@@ -32,13 +32,13 @@ from unittest.mock import MagicMock
 import numpy as np
 import pytest
 
-from huesync.pcm_source import (
+from lampastream.pcm_source import (
     SHM_ABI_V1_MAGIC,
     SHM_ABI_VERSION,
     SqueezeliteShmStereoSource,
     StreamInvalidated,
 )
-from huesync.spectrum_engine import (
+from lampastream.spectrum_engine import (
     CavaCoreSpectrumEngine,
     ProcessorUpdate,
 )
@@ -352,11 +352,11 @@ def _make_engine_with_old(old):
     """
     from unittest.mock import patch
 
-    from huesync.models import Profile
-    from huesync.sync_engine import SyncEngine
+    from lampastream.models import Profile
+    from lampastream.sync_engine import SyncEngine
 
     profile = Profile(name="test")
-    with patch("huesync.sync_engine.CavaPipeline"):
+    with patch("lampastream.sync_engine.CavaPipeline"):
         return SyncEngine(fifo_path=None, profile=profile, analyser=old)
 
 
@@ -443,8 +443,8 @@ def test_restart_cava_rolls_back_session_on_start_failure(monkeypatch, tmp_path)
     left at the NEW value and session.cava at None, so subsequent
     checks would see a mismatched state.
     """
-    from huesync.models import Coupling, Profile
-    from huesync.player_manager import ActiveSession, PlayerManager
+    from lampastream.models import Coupling, Profile
+    from lampastream.player_manager import ActiveSession, PlayerManager
 
     # Build a minimal storage stub with the coupling / dependencies
     # restart_cava needs.
@@ -470,7 +470,7 @@ def test_restart_cava_rolls_back_session_on_start_failure(monkeypatch, tmp_path)
 
     manager.storage.get_coupling.return_value = new_coupling
     monkeypatch.setattr(
-        "huesync.player_manager._build_engine_profile",
+        "lampastream.player_manager._build_engine_profile",
         lambda coupling, storage: new_profile,
     )
 
@@ -509,9 +509,9 @@ def test_distinct_processor_intervals_produce_distinct_publications():
     bounding-union record."""
     import numpy as np
 
-    from huesync.canonicalizer import AnalysisPcmFrame
-    from huesync.spectrum_engine import V2SpectrumEngine
-    from huesync.sync_engine import CanonicalAnalysisPipeline
+    from lampastream.canonicalizer import AnalysisPcmFrame
+    from lampastream.spectrum_engine import V2SpectrumEngine
+    from lampastream.sync_engine import CanonicalAnalysisPipeline
 
     class _TwoIntervalOther:
         processor_id = "twin"
@@ -588,9 +588,9 @@ def test_processor_updates_never_paired_by_list_index():
     must not be paired by list index — each interval belongs to exactly
     one publication and its ``effective_processor_ids`` reflects only
     the actual contributor at that interval."""
-    from huesync.canonicalizer import AnalysisPcmFrame
-    from huesync.spectrum_engine import V2SpectrumEngine
-    from huesync.sync_engine import CanonicalAnalysisPipeline
+    from lampastream.canonicalizer import AnalysisPcmFrame
+    from lampastream.spectrum_engine import V2SpectrumEngine
+    from lampastream.sync_engine import CanonicalAnalysisPipeline
 
     class _ProcA:
         processor_id = "A"
@@ -690,7 +690,7 @@ def _cavacore_available() -> bool:
 def test_cavacore_feed_reports_last_full_block_start():
     """feed(1441 frames) reports the LAST full block start (960), not the
     pre-fix ``_epoch_samples - BLOCK_SIZE`` value (961)."""
-    from huesync.spectrum_engine import SharedAnalysis
+    from lampastream.spectrum_engine import SharedAnalysis
 
     eng = CavaCoreSpectrumEngine(n_bars=16, lower_hz=50, upper_hz=10000)
     pcm = np.random.default_rng(0xC0DE).standard_normal((1441, 2)).astype(np.float32) * 0.2
@@ -707,7 +707,7 @@ def test_cavacore_feed_reports_last_full_block_start():
 def test_cavacore_flush_reports_carry_start():
     """flush() after feed(1441 frames) reports position 1440 (start of
     the 1-frame real tail), not the pre-fix 961."""
-    from huesync.spectrum_engine import SharedAnalysis
+    from lampastream.spectrum_engine import SharedAnalysis
 
     eng = CavaCoreSpectrumEngine(n_bars=16, lower_hz=50, upper_hz=10000)
     pcm = np.random.default_rng(0xC0DE).standard_normal((1441, 2)).astype(np.float32) * 0.2

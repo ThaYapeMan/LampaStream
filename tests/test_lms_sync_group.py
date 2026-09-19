@@ -4,7 +4,7 @@ import contextlib
 from unittest.mock import AsyncMock, patch
 from urllib.parse import quote
 
-from huesync.lms_follower import LmsSyncGroupObserver
+from lampastream.lms_follower import LmsSyncGroupObserver
 
 OWN = "02:00:00:00:00:01"
 MANAGED = "02:00:00:00:00:02"
@@ -118,7 +118,7 @@ def test_query_failure_clears_target_and_recovers_without_playback():
     async def run():
         callback = AsyncMock()
         observer = LmsSyncGroupObserver("lms", OWN, lambda: [OWN], callback)
-        with patch("huesync.lms_status.query_lms_sync_peers",
+        with patch("lampastream.lms_status.query_lms_sync_peers",
                    side_effect=[[ROOM], OSError("offline"), [OTHER]]) as query:
             await observer._refresh_group()
             assert observer._follow_mac == ROOM
@@ -146,7 +146,7 @@ def test_teardown_awaits_outstanding_sync_query():
 
         callback = AsyncMock()
         observer = LmsSyncGroupObserver("lms", OWN, lambda: [OWN], callback)
-        with patch("huesync.lms_status.query_lms_sync_peers", side_effect=query):
+        with patch("lampastream.lms_status.query_lms_sync_peers", side_effect=query):
             refresh = asyncio.create_task(observer._refresh_group())
             await until(entered.is_set)
             refresh.cancel()

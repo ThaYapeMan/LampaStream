@@ -7,10 +7,10 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 
-from huesync.canonicalizer import AnalysisPcmFrame
-from huesync.models import Profile
-from huesync.pcm_source import WINDOW_SIZE
-from huesync.spectrum_engine import (
+from lampastream.canonicalizer import AnalysisPcmFrame
+from lampastream.models import Profile
+from lampastream.pcm_source import WINDOW_SIZE
+from lampastream.spectrum_engine import (
     ENGINES,
     VALID_ENGINE_IDS,
     SharedAnalysis,
@@ -18,7 +18,7 @@ from huesync.spectrum_engine import (
     V2SpectrumEngine,
     make_spectrum_engine,
 )
-from huesync.sync_engine import CanonicalAnalysisPipeline, SyncEngine
+from lampastream.sync_engine import CanonicalAnalysisPipeline, SyncEngine
 
 # ---------------------------------------------------------------------------
 # Registry tests
@@ -256,7 +256,7 @@ def test_sync_engine_replace_analyser():
     new_analyser = MagicMock()
     new_analyser.latest.return_value = None
 
-    with patch("huesync.sync_engine.CavaPipeline"):
+    with patch("lampastream.sync_engine.CavaPipeline"):
         engine = SyncEngine(fifo_path=None, profile=profile, analyser=old_analyser)
 
     engine.replace_analyser(new_analyser)
@@ -277,7 +277,7 @@ def _make_engine_with_old(old_analyser):
         id="p1", name="test", effect_type="spectrum_rgb", bars=10,
         bars_source="pcm_pipeline", spectrum_backend="v2",
     )
-    with patch("huesync.sync_engine.CavaPipeline"):
+    with patch("lampastream.sync_engine.CavaPipeline"):
         return SyncEngine(fifo_path=None, profile=profile, analyser=old_analyser)
 
 
@@ -488,8 +488,8 @@ def test_unstarted_thread_stop_safe():
     the unstarted thread — that would raise RuntimeError."""
     import threading
 
-    from huesync.spectrum_engine import V2SpectrumEngine
-    from huesync.sync_engine import CanonicalAnalysisPipeline
+    from lampastream.spectrum_engine import V2SpectrumEngine
+    from lampastream.sync_engine import CanonicalAnalysisPipeline
 
     class _FakeSource:
         def __init__(self) -> None:
@@ -532,8 +532,8 @@ def test_unstarted_thread_stop_safe():
 def test_started_thread_stop_joins_and_closes_once():
     """Complementary control: a successfully-started worker still joins and
     closes processors exactly once."""
-    from huesync.spectrum_engine import V2SpectrumEngine
-    from huesync.sync_engine import CanonicalAnalysisPipeline
+    from lampastream.spectrum_engine import V2SpectrumEngine
+    from lampastream.sync_engine import CanonicalAnalysisPipeline
 
     class _FakeSource:
         def __init__(self) -> None:

@@ -119,11 +119,11 @@ reader before releasing it, including failed activation and retried teardown.
   [subscriptions](https://lyrion.org/reference/cli/compoundqueries/#status)).
   The target comes from the existing follower's `target_mac`: pinned manual
   target or dynamically selected sync-group peer. With no manual follower,
-  it queries HueSync's own player. Unsynced auto mode returns no track. The
+  it queries LampaStream's own player. Unsynced auto mode returns no track. The
   adapter checks the local target each second without querying LMS again and
   discards old-target snapshots immediately. It sends no playback/group commands.
 - **AirPlay:** the pinned Shairport build enables metadata and writes a separate
-  `/run/huesync/airplay.metadata` FIFO, owned by `huesync` with mode `0600`.
+  `/run/lampastream/airplay.metadata` FIFO, owned by `lampastream` with mode `0600`.
   `core/minm` and `core/asar` supply title and artist. `ssnc/prgr` gives
   start/current/end RTP timestamps; differences use unsigned 32-bit wraparound
   and 44,100 frames/second. Configured ten-second `phbt` updates correct position;

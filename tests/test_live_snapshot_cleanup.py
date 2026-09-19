@@ -10,12 +10,12 @@ from test_analysis_architecture import _make_cap, _make_frame
 from test_audit_blockers_v3 import _make_engine_and_start
 from test_player_manager import _make_full_storage
 
-from huesync.canonicalizer import TemporarilyNoData
-from huesync.lms_follower import LmsFollower
-from huesync.models import Profile
-from huesync.player_manager import ActiveSession, PlayerManager
-from huesync.spectrum_engine import ProcessorUpdate
-from huesync.sync_engine import SyncEngine
+from lampastream.canonicalizer import TemporarilyNoData
+from lampastream.lms_follower import LmsFollower
+from lampastream.models import Profile
+from lampastream.player_manager import ActiveSession, PlayerManager
+from lampastream.spectrum_engine import ProcessorUpdate
+from lampastream.sync_engine import SyncEngine
 
 
 def _deliver(cap, update, epoch='e'):
@@ -185,9 +185,9 @@ def test_follower_cleaned_once_across_blocked_teardown_retries(tmp_path, monkeyp
             await manager.deactivate()
             assert source.closed == 1
             assert not engine.retirement_pending
-            monkeypatch.setattr('huesync.player_manager.list_entertainment_areas',
+            monkeypatch.setattr('lampastream.player_manager.list_entertainment_areas',
                                 AsyncMock(return_value=[SimpleNamespace(id='ae-001', name='AE')]))
-            monkeypatch.setattr('huesync.player_manager.get_channel_infos',
+            monkeypatch.setattr('lampastream.player_manager.get_channel_infos',
                                 AsyncMock(return_value=[]))
 
             async def activate(session, *args):

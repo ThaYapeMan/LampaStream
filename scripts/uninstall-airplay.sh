@@ -56,16 +56,16 @@ rm -rf /usr/local/src/shairport-sync
 # ---------------------------------------------------------------------------
 echo "==> [5/6] Removing config files..."
 rm -f /usr/local/etc/shairport-sync.conf
-rm -f /etc/tmpfiles.d/huesync-run.conf
+rm -f /etc/tmpfiles.d/lampastream-run.conf
 
 # ---------------------------------------------------------------------------
 # Step 6: remove runtime directory
-# /run/huesync is created solely by setup-airplay.sh (via tmpfiles.d).
-# HueSync's own FIFOs live in /tmp/huesync (player_manager._RUN_DIR),
-# so removing /run/huesync does not affect a running HueSync instance.
+# /run/lampastream is created solely by setup-airplay.sh (via tmpfiles.d).
+# LampaStream's own FIFOs live in /tmp/lampastream (player_manager._RUN_DIR),
+# so removing /run/lampastream does not affect a running LampaStream instance.
 # ---------------------------------------------------------------------------
 echo "==> [6/6] Removing runtime directory and reloading systemd..."
-rm -rf /run/huesync
+rm -rf /run/lampastream
 systemctl daemon-reload
 
 echo ""

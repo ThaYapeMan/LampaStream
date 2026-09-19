@@ -7,7 +7,7 @@ import { updateVirtualPlayer } from '../lib/api'
 vi.mock('../lib/api', async (importOriginal) => ({
   ...await importOriginal<typeof import('../lib/api')>(),
   getVirtualPlayers: vi.fn().mockResolvedValue([{
-    id: 'managed', type: 'LMS', player_name: 'HueSync', lms_host: 'lms.local',
+    id: 'managed', type: 'LMS', player_name: 'LampaStream', lms_host: 'lms.local',
     lms_port: 3483, player_mac: 'aa:bb:cc:dd:ee:01',
     follow_player_mac: 'aa:bb:cc:dd:ee:02',
   }]),

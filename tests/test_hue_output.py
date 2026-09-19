@@ -6,9 +6,9 @@ minimal stub session so no network or DTLS connection is required.
 
 from __future__ import annotations
 
-from huesync.hue_output import ChannelInfo, HueDriver, HueOutputConfig
-from huesync.models import BridgeConfig
-from huesync.types import Colour, Position, UniformScene
+from lampastream.hue_output import ChannelInfo, HueDriver, HueOutputConfig
+from lampastream.models import BridgeConfig
+from lampastream.types import Colour, Position, UniformScene
 
 # ---------------------------------------------------------------------------
 # Stub helpers

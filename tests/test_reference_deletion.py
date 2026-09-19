@@ -11,12 +11,12 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from huesync.api import router
-from huesync.backup import configuration_lease
-from huesync.migration import convert, inspect_coupling, migrate_file
-from huesync.player_manager import PlayerManager
-from huesync.schema import validate_current
-from huesync.storage import ReferencedEntityError, Storage
+from lampastream.api import router
+from lampastream.backup import configuration_lease
+from lampastream.migration import convert, inspect_coupling, migrate_file
+from lampastream.player_manager import PlayerManager
+from lampastream.schema import validate_current
+from lampastream.storage import ReferencedEntityError, Storage
 
 FIXTURE = Path(__file__).parent / 'fixtures/a72893b-config.json'
 
@@ -90,7 +90,7 @@ def test_explicit_dangling_repair_preserves_backup_and_validates(tmp_path, histo
     assert migrate_file(path, check=True, **args)
     assert path.read_bytes() == raw
     assert not list(tmp_path.glob('*.bak'))
-    with patch('huesync.migration.os.replace', side_effect=OSError('disk failure')):
+    with patch('lampastream.migration.os.replace', side_effect=OSError('disk failure')):
         with pytest.raises(OSError):
             migrate_file(path, **args)
     assert path.read_bytes() == raw
@@ -144,7 +144,7 @@ def test_repair_cli_inspection_fingerprint_and_runtime_exclusion(configured):
     data['couplings'][0]['player_id'] = 'missing'
     path.write_text(json.dumps(data))
     raw = path.read_bytes()
-    command = [sys.executable, '-B', '-m', 'huesync.migration', str(path)]
+    command = [sys.executable, '-B', '-m', 'lampastream.migration', str(path)]
     env = dict(os.environ, PYTHONPATH=str(FIXTURE.parents[2] / 'src'))
     report = subprocess.run(command + ['--inspect-coupling', 'coupling-1'],
                             env=env, capture_output=True, text=True, check=True)

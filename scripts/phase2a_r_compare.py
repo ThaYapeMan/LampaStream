@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""HueSync DSP Phase 2A-R — Recovery / Real-CAVA Validation.
+"""LampaStream DSP Phase 2A-R — Recovery / Real-CAVA Validation.
 
 Phase 2A-R corrects the bar-mapping formula error from Phase 2A and provides
 a repaired CavaRunner for deployment on the LXC with actual CAVA 0.10.4.
@@ -7,13 +7,13 @@ a repaired CavaRunner for deployment on the LXC with actual CAVA 0.10.4.
 WITHDRAWN FINDING (Phase 2A):
     "~19% logarithmic bar-mapping divergence between native and CAVA at high
     frequencies" — caused by transcription error in CavaSimulator.  CAVA
-    cavacore.c and native HueSync use the same ideal log-spaced edge formula.
+    cavacore.c and native LampaStream use the same ideal log-spaced edge formula.
     Effective bin-coverage differs only due to FFT size and bin discretisation.
 
 Usage — native analysis only (default):
     python3 scripts/phase2a_r_compare.py [--output-dir artifacts/dsp_phase2a_r]
 
-Usage — with actual CAVA binary (run on LXC as huesync user):
+Usage — with actual CAVA binary (run on LXC as lampastream user):
     python3 scripts/phase2a_r_compare.py --cava [--cava-binary /usr/bin/cava]
 """
 
@@ -42,8 +42,8 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from huesync.pcm_source import WINDOW_SIZE, PcmStft
-from huesync.sync_engine import BandNormaliser
+from lampastream.pcm_source import WINDOW_SIZE, PcmStft
+from lampastream.sync_engine import BandNormaliser
 
 # ---------------------------------------------------------------------------
 # Global experiment parameters
@@ -217,7 +217,7 @@ def log_bar_edges(
     edge[n] = lower * (upper/lower)^(n/n_bars) for n=0..n_bars.
 
     Matches:
-    - Native HueSync _mag_to_bar_bytes:
+    - Native LampaStream _mag_to_bar_bytes:
           10^(log_lo + i/n_bars * (log_hi - log_lo))  [algebraically identical]
     - CAVA cavacore.c cut_off_frequency formula
           [hardcoded [0]=lower; [n]=upper*10^(log10(u/l)*(n/n_bars-1)) for n>=1]
@@ -327,7 +327,7 @@ def _mag_to_bar_bytes(
 
 
 class NativeAnalyser:
-    """HueSync native PCM path: PcmStft + _mag_to_bar_bytes + BandNormaliser.
+    """LampaStream native PCM path: PcmStft + _mag_to_bar_bytes + BandNormaliser.
 
     Processes CanonicalPcm.to_float32_stereo() through the production pipeline.
     Downmixes to mono via (L+R)/2 before STFT (matches production).
@@ -1145,7 +1145,7 @@ def _write_bar_mapping_csv(rows: list[dict], outdir: Path) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="HueSync DSP Phase 2A-R — Recovery / Real-CAVA Validation"
+        description="LampaStream DSP Phase 2A-R — Recovery / Real-CAVA Validation"
     )
     parser.add_argument(
         "--output-dir",

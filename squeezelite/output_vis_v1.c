@@ -1,9 +1,9 @@
 /*
- * HueSync v1 producer for squeezelite's visualiser shared memory.
+ * LampaStream v1 producer for squeezelite's visualiser shared memory.
  *
  * This file is a self-contained reference for the writes squeezelite must
- * perform in output_vis.c so that HueSync's consumer (see
- * src/huesync/pcm_source.py: SqueezeliteShmSource / SqueezeliteShmStereoSource)
+ * perform in output_vis.c so that LampaStream's consumer (see
+ * src/lampastream/pcm_source.py: SqueezeliteShmSource / SqueezeliteShmStereoSource)
  * can observe an atomic, monotonic view of the ring buffer.
  *
  * Integration is automatic through scripts/build-squeezelite.sh and the

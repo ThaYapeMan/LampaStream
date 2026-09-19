@@ -1,5 +1,5 @@
 /*
- * HueSync v1 SHM ABI — shared between squeezelite producer and Python consumer.
+ * LampaStream v1 SHM ABI — shared between squeezelite producer and Python consumer.
  *
  * This header defines the extension block appended immediately after the legacy
  * squeezelite vis_t header (at offset 80 = _HDR_OFFSET + _HDR_SIZE).

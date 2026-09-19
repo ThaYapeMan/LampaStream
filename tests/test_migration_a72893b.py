@@ -17,9 +17,9 @@ import numpy
 import pytest
 import soxr
 
-from huesync.migration import convert, migrate_file
-from huesync.schema import SCHEMA_VERSION, empty_config, validate_current
-from huesync.storage import Storage
+from lampastream.migration import convert, migrate_file
+from lampastream.schema import SCHEMA_VERSION, empty_config, validate_current
+from lampastream.storage import Storage
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURE = Path(__file__).parent / 'fixtures/a72893b-config.json'
@@ -152,7 +152,7 @@ def test_exact_bytes_backup_failure_and_idempotency(tmp_path):
     assert migrate_file(path, check=True)
     assert path.read_bytes() == raw
     assert not list(tmp_path.glob('*.bak'))
-    with patch('huesync.migration.os.replace', side_effect=OSError('disk unavailable')):
+    with patch('lampastream.migration.os.replace', side_effect=OSError('disk unavailable')):
         with pytest.raises(OSError):
             migrate_file(path)
     assert path.read_bytes() == raw
@@ -182,8 +182,8 @@ def test_current_runtime_still_rejects_historical_keys(tmp_path, key):
 @pytest.mark.parametrize("edited_coupling", [False, True])
 def test_installer_migration_command_in_isolated_environment(tmp_path, edited_coupling):
     # Same isolated Python/module command as installer phase 4, without apt/services.
-    installer = (ROOT / 'scripts/install-huesync.sh').read_text()
-    assert '"$RELEASE/venv/bin/python" -I -B -m huesync.migration "$CONFIG"' in installer
+    installer = (ROOT / 'scripts/install-lampastream.sh').read_text()
+    assert '"$RELEASE/venv/bin/python" -I -B -m lampastream.migration "$CONFIG"' in installer
     environment = tmp_path / 'venv'
     venv.EnvBuilder(with_pip=False, system_site_packages=True).create(environment)
     python = environment / 'bin/python'
@@ -194,7 +194,7 @@ def test_installer_migration_command_in_isolated_environment(tmp_path, edited_co
     # are user-installed (-I excludes user site); no dependency/native mocks.
     roots = {str(Path(module.__file__).resolve().parents[1]) for module in (numpy, soxr)}
     (Path(site) / 'test-runtime-dependencies.pth').write_text('\n'.join(sorted(roots)) + '\n')
-    shutil.copytree(ROOT / 'src/huesync', Path(site) / 'huesync',
+    shutil.copytree(ROOT / 'src/lampastream', Path(site) / 'lampastream',
                     ignore=shutil.ignore_patterns('__pycache__', 'webui'))
     config = tmp_path / 'config.json'
     data = historical()
@@ -203,7 +203,7 @@ def test_installer_migration_command_in_isolated_environment(tmp_path, edited_co
     original = json.dumps(data).encode()
     config.write_bytes(original)
     env = dict(os.environ, PYTHONDONTWRITEBYTECODE='1')
-    command = [str(python), '-I', '-B', '-m', 'huesync.migration', str(config)]
+    command = [str(python), '-I', '-B', '-m', 'lampastream.migration', str(config)]
     result = subprocess.run(command, capture_output=True, text=True, env=env)
     assert result.returncode == 0, result.stderr
     assert 'Schema 1: valid' in result.stdout

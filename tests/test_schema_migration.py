@@ -5,10 +5,10 @@ from unittest.mock import patch
 
 import pytest
 
-from huesync.migration import convert, migrate_file
-from huesync.models import Coupling, Effect, EnergyProfile
-from huesync.schema import empty_config, validate_current
-from huesync.storage import Storage
+from lampastream.migration import convert, migrate_file
+from lampastream.models import Coupling, Effect, EnergyProfile
+from lampastream.schema import empty_config, validate_current
+from lampastream.storage import Storage
 
 
 def historical():
@@ -100,7 +100,7 @@ def test_atomic_replace_failure_preserves_original_and_backup(tmp_path):
     path = tmp_path / 'config.json'
     raw = json.dumps(historical()).encode()
     path.write_bytes(raw)
-    with patch('huesync.migration.os.replace', side_effect=OSError('disk')):
+    with patch('lampastream.migration.os.replace', side_effect=OSError('disk')):
         with pytest.raises(OSError):
             migrate_file(path)
     assert path.read_bytes() == raw

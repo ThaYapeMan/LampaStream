@@ -12,8 +12,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from huesync.lms_status import LmsPlayerStatus
-from huesync.models import (
+from lampastream.lms_status import LmsPlayerStatus
+from lampastream.models import (
     Analyser,
     Controller,
     ControllerType,
@@ -25,8 +25,8 @@ from huesync.models import (
     VirtualPlayerType,
     Zone,
 )
-from huesync.player_manager import ActiveSession, PlayerManager, _build_engine_profile
-from huesync.storage import Storage
+from lampastream.player_manager import ActiveSession, PlayerManager, _build_engine_profile
+from lampastream.storage import Storage
 
 
 def _make_manager(tmp_path: Path) -> PlayerManager:
@@ -132,7 +132,7 @@ def test_squeezelite_server_arg_omits_lms_port(tmp_path: Path) -> None:
     manager = _make_manager(tmp_path)
     profile = Profile(
         player_mac="02:ff:00:de:ad:08",
-        player_name="HueSync",
+        player_name="LampaStream",
         lms_host="192.168.178.23",
         lms_port=9000,
         alsa_device="hw:CARD=Dummy,DEV=0",
@@ -215,7 +215,7 @@ def _make_full_storage(tmp_path: Path) -> tuple[Storage, Coupling]:
 
     player = VirtualPlayer(
         id="player-1", lms_host="192.168.1.10", lms_port=9000,
-        player_name="HueSync", player_mac="aa:bb:cc:dd:ee:ff", alsa_device="",
+        player_name="LampaStream", player_mac="aa:bb:cc:dd:ee:ff", alsa_device="",
     )
     storage.save_virtual_player(player)
 
@@ -434,7 +434,7 @@ def test_poll_sync_master_queries_follow_player_exactly_once(tmp_path: Path) -> 
 
         mock_query = MagicMock(return_value=LmsPlayerStatus(player_name="Sonos Port"))
 
-        with patch("huesync.player_manager.query_lms_status", new=mock_query), \
+        with patch("lampastream.player_manager.query_lms_status", new=mock_query), \
              patch.object(manager, "_apply_probe_for_master", new=AsyncMock()):
             await asyncio.wait_for(manager._poll_sync_master(session), timeout=2.0)
 
@@ -581,7 +581,7 @@ def _make_airplay_storage(tmp_path: Path) -> tuple[Storage, Coupling]:
 
     player = VirtualPlayer(
         id="player-ap", type=VirtualPlayerType.AIRPLAY,
-        player_name="HueSync-AP", player_mac="aa:bb:cc:dd:ee:01",
+        player_name="LampaStream-AP", player_mac="aa:bb:cc:dd:ee:01",
     )
     storage.save_virtual_player(player)
 
@@ -626,7 +626,7 @@ def test_airplay_activation_skips_squeezelite(tmp_path: Path) -> None:
     fake_area.id = "ae-ap"
     fake_area.name = "AP Room AE"
 
-    _pm = "huesync.player_manager"
+    _pm = "lampastream.player_manager"
     with (
         patch(f"{_pm}.list_entertainment_areas", new=AsyncMock(return_value=[fake_area])),
         patch(f"{_pm}.get_channel_infos", new=AsyncMock(return_value=[])),
@@ -672,7 +672,7 @@ def test_airplay_activation_player_type_recorded(tmp_path: Path) -> None:
     fake_area.id = "ae-ap"
     fake_area.name = "AP Room AE"
 
-    _pm = "huesync.player_manager"
+    _pm = "lampastream.player_manager"
     with (
         patch(f"{_pm}.list_entertainment_areas", new=AsyncMock(return_value=[fake_area])),
         patch(f"{_pm}.get_channel_infos", new=AsyncMock(return_value=[])),
@@ -708,7 +708,7 @@ def test_airplay_activation_airplay_receiving_property(tmp_path: Path) -> None:
     mock_src = MagicMock()
     mock_src.running = True
 
-    _pm = "huesync.player_manager"
+    _pm = "lampastream.player_manager"
     with (
         patch(f"{_pm}.list_entertainment_areas", new=AsyncMock(return_value=[fake_area])),
         patch(f"{_pm}.get_channel_infos", new=AsyncMock(return_value=[])),
@@ -735,8 +735,8 @@ def test_airplay_activation_airplay_receiving_property(tmp_path: Path) -> None:
 
 def test_configure_shairport_name_includes_explicit_format(tmp_path: Path) -> None:
     """_configure_shairport_name must write output_rate, output_format, output_channels."""
-    from huesync.player_manager import PlayerManager
-    from huesync.storage import Storage
+    from lampastream.player_manager import PlayerManager
+    from lampastream.storage import Storage
 
     storage = Storage(tmp_path / "config.json")
     manager = PlayerManager(storage)
@@ -752,7 +752,7 @@ def test_configure_shairport_name_includes_explicit_format(tmp_path: Path) -> No
     assert "output_rate = 44100" in text
     assert 'output_format = "S16_LE"' in text
     assert "output_channels = 2" in text
-    assert 'pipe_name = "/run/huesync/airplay.metadata"' in text
+    assert 'pipe_name = "/run/lampastream/airplay.metadata"' in text
     assert 'enabled = "yes"' in text
     assert "progress_interval = 10.0" in text
 
@@ -771,7 +771,7 @@ def test_cavacore_unavailable_raises_not_silently_falls_back() -> None:
     """
     import inspect
 
-    import huesync.player_manager as pm_module
+    import lampastream.player_manager as pm_module
 
     src = inspect.getsource(pm_module)
     # The silent-fallback warning message that existed before the fix
@@ -802,7 +802,7 @@ def _make_lms_storage(
 
     player = VirtualPlayer(
         id="player-lms", type=VirtualPlayerType.LMS,
-        player_name="HueSync-LMS", player_mac="aa:bb:cc:dd:ee:02",
+        player_name="LampaStream-LMS", player_mac="aa:bb:cc:dd:ee:02",
     )
     storage.save_virtual_player(player)
 
@@ -851,7 +851,7 @@ def test_lms_pcm_pipeline_path_when_bars_source_pcm_pipeline_v2(tmp_path: Path) 
     fake_area.id = "ae-lms"
     fake_area.name = "Living Room AE"
 
-    _pm = "huesync.player_manager"
+    _pm = "lampastream.player_manager"
     with (
         patch(f"{_pm}.list_entertainment_areas", new=AsyncMock(return_value=[fake_area])),
         patch(f"{_pm}.get_channel_infos", new=AsyncMock(return_value=[])),
@@ -880,7 +880,7 @@ def test_lms_cava_path_when_bars_source_cava(tmp_path: Path) -> None:
     fake_area.id = "ae-lms"
     fake_area.name = "Living Room AE"
 
-    _pm = "huesync.player_manager"
+    _pm = "lampastream.player_manager"
     with (
         patch(f"{_pm}.list_entertainment_areas", new=AsyncMock(return_value=[fake_area])),
         patch(f"{_pm}.get_channel_infos", new=AsyncMock(return_value=[])),
@@ -902,12 +902,12 @@ def test_lms_cava_path_when_bars_source_cava(tmp_path: Path) -> None:
 
 def test_installed_producer_matches_ingress_abi(tmp_path):
     """No implicit distro fallback: external CAVA and canonical PCM have distinct ABIs."""
-    from huesync.models import Profile
-    from huesync.player_manager import ActiveSession, PlayerManager
-    from huesync.storage import Storage
+    from lampastream.models import Profile
+    from lampastream.player_manager import ActiveSession, PlayerManager
+    from lampastream.storage import Storage
 
     manager = PlayerManager(Storage(tmp_path / 'config.json'))
-    for mode, expected in [('cava', 'huesync-squeezelite-fifo'), ('pcm_pipeline', 'squeezelite')]:
+    for mode, expected in [('cava', 'lampastream-squeezelite-fifo'), ('pcm_pipeline', 'squeezelite')]:
         profile = Profile(player_mac='aa:bb:cc:dd:ee:ff', bars_source=mode)
         session = ActiveSession(profile)
         with patch('shutil.which', return_value='/usr/local/bin/' + expected) as which, \
@@ -917,13 +917,13 @@ def test_installed_producer_matches_ingress_abi(tmp_path):
         assert popen.call_args.args[0][0] == '/usr/local/bin/' + expected
         with patch('shutil.which', return_value=None):
             import pytest
-            with pytest.raises(RuntimeError, match='install-huesync'):
+            with pytest.raises(RuntimeError, match='install-lampastream'):
                 manager._start_squeezelite(session, profile)
 
 
 @pytest.mark.parametrize("bars_source", ["cava", "pcm_pipeline"])
 def test_sync_group_activation_never_schedules_manual_unsync(tmp_path, bars_source):
-    from huesync.lms_follower import LmsSyncGroupObserver
+    from lampastream.lms_follower import LmsSyncGroupObserver
 
     async def run():
         storage, coupling = _make_full_storage(tmp_path)
@@ -944,7 +944,7 @@ def test_sync_group_activation_never_schedules_manual_unsync(tmp_path, bars_sour
              patch.object(LmsSyncGroupObserver, "_run", idle), \
              patch.object(manager, "_delayed_unsync_and_follow", new=AsyncMock()) as unsync, \
              patch.object(manager, "_apply_probe_for_master", new=AsyncMock()) as probe, \
-             patch("huesync.player_manager.query_lms_status",
+             patch("lampastream.player_manager.query_lms_status",
                    return_value=LmsPlayerStatus(player_name="Room")) as status:
             await manager._activate_lms(session, profile, player, None, None, [])
             assert isinstance(session.follower, LmsSyncGroupObserver)

@@ -1,7 +1,7 @@
 # Configuration
 
-The web UI and API persist configuration through Storage. `HUESYNC_CONFIG` defaults
-to `/etc/huesync/config.json`. Keep a backup before migration or target experiments.
+The web UI and API persist configuration through Storage. `LAMPASTREAM_CONFIG` defaults
+to `/etc/lampastream/config.json`. Keep a backup before migration or target experiments.
 The installer explicitly migrates supported historical formats before startup.
 Current startup rejects non-current schema and clears stale active-coupling state;
 it does not restore a previous process merely because a stored ID was active.
@@ -71,7 +71,7 @@ See [migration and backups](installation.md#migration).
 **Full backups are sensitive.** They include Hue Bridge pairing credentials and
 must not be published, logged or stored in a public location. Ordinary Controller
 API responses still hide credentials; the explicit full-backup endpoint includes them.
-HueSync currently has no authentication. Restrict UI/API access to a trusted network;
+LampaStream currently has no authentication. Restrict UI/API access to a trusted network;
 use a protected connection or tunnel when transferring a backup across networks.
 
 ### Configuration inventory
@@ -101,13 +101,13 @@ audio/features/publication queues, SHM/FFT state, processes, connections, logs, 
 binaries, venv and frontend artifacts. Runtime Profile objects are reconstructed from
 entities. Generated CAVA/receiver files are recreated at activation. OS environment,
 network/device mappings, custom systemd overrides and manually edited receiver settings
-are deployment administration, not portable HueSync configuration. The installer owns
+are deployment administration, not portable LampaStream configuration. The installer owns
 the standard deployment defaults. There is no additional persisted browser setting store.
 
 ### Format and validation
 
-JSON envelope: `format="huesync-config-backup"`, `backup_version=1`,
-`schema_version=1`, UTC `created_at`, `huesync_version`, `huesync_commit`,
+JSON envelope: `format="lampastream-config-backup"`, `backup_version=1`,
+`schema_version=1`, UTC `created_at`, `lampastream_version`, `lampastream_commit`,
 `contains_secrets=true`, and `configuration` (current persisted schema).
 Backup format version and configuration schema version are distinct and both checked.
 Unsupported versions, unknown fields/collections, partial entities, duplicate JSON keys,
@@ -140,7 +140,7 @@ Storage readers see the old complete file or the new complete file, never part o
 Before replacement, restore writes an exact-byte safety copy:
 
 ```text
-/etc/huesync/config.json.pre-restore.<SHA256-of-original>.<unique>.bak
+/etc/lampastream/config.json.pre-restore.<SHA256-of-original>.<unique>.bak
 ```
 
 It validates and prepares the new file before atomic rename. Validation, safety-backup,
@@ -152,19 +152,19 @@ against power failure or external lighting hardware.
 
 ### CLI / disaster recovery
 
-All CLI and API operations use `huesync.backup`, not separate serializers.
+All CLI and API operations use `lampastream.backup`, not separate serializers.
 
 ```sh
-# Export may run while HueSync is running. Existing output files are never overwritten.
-sudo /opt/huesync/.venv/bin/python -m huesync.backup export /secure/huesync-backup.json
+# Export may run while LampaStream is running. Existing output files are never overwritten.
+sudo /opt/lampastream/.venv/bin/python -m lampastream.backup export /secure/lampastream-backup.json
 
 # Validation only: no configuration, lock or runtime mutation.
-sudo /opt/huesync/.venv/bin/python -m huesync.backup import --check /secure/huesync-backup.json
+sudo /opt/lampastream/.venv/bin/python -m lampastream.backup import --check /secure/lampastream-backup.json
 
 # Offline restore: stop service first; the runtime ownership lease enforces this.
-sudo systemctl stop huesync
-sudo /opt/huesync/.venv/bin/python -m huesync.backup import /secure/huesync-backup.json
-sudo systemctl start huesync
+sudo systemctl stop lampastream
+sudo /opt/lampastream/.venv/bin/python -m lampastream.backup import /secure/lampastream-backup.json
+sudo systemctl start lampastream
 ```
 
 For a custom file, place `--config /path/config.json` before `export` or `import`.
@@ -187,7 +187,7 @@ revoked. Live lighting, LMS/AirPlay connectivity and cross-host recovery remain
 **REQUIRES LXC RUNTIME VALIDATION**.
 
 Migration backups (`pre-v1...bak`) and restore-safety backups are raw rollback files.
-Portable `huesync-config-backup` JSON is the user-created transfer/disaster-recovery
+Portable `lampastream-config-backup` JSON is the user-created transfer/disaster-recovery
 format. They are not interchangeable, and the installer does not automatically export
 secret portable backups.
 
@@ -214,22 +214,22 @@ cannot finish migration. First identify the Coupling; inspection is read-only an
 prints only its name, IDs, available player names/types, and a SHA256 fingerprint:
 
 ```sh
-sudo env PYTHONPATH="$PWD/src" /opt/huesync/.venv/bin/python -m huesync.migration \
-  /etc/huesync/config.json --inspect-coupling COUPLING_ID
+sudo env PYTHONPATH="$PWD/src" /opt/lampastream/.venv/bin/python -m lampastream.migration \
+  /etc/lampastream/config.json --inspect-coupling COUPLING_ID
 ```
 
 Do not choose an action until that report identifies the intended binding. Stop
-HueSync before applying a repair. With the fingerprint from inspection, choose
+LampaStream before applying a repair. With the fingerprint from inspection, choose
 **one** explicit operation:
 
 ```sh
-sudo systemctl stop huesync
+sudo systemctl stop lampastream
 # Remove only the identified Coupling whose player is missing:
-sudo env PYTHONPATH="$PWD/src" /opt/huesync/.venv/bin/python -m huesync.migration \
-  /etc/huesync/config.json --remove-dangling-coupling COUPLING_ID --expect-sha256 SHA256
+sudo env PYTHONPATH="$PWD/src" /opt/lampastream/.venv/bin/python -m lampastream.migration \
+  /etc/lampastream/config.json --remove-dangling-coupling COUPLING_ID --expect-sha256 SHA256
 # OR reassign that Coupling to an explicitly selected existing player:
-sudo env PYTHONPATH="$PWD/src" /opt/huesync/.venv/bin/python -m huesync.migration \
-  /etc/huesync/config.json --reassign-dangling-coupling COUPLING_ID \
+sudo env PYTHONPATH="$PWD/src" /opt/lampastream/.venv/bin/python -m lampastream.migration \
+  /etc/lampastream/config.json --reassign-dangling-coupling COUPLING_ID \
   --player-id EXISTING_PLAYER_ID --expect-sha256 SHA256
 ```
 
@@ -239,8 +239,8 @@ players. It validates the complete repaired configuration before creating an exa
 For historical data, the explicitly superseded Profile snapshot is removed with
 that binding so it cannot resurrect it. All original bytes remain in the backup.
 An active repaired binding is deactivated; there is no automatic activation.
-The runtime lease prevents repair while the current HueSync process owns the file.
-After success, resume `sudo ./scripts/install-huesync.sh`, then select/activate the
+The runtime lease prevents repair while the current LampaStream process owns the file.
+After success, resume `sudo ./scripts/install-lampastream.sh`, then select/activate the
 intended Coupling. Never edit the JSON manually to bypass validation.
 
 
@@ -250,8 +250,8 @@ VirtualPlayers have a `follow_mode` setting:
 
 - `manual` (default, including existing configurations): retains the existing
   fixed `follow_player_mac` and its event-driven track mirroring behavior.
-- `sync_group`: manually sync HueSync with a room in LMS first. Native LMS sync
-  delivers the audio. HueSync passively observes `listen 1` and queries its own
+- `sync_group`: manually sync LampaStream with a room in LMS first. Native LMS sync
+  delivers the audio. LampaStream passively observes `listen 1` and queries its own
   player's `sync ?` on activation/reconnection, on sync/client notifications,
   and every five seconds. It never sends playback commands or changes group
   membership in this mode.
@@ -260,14 +260,14 @@ The Virtual Player editor exposes both modes and retains the manual MAC when
 switching to automatic mode. Changing modes deactivates an active owning session;
 activate the Coupling again to use the new setting.
 
-Auto mode excludes all HueSync-managed player identities. With multiple external
+Auto mode excludes all LampaStream-managed player identities. With multiple external
 group members it keeps the selected peer while that peer remains present;
 otherwise it selects the first normalized MAC in sorted order. The displayed
 target and latency configuration follow that selection. Different rooms can
 have different latency settings even though they share a queue; use manual mode
 when a specific room must be pinned.
 
-Now Playing shows a warning when HueSync is not synced, when only managed players
+Now Playing shows a warning when LampaStream is not synced, when only managed players
 are grouped, or when LMS cannot be queried. No target is inferred from which
 independent player happens to be playing. A query failure clears the detected
 target until a successful refresh. Automatic selection is runtime state, not a

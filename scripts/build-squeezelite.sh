@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build a squeezelite binary with the HueSync v1 visualiser SHM producer.
+# Build a squeezelite binary with the LampaStream v1 visualiser SHM producer.
 #
 # This script automates the previously manual "copy files and patch
 # output_vis.c" ritual described in squeezelite/README.md.
@@ -9,7 +9,7 @@
 #      source tree.
 #   3. Apply squeezelite/output_vis_v1.patch to hook the v1 producer into
 #      output_vis.c and the build.
-#   4. Compile with -DVISEXPORT (always enabled — this is why HueSync
+#   4. Compile with -DVISEXPORT (always enabled — this is why LampaStream
 #      rebuilds squeezelite in the first place), asserting that the
 #      producer objects (output_vis.o, output_vis_v1.o) are part of the
 #      build plan before linking.
@@ -21,9 +21,9 @@
 #
 # Usage:
 #   sudo bash scripts/build-squeezelite.sh
-#   sudo INSTALL_DIR=/opt/huesync/bin bash scripts/build-squeezelite.sh
+#   sudo INSTALL_DIR=/opt/lampastream/bin bash scripts/build-squeezelite.sh
 #
-# Build requirements (Debian 13, provisioned by install-huesync.sh):
+# Build requirements (Debian 13, provisioned by install-lampastream.sh):
 #   build-essential   — gcc + make + libc headers
 #   libasound2-dev    — ALSA output backend
 #   libflac-dev libmad0-dev libmpg123-dev libvorbis-dev libfaad-dev
@@ -50,9 +50,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 PATCH_DIR="$REPO_DIR/squeezelite"
 
-BUILD_DIR="${BUILD_DIR:-/tmp/huesync-squeezelite-build}"
+BUILD_DIR="${BUILD_DIR:-/tmp/lampastream-squeezelite-build}"
 
-echo "==> HueSync squeezelite producer build"
+echo "==> LampaStream squeezelite producer build"
 echo "    upstream commit: $SQUEEZELITE_COMMIT"
 echo "    build dir:       $BUILD_DIR"
 echo "    install to:      $INSTALL_DIR/squeezelite"
@@ -99,7 +99,7 @@ echo "Building dedicated external-FIFO producer (upstream SHM ABI)..."
     cd "$BUILD_DIR/squeezelite"
     make -j"$(nproc)" OPTS=-DVISEXPORT
     test -f output_vis.o
-    cp squeezelite "$BUILD_DIR/huesync-squeezelite-fifo"
+    cp squeezelite "$BUILD_DIR/lampastream-squeezelite-fifo"
     make clean
 )
 
@@ -113,7 +113,7 @@ cp "$PATCH_DIR/output_vis_v1.c"  "$BUILD_DIR/squeezelite/output_vis_v1.c"
 # ---------------------------------------------------------------------------
 # [3] Apply the patch that hooks the v1 producer into output_vis.c + Makefile
 # ---------------------------------------------------------------------------
-echo "[3/5] Applying HueSync v1 producer patch..."
+echo "[3/5] Applying LampaStream v1 producer patch..."
 if [[ ! -f "$PATCH_DIR/output_vis_v1.patch" ]]; then
     echo "error: patch not found: $PATCH_DIR/output_vis_v1.patch" >&2
     exit 1
@@ -122,7 +122,7 @@ fi
 (
     cd "$BUILD_DIR/squeezelite"
     if ! patch --dry-run -p1 --forward < "$PATCH_DIR/output_vis_v1.patch"; then
-        echo "error: HueSync producer patch does not apply cleanly to $SQUEEZELITE_COMMIT" >&2
+        echo "error: LampaStream producer patch does not apply cleanly to $SQUEEZELITE_COMMIT" >&2
         echo "       regenerate output_vis_v1.patch against this upstream revision" >&2
         exit 1
     fi
@@ -135,9 +135,9 @@ fi
 #
 # The upstream Makefile only compiles the visualiser producer sources
 # (output_vis.c, output_vis_v1.c) when OPTS contains ``-DVISEXPORT``.
-# Without that macro the HueSync SHM producer is silently omitted from
+# Without that macro the LampaStream SHM producer is silently omitted from
 # the binary and consumers never see a v1 segment.  Because -DVISEXPORT
-# is HueSync's ENTIRE reason to rebuild squeezelite, we always inject it
+# is LampaStream's ENTIRE reason to rebuild squeezelite, we always inject it
 # into OPTS and refuse to install a binary that lacks the producer.
 #
 # Callers can still extend OPTS via the environment (e.g.
@@ -165,7 +165,7 @@ esac
         exit 1
     fi
     if ! grep -qE '(^| )output_vis_v1\.o( |$)' "$BUILD_DIR/plan.txt"; then
-        echo "error: build plan does not include output_vis_v1.o — HueSync v1 producer missing" >&2
+        echo "error: build plan does not include output_vis_v1.o — LampaStream v1 producer missing" >&2
         exit 1
     fi
 
@@ -188,7 +188,7 @@ esac
 echo "[5/5] Installing to $INSTALL_DIR/squeezelite..."
 install -d "$INSTALL_DIR"
 install -m 0755 "$BUILD_DIR/squeezelite/squeezelite" "$INSTALL_DIR/squeezelite"
-install -m 0755 "$BUILD_DIR/huesync-squeezelite-fifo" "$INSTALL_DIR/huesync-squeezelite-fifo"
+install -m 0755 "$BUILD_DIR/lampastream-squeezelite-fifo" "$INSTALL_DIR/lampastream-squeezelite-fifo"
 
 echo ""
 echo "Done.  Verify with:"

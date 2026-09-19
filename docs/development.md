@@ -1,6 +1,6 @@
 # Development
 
-Python source is in `src/huesync`, tests in `tests`, the React frontend in `web`.
+Python source is in `src/lampastream`, tests in `tests`, the React frontend in `web`.
 Read [the frozen architecture](ANALYSIS_ARCHITECTURE.md) before changing analysis.
 
 ## Environment
@@ -86,7 +86,7 @@ See [testing](testing.md) for full validation and native evidence boundaries.
 
 ## Deployment versus development
 
-Use `scripts/install-huesync.sh` for standard Debian deployment; development commands
+Use `scripts/install-lampastream.sh` for standard Debian deployment; development commands
 above are not an alternative operator install procedure. Native/commit build artifacts
 are generated outside the checkout. Only a wheel-installed runtime is expected to
 report generated deployment commit metadata. A direct source import may report unknown.

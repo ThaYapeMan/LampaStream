@@ -11,7 +11,7 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals())
 
 function chooseFile(name = 'backup.json') {
-  const file = new File(['{"format":"huesync-config-backup"}'], name, { type: 'application/json' })
+  const file = new File(['{"format":"lampastream-config-backup"}'], name, { type: 'application/json' })
   fireEvent.change(screen.getByLabelText(/Backup JSON file/), { target: { files: [file] } })
   return file
 }
@@ -20,7 +20,7 @@ describe('Backup and restore', () => {
   it('warns about secrets and never uploads merely selected files', () => {
     render(<Backup />)
     expect(screen.getByText(/Keep this file secure/)).toBeInTheDocument()
-    expect(screen.getByText(/HueSync has no authentication/)).toBeInTheDocument()
+    expect(screen.getByText(/LampaStream has no authentication/)).toBeInTheDocument()
     chooseFile()
     expect(screen.getByText('Selected file: backup.json')).toBeInTheDocument()
     expect(fetchMock).not.toHaveBeenCalled()
@@ -79,7 +79,7 @@ describe('Backup and restore', () => {
     const blob = new Blob(['sensitive-data'], { type: 'application/json' })
     fetchMock.mockResolvedValue({ ok: true, blob: async () => blob })
     render(<Backup />)
-    fireEvent.click(screen.getByRole('button', { name: 'Export HueSync configuration' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Export LampaStream configuration' }))
     await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Backup downloaded'))
     expect(fetchMock).toHaveBeenCalledWith('/api/config/export', { cache: 'no-store' })
     expect(create).toHaveBeenCalledWith(blob)

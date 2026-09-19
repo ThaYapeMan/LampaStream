@@ -1,0 +1,26 @@
+[Unit]
+Description=LampaStream - spectrum-reactive Hue lighting from LMS and AirPlay
+After=network-online.target shairport-sync.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=lampastream
+Group=lampastream
+UMask=0077
+WorkingDirectory=/opt/lampastream
+Environment=LAMPASTREAM_CONFIG=/etc/lampastream/config.json
+Environment=PATH=/usr/local/bin:/usr/local/sbin:/usr/bin:/usr/sbin
+Environment=PYTHONDONTWRITEBYTECODE=1
+SupplementaryGroups=audio
+
+ExecStart=/opt/lampastream/.venv/bin/lampastream
+Restart=on-failure
+RestartSec=5
+
+# squeezelite/cava write to /dev/shm and spawn subprocesses - keep
+# sandboxing light rather than fighting it for a first version.
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

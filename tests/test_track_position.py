@@ -5,12 +5,12 @@ import os
 from unittest.mock import AsyncMock, patch
 from urllib.parse import quote
 
-from huesync.lms_follower import LmsFollower, LmsSyncGroupObserver
-from huesync.lms_status import _parse_status
-from huesync.models import Profile
-from huesync.player_manager import ActiveSession, PlayerManager
-from huesync.storage import Storage
-from huesync.track_position import AirPlayTrackPositionSource, LmsTrackPositionSource, TrackPosition
+from lampastream.lms_follower import LmsFollower, LmsSyncGroupObserver
+from lampastream.lms_status import _parse_status
+from lampastream.models import Profile
+from lampastream.player_manager import ActiveSession, PlayerManager
+from lampastream.storage import Storage
+from lampastream.track_position import AirPlayTrackPositionSource, LmsTrackPositionSource, TrackPosition
 
 
 def item(code, data='', kind='ssnc'):
@@ -88,7 +88,7 @@ def test_lms_subscription_tracks_dynamic_target_without_playback_commands():
 
 def test_airplay_metadata_wrap_pause_seek_and_end(monkeypatch):
     clock = [100.0]
-    monkeypatch.setattr('huesync.track_position.time.monotonic', lambda: clock[0])
+    monkeypatch.setattr('lampastream.track_position.time.monotonic', lambda: clock[0])
     source = AirPlayTrackPositionSource()
     message = item('mdst') + item('minm', 'Song & One', 'core') + item('asar', 'Artist', 'core')
     for offset in range(0, len(message), 7):
@@ -170,7 +170,7 @@ def test_followers_expose_actual_target_without_changing_manual_behavior():
 
 
 def test_delivery_anchor_rebased_without_changing_snapshot():
-    with patch('huesync.track_position.time.monotonic', return_value=105):
+    with patch('lampastream.track_position.time.monotonic', return_value=105):
         snapshot = TrackPosition(position_s=10, duration_s=100, playing=True, observed_at=100)
         assert snapshot.for_delivery()['position_s'] == 15
         assert snapshot.position_s == 10
@@ -178,7 +178,7 @@ def test_delivery_anchor_rebased_without_changing_snapshot():
 
 
 def test_manager_selects_metadata_target_for_each_lms_mode(tmp_path):
-    from huesync.models import VirtualPlayer
+    from lampastream.models import VirtualPlayer
 
     async def run():
         manager = PlayerManager(Storage(tmp_path / 'config.json'))
@@ -204,8 +204,8 @@ def test_manager_selects_metadata_target_for_each_lms_mode(tmp_path):
 
 
 def test_lms_activation_seeds_current_track_without_newsong(tmp_path):
-    from huesync.lms_status import LmsPlayerStatus
-    from huesync.models import Coupling, VirtualPlayer
+    from lampastream.lms_status import LmsPlayerStatus
+    from lampastream.models import Coupling, VirtualPlayer
 
     async def run():
         storage = Storage(tmp_path / 'config.json')
@@ -224,7 +224,7 @@ def test_lms_activation_seeds_current_track_without_newsong(tmp_path):
              patch.object(manager, '_activate_lms_cava', side_effect=activate_audio), \
              patch.object(manager, '_apply_probe_for_master', new_callable=AsyncMock), \
              patch.object(LmsTrackPositionSource, 'open'), \
-             patch('huesync.player_manager.query_lms_status', return_value=current) as query:
+             patch('lampastream.player_manager.query_lms_status', return_value=current) as query:
             await manager._activate_lms(session, session.profile, player, None, None, [])
             manager._active = session
             await session.poller_task
@@ -252,11 +252,11 @@ def test_airplay_stop_go_keeps_current_metadata_and_shutdown_closes_reader(tmp_p
         driver.aclose = AsyncMock()
         engine = MagicMock()
         engine.run = AsyncMock()
-        with patch('huesync.player_manager.AirPlayTrackPositionSource', return_value=source), \
-             patch('huesync.player_manager.AirPlayPipeStereoSource'), \
-             patch('huesync.player_manager._make_canonical_pipeline'), \
-             patch('huesync.player_manager.SyncEngine', return_value=engine), \
-             patch('huesync.player_manager.HueDriver', return_value=driver), \
+        with patch('lampastream.player_manager.AirPlayTrackPositionSource', return_value=source), \
+             patch('lampastream.player_manager.AirPlayPipeStereoSource'), \
+             patch('lampastream.player_manager._make_canonical_pipeline'), \
+             patch('lampastream.player_manager.SyncEngine', return_value=engine), \
+             patch('lampastream.player_manager.HueDriver', return_value=driver), \
              patch.object(manager, '_configure_shairport_name', return_value=False):
             session = ActiveSession(Profile())
             await manager._activate_airplay(session, session.profile, None, None, [])
@@ -292,8 +292,8 @@ def test_airplay_stop_go_keeps_current_metadata_and_shutdown_closes_reader(tmp_p
 
 
 def test_sync_group_target_query_seeds_track_on_activation(tmp_path):
-    from huesync.lms_status import LmsPlayerStatus
-    from huesync.models import VirtualPlayer
+    from lampastream.lms_status import LmsPlayerStatus
+    from lampastream.models import VirtualPlayer
 
     async def run():
         manager = PlayerManager(Storage(tmp_path / 'config.json'))
@@ -307,7 +307,7 @@ def test_sync_group_target_query_seeds_track_on_activation(tmp_path):
              patch.object(LmsTrackPositionSource, 'open'), \
              patch.object(LmsSyncGroupObserver, 'start',
                           side_effect=lambda: asyncio.create_task(asyncio.sleep(100))), \
-             patch('huesync.player_manager.query_lms_status', return_value=current) as query:
+             patch('lampastream.player_manager.query_lms_status', return_value=current) as query:
             await manager._activate_lms(session, session.profile, player, None, None, [])
             manager._active = session
             await session.follower._set_target('aa:bb:cc:00:00:01')
@@ -321,7 +321,7 @@ def test_sync_group_target_query_seeds_track_on_activation(tmp_path):
 
 
 def test_initial_lms_snapshot_survives_subscription_start():
-    from huesync.lms_status import LmsPlayerStatus
+    from lampastream.lms_status import LmsPlayerStatus
 
     async def run():
         reader = asyncio.StreamReader()

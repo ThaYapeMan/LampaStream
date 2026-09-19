@@ -3,11 +3,11 @@
 Runs automatically during `pip install .` (editable or wheel).
 
 Git hash and native library are generated outside the checkout and included in the wheel.
-HUESYNC_BUILD_COMMIT supplies the revision for a git-archive build.
+LAMPASTREAM_BUILD_COMMIT supplies the revision for a git-archive build.
 
-cavacore: compiles src/huesync/cavacore/cavacore.c + _bridge.c into
-_libcavacore.so using gcc and libfftw3.  The standard HueSync installer
-(scripts/install-huesync.sh) installs the required system packages automatically before
+cavacore: compiles src/lampastream/cavacore/cavacore.c + _bridge.c into
+_libcavacore.so using gcc and libfftw3.  The standard LampaStream installer
+(scripts/install-lampastream.sh) installs the required system packages automatically before
 calling pip install:
     scripts/native-build-packages.txt
 This shared Debian/Ubuntu package list also drives CI and the development/wheel
@@ -36,7 +36,7 @@ class CustomBuildHook(BuildHookInterface):
         # Mark wheel as platform-specific (contains a compiled .so).
         build_data["pure_python"] = False
         build_data["infer_tag"] = True
-        self._generated = tempfile.TemporaryDirectory(prefix="huesync-build-")
+        self._generated = tempfile.TemporaryDirectory(prefix="lampastream-build-")
         try:
             self._write_commit_file()
             self._build_cavacore()
@@ -45,8 +45,8 @@ class CustomBuildHook(BuildHookInterface):
             raise
         generated = Path(self._generated.name)
         build_data.setdefault("force_include", {}).update({
-            str(generated / "_commit.py"): "huesync/_commit.py",
-            str(generated / "_libcavacore.so"): "huesync/cavacore/_libcavacore.so",
+            str(generated / "_commit.py"): "lampastream/_commit.py",
+            str(generated / "_libcavacore.so"): "lampastream/cavacore/_libcavacore.so",
         })
 
     def finalize(self, version: str, build_data: dict, artifact_path: str) -> None:
@@ -65,24 +65,24 @@ class CustomBuildHook(BuildHookInterface):
         except Exception:
             git_hash = "unknown"
 
-        git_hash = os.environ.get("HUESYNC_BUILD_COMMIT", git_hash)
+        git_hash = os.environ.get("LAMPASTREAM_BUILD_COMMIT", git_hash)
         if git_hash != "unknown" and not re.fullmatch(r"[0-9a-f]{7,40}", git_hash):
-            raise ValueError("HUESYNC_BUILD_COMMIT must be a Git hexadecimal revision")
+            raise ValueError("LAMPASTREAM_BUILD_COMMIT must be a Git hexadecimal revision")
         commit_file = Path(self._generated.name) / "_commit.py"
         commit_file.write_text(f'COMMIT = "{git_hash}"\n')
 
     def _build_cavacore(self) -> None:
         import shutil
-        cava_dir = Path(self.root) / "src" / "huesync" / "cavacore"
+        cava_dir = Path(self.root) / "src" / "lampastream" / "cavacore"
         out = Path(self._generated.name) / "_libcavacore.so"
 
         # Pre-flight: fail fast with an actionable message if build tools are absent.
-        # scripts/install-huesync.sh installs these before calling pip install.
+        # scripts/install-lampastream.sh installs these before calling pip install.
         if shutil.which("gcc") is None:
             raise RuntimeError(
                 "cavacore build requires gcc, which was not found in PATH.\n"
-                "Run the standard HueSync installer (installs this automatically):\n"
-                "  bash scripts/install-huesync.sh\n"
+                "Run the standard LampaStream installer (installs this automatically):\n"
+                "  bash scripts/install-lampastream.sh\n"
                 "Or install manually:  apt install build-essential"
             )
 
@@ -96,8 +96,8 @@ class CustomBuildHook(BuildHookInterface):
         if fftw_check.returncode != 0:
             raise RuntimeError(
                 "cavacore build requires libfftw3-dev (fftw3.h not found by gcc).\n"
-                "Run the standard HueSync installer (installs this automatically):\n"
-                "  bash scripts/install-huesync.sh\n"
+                "Run the standard LampaStream installer (installs this automatically):\n"
+                "  bash scripts/install-lampastream.sh\n"
                 "Or install manually:  apt install libfftw3-dev"
             )
 
@@ -118,7 +118,7 @@ class CustomBuildHook(BuildHookInterface):
             print(result.stderr, file=sys.stderr)
             raise RuntimeError(
                 "cavacore native build failed.\n"
-                "Run the standard HueSync installer:  bash scripts/install-huesync.sh\n"
+                "Run the standard LampaStream installer:  bash scripts/install-lampastream.sh\n"
                 f"Command: {' '.join(cmd)}\n"
                 f"Compiler output:\n{result.stderr.strip()}"
             )

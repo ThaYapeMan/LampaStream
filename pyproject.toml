@@ -1,5 +1,5 @@
 [project]
-name = "huesync"
+name = "lampastream"
 version = "0.2.0"
 description = "Spectrum-reactive Philips Hue Entertainment lighting driven by LMS or AirPlay 2."
 readme = "README.md"
@@ -26,7 +26,7 @@ calibration = [
 ]
 
 [project.scripts]
-huesync = "huesync.app:main"
+lampastream = "lampastream.app:main"
 
 [build-system]
 requires = ["hatchling"]
@@ -35,7 +35,7 @@ build-backend = "hatchling.build"
 [tool.hatch.build.hooks.custom]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/huesync"]
+packages = ["src/lampastream"]
 # Native library and commit metadata are generated and force-included by the build hook.
 # webui/ assets are built in the isolated installer source copy before wheel collection.
 

@@ -11,7 +11,7 @@ from unittest.mock import MagicMock
 import numpy as np
 from pipeline_factory import make_pipeline
 
-from huesync.canonicalizer import (
+from lampastream.canonicalizer import (
     AudioCanonicalizer,
     CanonicalData,
     EndOfStream,
@@ -19,14 +19,14 @@ from huesync.canonicalizer import (
     StreamInvalidated,
     TemporarilyNoData,
 )
-from huesync.pcm_source import (
+from lampastream.pcm_source import (
     AIRPLAY_SAMPLE_RATE,
     AirPlayPipeStereoSource,
 )
-from huesync.spectrum_engine import _V2_NOISE_FLOOR, V2SpectrumEngine
+from lampastream.spectrum_engine import _V2_NOISE_FLOOR, V2SpectrumEngine
 
 # Import StereoMagStft directly (it is defined in sync_engine).
-from huesync.sync_engine import (
+from lampastream.sync_engine import (
     _CAP_SAMPLE_RATE,
     CanonicalAnalysisPipeline,
     MultibandStftPipeline,
@@ -69,7 +69,7 @@ def _make_canonical_frame(
     sample_pos: int = 0,
     over_range: bool = False,
 ) -> CanonicalData:
-    from huesync.canonicalizer import AnalysisPcmFrame
+    from lampastream.canonicalizer import AnalysisPcmFrame
 
     frame = AnalysisPcmFrame(
         samples=samples,
@@ -236,7 +236,7 @@ def test_stereo_mag_stft_different_frequencies():
 
 def test_stereo_mag_stft_hop():
     """hop property matches PcmStft at same sample rate."""
-    from huesync.pcm_source import PcmStft
+    from lampastream.pcm_source import PcmStft
 
     sr = 48000
     stft_stereo = StereoMagStft(sr)
@@ -257,7 +257,7 @@ def test_stereo_mag_stft_n_bins():
 
 def test_stft_onset_push_mag_matches_push():
     """StftOnsetPipeline.push_mag() on pre-computed frames matches push() on same samples."""
-    from huesync.pcm_source import PcmStft
+    from lampastream.pcm_source import PcmStft
 
     sr = 44100
     n = 8192
@@ -363,7 +363,7 @@ def test_v2_legacy_mono_downmix_would_cancel():
     This is the regression the new path is designed to avoid.  This test
     directly verifies the failure mode; CanonicalAnalysisPipeline never takes this path.
     """
-    from huesync.pcm_source import PcmStft
+    from lampastream.pcm_source import PcmStft
 
     sr = _CANONICAL_RATE
     n = _WINDOW * 8
@@ -633,7 +633,7 @@ def test_v2_chunk_independence_max_bar():
 
 def test_v2_produces_audiofeatures_shape():
     """latest() produces an AudioFeatures with the required fields."""
-    from huesync.types import AudioFeatures
+    from lampastream.types import AudioFeatures
 
     p = _make_pipeline()
     sig = _sine_stereo(440, 440, 0.5, 0.5, n=3 * _CANONICAL_RATE)
@@ -672,9 +672,9 @@ def test_v2_hpss_inactive():
 
 def test_v2_layermixer_fallback_via_sustained_none():
     """EnergyProfile LayerMixer fallback: when sustained_energy is None, uses full."""
-    from huesync.models import Profile
-    from huesync.sync_engine import LayerMixer
-    from huesync.types import AudioFeatures
+    from lampastream.models import Profile
+    from lampastream.sync_engine import LayerMixer
+    from lampastream.types import AudioFeatures
 
     p_model = Profile(id="test", name="test")
     lm = LayerMixer(p_model, p_model)
@@ -697,9 +697,9 @@ def test_v2_layermixer_fallback_via_sustained_none():
 
 def test_v2_effects_consume_audiofeatures():
     """Existing effect renderers can consume V2 AudioFeatures without error."""
-    from huesync.models import Profile
-    from huesync.sync_engine import _MonoPulseRenderer, _SpectrumRgbRenderer
-    from huesync.types import AudioFeatures
+    from lampastream.models import Profile
+    from lampastream.sync_engine import _MonoPulseRenderer, _SpectrumRgbRenderer
+    from lampastream.types import AudioFeatures
 
     profile = Profile(id="test", name="test")
     features = AudioFeatures(
@@ -836,7 +836,7 @@ def test_full_airplay_path_in_phase_nonzero_bars():
 def test_one_ingress_audit_activate_airplay():
     """The _activate_airplay method instantiates exactly AirPlayPipeStereoSource
     (not the legacy AirPlayPipeSource) — verified by patch check."""
-    import huesync.player_manager as pm
+    import lampastream.player_manager as pm
     # The production code now uses AirPlayPipeStereoSource only.
     # Verify the legacy class is NOT imported at the module level.
     assert not hasattr(pm, "AirPlayPipeSource"), (
@@ -850,7 +850,7 @@ def test_one_ingress_audit_activate_airplay():
 
 def test_legacy_airplay_source_not_in_player_manager_imports():
     """Legacy AirPlayPipeSource must not be a name in the player_manager module namespace."""
-    import huesync.player_manager as pm
+    import lampastream.player_manager as pm
     assert "AirPlayPipeSource" not in dir(pm), (
         "AirPlayPipeSource must not be in player_manager namespace after Phase 3"
     )
@@ -865,7 +865,7 @@ def test_lms_path_uses_canonical_pipeline():
     """The LMS PCM sub-path routes through _make_canonical_pipeline (v2 or cavacore)."""
     import inspect
 
-    import huesync.player_manager as pm
+    import lampastream.player_manager as pm
 
     src = inspect.getsource(pm.PlayerManager._activate_lms_pcm)
     # Must use the shared factory — not the old mono PcmAudioPipeline.
@@ -881,7 +881,7 @@ def test_lms_path_uses_canonical_pipeline():
 
 def test_shared_factory_in_player_manager():
     """_make_canonical_pipeline is a module-level factory in player_manager."""
-    import huesync.player_manager as pm
+    import lampastream.player_manager as pm
 
     assert hasattr(pm, "_make_canonical_pipeline"), (
         "_make_canonical_pipeline must be a module-level factory"
@@ -900,7 +900,7 @@ def _run_one_canonical_patch(self, cresult):
     Mirrors the CanonicalAnalysisPipeline._run() dispatch exactly so the tests
     exercise the real production paths via the inner CAP instance.
     """
-    from huesync.canonicalizer import CanonicalData
+    from lampastream.canonicalizer import CanonicalData
 
     cap = self
     if isinstance(cresult, CanonicalData):
@@ -1073,7 +1073,7 @@ def test_v2_epoch_reset_clears_peak_ema():
 
 def test_static_audit_default_gate_unchanged():
     """BandNormaliser.DEFAULT_GATE must remain 5.0 — it is correct for cava output."""
-    from huesync.sync_engine import BandNormaliser
+    from lampastream.sync_engine import BandNormaliser
 
     assert BandNormaliser.DEFAULT_GATE == 5.0, (
         f"DEFAULT_GATE changed from 5.0 to {BandNormaliser.DEFAULT_GATE} — "
@@ -1085,7 +1085,7 @@ def test_static_audit_cava_pipeline_uses_default_gate():
     """CavaPipeline must continue to use DEFAULT_GATE (not gate=0.0)."""
     import inspect
 
-    from huesync.sync_engine import CavaPipeline
+    from lampastream.sync_engine import CavaPipeline
 
     src = inspect.getsource(CavaPipeline.__init__)
     assert "gate=0.0" not in src, (

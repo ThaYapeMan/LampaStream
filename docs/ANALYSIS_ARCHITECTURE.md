@@ -40,7 +40,7 @@ V2 and Beat reuse its output. There is no second V2 FFT.
 
 Embedded CAVA consumes canonical PCM directly. Its native path preserves upstream
 4096 normal / 8192 bass FFTs, Hann windows, independent channels, band mapping,
-compensation, autosensitivity, integral, gravity/fall and noise reduction. HueSync
+compensation, autosensitivity, integral, gravity/fall and noise reduction. LampaStream
 schedules 480 stereo frames per execution: **100 Hz source-audio cadence**.
 Boundary conversion is float64 interleaved PCM ×32768. Conditioned channel bars
 are averaged; no second V2 Spectrum conditioning follows CAVA.

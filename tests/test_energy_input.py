@@ -4,11 +4,11 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from huesync.energy_input import EnergyInput
-from huesync.models import EnergyProfile, Profile
-from huesync.spectrum_engine import ProcessorUpdate
-from huesync.sync_engine import LayerMixer, SyncEngine, _smoothstep
-from huesync.types import AudioFeatures
+from lampastream.energy_input import EnergyInput
+from lampastream.models import EnergyProfile, Profile
+from lampastream.spectrum_engine import ProcessorUpdate
+from lampastream.sync_engine import LayerMixer, SyncEngine, _smoothstep
+from lampastream.types import AudioFeatures
 
 
 def features(lufs=-11.0, sustained=0.0, full=.2):
@@ -96,7 +96,7 @@ def test_sync_engine_uses_freshest_loudness_without_mutating_spectrum_publicatio
     async def stop_after_tick(_):
         raise asyncio.CancelledError
 
-    monkeypatch.setattr("huesync.sync_engine.asyncio.sleep", stop_after_tick)
+    monkeypatch.setattr("lampastream.sync_engine.asyncio.sleep", stop_after_tick)
     with pytest.raises(asyncio.CancelledError):
         asyncio.run(engine.run(MagicMock()))
     assert engine.last_energy_input == pytest.approx(19/22)

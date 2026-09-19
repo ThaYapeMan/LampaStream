@@ -71,7 +71,7 @@ from phase2a_r_compare import (
     NativeAnalyser as NativeAnalyserR,
 )
 
-from huesync.sync_engine import BandNormaliser
+from lampastream.sync_engine import BandNormaliser
 
 # ---------------------------------------------------------------------------
 # 1. BandNormaliser cadence invariance

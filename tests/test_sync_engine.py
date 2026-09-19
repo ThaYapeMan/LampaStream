@@ -1,8 +1,8 @@
 import numpy as np
 import pytest
 
-from huesync.models import Profile
-from huesync.sync_engine import (
+from lampastream.models import Profile
+from lampastream.sync_engine import (
     BandNormaliser,
     ColourModeEffect,
     OnsetDetector,
@@ -12,7 +12,7 @@ from huesync.sync_engine import (
     _band_avg,
     _hz_to_frac,
 )
-from huesync.types import AudioFeatures, Position
+from lampastream.types import AudioFeatures, Position
 
 # ---------------------------------------------------------------------------
 # Helper
@@ -902,7 +902,7 @@ def test_sync_engine_update_profile_takes_effect():
 
 def test_update_onset_pipeline_clears_state():
     """update_onset_pipeline() resets all onset flags regardless of shm source."""
-    from huesync.sync_engine import SyncEngine
+    from lampastream.sync_engine import SyncEngine
 
     fifo = "/tmp/_nonexistent_fifo_for_test_pipeline"
     profile = Profile(onset_method="combined")
@@ -923,7 +923,7 @@ def test_update_onset_pipeline_clears_state():
 
 def test_update_onset_pipeline_without_shm_nulls_pipelines():
     """Without a SHM source attached, all PCM pipelines are None after update."""
-    from huesync.sync_engine import SyncEngine
+    from lampastream.sync_engine import SyncEngine
 
     fifo = "/tmp/_nonexistent_fifo_for_test_pipeline2"
     engine = SyncEngine(fifo, Profile(onset_method="combined"))
@@ -937,7 +937,7 @@ def test_update_onset_pipeline_without_shm_nulls_pipelines():
 def test_update_render_updates_exertion_clip():
     """update_render() must propagate the new exertion_clip to BandNormaliser
     via the shared .normaliser property — without requiring a specific pipeline type."""
-    from huesync.sync_engine import SyncEngine
+    from lampastream.sync_engine import SyncEngine
 
     fifo = "/tmp/_nonexistent_fifo_for_test_render"
     profile = Profile(exertion_clip=3.0)
@@ -953,7 +953,7 @@ def test_update_render_updates_exertion_clip():
 
 def test_update_render_replaces_effect():
     """update_render() must create a new LayerMixer with the updated profile."""
-    from huesync.sync_engine import LayerMixer, SyncEngine
+    from lampastream.sync_engine import LayerMixer, SyncEngine
 
     fifo = "/tmp/_nonexistent_fifo_for_test_render2"
     profile = Profile(sensitivity=1.0)
@@ -971,7 +971,7 @@ def test_update_render_replaces_effect():
 
 def test_band_normaliser_update_exertion_clip_preserves_ema():
     """update_exertion_clip() changes the clip ratio without touching EMA state."""
-    from huesync.sync_engine import BandNormaliser
+    from lampastream.sync_engine import BandNormaliser
 
     norm = BandNormaliser(exertion_clip=3.0)
     # Warm up EMA with a frame so _ema is no longer None.
@@ -992,7 +992,7 @@ def test_band_normaliser_update_exertion_clip_preserves_ema():
 
 def test_layer_mixer_low_energy_stays_mellow():
     """At energy=0.0, mix stays near 0 (pure mellow output)."""
-    from huesync.sync_engine import LayerMixer
+    from lampastream.sync_engine import LayerMixer
 
     active_profile = Profile(
         effect_type="mono_pulse",  # active layer → grey
@@ -1018,7 +1018,7 @@ def test_layer_mixer_low_energy_stays_mellow():
 
 def test_layer_mixer_high_energy_drives_active():
     """At energy=1.0, mix converges toward 1 (pure active output)."""
-    from huesync.sync_engine import LayerMixer
+    from lampastream.sync_engine import LayerMixer
 
     active_profile = Profile(
         effect_type="mono_pulse",
@@ -1044,7 +1044,7 @@ def test_layer_mixer_high_energy_drives_active():
 
 def test_layer_mixer_smooth_transition_no_jumps():
     """A gradual energy ramp must produce a monotonically non-decreasing mix."""
-    from huesync.sync_engine import LayerMixer
+    from lampastream.sync_engine import LayerMixer
 
     active_profile = Profile(
         effect_type="mono_pulse",
@@ -1076,7 +1076,7 @@ def test_layer_mixer_smooth_transition_no_jumps():
 
 def test_layer_mixer_output_is_lerp_of_layers():
     """At mix=0.5 (instantaneous EMA), output colour is the midpoint of both layers."""
-    from huesync.sync_engine import ColourModeEffect, LayerMixer
+    from lampastream.sync_engine import ColourModeEffect, LayerMixer
 
     # Construct profiles where smoothstep(energy=0.5, lo=0.5, hi=0.5) lands mid-range.
     # Check that the mixer output is between what the two layers produce individually.
@@ -1119,7 +1119,7 @@ def test_layer_mixer_output_is_lerp_of_layers():
 
 def test_sync_engine_publishes_last_mix():
     """SyncEngine.last_mix must be 0.0 on construction (before any frames)."""
-    from huesync.sync_engine import SyncEngine
+    from lampastream.sync_engine import SyncEngine
 
     engine = SyncEngine("/tmp/_nonexistent_fifo_last_mix", Profile())
     assert engine.last_mix == pytest.approx(0.0)
@@ -1150,8 +1150,8 @@ def _prof(**kw) -> Profile:
 
 def test_none_effect_is_black():
     """None effect returns Colour.BLACK regardless of input (even onset=True, full=1.0)."""
-    from huesync.sync_engine import ColourModeEffect
-    from huesync.types import Colour
+    from lampastream.sync_engine import ColourModeEffect
+    from lampastream.types import Colour
 
     effect = ColourModeEffect(_prof(effect_type="none"))
     for onset in (False, True):
@@ -1162,7 +1162,7 @@ def test_none_effect_is_black():
 
 def test_pulses_spikes_on_onset():
     """Brightness after onset frame is significantly brighter than before."""
-    from huesync.sync_engine import ColourModeEffect
+    from lampastream.sync_engine import ColourModeEffect
 
     effect = ColourModeEffect(_prof(effect_type="pulses", effect_decay=0.3))
     before = effect.render(_ef(onset=False, full=0.0), 0.0).color_at(_ORIGIN, 0.0)
@@ -1174,7 +1174,7 @@ def test_pulses_spikes_on_onset():
 
 def test_pulses_decays_after_onset():
     """After an onset, brightness decreases monotonically over 10 silence frames."""
-    from huesync.sync_engine import ColourModeEffect
+    from lampastream.sync_engine import ColourModeEffect
 
     effect = ColourModeEffect(_prof(effect_type="pulses", effect_decay=0.3))
     effect.render(_ef(onset=True, full=0.0), 0.0)  # trigger onset
@@ -1190,7 +1190,7 @@ def test_pulses_decays_after_onset():
 
 def test_flashes_dark_without_onset():
     """After 15 no-onset frames, brightness falls below 0.05."""
-    from huesync.sync_engine import ColourModeEffect
+    from lampastream.sync_engine import ColourModeEffect
 
     effect = ColourModeEffect(_prof(effect_type="flashes", effect_decay=0.5))
     for _ in range(15):
@@ -1200,7 +1200,7 @@ def test_flashes_dark_without_onset():
 
 def test_flashes_bright_on_onset():
     """Onset frame produces brightness significantly above the floor."""
-    from huesync.sync_engine import ColourModeEffect
+    from lampastream.sync_engine import ColourModeEffect
 
     # Use very small decay so the envelope stays high after onset.
     effect = ColourModeEffect(_prof(effect_type="flashes", effect_decay=0.01))
@@ -1215,7 +1215,7 @@ def test_splotches_differs_by_position():
     With seed=1 (post first onset): sin(0.0*3.7+1.1)≈+0.89, sin(-0.5*3.7+1.1)≈-0.68.
     The positive position gets envelope*sensitivity; the negative position gets floor=0.
     """
-    from huesync.sync_engine import ColourModeEffect
+    from lampastream.sync_engine import ColourModeEffect
 
     effect = ColourModeEffect(_prof(effect_type="splotches", effect_decay=0.1, sensitivity=1.5))
     scene = effect.render(_ef(onset=True, full=0.5), 0.0)
@@ -1231,7 +1231,7 @@ def test_splotches_differs_by_position():
 
 def test_fireworks_radiates_spatially():
     """After onset, scene has spatial variation across 5 spread positions."""
-    from huesync.sync_engine import ColourModeEffect
+    from lampastream.sync_engine import ColourModeEffect
 
     effect = ColourModeEffect(_prof(effect_type="fireworks", effect_speed=1.0))
     # Trigger onset at t=0; sample the scene at a slightly later time so the
@@ -1249,7 +1249,7 @@ def test_fireworks_radiates_spatially():
 
 def test_swirl_differs_by_position():
     """Swirl scene produces different colours at different x-positions."""
-    from huesync.sync_engine import ColourModeEffect
+    from lampastream.sync_engine import ColourModeEffect
 
     effect = ColourModeEffect(_prof(effect_type="swirl", effect_speed=1.0))
     scene = effect.render(_ef(onset=False, full=0.5), 0.0)
@@ -1264,7 +1264,7 @@ def test_swirl_differs_by_position():
 
 def test_wave_differs_by_position():
     """Wave scene produces different brightness at different x-positions."""
-    from huesync.sync_engine import ColourModeEffect
+    from lampastream.sync_engine import ColourModeEffect
 
     effect = ColourModeEffect(_prof(effect_type="wave", effect_speed=1.0))
     scene = effect.render(_ef(onset=False, full=0.5), 1.0)
@@ -1279,7 +1279,7 @@ def test_wave_differs_by_position():
 
 def test_spectrum_rgb_spatial_differs_by_position():
     """Spectrum RGB Spatial scene produces different colours at different x-positions."""
-    from huesync.sync_engine import ColourModeEffect
+    from lampastream.sync_engine import ColourModeEffect
 
     effect = ColourModeEffect(_prof(effect_type="spectrum_rgb_spatial"))
     scene = effect.render(_ef(onset=False, full=0.5), 0.0)
@@ -1294,7 +1294,7 @@ def test_spectrum_rgb_spatial_differs_by_position():
 
 def test_solid_uniform_across_positions():
     """Solid effect returns the same colour at all positions."""
-    from huesync.sync_engine import ColourModeEffect
+    from lampastream.sync_engine import ColourModeEffect
 
     effect = ColourModeEffect(_prof(effect_type="solid"))
     scene = effect.render(_ef(onset=False, full=0.5, centroid=0.5), 0.0)
@@ -1306,8 +1306,8 @@ def test_solid_uniform_across_positions():
 
 def test_all_active_effects_non_black_on_onset():
     """spectrum_rgb, mono_pulse, pulses, flashes each produce non-black on onset."""
-    from huesync.sync_engine import ColourModeEffect
-    from huesync.types import Colour
+    from lampastream.sync_engine import ColourModeEffect
+    from lampastream.types import Colour
 
     effects_to_test = ["spectrum_rgb", "mono_pulse", "pulses", "flashes"]
     features = _ef(onset=True, full=0.5)
@@ -1325,7 +1325,7 @@ def test_pulses_colour_follows_spectrum():
     Bass-heavy bars (first 8 high, rest low) must give red-dominant output
     because bass maps to the R channel in the spectrum colour split.
     """
-    from huesync.sync_engine import ColourModeEffect
+    from lampastream.sync_engine import ColourModeEffect
 
     bars = [1.0] * 8 + [0.1] * 22  # heavy bass, quiet mids and treble
     features = AudioFeatures(
@@ -1345,8 +1345,8 @@ def test_pulses_colour_follows_spectrum():
 
 def test_fireworks_dark_before_any_onset():
     """Fireworks shows no ambient glow before the first onset."""
-    from huesync.sync_engine import ColourModeEffect
-    from huesync.types import Colour
+    from lampastream.sync_engine import ColourModeEffect
+    from lampastream.types import Colour
 
     effect = ColourModeEffect(_prof(effect_type="fireworks"))
     scene = effect.render(_ef(onset=False, full=0.5), t=5.0)
@@ -1359,7 +1359,7 @@ def test_fireworks_dark_before_any_onset():
 
 def test_fireworks_burst_and_decay():
     """Fireworks: peak brightness right after onset, clear decay over subsequent frames."""
-    from huesync.sync_engine import ColourModeEffect
+    from lampastream.sync_engine import ColourModeEffect
 
     effect = ColourModeEffect(_prof(effect_type="fireworks", effect_speed=1.0, effect_decay=0.3))
     positions = [Position(x, 0.0, 0.0) for x in (-0.9, -0.45, 0.0, 0.45, 0.9)]
@@ -1391,7 +1391,7 @@ def test_fireworks_bright_at_onset_regardless_of_position():
     Without flash the light would have to wait for a particle to travel 1.8 units,
     but the flash ensures full brightness immediately.
     """
-    from huesync.sync_engine import ColourModeEffect
+    from lampastream.sync_engine import ColourModeEffect
 
     effect = ColourModeEffect(_prof(effect_type="fireworks", effect_speed=1.0, effect_decay=0.3))
     # Trigger onset at t=0; sin(0)*0.9=0.0 but we fabricate onset at a known non-zero time
@@ -1411,7 +1411,7 @@ def test_fireworks_bright_at_onset_regardless_of_position():
 
 def test_pulses_attack_is_not_instant():
     """Onset rise must be an exponential approach, not an instant 0→1 spike."""
-    from huesync.sync_engine import ColourModeEffect
+    from lampastream.sync_engine import ColourModeEffect
 
     effect = ColourModeEffect(_prof(effect_type="pulses", effect_decay=0.3))
     before = effect.render(_ef(onset=False, full=0.0), 0.0).color_at(_ORIGIN, 0.0)
@@ -1427,8 +1427,8 @@ def test_pulses_attack_is_not_instant():
 
 def test_fireworks_colour_follows_spectrum():
     """Fireworks captures spectrum hue at onset; bass-heavy bars give red-dominant burst."""
-    from huesync.sync_engine import ColourModeEffect
-    from huesync.types import AudioFeatures
+    from lampastream.sync_engine import ColourModeEffect
+    from lampastream.types import AudioFeatures
 
     bars = [1.0] * 8 + [0.1] * 22  # heavy bass, quiet mids and treble
     features = AudioFeatures(

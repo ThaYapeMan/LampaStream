@@ -19,11 +19,11 @@ from urllib.parse import unquote
 
 import pytest
 
-from huesync.lms_follower import LmsFollower, LmsSyncGroupObserver
-from huesync.track_position import LmsTrackPositionSource
+from lampastream.lms_follower import LmsFollower, LmsSyncGroupObserver
+from lampastream.track_position import LmsTrackPositionSource
 
 FOLLOW_MAC = "aa:bb:cc:dd:ee:ff"
-HUESYNC_MAC = "11:22:33:44:55:66"
+LAMPASTREAM_MAC = "11:22:33:44:55:66"
 THIRD_MAC = "cc:dd:ee:ff:00:11"   # unrelated player; must never receive any command
 MOCK_URL = "http://lms.local/music/track.flac"
 
@@ -39,9 +39,9 @@ class MockLmsServer:
 
     def __init__(self) -> None:
         self.received: list[str] = []
-        self.modes = {FOLLOW_MAC: "stop", HUESYNC_MAC: "stop"}
-        self.urls = {FOLLOW_MAC: MOCK_URL, HUESYNC_MAC: MOCK_URL}
-        self.positions = {FOLLOW_MAC: 196.0, HUESYNC_MAC: 0.0}
+        self.modes = {FOLLOW_MAC: "stop", LAMPASTREAM_MAC: "stop"}
+        self.urls = {FOLLOW_MAC: MOCK_URL, LAMPASTREAM_MAC: MOCK_URL}
+        self.positions = {FOLLOW_MAC: 196.0, LAMPASTREAM_MAC: 0.0}
         self.status_writers = {}
         self._event_writer: asyncio.StreamWriter | None = None
         self._listen_connected = asyncio.Event()
@@ -181,7 +181,7 @@ def test_newsong_triggers_play() -> None:
         server = MockLmsServer()
         port = await server.start()
 
-        follower = LmsFollower("127.0.0.1", FOLLOW_MAC, HUESYNC_MAC, cli_port=port)
+        follower = LmsFollower("127.0.0.1", FOLLOW_MAC, LAMPASTREAM_MAC, cli_port=port)
         task = follower.start()
 
         await asyncio.wait_for(server._listen_connected.wait(), timeout=2.0)
@@ -191,7 +191,7 @@ def test_newsong_triggers_play() -> None:
             "no playlist play command received after newsong"
         )
         cmd = server.play_commands()[0]
-        assert HUESYNC_MAC in cmd
+        assert LAMPASTREAM_MAC in cmd
         assert "playlist play" in cmd
         assert urlquote(MOCK_URL, safe="") in cmd
 
@@ -211,7 +211,7 @@ def test_newsong_from_other_player_ignored() -> None:
         server = MockLmsServer()
         port = await server.start()
 
-        follower = LmsFollower("127.0.0.1", FOLLOW_MAC, HUESYNC_MAC, cli_port=port)
+        follower = LmsFollower("127.0.0.1", FOLLOW_MAC, LAMPASTREAM_MAC, cli_port=port)
         task = follower.start()
 
         await asyncio.wait_for(server._listen_connected.wait(), timeout=2.0)
@@ -282,7 +282,7 @@ def test_follower_reconnects_after_disconnect() -> None:
         server = await asyncio.start_server(handle, "127.0.0.1", 0)
         port = server.sockets[0].getsockname()[1]
 
-        follower = LmsFollower("127.0.0.1", FOLLOW_MAC, HUESYNC_MAC, cli_port=port)
+        follower = LmsFollower("127.0.0.1", FOLLOW_MAC, LAMPASTREAM_MAC, cli_port=port)
         task = follower.start()
 
         # Wait for reconnect (second listen 1 connection, after 1s initial backoff).
@@ -304,8 +304,8 @@ def test_follower_reconnects_after_disconnect() -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_post_play_unsync_targets_only_huesync_and_follow_macs() -> None:
-    """After a newsong event, 'sync -' is sent to HueSync's own MAC and the
+def test_post_play_unsync_targets_only_lampastream_and_follow_macs() -> None:
+    """After a newsong event, 'sync -' is sent to LampaStream's own MAC and the
     followed player's MAC only.  No other player in the LMS environment
     (e.g. THIRD_MAC) receives any command.
 
@@ -316,7 +316,7 @@ def test_post_play_unsync_targets_only_huesync_and_follow_macs() -> None:
         server = MockLmsServer()
         port = await server.start()
 
-        follower = LmsFollower("127.0.0.1", FOLLOW_MAC, HUESYNC_MAC, cli_port=port)
+        follower = LmsFollower("127.0.0.1", FOLLOW_MAC, LAMPASTREAM_MAC, cli_port=port)
         task = follower.start()
 
         await asyncio.wait_for(server._listen_connected.wait(), timeout=2.0)
@@ -331,8 +331,8 @@ def test_post_play_unsync_targets_only_huesync_and_follow_macs() -> None:
 
         unsync_cmds = [c for c in server.received if "sync -" in c]
 
-        assert any(HUESYNC_MAC in c for c in unsync_cmds), (
-            f"'sync -' not sent for HueSync MAC {HUESYNC_MAC!r}; got: {unsync_cmds}"
+        assert any(LAMPASTREAM_MAC in c for c in unsync_cmds), (
+            f"'sync -' not sent for LampaStream MAC {LAMPASTREAM_MAC!r}; got: {unsync_cmds}"
         )
         assert any(FOLLOW_MAC in c for c in unsync_cmds), (
             f"'sync -' not sent for follow MAC {FOLLOW_MAC!r}; got: {unsync_cmds}"
@@ -360,7 +360,7 @@ def test_stop_terminates_follower() -> None:
         server = MockLmsServer()
         port = await server.start()
 
-        follower = LmsFollower("127.0.0.1", FOLLOW_MAC, HUESYNC_MAC, cli_port=port)
+        follower = LmsFollower("127.0.0.1", FOLLOW_MAC, LAMPASTREAM_MAC, cli_port=port)
         task = follower.start()
 
         await asyncio.wait_for(server._listen_connected.wait(), timeout=2.0)
@@ -374,35 +374,35 @@ def test_stop_terminates_follower() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Stop propagation: master stop → HueSync stop
+# Stop propagation: master stop → LampaStream stop
 # Root cause: _handle_line only handled newsong; stop events were silently
-# dropped, leaving HueSync playing after the master stopped.
+# dropped, leaving LampaStream playing after the master stopped.
 # ---------------------------------------------------------------------------
 
 
-def test_master_stop_sends_stop_to_huesync() -> None:
-    """'playlist stop' from the master must propagate as a stop command to HueSync.
+def test_master_stop_sends_stop_to_lampastream() -> None:
+    """'playlist stop' from the master must propagate as a stop command to LampaStream.
 
     Regression guard: before the fix, _handle_line only handled 'newsong'.
     A 'playlist stop' event from the master was silently ignored, leaving
-    HueSync's player running indefinitely after the master stopped.
+    LampaStream's player running indefinitely after the master stopped.
     """
     async def _test() -> None:
         server = MockLmsServer()
         port = await server.start()
 
-        follower = LmsFollower("127.0.0.1", FOLLOW_MAC, HUESYNC_MAC, cli_port=port)
+        follower = LmsFollower("127.0.0.1", FOLLOW_MAC, LAMPASTREAM_MAC, cli_port=port)
         task = follower.start()
 
         await asyncio.wait_for(server._listen_connected.wait(), timeout=2.0)
         await server.send_stop(FOLLOW_MAC)
 
         assert await _wait_for(lambda: len(server.stop_commands()) >= 1), (
-            "no stop command sent to HueSync after master 'playlist stop' event"
+            "no stop command sent to LampaStream after master 'playlist stop' event"
         )
         cmd = server.stop_commands()[0]
-        assert HUESYNC_MAC in cmd, (
-            f"stop command targeted wrong player; expected {HUESYNC_MAC!r}, got: {cmd!r}"
+        assert LAMPASTREAM_MAC in cmd, (
+            f"stop command targeted wrong player; expected {LAMPASTREAM_MAC!r}, got: {cmd!r}"
         )
 
         await _stop_follower(follower, task)
@@ -417,7 +417,7 @@ def test_stop_from_other_player_not_forwarded() -> None:
         server = MockLmsServer()
         port = await server.start()
 
-        follower = LmsFollower("127.0.0.1", FOLLOW_MAC, HUESYNC_MAC, cli_port=port)
+        follower = LmsFollower("127.0.0.1", FOLLOW_MAC, LAMPASTREAM_MAC, cli_port=port)
         task = follower.start()
 
         await asyncio.wait_for(server._listen_connected.wait(), timeout=2.0)
@@ -425,7 +425,7 @@ def test_stop_from_other_player_not_forwarded() -> None:
 
         await asyncio.sleep(0.3)
         assert len(server.stop_commands()) == 0, (
-            "stop command sent to HueSync after a stop from an unrelated player"
+            "stop command sent to LampaStream after a stop from an unrelated player"
         )
 
         await _stop_follower(follower, task)
@@ -434,8 +434,8 @@ def test_stop_from_other_player_not_forwarded() -> None:
     asyncio.run(_test())
 
 
-def test_master_pause_sends_pause_to_huesync() -> None:
-    """'playlist pause 1' from the master propagates as 'pause 1' to HueSync.
+def test_master_pause_sends_pause_to_lampastream() -> None:
+    """'playlist pause 1' from the master propagates as 'pause 1' to LampaStream.
 
     Also verifies that 'playlist pause 0' (resume) is forwarded correctly.
     """
@@ -443,7 +443,7 @@ def test_master_pause_sends_pause_to_huesync() -> None:
         server = MockLmsServer()
         port = await server.start()
 
-        follower = LmsFollower("127.0.0.1", FOLLOW_MAC, HUESYNC_MAC, cli_port=port)
+        follower = LmsFollower("127.0.0.1", FOLLOW_MAC, LAMPASTREAM_MAC, cli_port=port)
         task = follower.start()
 
         await asyncio.wait_for(server._listen_connected.wait(), timeout=2.0)
@@ -451,17 +451,17 @@ def test_master_pause_sends_pause_to_huesync() -> None:
         # Pause
         await server.send_pause(FOLLOW_MAC, state=1)
         assert await _wait_for(lambda: any("pause 1" in c for c in server.pause_commands())), (
-            "no 'pause 1' sent to HueSync after master pause event"
+            "no 'pause 1' sent to LampaStream after master pause event"
         )
         pause_cmds = [c for c in server.pause_commands() if "pause 1" in c]
-        assert any(HUESYNC_MAC in c for c in pause_cmds), (
+        assert any(LAMPASTREAM_MAC in c for c in pause_cmds), (
             f"pause targeted wrong player; got: {pause_cmds}"
         )
 
         # Resume
         await server.send_pause(FOLLOW_MAC, state=0)
         assert await _wait_for(lambda: any("pause 0" in c for c in server.pause_commands())), (
-            "no 'pause 0' sent to HueSync after master resume event"
+            "no 'pause 0' sent to LampaStream after master resume event"
         )
 
         await _stop_follower(follower, task)
@@ -475,13 +475,13 @@ def test_manual_connect_seeds_playback_before_newsong() -> None:
         server = MockLmsServer()
         server.modes[FOLLOW_MAC] = 'play'
         port = await server.start()
-        follower = LmsFollower('127.0.0.1', FOLLOW_MAC, HUESYNC_MAC, cli_port=port)
+        follower = LmsFollower('127.0.0.1', FOLLOW_MAC, LAMPASTREAM_MAC, cli_port=port)
         task = follower.start()
         try:
             assert await _wait_for(lambda: f'{FOLLOW_MAC} sync -' in server.received)
             assert server.play_commands() == [
-                f'{HUESYNC_MAC} playlist play {urlquote(MOCK_URL, safe="")}']
-            assert f'{HUESYNC_MAC} sync -' in server.received
+                f'{LAMPASTREAM_MAC} playlist play {urlquote(MOCK_URL, safe="")}']
+            assert f'{LAMPASTREAM_MAC} sync -' in server.received
             # A subsequent newsong still takes the existing mirroring path once.
             server.urls[FOLLOW_MAC] = 'http://lms.local/next.flac'
             await server.send_newsong(FOLLOW_MAC, 1)
@@ -501,7 +501,7 @@ def test_manual_connect_does_not_start_inactive_target(mode) -> None:
         server = MockLmsServer()
         server.modes[FOLLOW_MAC] = mode
         port = await server.start()
-        follower = LmsFollower('127.0.0.1', FOLLOW_MAC, HUESYNC_MAC, cli_port=port)
+        follower = LmsFollower('127.0.0.1', FOLLOW_MAC, LAMPASTREAM_MAC, cli_port=port)
         task = follower.start()
         try:
             assert await _wait_for(lambda: f'{FOLLOW_MAC} mode ?' in server.received)
@@ -518,7 +518,7 @@ def test_sync_group_connect_never_seeds_or_mirrors_playback() -> None:
         server = MockLmsServer()
         server.modes[FOLLOW_MAC] = 'play'
         port = await server.start()
-        follower = LmsSyncGroupObserver('127.0.0.1', HUESYNC_MAC, lambda: [HUESYNC_MAC],
+        follower = LmsSyncGroupObserver('127.0.0.1', LAMPASTREAM_MAC, lambda: [LAMPASTREAM_MAC],
                                        AsyncMock(), cli_port=port)
         task = follower.start()
         try:
@@ -545,14 +545,14 @@ def test_manual_reconnect_skips_only_already_playing_same_url(
         server = MockLmsServer()
         server.modes[FOLLOW_MAC] = 'play'
         port = await server.start()
-        follower = LmsFollower('127.0.0.1', FOLLOW_MAC, HUESYNC_MAC, cli_port=port)
+        follower = LmsFollower('127.0.0.1', FOLLOW_MAC, LAMPASTREAM_MAC, cli_port=port)
         task = follower.start()
         try:
             assert await _wait_for(lambda: f'{FOLLOW_MAC} sync -' in server.received)
-            server.modes[HUESYNC_MAC] = own_mode
-            server.urls[HUESYNC_MAC] = own_url
+            server.modes[LAMPASTREAM_MAC] = own_mode
+            server.urls[LAMPASTREAM_MAC] = own_url
             server._event_writer.close()
-            assert await _wait_for(lambda: server.received.count(f'{HUESYNC_MAC} mode ?') == 2,
+            assert await _wait_for(lambda: server.received.count(f'{LAMPASTREAM_MAC} mode ?') == 2,
                                    timeout=4)
             await asyncio.sleep(0.2)
             assert len(server.play_commands()) == expected_plays
@@ -568,13 +568,13 @@ def test_seed_seeks_current_position_only_after_play_and_newsong_never_seeks():
         server = MockLmsServer()
         server.modes[FOLLOW_MAC] = 'play'
         port = await server.start()
-        follower = LmsFollower('127.0.0.1', FOLLOW_MAC, HUESYNC_MAC, cli_port=port)
+        follower = LmsFollower('127.0.0.1', FOLLOW_MAC, LAMPASTREAM_MAC, cli_port=port)
         task = follower.start()
         try:
             assert await _wait_for(lambda: any(' time ' in c for c in server.received))
             seeks = [c for c in server.received if ' time ' in c]
             assert len(server.play_commands()) == len(seeks) == 1
-            assert seeks[0].startswith(f'{HUESYNC_MAC} time ')
+            assert seeks[0].startswith(f'{LAMPASTREAM_MAC} time ')
             assert 196 <= float(seeks[0].split()[2]) < 197
             assert (server.received.index(server.play_commands()[0])
                     < server.received.index(seeks[0]))
@@ -601,7 +601,7 @@ def test_manual_pause_resume_and_stop_with_followed_track_position(pause, resume
         server = MockLmsServer()
         server.modes[FOLLOW_MAC] = 'play'
         port = await server.start()
-        follower = LmsFollower('127.0.0.1', FOLLOW_MAC, HUESYNC_MAC, cli_port=port)
+        follower = LmsFollower('127.0.0.1', FOLLOW_MAC, LAMPASTREAM_MAC, cli_port=port)
         source = LmsTrackPositionSource('127.0.0.1', lambda: follower.target_mac, port)
         source.open()
         task = follower.start()
@@ -610,18 +610,18 @@ def test_manual_pause_resume_and_stop_with_followed_track_position(pause, resume
                                    and FOLLOW_MAC in server.status_writers)
             server.positions[FOLLOW_MAC] = 201.0
             await server.transport(pause, 'pause')
-            assert await _wait_for(lambda: server.modes[HUESYNC_MAC] == 'pause')
+            assert await _wait_for(lambda: server.modes[LAMPASTREAM_MAC] == 'pause')
             assert await _wait_for(lambda: source.read() and not source.read().playing)
             assert source.read().position_now() == 201
             await asyncio.sleep(0.1)
             assert source.read().position_now() == 201
             assert source.read().title == 'Song'
             await server.transport(resume, 'play')
-            assert await _wait_for(lambda: server.modes[HUESYNC_MAC] == 'play')
+            assert await _wait_for(lambda: server.modes[LAMPASTREAM_MAC] == 'play')
             assert await _wait_for(lambda: source.read().playing)
             assert source.read().position_now() >= 201
             await server.transport(stop, 'stop')
-            assert await _wait_for(lambda: server.modes[HUESYNC_MAC] == 'stop')
+            assert await _wait_for(lambda: server.modes[LAMPASTREAM_MAC] == 'stop')
             assert await _wait_for(lambda: not source.read().playing)
             assert source.read().position_now() == 201
         finally:
@@ -633,7 +633,7 @@ def test_manual_pause_resume_and_stop_with_followed_track_position(pause, resume
 
 def test_sync_group_transport_events_never_relay_or_seek():
     async def run():
-        follower = LmsSyncGroupObserver('host', HUESYNC_MAC, lambda: [], AsyncMock())
+        follower = LmsSyncGroupObserver('host', LAMPASTREAM_MAC, lambda: [], AsyncMock())
         follower._follow_mac = FOLLOW_MAC
         for event in ('playlist pause 1', 'playlist pause 0', 'playlist stop',
                       'pause', 'pause 1', 'play', 'stop', 'playlist newsong 0'):
@@ -641,7 +641,7 @@ def test_sync_group_transport_events_never_relay_or_seek():
         assert follower._play_count == 0
     # Any attempted CLI exchange fails the test, including a swallowed OSError.
     from unittest.mock import patch
-    with patch('huesync.lms_follower._cli_exchange') as exchange:
+    with patch('lampastream.lms_follower._cli_exchange') as exchange:
         asyncio.run(run())
         exchange.assert_not_called()
 
@@ -657,7 +657,7 @@ def test_sync_group_transport_events_never_relay_or_seek():
 ])
 def test_documented_transport_notifications_reach_manual_relay(event, method, args):
     from unittest.mock import patch
-    follower = LmsFollower('host', FOLLOW_MAC, HUESYNC_MAC)
+    follower = LmsFollower('host', FOLLOW_MAC, LAMPASTREAM_MAC)
     with patch.object(follower, method) as send:
         asyncio.run(follower._handle_line(f'{FOLLOW_MAC} {event}'))
         send.assert_called_once_with(*args)
@@ -666,46 +666,46 @@ def test_documented_transport_notifications_reach_manual_relay(event, method, ar
 def test_seed_alignment_waits_for_ready_and_compensates_query_delay(monkeypatch):
     from unittest.mock import Mock
 
-    from huesync.lms_status import LmsPlayerStatus
-    follower = LmsFollower('host', FOLLOW_MAC, HUESYNC_MAC)
+    from lampastream.lms_status import LmsPlayerStatus
+    follower = LmsFollower('host', FOLLOW_MAC, LAMPASTREAM_MAC)
     clock = [100.0]
-    monkeypatch.setattr('huesync.lms_follower.time.monotonic', lambda: clock[0])
-    monkeypatch.setattr('huesync.lms_follower.time.sleep', lambda delay: clock.__setitem__(
+    monkeypatch.setattr('lampastream.lms_follower.time.monotonic', lambda: clock[0])
+    monkeypatch.setattr('lampastream.lms_follower.time.sleep', lambda delay: clock.__setitem__(
         0, clock[0] + delay))
     calls = []
 
     def status(host, mac, port):
         calls.append(mac)
-        if mac == HUESYNC_MAC:
+        if mac == LAMPASTREAM_MAC:
             return LmsPlayerStatus(mode='play', waiting_to_play=len(calls) == 1)
         clock[0] += 0.25
         return LmsPlayerStatus(mode='play', time=196, duration=326)
 
-    monkeypatch.setattr('huesync.lms_follower.query_lms_status', status)
+    monkeypatch.setattr('lampastream.lms_follower.query_lms_status', status)
     monkeypatch.setattr(follower, '_get_current_url', lambda: MOCK_URL)
     exchange = Mock()
-    monkeypatch.setattr('huesync.lms_follower._cli_exchange', exchange)
+    monkeypatch.setattr('lampastream.lms_follower._cli_exchange', exchange)
     follower._align_seed_position(MOCK_URL)
-    assert calls == [HUESYNC_MAC, HUESYNC_MAC, FOLLOW_MAC]
-    exchange.assert_called_once_with('host', 9090, f'{HUESYNC_MAC} time 196.250\n')
+    assert calls == [LAMPASTREAM_MAC, LAMPASTREAM_MAC, FOLLOW_MAC]
+    exchange.assert_called_once_with('host', 9090, f'{LAMPASTREAM_MAC} time 196.250\n')
 
 
 @pytest.mark.parametrize('reason', ['unknown_position', 'paused', 'track_changed', 'stopped'])
 def test_seed_alignment_does_not_seek_invalid_or_changed_source(monkeypatch, reason):
     from unittest.mock import Mock
 
-    from huesync.lms_status import LmsPlayerStatus
-    follower = LmsFollower('host', FOLLOW_MAC, HUESYNC_MAC)
+    from lampastream.lms_status import LmsPlayerStatus
+    follower = LmsFollower('host', FOLLOW_MAC, LAMPASTREAM_MAC)
     if reason == 'stopped':
         follower._stop_event.set()
     source = LmsPlayerStatus(mode='pause' if reason == 'paused' else 'play',
                              time=None if reason == 'unknown_position' else 196)
-    monkeypatch.setattr('huesync.lms_follower.query_lms_status', Mock(side_effect=[
+    monkeypatch.setattr('lampastream.lms_follower.query_lms_status', Mock(side_effect=[
         LmsPlayerStatus(mode='play'), source]))
     monkeypatch.setattr(follower, '_get_current_url', lambda:
                         'different' if reason == 'track_changed' else MOCK_URL)
     exchange = Mock()
-    monkeypatch.setattr('huesync.lms_follower._cli_exchange', exchange)
+    monkeypatch.setattr('lampastream.lms_follower._cli_exchange', exchange)
     follower._align_seed_position(MOCK_URL)
     exchange.assert_not_called()
 
@@ -720,7 +720,7 @@ def test_bare_pause_predicts_before_delayed_bridge_confirmation(initial, confirm
     from unittest.mock import Mock, call
 
     async def run():
-        follower = LmsFollower("host", FOLLOW_MAC, HUESYNC_MAC)
+        follower = LmsFollower("host", FOLLOW_MAC, LAMPASTREAM_MAC)
         follower._transport_mode = initial
         send = Mock()
         query = Mock(return_value=confirmed)
@@ -748,7 +748,7 @@ def test_pending_pause_confirmation_is_cancelled_by_new_state_or_shutdown(event,
     from unittest.mock import Mock
 
     async def run():
-        follower = LmsFollower("host", FOLLOW_MAC, HUESYNC_MAC)
+        follower = LmsFollower("host", FOLLOW_MAC, LAMPASTREAM_MAC)
         follower._transport_mode = "play"
         query = Mock(return_value="play")
         monkeypatch.setattr(follower, "_query_mode", query)
@@ -772,7 +772,7 @@ def test_new_event_waits_for_confirmation_query_and_discards_stale_result(monkey
     from unittest.mock import Mock
 
     async def run():
-        follower = LmsFollower('host', FOLLOW_MAC, HUESYNC_MAC)
+        follower = LmsFollower('host', FOLLOW_MAC, LAMPASTREAM_MAC)
         follower._transport_mode = 'play'
         entered, release = threading.Event(), threading.Event()
 

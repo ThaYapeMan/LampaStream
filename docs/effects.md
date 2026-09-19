@@ -1,7 +1,7 @@
 # Effects reference
 
 This is the current selectable catalog, verified against `EFFECT_IDS` in
-`src/huesync/models.py`, `_make_renderer()` in `src/huesync/sync_engine.py`, and
+`src/lampastream/models.py`, `_make_renderer()` in `src/lampastream/sync_engine.py`, and
 `EFFECTS` in `web/src/lib/api.ts`. Configure an Effect in the **Effects** tab, then
 select it as the high- or low-energy Effect of an EnergyProfile used by a Coupling.
 

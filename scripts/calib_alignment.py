@@ -10,7 +10,7 @@ Algorithm:
   4. Peak lag L (samples) → offset_s = L * dt.
   5. Normalize by sqrt(sum(a²)*sum(b²)) for Pearson-like quality score.
 
-Convention throughout HueSync calibration:
+Convention throughout LampaStream calibration:
     track_time = capture_time + offset_s
 
 A positive offset means the capture started part-way into the track.

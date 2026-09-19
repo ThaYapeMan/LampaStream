@@ -6,10 +6,10 @@ cannot establish live deployment behavior.
 ## Before activation
 
 ```sh
-git clone https://github.com/ThaYapeMan/HueSync.git
-cd HueSync
-sudo ./scripts/install-huesync.sh
-sudo ./scripts/install-huesync.sh --check
+git clone https://github.com/ThaYapeMan/LampaStream.git
+cd LampaStream
+sudo ./scripts/install-lampastream.sh
+sudo ./scripts/install-lampastream.sh --check
 ```
 
 The repository installer is the authoritative standard deployment path. It owns
@@ -22,7 +22,7 @@ Record its commit/binary hashes and run it twice to verify target idempotency.
 
 The host must expose paced snd-dummy/audio devices and appropriate permissions for
 LMS; the guest installer does not alter the host. Select canonical PCM + V2/CAVA Core
-or the intentional external FIFO route in HueSync. Inspect `journalctl -u huesync`.
+or the intentional external FIFO route in LampaStream. Inspect `journalctl -u lampastream`.
 
 Do not read a production audio FIFO from a diagnostic second consumer. For SHM,
 inspect metadata or use isolated test fixtures. Unsupported canonical ABI is a
@@ -49,10 +49,10 @@ context and do not certify this implementation.
 
 ## Disaster recovery
 
-1. Install from Git on a clean supported target using `scripts/install-huesync.sh`.
+1. Install from Git on a clean supported target using `scripts/install-lampastream.sh`.
 2. Transfer the sensitive portable backup securely; keep file permissions private.
-3. Use **Backup and restore** in the UI, or stop HueSync and use the installed
-   `python -m huesync.backup import` CLI, then restart the service.
+3. Use **Backup and restore** in the UI, or stop LampaStream and use the installed
+   `python -m lampastream.backup import` CLI, then restart the service.
 4. Verify all entities, exact IDs, LMS/AirPlay settings, player latencies and references.
 5. Activate a restored Coupling and verify the original Hue Bridge works without
    re-pairing. This depends on reachable, still-valid Bridge credentials.

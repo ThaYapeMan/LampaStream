@@ -2,8 +2,8 @@
 """Diagnostic: compare cava bars vs PcmAudioPipeline bars side by side.
 
 Usage (from the LXC):
-    /opt/huesync/.venv/bin/python3 scripts/compare_bars.py --from-config
-    /opt/huesync/.venv/bin/python3 scripts/compare_bars.py --mac AA:BB:CC:DD:EE:FF --bars 30
+    /opt/lampastream/.venv/bin/python3 scripts/compare_bars.py --from-config
+    /opt/lampastream/.venv/bin/python3 scripts/compare_bars.py --mac AA:BB:CC:DD:EE:FF --bars 30
 """
 
 from __future__ import annotations
@@ -22,20 +22,20 @@ from pathlib import Path
 import numpy as np
 
 # ---------------------------------------------------------------------------
-# sys.path: add src/ so we can import huesync even when run as a script
+# sys.path: add src/ so we can import lampastream even when run as a script
 # ---------------------------------------------------------------------------
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(_REPO_ROOT / "src"))
 
-from huesync.pcm_source import WINDOW_SIZE, SqueezeliteShmSource  # noqa: E402
-from huesync.sync_engine import BandNormaliser, FifoReader  # noqa: E402
+from lampastream.pcm_source import WINDOW_SIZE, SqueezeliteShmSource  # noqa: E402
+from lampastream.sync_engine import BandNormaliser, FifoReader  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
 
-DEFAULT_CONFIG_PATH = os.environ.get("HUESYNC_CONFIG", "/etc/huesync/config.json")
+DEFAULT_CONFIG_PATH = os.environ.get("LAMPASTREAM_CONFIG", "/etc/lampastream/config.json")
 WARMUP_SECONDS = 5  # exclude first N seconds from summary statistics
 
 
@@ -131,7 +131,7 @@ def parse_args() -> argparse.Namespace:
     p.add_argument(
         "--from-config",
         action="store_true",
-        help="Read MAC/bars/cutoffs from the running HueSync config.json",
+        help="Read MAC/bars/cutoffs from the running LampaStream config.json",
     )
     p.add_argument("--config", default=DEFAULT_CONFIG_PATH, help="Path to config.json")
     return p.parse_args()
@@ -335,7 +335,7 @@ class PcmSide:
         self._sample_rate = self._shm.sample_rate
         print(f"[pcm]  SHM opened  mac={self._mac}  sample_rate={self._sample_rate}")
 
-        from huesync.pcm_source import PcmStft  # local import: sample_rate known now
+        from lampastream.pcm_source import PcmStft  # local import: sample_rate known now
         self._stft = PcmStft(self._sample_rate)
 
         self._thread = threading.Thread(target=self._run, daemon=True, name="pcm-poll")

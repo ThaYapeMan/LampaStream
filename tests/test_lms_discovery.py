@@ -5,7 +5,7 @@ main thing worth unit-testing here.  Live network discovery is not tested
 (would require a real LMS instance or a complex socket mock).
 """
 
-from huesync.lms_discovery import _parse_tlv_response
+from lampastream.lms_discovery import _parse_tlv_response
 
 # ---------------------------------------------------------------------------
 # Helper: build a synthetic TLV response

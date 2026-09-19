@@ -27,7 +27,7 @@ export function Backup() {
       const link = document.createElement('a')
       link.href = url
       // Filename is generated locally; credentials never influence it.
-      link.download = `huesync-backup-${new Date().toISOString().replace(/:/g, '')}.json`
+      link.download = `lampastream-backup-${new Date().toISOString().replace(/:/g, '')}.json`
       document.body.appendChild(link)
       link.click(); link.remove()
       const revoke = URL.revokeObjectURL.bind(URL)
@@ -58,13 +58,13 @@ export function Backup() {
   return (
     <section className="space-y-5">
       <h2 className="text-xl font-semibold">Backup and restore</h2>
-      <p>Downloads all HueSync configuration, including player settings, Hue Bridge pairing credentials,
+      <p>Downloads all LampaStream configuration, including player settings, Hue Bridge pairing credentials,
         zones, analysers, energy profiles, effects, couplings and player latencies.</p>
       <p className="font-medium">Keep this file secure. It contains credentials that may grant access
-        to paired lighting controllers. HueSync has no authentication; use a trusted network only.</p>
-      <Button onClick={exportConfig} disabled={busy}>Export HueSync configuration</Button>
+        to paired lighting controllers. LampaStream has no authentication; use a trusted network only.</p>
+      <Button onClick={exportConfig} disabled={busy}>Export LampaStream configuration</Button>
       <hr />
-      <h3 className="font-semibold">Restore HueSync configuration</h3>
+      <h3 className="font-semibold">Restore LampaStream configuration</h3>
       <p>Restore replaces all current configuration and creates a safety backup on the server.
         Deactivate the current Coupling first and wait for teardown to finish. Playback is not restored.</p>
       <label className="block space-y-2">
@@ -76,7 +76,7 @@ export function Backup() {
       <label className="flex gap-2 items-start">
         <input type="checkbox" checked={confirmed} disabled={busy || !file}
           onChange={e => setConfirmed(e.target.checked)} />
-        <span>I understand that restoring this backup replaces all current HueSync configuration.</span>
+        <span>I understand that restoring this backup replaces all current LampaStream configuration.</span>
       </label>
       <Button onClick={restoreConfig} disabled={busy || !file || !confirmed}>Restore configuration</Button>
       {busy && <p role="status">Working…</p>}

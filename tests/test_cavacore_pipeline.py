@@ -27,16 +27,16 @@ from pipeline_factory import make_pipeline
 # Skip guard
 # ---------------------------------------------------------------------------
 
-_SO_PATH = Path(__file__).parent.parent / "src" / "huesync" / "cavacore" / "_libcavacore.so"
+_SO_PATH = Path(__file__).parent.parent / "src" / "lampastream" / "cavacore" / "_libcavacore.so"
 
 pytestmark = pytest.mark.skipif(
     not _SO_PATH.exists(),
     reason="cavacore native library not built — run: pip install . (needs libfftw3-dev)",
 )
 
-from huesync.canonicalizer import AnalysisPcmFrame  # noqa: E402
-from huesync.sync_engine import CanonicalAnalysisPipeline  # noqa: E402
-from huesync.types import AudioFeatures  # noqa: E402
+from lampastream.canonicalizer import AnalysisPcmFrame  # noqa: E402
+from lampastream.sync_engine import CanonicalAnalysisPipeline  # noqa: E402
+from lampastream.types import AudioFeatures  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -410,7 +410,7 @@ def test_stop_after_start_is_safe() -> None:
 
 def test_is_cavacore_available_returns_true_when_so_built() -> None:
     """is_cavacore_available() must return True in an environment where the .so exists."""
-    from huesync.cavacore import is_cavacore_available
+    from lampastream.cavacore import is_cavacore_available
 
     assert is_cavacore_available() is True
 
@@ -589,7 +589,7 @@ def test_eos_flush_with_non_silent_carry() -> None:
 
 def test_profile_invalid_spectrum_backend_rejected() -> None:
     """Profile must raise ValueError for unknown spectrum_backend values."""
-    from huesync.models import Profile
+    from lampastream.models import Profile
 
     with pytest.raises(ValueError, match="spectrum_backend"):
         Profile(spectrum_backend="unknown_backend")
@@ -620,8 +620,8 @@ def test_v2_pipeline_effective_backend_is_v2() -> None:
 def test_factory_selects_v2_for_v2_backend() -> None:
     """
 _make_canonical_pipeline returns CanonicalAnalysisPipeline when profile.spectrum_backend='v2'."""
-    from huesync.models import Profile
-    from huesync.player_manager import _make_canonical_pipeline
+    from lampastream.models import Profile
+    from lampastream.player_manager import _make_canonical_pipeline
 
     src = MagicMock()
     src.running = True
@@ -634,8 +634,8 @@ _make_canonical_pipeline returns CanonicalAnalysisPipeline when profile.spectrum
 def test_factory_selects_cavacore_for_cavacore_backend() -> None:
     """
 _make_canonical_pipeline returns CanonicalAnalysisPipeline for spectrum_backend='cavacore'."""
-    from huesync.models import Profile
-    from huesync.player_manager import _make_canonical_pipeline
+    from lampastream.models import Profile
+    from lampastream.player_manager import _make_canonical_pipeline
 
     src = MagicMock()
     src.running = True
@@ -647,8 +647,8 @@ _make_canonical_pipeline returns CanonicalAnalysisPipeline for spectrum_backend=
 
 def test_factory_same_source_accepted_by_both_backends() -> None:
     """Same mock source is accepted by both factory outputs — proves source-agnostic design."""
-    from huesync.models import Profile
-    from huesync.player_manager import _make_canonical_pipeline
+    from lampastream.models import Profile
+    from lampastream.player_manager import _make_canonical_pipeline
 
     src = MagicMock()
     src.running = True
@@ -668,7 +668,7 @@ def test_worker_starts_and_stops_cleanly() -> None:
     src = MagicMock()
     src.running = False
     # read() must return a TemporarilyNoData-like object to keep the loop idle.
-    from huesync.canonicalizer import TemporarilyNoData
+    from lampastream.canonicalizer import TemporarilyNoData
 
     src.read.return_value = TemporarilyNoData()
 

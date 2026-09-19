@@ -33,21 +33,21 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 
-from huesync.canonicalizer import (
+from lampastream.canonicalizer import (
     StreamInvalidated,
     TemporarilyNoData,
 )
-from huesync.models import Profile
-from huesync.pcm_source import (
+from lampastream.models import Profile
+from lampastream.pcm_source import (
     SHM_ABI_V1_MAGIC,
     SHM_ABI_VERSION,
     SqueezeliteShmStereoSource,
 )
-from huesync.spectrum_engine import (
+from lampastream.spectrum_engine import (
     ProcessorUpdate,
     V2SpectrumEngine,
 )
-from huesync.sync_engine import (
+from lampastream.sync_engine import (
     CanonicalAnalysisPipeline,
     SyncEngine,
 )
@@ -338,7 +338,7 @@ class _ManualProcessor:
 
 
 def _make_frame(sample_pos: int) -> object:
-    from huesync.canonicalizer import AnalysisPcmFrame
+    from lampastream.canonicalizer import AnalysisPcmFrame
     return AnalysisPcmFrame(
         samples=np.zeros((_HOP, 2), dtype=np.float32),
         sample_pos=sample_pos,
@@ -495,7 +495,7 @@ def _make_engine_and_start(source):
         bass_hz=250,
         mid_hz=2000,
     )
-    with patch("huesync.sync_engine.CavaPipeline"):
+    with patch("lampastream.sync_engine.CavaPipeline"):
         engine = SyncEngine(
             fifo_path=None, profile=Profile(name="test"), analyser=cap
         )

@@ -14,7 +14,7 @@ from urllib.parse import quote
 import pytest
 from pytest import approx
 
-from huesync.lms_status import (
+from lampastream.lms_status import (
     LmsPlayerStatus,
     _parse_status,
     _parse_sync_response,
@@ -70,9 +70,9 @@ def test_parse_sync_slaves_empty():
 
 def test_parse_standalone_player():
     """A standalone player has no sync_master or sync_slaves tokens at all."""
-    result = _parse_status(_build_response("time:55.1", "player_name:HueSync"))
+    result = _parse_status(_build_response("time:55.1", "player_name:LampaStream"))
     assert result.time == approx(55.1)
-    assert result.player_name == "HueSync"
+    assert result.player_name == "LampaStream"
     assert result.sync_master is None
     assert result.sync_slaves == []
 
@@ -131,9 +131,9 @@ def test_parse_mac_value_and_space_in_key():
 
 def test_parse_lowercase_encoded_separator():
     """%3a (lowercase) is valid URL-encoding and must be treated as %3A."""
-    text = "player_name%3aHueSync sync_master%3a94%3a9f%3a3e%3afa%3aba%3a66"
+    text = "player_name%3aLampaStream sync_master%3a94%3a9f%3a3e%3afa%3aba%3a66"
     result = _parse_status(text)
-    assert result.player_name == "HueSync"
+    assert result.player_name == "LampaStream"
     assert result.sync_master == "94:9f:3e:fa:ba:66"
 
 
@@ -146,12 +146,12 @@ def test_parse_fully_encoded_response():
     are present and the separator is %3A throughout."""
     text = (
         "02%3Aae%3A8a%3Ab0%3A24%3A9b status 0 1 "
-        "player_name%3AHueSync "
+        "player_name%3ALampaStream "
         "sync_master%3A94%3A9f%3A3e%3Afa%3Aba%3A66 "
         "sync_slaves%3A02%3Aae%3A8a%3Ab0%3A24%3A9b"
     )
     result = _parse_status(text)
-    assert result.player_name == "HueSync"
+    assert result.player_name == "LampaStream"
     assert result.sync_master == "94:9f:3e:fa:ba:66"
     assert result.sync_slaves == ["02:ae:8a:b0:24:9b"]
 
@@ -165,12 +165,12 @@ def test_parse_status_no_sync_master_when_stopped():
     """
     text = (
         "02%3Aae%3A8a%3Ab0%3A24%3A9b status 0 1 "
-        "player_name%3AHueSync "
+        "player_name%3ALampaStream "
         "time%3A0.0"
         # No sync_master or sync_slaves — player is stopped
     )
     result = _parse_status(text)
-    assert result.player_name == "HueSync"
+    assert result.player_name == "LampaStream"
     assert result.sync_master is None
     assert result.sync_slaves == []
 

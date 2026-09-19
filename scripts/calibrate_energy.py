@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Offline energy calibration tool for HueSync EnergyProfile tuning.
+"""Offline energy calibration tool for LampaStream EnergyProfile tuning.
 
 M1: Decode audio file and reconstruct SustainedEnergy at production tick rate.
-M2: Automatically align audio SE with a HueSync capture CSV via cross-correlation.
+M2: Automatically align audio SE with a LampaStream capture CSV via cross-correlation.
 
 Usage:
     python scripts/calibrate_energy.py \\
@@ -16,7 +16,7 @@ Usage:
 
 Requirements for audio decoding:
     pip install soundfile        (FLAC/WAV via libsndfile)
-    pip install 'huesync[calibration]'   (same, via project extras)
+    pip install 'lampastream[calibration]'   (same, via project extras)
 
 MP3 is not supported.  Transcode to FLAC first:
     ffmpeg -i track.mp3 track.flac
@@ -234,7 +234,7 @@ def main() -> None:
     ap.add_argument("--audio", required=True, metavar="FILE",
                     help="Audio file (FLAC or WAV; requires soundfile)")
     ap.add_argument("--capture", required=True, metavar="CSV",
-                    help="HueSync energy capture CSV (from capture_energy.py)")
+                    help="LampaStream energy capture CSV (from capture_energy.py)")
     ap.add_argument(
         "--search-range", type=float, default=60.0, metavar="SECONDS",
         help="Maximum alignment offset to search in either direction (default: 60 s)",

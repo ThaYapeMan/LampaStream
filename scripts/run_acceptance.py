@@ -49,7 +49,7 @@ import numpy as np
 _REPO_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(_REPO_ROOT / "src"))
 
-from huesync.canonicalizer import (  # noqa: E402
+from lampastream.canonicalizer import (  # noqa: E402
     AnalysisPcmFrame,
     AudioCanonicalizer,
     CanonicalData,
@@ -57,15 +57,15 @@ from huesync.canonicalizer import (  # noqa: E402
     DecodedSourceFrame,
     EndOfStream,
 )
-from huesync.pcm_source import WINDOW_SIZE  # noqa: E402
-from huesync.spectrum_engine import ENGINES, make_spectrum_engine  # noqa: E402
-from huesync.sync_engine import CanonicalAnalysisPipeline  # noqa: E402
+from lampastream.pcm_source import WINDOW_SIZE  # noqa: E402
+from lampastream.spectrum_engine import ENGINES, make_spectrum_engine  # noqa: E402
+from lampastream.sync_engine import CanonicalAnalysisPipeline  # noqa: E402
 
 # Suppress the per-frame diagnostic INFO log that fires every 50 frames.
 # This log was added as a temporary field-debugging aid and is not structural.
 # The harness suppresses it at WARNING so stdout stays clean.  Production
 # runtime behavior is unchanged (the harness never runs on the LXC).
-logging.getLogger("huesync.sync_engine").setLevel(logging.WARNING)
+logging.getLogger("lampastream.sync_engine").setLevel(logging.WARNING)
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -84,7 +84,7 @@ CHUNK_BYTES: int = CHUNK_SAMPLES * 2 * 2  # stereo × 2 bytes (S16LE)
 # _process_canonical_frame() processes at most one STFT frame per call.
 HOP: int = 480
 
-# Analyser defaults that match HueSync production coupling/analyser model defaults.
+# Analyser defaults that match LampaStream production coupling/analyser model defaults.
 _DEFAULT_BARS: int = 30
 _DEFAULT_LOWER_HZ: int = 50
 _DEFAULT_UPPER_HZ: int = 12000
@@ -755,7 +755,7 @@ def git_commit(repo_root: Path = _REPO_ROOT) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="HueSync offline native analyser acceptance harness.",
+        description="LampaStream offline native analyser acceptance harness.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )

@@ -15,7 +15,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from huesync.pcm_source import (
+from lampastream.pcm_source import (
     _BUF_OFFSET,
     _BUF_OFFSET_V1,
     _HDR_FMT,
@@ -269,7 +269,7 @@ def test_fell_behind_logs_warning(tmp_path: Path, caplog: pytest.LogCaptureFixtu
     src.open("x", _path=p)
     src._prev_index = 0  # n_new = 9000 > 8192 → fell behind
 
-    with caplog.at_level(logging.WARNING, logger="huesync.pcm_source"):
+    with caplog.at_level(logging.WARNING, logger="lampastream.pcm_source"):
         src.read_new()
 
     assert any("fell behind" in r.message.lower() for r in caplog.records)

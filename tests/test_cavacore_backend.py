@@ -18,7 +18,7 @@ import pytest
 # Skip guard — skip every test in this module if the .so is absent
 # ---------------------------------------------------------------------------
 
-_SO_PATH = Path(__file__).parent.parent / "src" / "huesync" / "cavacore" / "_libcavacore.so"
+_SO_PATH = Path(__file__).parent.parent / "src" / "lampastream" / "cavacore" / "_libcavacore.so"
 
 pytestmark = pytest.mark.skipif(
     not _SO_PATH.exists(),
@@ -26,7 +26,7 @@ pytestmark = pytest.mark.skipif(
 )
 
 # These imports happen only when the skip guard passes.
-from huesync.cavacore import SCALING_DECIBEL, CavaCoreBackend  # noqa: E402
+from lampastream.cavacore import SCALING_DECIBEL, CavaCoreBackend  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Helpers

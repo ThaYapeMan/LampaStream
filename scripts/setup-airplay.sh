@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # Build and install shairport-sync (AirPlay 2) + nqptp from source.
-# Enables AirPlay 2 as an input source for HueSync on Debian 13 (Trixie).
+# Enables AirPlay 2 as an input source for LampaStream on Debian 13 (Trixie).
 # Safe to re-run: source trees are checked out at exact pinned release commits.
 #
 # Usage (on the LXC, as root):
-#   sudo ./scripts/install-huesync.sh (invokes this build helper)
+#   sudo ./scripts/install-lampastream.sh (invokes this build helper)
 set -Eeuo pipefail
 export DEBIAN_FRONTEND=noninteractive
-DEFER_START="${HUESYNC_DEFER_START:-0}"
+DEFER_START="${LAMPASTREAM_DEFER_START:-0}"
 # Upstream make install creates a sample config at the live path. Distinguish
 # that first-install sample from an existing operator-owned receiver config.
 CONFIG_EXISTED=0
@@ -18,7 +18,7 @@ if [[ $EUID -ne 0 ]]; then
     exit 1
 fi
 
-SRC="${AIRPLAY_BUILD_DIR:-/var/cache/huesync/airplay}"
+SRC="${AIRPLAY_BUILD_DIR:-/var/cache/lampastream/airplay}"
 NQPTP_COMMIT=591f425d9da69f1c4e09f3ad09611b758937b3e5
 SHAIRPORT_COMMIT=0b1c4391ffd398e7b145eb4b98416261380adeea
 
@@ -125,8 +125,8 @@ ensure_unit_visible() {
 # "pkg-config unable to query systemd" configure error.
 # ---------------------------------------------------------------------------
 echo "==> [1/6] Checking installer-provisioned dependencies..."
-if [[ "${HUESYNC_DEPENDENCIES_READY:-0}" != 1 ]]; then
-    echo "error: use scripts/install-huesync.sh to provision dependencies" >&2
+if [[ "${LAMPASTREAM_DEPENDENCIES_READY:-0}" != 1 ]]; then
+    echo "error: use scripts/install-lampastream.sh to provision dependencies" >&2
     exit 1
 fi
 
@@ -150,7 +150,7 @@ make -j"$(nproc)"
 make SHELL=/bin/bash install
 ensure_unit_visible nqptp
 mkdir -p /etc/systemd/system/nqptp.service.d
-cat > /etc/systemd/system/nqptp.service.d/huesync-binary.conf << 'EOF'
+cat > /etc/systemd/system/nqptp.service.d/lampastream-binary.conf << 'EOF'
 [Service]
 ExecStart=
 ExecStart=/usr/local/bin/nqptp
@@ -183,46 +183,46 @@ make SHELL=/bin/bash install
 # ---------------------------------------------------------------------------
 # Phase 4: runtime directory and AirPlay FIFO
 # /run/ is tmpfs and is cleared on every reboot. This tmpfiles.d entry
-# recreates /run/huesync and pre-creates the AirPlay FIFO at every boot.
+# recreates /run/lampastream and pre-creates the AirPlay FIFO at every boot.
 #
 # Both entries are needed:
 #   d  — directory, so shairport-sync can write the FIFO into it
-#   p  — named pipe (FIFO), pre-created so HueSync can open it before
+#   p  — named pipe (FIFO), pre-created so LampaStream can open it before
 #         an iOS client connects.  shairport-sync opens the existing FIFO
 #         for writing when a session starts; no mkfifo from shairport-sync
 #         is required.
 #
 # Without the 'p' entry the FIFO is created only when iOS connects, which
-# means HueSync's pipe_source.open() (O_RDONLY|O_NONBLOCK) raises OSError
+# means LampaStream's pipe_source.open() (O_RDONLY|O_NONBLOCK) raises OSError
 # if a coupling is activated before the first iOS AirPlay session.
 #
-# Ownership: both huesync user — shairport-sync runs as huesync (drop-in),
-# HueSync runs as huesync.  Mode 0600 restricts access to that user only.
-# HueSync's own cava FIFOs use /tmp/huesync (player_manager._RUN_DIR);
-# /run/huesync is solely for the AirPlay pipe.
+# Ownership: both lampastream user — shairport-sync runs as lampastream (drop-in),
+# LampaStream runs as lampastream.  Mode 0600 restricts access to that user only.
+# LampaStream's own cava FIFOs use /tmp/lampastream (player_manager._RUN_DIR);
+# /run/lampastream is solely for the AirPlay pipe.
 # ---------------------------------------------------------------------------
 echo "==> [4/6] Configuring runtime directory and AirPlay FIFO..."
-printf 'd /run/huesync             0755 huesync huesync -\np /run/huesync/airplay.pcm 0600 huesync huesync -\np /run/huesync/airplay.metadata 0600 huesync huesync -\n' \
-    > /etc/tmpfiles.d/huesync-run.conf
-systemd-tmpfiles --create /etc/tmpfiles.d/huesync-run.conf
+printf 'd /run/lampastream             0755 lampastream lampastream -\np /run/lampastream/airplay.pcm 0600 lampastream lampastream -\np /run/lampastream/airplay.metadata 0600 lampastream lampastream -\n' \
+    > /etc/tmpfiles.d/lampastream-run.conf
+systemd-tmpfiles --create /etc/tmpfiles.d/lampastream-run.conf
 
 # ---------------------------------------------------------------------------
 # Phase 5: shairport-sync configuration
-# No audio output from the LXC — pipe backend only. HueSync reads the raw
+# No audio output from the LXC — pipe backend only. LampaStream reads the raw
 # PCM stream (S16_LE stereo 44100 Hz) from the pipe for spectrum analysis.
 # ---------------------------------------------------------------------------
 echo "==> [5/6] Writing shairport-sync config..."
 if [[ "$CONFIG_EXISTED" == 0 ]]; then
 cat > /usr/local/etc/shairport-sync.conf << 'EOF'
 general = {
-  name = "HueSync";
+  name = "LampaStream";
   output_backend = "pipe";
   // Analysis-only receiver: full-scale PCM regardless of source volume.
   ignore_volume_control = "yes";
 }
 
 pipe = {
-  name = "/run/huesync/airplay.pcm";
+  name = "/run/lampastream/airplay.pcm";
   output_rate = 44100;
   output_format = "S16_LE";
   output_channels = 2;
@@ -230,7 +230,7 @@ pipe = {
 metadata = {
   enabled = "yes";
   include_cover_art = "no";
-  pipe_name = "/run/huesync/airplay.metadata";
+  pipe_name = "/run/lampastream/airplay.metadata";
   progress_interval = 10.0;
 }
 EOF
@@ -286,29 +286,29 @@ if updated != original:
         if os.path.exists(temporary):
             os.unlink(temporary)
 PY_VOLUME
-# Allow the huesync service to overwrite the name field at activation time.
-chown huesync:huesync /usr/local/etc/shairport-sync.conf
+# Allow the lampastream service to overwrite the name field at activation time.
+chown lampastream:lampastream /usr/local/etc/shairport-sync.conf
 
 # ---------------------------------------------------------------------------
-# Phase 6: systemd service — run as huesync user
+# Phase 6: systemd service — run as lampastream user
 # make SHELL=/bin/bash install creates a shairport-sync system user. This drop-in overrides
-# that so the service runs as huesync instead, giving it write access to
-# /run/huesync/ without extra group membership.
+# that so the service runs as lampastream instead, giving it write access to
+# /run/lampastream/ without extra group membership.
 # ---------------------------------------------------------------------------
 echo "==> [6/6] Installing systemd drop-in and starting services..."
 ensure_unit_visible shairport-sync
 mkdir -p /etc/systemd/system/shairport-sync.service.d
-cat > /etc/systemd/system/shairport-sync.service.d/run-as-huesync.conf << 'EOF'
+cat > /etc/systemd/system/shairport-sync.service.d/run-as-lampastream.conf << 'EOF'
 [Service]
-User=huesync
-Group=huesync
+User=lampastream
+Group=lampastream
 ExecStart=
-ExecStart=/usr/local/bin/shairport-sync --configfile=/usr/local/etc/shairport-sync.conf --metadata-enable --metadata-pipename=/run/huesync/airplay.metadata
+ExecStart=/usr/local/bin/shairport-sync --configfile=/usr/local/etc/shairport-sync.conf --metadata-enable --metadata-pipename=/run/lampastream/airplay.metadata
 EOF
 
 # Standard installer starts services only after artifact/schema verification.
 /usr/local/bin/shairport-sync --version
-[[ -p /run/huesync/airplay.pcm && -p /run/huesync/airplay.metadata ]]
+[[ -p /run/lampastream/airplay.pcm && -p /run/lampastream/airplay.metadata ]]
 /usr/local/bin/shairport-sync --version | grep -i metadata >/dev/null
 if [[ "$DEFER_START" != 1 ]]; then
     systemctl daemon-reload

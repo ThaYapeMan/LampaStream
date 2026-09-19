@@ -1,4 +1,4 @@
-# HueSync repository guidance
+# LampaStream repository guidance
 
 ## Authority and scope
 
@@ -8,7 +8,7 @@ The analysis architecture is frozen. Read [README.md](README.md),
 Use [development.md](docs/development.md) and [testing.md](docs/testing.md)
 for working and validation instructions.
 
-Top-level `docs/HueSync_*.md` files bearing a historical banner, `docs/archive/`
+Top-level `docs/LampaStream_*.md` files bearing a historical banner, `docs/archive/`
 and local untracked research files are **not current implementation instructions**.
 Do not implement `docs/future/` proposals unless asked.
 
@@ -46,7 +46,7 @@ See [deployment-lxc.md](docs/deployment-lxc.md) before deployment. The dev envir
 may have Python/toolchains; inspect it rather than assuming it lacks them.
 Native runtime/performance claims require target evidence, not green stub tests.
 
-The repository installer (`scripts/install-huesync.sh`) owns standard deployment,
+The repository installer (`scripts/install-lampastream.sh`) owns standard deployment,
 dependencies, builds and explicit persisted-schema migration. Current runtime accepts
 schema version 1 only; historical conversions belong exclusively to migration code.
 See [cutover inventory](docs/compatibility-cutover.md). Never add runtime fallbacks

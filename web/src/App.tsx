@@ -46,7 +46,7 @@ export default function App() {
     <div className="min-h-screen flex flex-col bg-background">
       <header className="border-b border-border shrink-0">
         <div className="px-4 py-4 flex items-center justify-between">
-          <h1 className="text-lg font-semibold tracking-tight">HueSync</h1>
+          <h1 className="text-lg font-semibold tracking-tight">LampaStream</h1>
           <div className="flex items-center gap-3">
             {status?.version && (
               <span className="text-xs text-muted-foreground font-mono">{status.version}</span>
