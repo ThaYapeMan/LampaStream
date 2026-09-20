@@ -181,6 +181,11 @@ migrate_huesync_layout() {
     elif [[ -f "$HUESYNC_CONFIG" && -f "$CONFIG" ]]; then
         log "Both configs present; retaining existing $CONFIG"
     fi
+    local shairport_conf=/usr/local/etc/shairport-sync.conf
+    if [[ -f "$shairport_conf" ]] && grep -qF '/run/huesync/' "$shairport_conf"; then
+        sed -i 's#/run/huesync/#/run/lampastream/#g' "$shairport_conf"
+        log "Updated FIFO paths in $shairport_conf: /run/huesync/ -> /run/lampastream/"
+    fi
 }
 cleanup_huesync_layout() {
     local huesync_dir

@@ -25,6 +25,8 @@ inside its "4/7 Migrate persisted configuration" stage:
 
 - Stops and disables `huesync.service`.
 - Copies `/etc/huesync/config.json` → `/etc/lampastream/config.json`.
+- Rewrites `/run/huesync/` FIFO paths in `/usr/local/etc/shairport-sync.conf`
+  to `/run/lampastream/` (idempotent; skipped if already correct).
 - Rewrites any `player_name` / `display_name` fields that start with `HueSync`
   to `LampaStream` (never changes `player_mac`). Each rewritten field is logged.
 - After the new unit is installed, verified and the service is running, removes
@@ -36,6 +38,7 @@ inside its "4/7 Migrate persisted configuration" stage:
 ==> Old huesync layout detected — migrating to lampastream
 ==> huesync.service stopped and disabled
 ==> Config moved: /etc/huesync/config.json -> /etc/lampastream/config.json
+==> Updated FIFO paths in /usr/local/etc/shairport-sync.conf: /run/huesync/ -> /run/lampastream/
 MIGRATE player_name: 'HueSync LMS' -> 'LampaStream LMS'
 ...
 ==> Completing huesync -> lampastream cleanup (new unit verified and running)

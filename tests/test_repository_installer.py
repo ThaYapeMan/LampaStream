@@ -609,3 +609,80 @@ def test_check_branch_calls_detect_layout():
     check = text.split('if [[ "$CHECK" == 1 ]]; then', 1)[1].split('\nfi', 1)[0]
     assert 'detect_layout' in check
     assert text.index('detect_layout') < text.index('squeezelite_conflicts check')
+
+
+def test_migrate_huesync_layout_updates_shairport_fifo_paths(tmp_path):
+    """migrate_huesync_layout rewrites /run/huesync/ FIFO paths in shairport-sync.conf."""
+    text = SCRIPT.read_text()
+    functions = _migration_functions(text)
+    etc_huesync = tmp_path / 'etc' / 'huesync'
+    etc_huesync.mkdir(parents=True)
+    old_config = etc_huesync / 'config.json'
+    old_config.write_text('{}')
+    shairport_conf = tmp_path / 'shairport-sync.conf'
+    shairport_conf.write_text(
+        'pipe = {\n'
+        '  name = "/run/huesync/airplay.pcm";\n'
+        '}\n'
+        'metadata = {\n'
+        '  pipename = "/run/huesync/airplay.metadata";\n'
+        '}\n'
+    )
+    new_config = tmp_path / 'etc' / 'lampastream' / 'config.json'
+    shell = f'''set -Eeuo pipefail
+log() {{ echo "$*"; }}
+fail() {{ echo "$*"; exit 1; }}
+systemctl() {{ return 1; }}
+id() {{ return 0; }}
+install() {{ mkdir -p "${{@: -1}}"; }}
+cp() {{ command cp "$@"; }}
+chown() {{ true; }}
+chmod() {{ true; }}
+HUESYNC_CONFIG="{old_config}"
+CONFIG="{new_config}"
+HUESYNC_SERVICE="{tmp_path}/missing.service"
+HUESYNC_RULES="{tmp_path}/missing.rules"
+{functions.replace('/usr/local/etc/shairport-sync.conf', str(shairport_conf))}
+migrate_huesync_layout
+'''
+    result = subprocess.run(['bash', '-c', shell], capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    updated = shairport_conf.read_text()
+    assert '/run/huesync/' not in updated
+    assert '/run/lampastream/airplay.pcm' in updated
+    assert '/run/lampastream/airplay.metadata' in updated
+    assert 'Updated FIFO paths' in result.stdout
+
+
+def test_migrate_huesync_layout_skips_shairport_if_already_migrated(tmp_path):
+    """migrate_huesync_layout does not touch shairport-sync.conf if paths are already correct."""
+    text = SCRIPT.read_text()
+    functions = _migration_functions(text)
+    etc_huesync = tmp_path / 'etc' / 'huesync'
+    etc_huesync.mkdir(parents=True)
+    old_config = etc_huesync / 'config.json'
+    old_config.write_text('{}')
+    shairport_conf = tmp_path / 'shairport-sync.conf'
+    original = 'pipe = { name = "/run/lampastream/airplay.pcm"; }\n'
+    shairport_conf.write_text(original)
+    new_config = tmp_path / 'etc' / 'lampastream' / 'config.json'
+    shell = f'''set -Eeuo pipefail
+log() {{ echo "$*"; }}
+fail() {{ echo "$*"; exit 1; }}
+systemctl() {{ return 1; }}
+id() {{ return 0; }}
+install() {{ mkdir -p "${{@: -1}}"; }}
+cp() {{ command cp "$@"; }}
+chown() {{ true; }}
+chmod() {{ true; }}
+HUESYNC_CONFIG="{old_config}"
+CONFIG="{new_config}"
+HUESYNC_SERVICE="{tmp_path}/missing.service"
+HUESYNC_RULES="{tmp_path}/missing.rules"
+{functions.replace('/usr/local/etc/shairport-sync.conf', str(shairport_conf))}
+migrate_huesync_layout
+'''
+    result = subprocess.run(['bash', '-c', shell], capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    assert shairport_conf.read_text() == original, "Already-migrated shairport conf must not be rewritten"
+    assert 'Updated FIFO paths' not in result.stdout
