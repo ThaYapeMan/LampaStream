@@ -286,8 +286,12 @@ def test_create_airplay_virtual_player(client: TestClient):
 
 def test_airplay_virtual_player_in_list(client: TestClient):
     """An AirPlay player appears in the virtual-players list with correct type."""
-    client.post("/api/virtual-players", json={"type": "AirPlay", "player_name": "LampaStreamAirPlay"})
-    client.post("/api/virtual-players", json={"lms_host": "10.0.0.1", "player_name": "LampaStreamLMS"})
+    client.post(
+        "/api/virtual-players", json={"type": "AirPlay", "player_name": "LampaStreamAirPlay"}
+    )
+    client.post(
+        "/api/virtual-players", json={"lms_host": "10.0.0.1", "player_name": "LampaStreamLMS"}
+    )
 
     resp = client.get("/api/virtual-players")
     assert resp.status_code == 200

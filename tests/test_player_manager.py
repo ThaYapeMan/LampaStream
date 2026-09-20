@@ -907,7 +907,8 @@ def test_installed_producer_matches_ingress_abi(tmp_path):
     from lampastream.storage import Storage
 
     manager = PlayerManager(Storage(tmp_path / 'config.json'))
-    for mode, expected in [('cava', 'lampastream-squeezelite-fifo'), ('pcm_pipeline', 'squeezelite')]:
+    cases = [('cava', 'lampastream-squeezelite-fifo'), ('pcm_pipeline', 'squeezelite')]
+    for mode, expected in cases:
         profile = Profile(player_mac='aa:bb:cc:dd:ee:ff', bars_source=mode)
         session = ActiveSession(profile)
         with patch('shutil.which', return_value='/usr/local/bin/' + expected) as which, \

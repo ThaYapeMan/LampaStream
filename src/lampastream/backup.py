@@ -223,7 +223,9 @@ def configuration_lease(path: Path):
         try:
             fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
-            raise BackupError("Configuration is in use; stop LampaStream before CLI restore") from None
+            raise BackupError(
+                "Configuration is in use; stop LampaStream before CLI restore"
+            ) from None
         # A root CLI must not leave a lock that the runtime config owner cannot open.
         metadata = path.stat()
         os.fchown(fd, metadata.st_uid, metadata.st_gid)

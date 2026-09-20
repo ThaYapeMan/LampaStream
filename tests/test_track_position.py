@@ -10,7 +10,11 @@ from lampastream.lms_status import _parse_status
 from lampastream.models import Profile
 from lampastream.player_manager import ActiveSession, PlayerManager
 from lampastream.storage import Storage
-from lampastream.track_position import AirPlayTrackPositionSource, LmsTrackPositionSource, TrackPosition
+from lampastream.track_position import (
+    AirPlayTrackPositionSource,
+    LmsTrackPositionSource,
+    TrackPosition,
+)
 
 
 def item(code, data='', kind='ssnc'):

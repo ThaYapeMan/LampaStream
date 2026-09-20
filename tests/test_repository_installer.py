@@ -278,7 +278,8 @@ def test_airplay_metadata_build_fifo_and_service_arguments(tmp_path):
     destination = tmp_path / 'tmpfiles.conf'
     subprocess.run(['bash', '-c', declaration.replace('/etc/tmpfiles.d/lampastream-run.conf',
                                                      str(destination))], check=True)
-    assert 'p /run/lampastream/airplay.metadata 0600 lampastream lampastream -' in destination.read_text()
+    expected = 'p /run/lampastream/airplay.metadata 0600 lampastream lampastream -'
+    assert expected in destination.read_text()
     assert '--metadata-enable --metadata-pipename=/run/lampastream/airplay.metadata' in text
 
 
@@ -684,7 +685,9 @@ migrate_huesync_layout
 '''
     result = subprocess.run(['bash', '-c', shell], capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
-    assert shairport_conf.read_text() == original, "Already-migrated shairport conf must not be rewritten"
+    assert shairport_conf.read_text() == original, (
+        "Already-migrated shairport conf must not be rewritten"
+    )
     assert 'MIGRATE shairport-sync.conf' not in result.stdout
 
 
@@ -790,5 +793,7 @@ cleanup_huesync_layout
     result = subprocess.run(['bash', '-c', shell], capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
     assert not old_rules.exists(), "Old huesync rules must be removed"
-    assert new_rules.exists(), "New lampastream rules must survive cleanup (replaced, not just deleted)"
+    assert new_rules.exists(), (
+        "New lampastream rules must survive cleanup (replaced, not just deleted)"
+    )
     assert 'subject.user === "lampastream"' in new_rules.read_text()

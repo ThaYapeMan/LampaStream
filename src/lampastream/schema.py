@@ -57,7 +57,9 @@ def validate_current(data: dict, *, references: bool = False) -> None:
     """
     if (not isinstance(data, dict) or type(data.get("schema_version")) is not int
             or data.get("schema_version") != SCHEMA_VERSION):
-        raise ValueError("Unsupported persisted schema; run scripts/install-lampastream.sh to migrate")
+        raise ValueError(
+            "Unsupported persisted schema; run scripts/install-lampastream.sh to migrate"
+        )
     if set(data) != set(empty_config()):
         raise ValueError("Unexpected/missing persisted collections; run the repository migration")
     ids = {}
