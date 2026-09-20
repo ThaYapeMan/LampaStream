@@ -651,7 +651,7 @@ migrate_huesync_layout
     assert '/run/huesync/' not in updated
     assert '/run/lampastream/airplay.pcm' in updated
     assert '/run/lampastream/airplay.metadata' in updated
-    assert 'Updated FIFO paths' in result.stdout
+    assert 'MIGRATE shairport-sync.conf: /run/huesync -> /run/lampastream' in result.stdout
 
 
 def test_migrate_huesync_layout_skips_shairport_if_already_migrated(tmp_path):
@@ -685,4 +685,110 @@ migrate_huesync_layout
     result = subprocess.run(['bash', '-c', shell], capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
     assert shairport_conf.read_text() == original, "Already-migrated shairport conf must not be rewritten"
-    assert 'Updated FIFO paths' not in result.stdout
+    assert 'MIGRATE shairport-sync.conf' not in result.stdout
+
+
+def test_migrate_huesync_layout_old_fixture_full(tmp_path):
+    """Old-layout fixture (huesync config + huesync shairport paths) → one run produces
+    lampastream config and lampastream FIFO paths; second run is a no-op."""
+    text = SCRIPT.read_text()
+    functions = _migration_functions(text)
+    etc_huesync = tmp_path / 'etc' / 'huesync'
+    etc_huesync.mkdir(parents=True)
+    old_config = etc_huesync / 'config.json'
+    old_config.write_text('{"schema_version": 1}')
+    shairport_conf = tmp_path / 'shairport-sync.conf'
+    shairport_conf.write_text(
+        'general = { name = "HueSync AirPlay"; }\n'
+        'pipe = { name = "/run/huesync/airplay.pcm"; }\n'
+        'metadata = { pipename = "/run/huesync/airplay.metadata"; }\n'
+    )
+    new_config = tmp_path / 'etc' / 'lampastream' / 'config.json'
+
+    def _run():
+        shell = f'''set -Eeuo pipefail
+log() {{ echo "$*"; }}
+fail() {{ echo "$*"; exit 1; }}
+systemctl() {{ return 1; }}
+install() {{ mkdir -p "${{@: -1}}"; }}
+cp() {{ command cp "$@"; }}
+chown() {{ true; }}
+chmod() {{ true; }}
+HUESYNC_CONFIG="{old_config}"
+CONFIG="{new_config}"
+HUESYNC_SERVICE="{tmp_path}/missing.service"
+HUESYNC_RULES="{tmp_path}/missing.rules"
+{functions.replace('/usr/local/etc/shairport-sync.conf', str(shairport_conf))}
+migrate_huesync_layout
+'''
+        return subprocess.run(['bash', '-c', shell], capture_output=True, text=True)
+
+    # First run: migrate
+    r1 = _run()
+    assert r1.returncode == 0, r1.stderr
+    assert new_config.exists(), "New config must be created"
+    assert new_config.read_text() == '{"schema_version": 1}'
+    conf = shairport_conf.read_text()
+    assert '/run/huesync/' not in conf
+    assert '/run/lampastream/airplay.pcm' in conf
+    assert '/run/lampastream/airplay.metadata' in conf
+    assert 'MIGRATE shairport-sync.conf: /run/huesync -> /run/lampastream' in r1.stdout
+
+    # Second run: idempotent — shairport conf unchanged, no MIGRATE log
+    conf_before = shairport_conf.read_text()
+    r2 = _run()
+    assert r2.returncode == 0, r2.stderr
+    assert shairport_conf.read_text() == conf_before
+    assert 'MIGRATE shairport-sync.conf' not in r2.stdout
+
+
+def test_cleanup_huesync_rules_replaced_not_just_deleted(tmp_path):
+    """49-huesync-airplay.rules references the old user (huesync) and after cleanup
+    it is gone while 49-lampastream-airplay.rules (with lampastream user) remains."""
+    text = SCRIPT.read_text()
+    functions = _migration_functions(text)
+
+    rules_dir = tmp_path / 'etc' / 'polkit-1' / 'rules.d'
+    rules_dir.mkdir(parents=True)
+    old_rules = rules_dir / '49-huesync-airplay.rules'
+    old_rules.write_text(
+        'polkit.addRule(function(action, subject) {\n'
+        '    if (subject.user === "huesync" &&\n'
+        '        action.id === "org.freedesktop.systemd1.manage-units") {\n'
+        '        return polkit.Result.YES;\n'
+        '    }\n'
+        '});\n'
+    )
+    new_rules = rules_dir / '49-lampastream-airplay.rules'
+    new_rules.write_text(
+        'polkit.addRule(function(action, subject) {\n'
+        '    if (subject.user === "lampastream" &&\n'
+        '        action.id === "org.freedesktop.systemd1.manage-units") {\n'
+        '        return polkit.Result.YES;\n'
+        '    }\n'
+        '});\n'
+    )
+
+    # Confirm the fixture is realistic: old rules reference the huesync user
+    assert 'subject.user === "huesync"' in old_rules.read_text()
+    # Confirm new rules reference the lampastream user
+    assert 'subject.user === "lampastream"' in new_rules.read_text()
+
+    shell = f'''set -Eeuo pipefail
+log() {{ echo "$*"; }}
+fail() {{ echo "$*"; exit 1; }}
+systemctl() {{ true; }}
+id() {{ return 1; }}
+getent() {{ return 1; }}
+HUESYNC_CONFIG="{tmp_path}/missing-config"
+CONFIG="{tmp_path}/missing-new"
+HUESYNC_SERVICE="{tmp_path}/missing.service"
+HUESYNC_RULES="{old_rules}"
+{functions}
+cleanup_huesync_layout
+'''
+    result = subprocess.run(['bash', '-c', shell], capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    assert not old_rules.exists(), "Old huesync rules must be removed"
+    assert new_rules.exists(), "New lampastream rules must survive cleanup (replaced, not just deleted)"
+    assert 'subject.user === "lampastream"' in new_rules.read_text()
