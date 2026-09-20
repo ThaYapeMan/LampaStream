@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Capture live energy and blend-weight data from a running HueSync instance.
+"""Capture live energy and blend-weight data from a running LampaStream instance.
 
 Run on the LXC using the project venv:
 
@@ -362,9 +362,9 @@ def main() -> None:
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
     ap.add_argument("--host", default="localhost", metavar="HOST",
-                    help="HueSync host (default: localhost)")
+                    help="LampaStream host (default: localhost)")
     ap.add_argument("--port", type=int, default=8420, metavar="PORT",
-                    help="HueSync port (default: 8420)")
+                    help="LampaStream port (default: 8420)")
     ap.add_argument("--duration", type=float, default=120.0, metavar="SECONDS",
                     help="Capture duration in seconds (default: 120)")
     ap.add_argument("--out", default=None, metavar="PATH",

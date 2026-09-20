@@ -1,9 +1,9 @@
-"""Tests for Phase 1 audio contract types in huesync.canonicalizer."""
+"""Tests for Phase 1 audio contract types in lampastream.canonicalizer."""
 
 import numpy as np
 import pytest
 
-from huesync.canonicalizer import (
+from lampastream.canonicalizer import (
     AnalysisPcmFrame,
     CanonicalData,
     DataResult,
@@ -382,7 +382,7 @@ def test_canonical_data_construction():
 
 
 def test_canonical_lifecycle_variants():
-    from huesync.canonicalizer import CanonicalReadResult  # noqa: F401 — import check
+    from lampastream.canonicalizer import CanonicalReadResult  # noqa: F401 — import check
 
     frame = _analysis()
     variants = [

@@ -8,9 +8,9 @@ silently falls through to cava-based detection in SyncEngine without error.
 import re
 from pathlib import Path
 
-from huesync.models import ONSET_METHODS
+from lampastream.models import ONSET_METHODS
 
-_SYNC_ENGINE = Path(__file__).parent.parent / "src" / "huesync" / "sync_engine.py"
+_SYNC_ENGINE = Path(__file__).parent.parent / "src" / "lampastream" / "sync_engine.py"
 
 
 def test_onset_methods_contains_expected_values() -> None:

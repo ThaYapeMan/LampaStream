@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""HueSync DSP Phase 2A — Deterministic Same-PCM Comparison.
+"""LampaStream DSP Phase 2A — Deterministic Same-PCM Comparison.
 
-Compares HueSync native PCM spectrum analysis vs CAVA 0.10.4 algorithm
+Compares LampaStream native PCM spectrum analysis vs CAVA 0.10.4 algorithm
 using six identical deterministic test signals.
 
 Usage (Python simulation, runs locally):
@@ -36,8 +36,8 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-from huesync.pcm_source import WINDOW_SIZE, PcmStft
-from huesync.sync_engine import BandNormaliser
+from lampastream.pcm_source import WINDOW_SIZE, PcmStft
+from lampastream.sync_engine import BandNormaliser
 
 # ---------------------------------------------------------------------------
 # Global experiment parameters
@@ -205,7 +205,7 @@ def _mag_to_bar_bytes(mag: np.ndarray, n_bars: int, lower_hz: float,
 
 
 class NativeAnalyser:
-    """HueSync native PCM path: PcmStft + _mag_to_bar_bytes + BandNormaliser.
+    """LampaStream native PCM path: PcmStft + _mag_to_bar_bytes + BandNormaliser.
 
     Processes mono float32 samples derived from stereo (L+R)/2 downmix.
     """
@@ -957,7 +957,7 @@ def plot_cava_stale_frame(outdir: Path) -> dict:
 # ---------------------------------------------------------------------------
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="HueSync DSP Phase 2A comparison")
+    parser = argparse.ArgumentParser(description="LampaStream DSP Phase 2A comparison")
     parser.add_argument("--output-dir", default="/tmp/phase2a")
     parser.add_argument("--cava", action="store_true",
                         help="Use real CAVA binary (requires LXC)")

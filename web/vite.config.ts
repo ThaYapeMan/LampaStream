@@ -25,7 +25,7 @@ export default defineConfig({
   },
   build: {
     // Output directly into the Python package so it is included after pip install.
-    outDir: '../src/huesync/webui',
+    outDir: '../src/lampastream/webui',
     emptyOutDir: true,
   },
   server: {

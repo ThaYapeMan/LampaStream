@@ -11,7 +11,7 @@ Pinned upstream: `ralph-irving/squeezelite` at
 For a standard installation, from the repository:
 
 ```sh
-sudo ./scripts/install-huesync.sh
+sudo ./scripts/install-lampastream.sh
 ```
 
 The repository installer is the authoritative standard deployment path. It provisions
@@ -24,7 +24,7 @@ dry-runs/applies `output_vis_v1.patch`, forces VISEXPORT, checks both producer o
 in the make plan, compiles them and performs the full link. The installer copies the
 result to `/usr/local/bin/squeezelite`, compares bytes and records SHA256 provenance.
 The service PATH selects this binary ahead of any packaged Squeezelite.
-The helper also builds `huesync-squeezelite-fifo` from unpatched pinned upstream
+The helper also builds `lampastream-squeezelite-fifo` from unpatched pinned upstream
 with VISEXPORT, specifically for external CAVA's byte-80 ring layout. That binary
 is selected only by `bars_source=cava`; canonical PCM always uses the v1 binary.
 Neither route falls back to a distro executable.

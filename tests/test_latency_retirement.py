@@ -12,16 +12,16 @@ from fastapi import HTTPException
 from test_analysis_architecture import _make_cap, _make_frame
 from test_audit_blockers_v3 import _make_engine_and_start
 
-from huesync.api import deactivate_coupling
-from huesync.canonicalizer import (
+from lampastream.api import deactivate_coupling
+from lampastream.canonicalizer import (
     AnalysisPcmFrame,
     DataResult,
     DecodedSourceFrame,
     TemporarilyNoData,
 )
-from huesync.cavacore import CavaCoreBackend
-from huesync.player_manager import ActiveSession, PlayerManager
-from huesync.spectrum_engine import CavaCoreSpectrumEngine, ProcessorUpdate
+from lampastream.cavacore import CavaCoreBackend
+from lampastream.player_manager import ActiveSession, PlayerManager
+from lampastream.spectrum_engine import CavaCoreSpectrumEngine, ProcessorUpdate
 
 
 def _real_cava_scheduler():

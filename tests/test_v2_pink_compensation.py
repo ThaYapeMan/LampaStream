@@ -5,10 +5,10 @@ from unittest.mock import patch
 import numpy as np
 import pytest
 
-from huesync import spectrum_engine
-from huesync import v2_bars_pink as pink
-from huesync.pcm_source import WINDOW_SIZE
-from huesync.spectrum_engine import SharedAnalysis, V2SpectrumEngine
+from lampastream import spectrum_engine
+from lampastream import v2_bars_pink as pink
+from lampastream.pcm_source import WINDOW_SIZE
+from lampastream.spectrum_engine import SharedAnalysis, V2SpectrumEngine
 
 
 def run(engine, frames):
@@ -57,7 +57,7 @@ def test_production_v2_table_limits_determinism_and_reset():
     assert gain.max() <= 12
     assert gain[-1] > gain[0]
     np.testing.assert_array_equal(gain, pink.derive_pink_compensation(34, 50, 12000))
-    with patch('huesync.spectrum_engine.derive_pink_compensation') as derive:
+    with patch('lampastream.spectrum_engine.derive_pink_compensation') as derive:
         engine.reset()
         assert engine._pink_compensation is gain
         derive.assert_not_called()

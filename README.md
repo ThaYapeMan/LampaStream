@@ -1,13 +1,15 @@
-# HueSync
+# LampaStream
+
+> Formerly known as **HueSync**; renamed when the project outgrew Philips Hue.
 
 Music-reactive Philips Hue Entertainment lighting from LMS or AirPlay 2.
-HueSync analyzes live audio, produces generic audio features, and renders Effects
+LampaStream analyzes live audio, produces generic audio features, and renders Effects
 through a Hue Entertainment output driver. No microphone or precomputed BPM tags
 are required.
 
-## HueSync domain model
+## LampaStream domain model
 
-HueSync has two architectural levels: a **product/domain model** describing what
+LampaStream has two architectural levels: a **product/domain model** describing what
 runs together, and an **audio-analysis subsystem** describing how audio becomes
 features. The frozen canonical pipeline is a subsystem within the broader model.
 
@@ -38,7 +40,7 @@ the EnergyProfile references its Effects through `high_energy_effect_id` and
 `low_energy_effect_id`. Controller and Effect are therefore bound indirectly.
 
 ```text
-HueSync domain model
+LampaStream domain model
     ├── VirtualPlayer ───────────────────┐
     ├── Analyser ────────────────────────┤
     ├── Zone → Controller ───────────────┤
@@ -46,7 +48,7 @@ HueSync domain model
                                         ▼
                                      Coupling
                                         ▼
-                              Running HueSync session
+                              Running LampaStream session
                                 ├── player / ingress
                                 ├── analysis
                                 ├── energy blending
@@ -63,7 +65,7 @@ with a backup and conflict checks. See [configuration](docs/configuration.md).
 
 ## Player-independent audio architecture
 
-**LMS/Squeezelite and AirPlay are current integrations. Neither defines HueSync's
+**LMS/Squeezelite and AirPlay are current integrations. Neither defines LampaStream's
 architecture. The player-specific boundary ends at canonical audio ingress.**
 Once audio has been canonicalised, downstream analysis and Effects do not need to
 know which player supplied it.
@@ -80,7 +82,7 @@ know which player supplied it.
 | Roon | NOT PRESENT | — | — | Potential future adapter; no production Roon player type or ingress. |
 
 No other production VirtualPlayer types are currently defined. AirPlay uses one
-managed global shairport-sync instance and `/run/huesync/airplay.pcm`, with one
+managed global shairport-sync instance and `/run/lampastream/airplay.pcm`, with one
 reader; it does not create an independent receiver per configured VirtualPlayer.
 LMS SHM continuity and AirPlay pipe framing/disconnect events belong to their
 respective ingress adapters. Both canonical routes retain stereo channels and
@@ -176,7 +178,7 @@ Legacy:    LMS → squeezelite → external CAVA process → FIFO derived bars
 | LMS external bars | `bars_source=cava`, backend default `v2` | External CAVA/FIFO; the backend field does not select embedded processing |
 
 V2 uses the shared STFT. Embedded CAVA Core keeps upstream native DSP and its own
-FFTs; HueSync schedules 480-frame executions at 48 kHz (100 Hz). External CAVA/FIFO
+FFTs; LampaStream schedules 480-frame executions at 48 kHz (100 Hz). External CAVA/FIFO
 is outside the canonical AnalysisProcessor/SpectrumEngine path and registry.
 **LMS does not require external CAVA when using canonical PCM.**
 
@@ -233,9 +235,9 @@ The repository installer is the authoritative standard deployment path.
 Supported installer target: **Debian 13 / trixie, x86_64, with systemd**.
 
 ```sh
-git clone https://github.com/ThaYapeMan/HueSync.git
-cd HueSync
-sudo ./scripts/install-huesync.sh
+git clone https://github.com/ThaYapeMan/LampaStream.git
+cd LampaStream
+sudo ./scripts/install-lampastream.sh
 ```
 
 The installer provisions dependencies, builds the patched Squeezelite producer and
@@ -247,7 +249,7 @@ Create/pair a Controller through the API, then open `http://<host>:8420` to conf
 the Zone, player, Analyser, Effects/EnergyProfile and Coupling. Host audio-device passthrough remains an LXC
 prerequisite for paced LMS playback; a guest script cannot provision host devices.
 See [installation](docs/installation.md) and [LXC deployment](docs/deployment-lxc.md).
-For read-only diagnosis, run `sudo ./scripts/install-huesync.sh --check`.
+For read-only diagnosis, run `sudo ./scripts/install-lampastream.sh --check`.
 
 ## Validation status
 
@@ -280,7 +282,7 @@ unimplemented proposals, not current capabilities.
 Use **Backup and restore** in the UI to export all configured entities and player
 latencies, including Hue Bridge `app_key` and `client_key`. Restoring preserves
 pairing data, IDs and relationships; no configuration needs to be reconstructed.
-Keep the JSON file secure: it contains controller credentials. HueSync has no
+Keep the JSON file secure: it contains controller credentials. LampaStream has no
 built-in authentication; expose its UI/API only on a trusted network.
 
 Restore accepts the current versioned backup format only. Deactivate the current

@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from huesync.models import (
+from lampastream.models import (
     Analyser,
     Controller,
     ControllerType,
@@ -15,7 +15,7 @@ from huesync.models import (
     VirtualPlayer,
     Zone,
 )
-from huesync.storage import Storage
+from lampastream.storage import Storage
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -64,7 +64,7 @@ def test_controller_from_dict_rejects_unknown_keys():
 
 def test_player_roundtrip():
     p = VirtualPlayer(lms_host="10.0.0.5", lms_port=9000,
-                      player_name="HueSync", player_mac="aa:bb:cc:dd:ee:01",
+                      player_name="LampaStream", player_mac="aa:bb:cc:dd:ee:01",
                       alsa_device="hw:0")
     p2 = VirtualPlayer.from_dict(p.to_dict())
     assert p2.id == p.id
@@ -407,14 +407,14 @@ def test_analyser_from_dict_rejects_invalid_spectrum_backend() -> None:
 
 
 def test_profile_default_backend_is_v2() -> None:
-    from huesync.models import Profile
+    from lampastream.models import Profile
 
     p = Profile()
     assert p.spectrum_backend == "v2"
 
 
 def test_profile_cavacore_backend_accepted() -> None:
-    from huesync.models import Profile
+    from lampastream.models import Profile
 
     p = Profile(bars_source="pcm_pipeline", spectrum_backend="cavacore")
     assert p.spectrum_backend == "cavacore"
@@ -423,7 +423,7 @@ def test_profile_cavacore_backend_accepted() -> None:
 def test_profile_invalid_backend_raises() -> None:
     import pytest
 
-    from huesync.models import Profile
+    from lampastream.models import Profile
 
     with pytest.raises(ValueError, match="spectrum_backend"):
         Profile(spectrum_backend="unknown_backend")
@@ -432,7 +432,7 @@ def test_profile_invalid_backend_raises() -> None:
 def test_profile_from_dict_rejects_invalid_backend() -> None:
     import pytest
 
-    from huesync.models import Profile
+    from lampastream.models import Profile
 
     with pytest.raises(ValueError, match="spectrum_backend"):
         Profile.from_dict({"spectrum_backend": "bogus"})

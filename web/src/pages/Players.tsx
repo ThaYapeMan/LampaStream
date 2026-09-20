@@ -54,7 +54,7 @@ function defaultForm(player?: VirtualPlayer): FormState {
     playerType: player?.type ?? 'LMS',
     lms_host: player?.lms_host ?? '',
     lms_port: String(player?.lms_port ?? 9000),
-    player_name: player?.player_name ?? 'HueSync',
+    player_name: player?.player_name ?? 'LampaStream',
     display_name: player?.display_name ?? '',
     alsa_device: player?.alsa_device ?? '',
     follow_player_mac: player?.follow_player_mac ?? '',
@@ -308,7 +308,7 @@ export function Players({ activeCouplingId = null }: { activeCouplingId?: string
               <Input
                 value={form.display_name}
                 onChange={(e) => set('display_name', e.target.value)}
-                placeholder={form.player_name || 'HueSync'}
+                placeholder={form.player_name || 'LampaStream'}
               />
             </div>
 
@@ -328,7 +328,7 @@ export function Players({ activeCouplingId = null }: { activeCouplingId?: string
                   </p>
                   <p>
                     Select this player alongside your real speaker in Control Center to keep audio
-                    playing through your speaker while HueSync analyses the stream.
+                    playing through your speaker while LampaStream analyses the stream.
                   </p>
                 </div>
               </>
@@ -375,7 +375,7 @@ export function Players({ activeCouplingId = null }: { activeCouplingId?: string
                 </FormRow>
                 {form.follow_mode === 'sync_group' ? (
                   <p className="text-sm text-muted-foreground">
-                    Sync HueSync with a room in LMS. HueSync observes that group automatically
+                    Sync LampaStream with a room in LMS. LampaStream observes that group automatically
                     and never changes its membership or sends playback commands.
                     Your manual target is retained when switching modes.
                   </p>
@@ -383,7 +383,7 @@ export function Players({ activeCouplingId = null }: { activeCouplingId?: string
                 <div className="space-y-1">
                   <Label className="text-sm">Follow player</Label>
                   <p className="text-xs text-muted-foreground">
-                    HueSync mirrors track changes from this LMS player without joining its sync group.
+                    LampaStream mirrors track changes from this LMS player without joining its sync group.
                   </p>
                   <div className="flex gap-2">
                     <Select

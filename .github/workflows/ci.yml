@@ -71,10 +71,10 @@ jobs:
 
       - name: Check bundle matches source
         run: |
-          if [[ -n "$(git status --porcelain --untracked-files=all -- src/huesync/webui/)" ]]; then
+          if [[ -n "$(git status --porcelain --untracked-files=all -- src/lampastream/webui/)" ]]; then
             echo ""
-            echo "ERROR: The committed bundle in src/huesync/webui/ does not match"
+            echo "ERROR: The committed bundle in src/lampastream/webui/ does not match"
             echo "a fresh build of the current web/src/ source."
-            echo "Run: cd web && npm run build, then commit src/huesync/webui/."
+            echo "Run: cd web && npm run build, then commit src/lampastream/webui/."
             exit 1
           fi

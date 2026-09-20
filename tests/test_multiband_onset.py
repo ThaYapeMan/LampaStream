@@ -15,8 +15,8 @@ Two distinct verification layers:
 
 import numpy as np
 
-from huesync.pcm_source import WINDOW_SIZE
-from huesync.sync_engine import MultibandOnsetDetector, MultibandStftPipeline, OnsetDetector
+from lampastream.pcm_source import WINDOW_SIZE
+from lampastream.sync_engine import MultibandOnsetDetector, MultibandStftPipeline, OnsetDetector
 
 _SR = 44100
 _HOP = round(_SR * 0.010)  # 441 samples

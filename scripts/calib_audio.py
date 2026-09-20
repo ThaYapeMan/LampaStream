@@ -2,13 +2,13 @@
 
 Decodes FLAC/WAV audio to mono PCM float32 and replays the exact
 SustainedEnergyTracker algorithm at production tick rate to reconstruct
-the SE time series that HueSync would have produced for that audio.
+the SE time series that LampaStream would have produced for that audio.
 
 Requires:  pip install soundfile   (FLAC and WAV via libsndfile)
            MP3 is not supported — use ffmpeg to transcode first.
 
 Dependency direction:
-    calib_audio → huesync.sync_engine (import only, no mutation)
+    calib_audio → lampastream.sync_engine (import only, no mutation)
     calibrate_energy.py → calib_audio (CLI layer)
 
 Production runtime has no dependency on this module.
@@ -24,7 +24,7 @@ import numpy as np
 _SRC_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src")
 if _SRC_DIR not in sys.path:
     sys.path.insert(0, _SRC_DIR)
-from huesync.sync_engine import SustainedEnergyTracker  # noqa: E402
+from lampastream.sync_engine import SustainedEnergyTracker  # noqa: E402
 
 PRODUCTION_TICK_S: float = 1.0 / 30.0   # matches SyncEngine SEND_INTERVAL_S
 
@@ -63,7 +63,7 @@ def _require_soundfile():
         raise ImportError(
             "soundfile is required for audio decoding.\n"
             "Install it with:  pip install soundfile\n"
-            "  or:  pip install 'huesync[calibration]'\n"
+            "  or:  pip install 'lampastream[calibration]'\n"
             "(requires libsndfile; supports FLAC and WAV; not MP3)"
         ) from None
 

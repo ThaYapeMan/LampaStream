@@ -1,4 +1,4 @@
-"""Tests for the JSON REST API (src/huesync/api.py).
+"""Tests for the JSON REST API (src/lampastream/api.py).
 
 Uses FastAPI's TestClient so no real network connections are made.
 PlayerManager is mocked to avoid needing actual processes or bridges.
@@ -14,8 +14,8 @@ from unittest.mock import AsyncMock, MagicMock, PropertyMock
 import pytest
 from fastapi.testclient import TestClient
 
-from huesync.app import app
-from huesync.models import (
+from lampastream.app import app
+from lampastream.models import (
     Analyser,
     Coupling,
     Effect,
@@ -23,7 +23,7 @@ from huesync.models import (
     VirtualPlayer,
     Zone,
 )
-from huesync.storage import Storage
+from lampastream.storage import Storage
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -286,8 +286,8 @@ def test_create_airplay_virtual_player(client: TestClient):
 
 def test_airplay_virtual_player_in_list(client: TestClient):
     """An AirPlay player appears in the virtual-players list with correct type."""
-    client.post("/api/virtual-players", json={"type": "AirPlay", "player_name": "HueSyncAirPlay"})
-    client.post("/api/virtual-players", json={"lms_host": "10.0.0.1", "player_name": "HueSyncLMS"})
+    client.post("/api/virtual-players", json={"type": "AirPlay", "player_name": "LampaStreamAirPlay"})
+    client.post("/api/virtual-players", json={"lms_host": "10.0.0.1", "player_name": "LampaStreamLMS"})
 
     resp = client.get("/api/virtual-players")
     assert resp.status_code == 200
@@ -395,7 +395,7 @@ def test_lms_players_endpoint_empty_host(client: TestClient):
 
 
 def test_lms_players_endpoint_returns_list(client: TestClient, monkeypatch):
-    from huesync import api as api_module
+    from lampastream import api as api_module
 
     fake_players = [
         {"playerid": "aa:bb:cc:dd:ee:ff", "name": "Sonos Living Room"},
@@ -413,11 +413,11 @@ def test_lms_players_endpoint_returns_list(client: TestClient, monkeypatch):
 
 
 def test_lms_follow_targets_exclude_all_managed_players(client: TestClient, monkeypatch):
-    from huesync import api as api_module
+    from lampastream import api as api_module
 
     for name, mac in [
-        ("HueSync", "AA:BB:CC:DD:EE:01"),
-        ("HueSync LMS", "aa:bb:cc:dd:ee:02"),
+        ("LampaStream", "AA:BB:CC:DD:EE:01"),
+        ("LampaStream LMS", "aa:bb:cc:dd:ee:02"),
     ]:
         client._storage.save_virtual_player(VirtualPlayer(
             player_name=name, player_mac=mac, lms_host="other-host",
@@ -425,11 +425,11 @@ def test_lms_follow_targets_exclude_all_managed_players(client: TestClient, monk
     # An unset identity must not filter unrelated discoveries.
     client._storage.save_virtual_player(VirtualPlayer(player_name="Unconfigured"))
     discovered = [
-        {"playerid": "aa:bb:cc:dd:ee:01", "name": "HueSync"},
-        {"playerid": "AA:BB:CC:DD:EE:02", "name": "HueSync LMS"},
+        {"playerid": "aa:bb:cc:dd:ee:01", "name": "LampaStream"},
+        {"playerid": "AA:BB:CC:DD:EE:02", "name": "LampaStream LMS"},
         {"playerid": "11:22:33:44:55:66", "name": "Sonos Living Room"},
         # Names are not identities: an external player may have the same name.
-        {"playerid": "11:22:33:44:55:77", "name": "HueSync"},
+        {"playerid": "11:22:33:44:55:77", "name": "LampaStream"},
     ]
     cli = MagicMock(return_value=discovered)
     monkeypatch.setattr(api_module, "list_lms_players", cli)
@@ -444,11 +444,11 @@ def test_lms_follow_targets_exclude_all_managed_players(client: TestClient, monk
 
 
 def test_lms_follow_targets_all_managed_returns_empty(client: TestClient, monkeypatch):
-    from huesync import api as api_module
+    from lampastream import api as api_module
 
     client._storage.save_virtual_player(VirtualPlayer(player_mac="aa:bb:cc:dd:ee:01"))
     monkeypatch.setattr(api_module, "list_lms_players", lambda host: [
-        {"playerid": "aa:bb:cc:dd:ee:01", "name": "HueSync"},
+        {"playerid": "aa:bb:cc:dd:ee:01", "name": "LampaStream"},
     ])
     response = client.get("/api/lms/players?host=10.0.0.1")
     assert response.status_code == 200
@@ -1574,7 +1574,7 @@ def test_follow_mode_change_deactivates_owning_session(client):
 
 
 def test_persisted_follow_mode_validation_and_missing_default():
-    from huesync.schema import empty_config, validate_current
+    from lampastream.schema import empty_config, validate_current
 
     data = empty_config()
     data["virtual_players"] = [{"id": "old"}]
@@ -1588,7 +1588,7 @@ def test_persisted_follow_mode_validation_and_missing_default():
 def test_ws_track_is_generic_and_rebased_for_new_client(client: TestClient):
     import time
 
-    from huesync.track_position import TrackPosition
+    from lampastream.track_position import TrackPosition
 
     snapshot = TrackPosition('Title', 'Artist', 83, 225, True, time.monotonic() - 2)
     type(client._manager).track_position = PropertyMock(return_value=snapshot)
@@ -1629,9 +1629,9 @@ def test_ws_preview_reports_active_bars_source(client, bars_source):
 @pytest.fixture()
 def transport_session(client, monkeypatch):
     """Real manager/follower routing; stub only the final CLI socket exchange."""
-    from huesync.lms_follower import LmsFollower
-    from huesync.models import Profile
-    from huesync.player_manager import ActiveSession, PlayerManager
+    from lampastream.lms_follower import LmsFollower
+    from lampastream.models import Profile
+    from lampastream.player_manager import ActiveSession, PlayerManager
 
     player = VirtualPlayer(player_mac="02:00:00:00:00:01",
                            follow_player_mac="33:33:33:33:33:33")
@@ -1645,7 +1645,7 @@ def transport_session(client, monkeypatch):
     manager._active = session
     app.state.player_manager = manager
     exchange = MagicMock(return_value="OK")
-    monkeypatch.setattr("huesync.lms_follower._cli_exchange", exchange)
+    monkeypatch.setattr("lampastream.lms_follower._cli_exchange", exchange)
     return manager, session, exchange, coupling
 
 
@@ -1658,7 +1658,7 @@ def transport_session(client, monkeypatch):
 def test_transport_sends_exact_command_only_to_live_follow_target(
     client, transport_session, action, command, mode,
 ):
-    from huesync.lms_follower import LmsSyncGroupObserver
+    from lampastream.lms_follower import LmsSyncGroupObserver
 
     manager, session, exchange, coupling = transport_session
     if mode == "sync_group":
@@ -1683,7 +1683,7 @@ def test_transport_sends_exact_command_only_to_live_follow_target(
 def test_transport_rejects_uncontrollable_session_without_cli(
     client, transport_session, invalid, action,
 ):
-    from huesync.models import VirtualPlayerType
+    from lampastream.models import VirtualPlayerType
 
     manager, session, exchange, coupling = transport_session
     if invalid == "inactive":

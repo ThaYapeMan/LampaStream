@@ -19,7 +19,7 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 from pipeline_factory import make_pipeline
 
-from huesync.canonicalizer import (
+from lampastream.canonicalizer import (
     AudioCanonicalizer,
     CanonicalData,
     DataResult,
@@ -29,7 +29,7 @@ from huesync.canonicalizer import (
     StreamInvalidated,
     TemporarilyNoData,
 )
-from huesync.pcm_source import (
+from lampastream.pcm_source import (
     _BUF_OFFSET,
     _HDR_FMT,
     _HDR_OFFSET,
@@ -39,7 +39,7 @@ from huesync.pcm_source import (
     AirPlayPipeStereoSource,
     SqueezeliteShmStereoSource,
 )
-from huesync.sync_engine import _CAP_POLL_S, CanonicalAnalysisPipeline
+from lampastream.sync_engine import _CAP_POLL_S, CanonicalAnalysisPipeline
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -77,7 +77,7 @@ def _sine_stereo(freq: float = 440.0, n: int = _CANONICAL_RATE) -> np.ndarray:
 def _make_canonical_frame(
     samples: np.ndarray, epoch_id: str = "ep-1", sample_pos: int = 0,
 ) -> object:
-    from huesync.canonicalizer import AnalysisPcmFrame
+    from lampastream.canonicalizer import AnalysisPcmFrame
     frame = AnalysisPcmFrame(
         samples=samples,
         sample_pos=sample_pos,
@@ -160,14 +160,14 @@ def test_invalidation_clears_latest_via_run():
     p = _make_pipeline(source=src)
 
     # Manually set _latest to a non-None value on the inner CAP (simulates prior audio).
-    from huesync.types import AudioFeatures
+    from lampastream.types import AudioFeatures
     stale = AudioFeatures(
         bars=[0.5] * 30, bass=0.5, mid=0.5, full=0.5,
         centroid=0.5, sustained_energy=None,
     )
     # Plant a synthetic PublicationRecord so p.latest() returns non-None
     # before the invalidation lands.
-    from huesync.spectrum_engine import PublicationRecord
+    from lampastream.spectrum_engine import PublicationRecord
     with p._pub_lock:
         p._latest_pub = PublicationRecord(
             sequence=0, epoch="stale", sample_pos=0, sample_end=0,
@@ -439,14 +439,14 @@ def test_worker_exception_clears_latest():
     p = _make_pipeline(source=_CrashAfterFirst())
 
     # Plant stale features on the inner CAP
-    from huesync.types import AudioFeatures
+    from lampastream.types import AudioFeatures
     stale = AudioFeatures(
         bars=[0.8] * 30, bass=0.8, mid=0.8, full=0.8,
         centroid=0.5, sustained_energy=None,
     )
     # Plant a synthetic PublicationRecord so p.latest() returns non-None
     # before the invalidation lands.
-    from huesync.spectrum_engine import PublicationRecord
+    from lampastream.spectrum_engine import PublicationRecord
     with p._pub_lock:
         p._latest_pub = PublicationRecord(
             sequence=0, epoch="stale", sample_pos=0, sample_end=0,

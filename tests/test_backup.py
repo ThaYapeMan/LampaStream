@@ -15,9 +15,9 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from huesync import __git_hash__, __version__
-from huesync.api import router
-from huesync.backup import (
+from lampastream import __git_hash__, __version__
+from lampastream.api import router
+from lampastream.backup import (
     BACKUP_VERSION,
     FORMAT,
     MAX_BACKUP_BYTES,
@@ -30,7 +30,7 @@ from huesync.backup import (
     restore_configuration,
     validate_backup,
 )
-from huesync.models import (
+from lampastream.models import (
     Analyser,
     Controller,
     Coupling,
@@ -41,9 +41,9 @@ from huesync.models import (
     VirtualPlayerType,
     Zone,
 )
-from huesync.player_manager import PlayerManager
-from huesync.schema import COLLECTIONS, SCHEMA_VERSION, validate_current
-from huesync.storage import Storage
+from lampastream.player_manager import PlayerManager
+from lampastream.schema import COLLECTIONS, SCHEMA_VERSION, validate_current
+from lampastream.storage import Storage
 
 ROOT = Path(__file__).resolve().parents[1]
 SECRET_APP = "private-app-key-never-log"
@@ -120,8 +120,8 @@ def test_all_fields_credentials_and_round_trip(configured, tmp_path, caplog):
     assert backup["format"] == FORMAT
     assert backup["backup_version"] == BACKUP_VERSION == 1
     assert backup["schema_version"] == SCHEMA_VERSION
-    assert backup["huesync_version"] == __version__
-    assert backup["huesync_commit"] == __git_hash__
+    assert backup["lampastream_version"] == __version__
+    assert backup["lampastream_commit"] == __git_hash__
     assert backup["created_at"].endswith("Z") and backup["contains_secrets"] is True
     assert backup["configuration"] == original  # only active-session state omitted
     for key, model in COLLECTIONS.items():
@@ -166,7 +166,7 @@ def test_export_rejects_invalid_references(configured):
         lambda b: b.update(contains_secrets=False),
         lambda b: b.update(created_at="not a timestamp"),
         lambda b: b.update(unexpected="private-app-key-never-log"),
-        lambda b: b.pop("huesync_commit"),
+        lambda b: b.pop("lampastream_commit"),
         lambda b: b["configuration"].pop("effects"),
         lambda b: b["configuration"]["controllers"][0].pop("app_key"),
         lambda b: b["configuration"]["zones"][0].update(controller_id="missing"),
@@ -206,12 +206,12 @@ def test_rename_failure_preserves_safety_and_original(configured, tmp_path):
         assert safety.read_bytes() == before  # already created before attempted commit
         raise OSError("sensitive filesystem exception")
 
-    with patch("huesync.backup.os.replace", side_effect=fail_replace):
+    with patch("lampastream.backup.os.replace", side_effect=fail_replace):
         with pytest.raises(BackupError, match="could not commit"):
             restore_configuration(target, backup)
     assert target.path.read_bytes() == before
     assert len(list(tmp_path.glob("target.json.pre-restore.*"))) == 1
-    assert not list(tmp_path.glob(".huesync-restore-*"))
+    assert not list(tmp_path.glob(".lampastream-restore-*"))
 
 
 def test_export_file_private_and_no_overwrite(configured, tmp_path):
@@ -234,7 +234,7 @@ def test_export_file_private_and_no_overwrite(configured, tmp_path):
 
 def cli(*args):
     return subprocess.run(
-        [sys.executable, "-B", "-m", "huesync.backup", *map(str, args)],
+        [sys.executable, "-B", "-m", "lampastream.backup", *map(str, args)],
         env=dict(os.environ, PYTHONPATH=str(ROOT / "src")),
         capture_output=True,
         text=True,
@@ -258,7 +258,7 @@ def test_cli_round_trip_check_and_runtime_lease(configured, tmp_path):
     assert set(tmp_path.iterdir()) == files_before and target.path.read_bytes() == before
     with configuration_lease(target.path):
         result = cli("--config", target.path, "import", portable)
-        assert result.returncode != 0 and "stop HueSync" in result.stderr
+        assert result.returncode != 0 and "stop LampaStream" in result.stderr
         assert target.path.read_bytes() == before
     result = cli("--config", target.path, "import", portable)
     assert result.returncode == 0, result.stderr
@@ -281,7 +281,7 @@ def test_api_headers_restore_and_secrets(configured, tmp_path, caplog):
     assert response.headers["content-type"] == "application/json"
     assert response.headers["cache-control"] == "no-store"
     assert response.headers["content-disposition"].startswith(
-        'attachment; filename="huesync-backup-'
+        'attachment; filename="lampastream-backup-'
     )
     assert SECRET_APP in response.text and SECRET_CLIENT in response.text
     target = Storage(tmp_path / "target.json")
@@ -377,7 +377,7 @@ def test_restore_waits_for_inflight_api_mutation(configured, tmp_path):
         async with httpx.AsyncClient(
             transport=httpx.ASGITransport(app), base_url="http://test"
         ) as client:
-            with patch("huesync.api.hue_bridge.pair", side_effect=pairing):
+            with patch("lampastream.api.hue_bridge.pair", side_effect=pairing):
                 pending = asyncio.create_task(
                     client.post("/api/controllers/pair", json={"host": "192.0.2.9"})
                 )
@@ -399,7 +399,7 @@ def test_restore_waits_for_inflight_api_mutation(configured, tmp_path):
 
 
 def test_running_application_excludes_offline_restore(configured, tmp_path, monkeypatch):
-    from huesync.app import app
+    from lampastream.app import app
 
     portable = tmp_path / "portable.json"
     export_file(configured, portable)
@@ -409,7 +409,7 @@ def test_running_application_excludes_offline_restore(configured, tmp_path, monk
     monkeypatch.setattr(app.state, "player_manager", manager)
     with TestClient(app):
         result = cli("--config", configured.path, "import", portable)
-        assert result.returncode != 0 and "stop HueSync" in result.stderr
+        assert result.returncode != 0 and "stop LampaStream" in result.stderr
     # Successful shutdown releases the actual app-owned lease.
     assert cli("--config", configured.path, "import", portable).returncode == 0
 
@@ -418,7 +418,7 @@ def test_api_write_failure_leaves_idle_runtime_and_original(configured, tmp_path
     target = Storage(tmp_path / "target.json")
     app = api(target)
     before = target.path.read_bytes()
-    with TestClient(app) as client, patch("huesync.backup.os.replace", side_effect=OSError):
+    with TestClient(app) as client, patch("lampastream.backup.os.replace", side_effect=OSError):
         result = client.post("/api/config/import", json=export_configuration(configured))
     assert result.status_code == 409
     assert result.headers["cache-control"] == "no-store"

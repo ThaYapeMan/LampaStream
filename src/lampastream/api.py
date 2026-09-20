@@ -1,0 +1,1594 @@
+"""JSON REST API for LampaStream.
+
+Mounted at /api via app.include_router(router).  State is injected through
+request.app.state (storage and player_manager), following the same pattern
+used by the HTML routes in app.py.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import uuid
+from dataclasses import replace
+from typing import Literal
+
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import JSONResponse, Response
+from pydantic import BaseModel, ConfigDict
+
+from . import __git_hash__, __version__, hue_bridge
+from .backup import (
+    MAX_BACKUP_BYTES,
+    BackupError,
+    decode_backup,
+    encode_backup,
+    export_configuration,
+    restore_configuration,
+)
+from .hue_output import get_channel_infos
+from .lms_discovery import discover_lms
+from .lms_follower import TransportAction
+from .lms_status import list_lms_players
+from .models import (
+    EFFECT_IDS,
+    VIRTUAL_PLAYER_TYPES,
+    Analyser,
+    BridgeConfig,
+    Controller,
+    ControllerType,
+    Coupling,
+    Effect,
+    EnergyProfile,
+    PlayerLatency,
+    VirtualPlayer,
+    VirtualPlayerType,
+    Zone,
+)
+from .player_manager import PlayerManager, _build_engine_profile, _build_mellow_profile
+from .schema import REFERENCES
+from .storage import ReferencedEntityError, Storage
+from .util import generate_locally_administered_mac
+
+_VERSION_STRING = f"{__version__}+{__git_hash__}"
+
+async def configuration_mutation_guard(request: Request):
+    """Serialize API writes/full exports so restore cannot cross an in-flight update."""
+    if (request.method in {'POST', 'PATCH', 'PUT', 'DELETE'}
+            or request.url.path == '/api/config/export'):
+        if not hasattr(request.app.state, 'configuration_mutation_lock'):
+            request.app.state.configuration_mutation_lock = asyncio.Lock()
+        async with request.app.state.configuration_mutation_lock:
+            try:
+                # A serialized create/PATCH must not reintroduce a reference to
+                # a target deleted just before this request. Empty means unbound.
+                parts = request.url.path.removeprefix('/api/').split('/')
+                collection = parts[0].replace('-', '_')
+                edges = [(field, target) for source, field, target in REFERENCES
+                         if source == collection]
+                clone = request.method == 'POST' and len(parts) == 3 and parts[2] == 'clone'
+                if edges and (clone or (request.method == 'POST' and len(parts) == 1)
+                              or (request.method == 'PATCH' and len(parts) == 2)):
+                    try:
+                        body = await request.json()
+                    except ValueError:
+                        body = None  # Normal request validation reports malformed JSON.
+                    data = _storage(request).read_configuration()
+                    if clone:
+                        body = next((row for row in data[collection]
+                                     if row['id'] == parts[1]), {})
+                    if isinstance(body, dict):
+                        for field, target in edges:
+                            if field in body:
+                                value = body[field]
+                                if not isinstance(value, str) or (value and not any(
+                                        row['id'] == value for row in data[target])):
+                                    raise HTTPException(409, f"Invalid {field}: select an existing "
+                                                        f"{target} entry or clear the reference")
+                yield
+            except ReferencedEntityError as exc:
+                raise HTTPException(status_code=409, detail=str(exc)) from None
+    else:
+        yield
+
+
+router = APIRouter(prefix="/api", dependencies=[Depends(configuration_mutation_guard)])
+
+
+# ---------------------------------------------------------------------------
+# Request body models
+# ---------------------------------------------------------------------------
+
+
+class ControllerPairBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    host: str
+    name: str = "Hue Bridge"
+
+
+class PlayerLatencyCreateBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    player_mac: str
+    name: str | None = None
+    strategy: str = "fixed"
+    fixed_delay_ms: int = 2000
+    speaker_ip: str | None = None
+
+
+class PlayerLatencyPatchBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str | None = None
+    strategy: str | None = None
+    fixed_delay_ms: int | None = None
+    speaker_ip: str | None = None
+
+
+class ControllerCreateBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = "Controller"
+    type: str = "hue"
+    host: str
+    app_key: str = ""
+    client_key: str = ""
+
+
+class ControllerPatchBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    name: str | None = None
+    host: str | None = None
+    app_key: str | None = None
+    client_key: str | None = None
+
+
+class VirtualPlayerCreateBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    type: str = "LMS"
+    lms_host: str = ""
+    lms_port: int = 9000
+    player_name: str = "LampaStream"
+    display_name: str = ""
+    player_mac: str = ""
+    alsa_device: str = ""
+    follow_player_mac: str = ""
+    follow_mode: Literal["manual", "sync_group"] = "manual"
+
+
+class VirtualPlayerPatchBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    type: str | None = None
+    lms_host: str | None = None
+    lms_port: int | None = None
+    player_name: str | None = None
+    display_name: str | None = None
+    alsa_device: str | None = None
+    follow_player_mac: str | None = None
+    follow_mode: Literal["manual", "sync_group"] | None = None
+
+
+class ZoneCreateBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = "Zone"
+    controller_id: str
+    entertainment_area_id: str
+    entertainment_area_name: str = ""
+    light_count: int = 0
+
+
+class ZonePatchBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    name: str | None = None
+    entertainment_area_name: str | None = None
+    light_count: int | None = None
+
+
+class AnalyserCreateBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = "Default Analysis"
+    onset_method: str = "combined"
+    onset_delta: float = 0.1
+    onset_alpha: float = 0.9
+    superflux_mu: int = 3
+    superflux_lag: int = 2
+    bars: int = 30
+    lower_cutoff_freq: int = 50
+    higher_cutoff_freq: int = 12000
+    use_hpss_separation: bool = False
+    band_normalise: bool = False
+    bars_source: str = "cava"
+    spectrum_backend: str = "v2"
+
+
+class AnalyserPatchBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    name: str | None = None
+    onset_method: str | None = None
+    onset_delta: float | None = None
+    onset_alpha: float | None = None
+    superflux_mu: int | None = None
+    superflux_lag: int | None = None
+    bars: int | None = None
+    lower_cutoff_freq: int | None = None
+    higher_cutoff_freq: int | None = None
+    use_hpss_separation: bool | None = None
+    band_normalise: bool | None = None
+    bars_source: str | None = None
+    spectrum_backend: str | None = None
+
+
+class EffectCreateBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = "Default Effect"
+    effect_type: str = "spectrum_rgb"
+    effect_speed: float = 1.0
+    effect_decay: float = 0.3
+    sensitivity: float = 1.0
+    brightness_floor: float = 0.15
+    bass_hz: int = 250
+    mid_hz: int = 2000
+    exertion_clip: float = 3.0
+    onset_flash_intensity: float = 0.0
+
+
+class EffectPatchBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    name: str | None = None
+    effect_type: str | None = None
+    effect_speed: float | None = None
+    effect_decay: float | None = None
+    sensitivity: float | None = None
+    brightness_floor: float | None = None
+    bass_hz: int | None = None
+    mid_hz: int | None = None
+    exertion_clip: float | None = None
+    onset_flash_intensity: float | None = None
+
+
+class EnergyProfileCreateBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = "Default EnergyProfile"
+    high_energy_effect_id: str
+    low_energy_effect_id: str = ""
+    blend_start: float = 0.3
+    blend_end: float = 0.7
+    energy_source: Literal["sustained", "loudness_fixed", "loudness_adaptive"] = "sustained"
+    lufs_floor: float = -30.0
+    lufs_ceiling: float = -8.0
+    adaptation_tau_s: float = 60.0
+    blend_response: float = 0.1
+
+
+class EnergyProfilePatchBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    name: str | None = None
+    high_energy_effect_id: str | None = None
+    low_energy_effect_id: str | None = None
+    blend_start: float | None = None
+    blend_end: float | None = None
+    energy_source: Literal["sustained", "loudness_fixed", "loudness_adaptive"] | None = None
+    lufs_floor: float | None = None
+    lufs_ceiling: float | None = None
+    adaptation_tau_s: float | None = None
+    blend_response: float | None = None
+
+
+class CouplingCreateBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+    player_id: str
+    analyser_id: str
+    zone_id: str
+    energy_profile_id: str
+    enabled: bool = True
+
+
+class CouplingPatchBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    """Omnibus PATCH body; routes each field to the appropriate sub-entity.
+
+    Priority categories (high to low):
+      FK/player fields → deactivate
+      cava fields      → restart_cava
+      pcm fields       → update_onset_pipeline
+      render fields    → update_render
+    """
+
+    model_config = ConfigDict(extra="forbid")
+    # Coupling meta (no session action)
+    name: str | None = None
+    enabled: bool | None = None
+    # FK rewiring (deactivate if active)
+    player_id: str | None = None
+    zone_id: str | None = None
+    # FK live update (no deactivate)
+    analyser_id: str | None = None
+    energy_profile_id: str | None = None
+    # Player inline (deactivate if active)
+    lms_host: str | None = None
+    lms_port: int | None = None
+    player_name: str | None = None
+    alsa_device: str | None = None
+    # Analyser cava category (restart_cava)
+    bars: int | None = None
+    lower_cutoff_freq: int | None = None
+    higher_cutoff_freq: int | None = None
+    # Analyser pcm category (update_onset_pipeline)
+    onset_method: str | None = None
+    onset_delta: float | None = None
+    onset_alpha: float | None = None
+    superflux_mu: int | None = None
+    superflux_lag: int | None = None
+    use_hpss_separation: bool | None = None
+    band_normalise: bool | None = None
+    # bass_hz/mid_hz: stored in Effect but pcm-category for restart
+    bass_hz: int | None = None
+    mid_hz: int | None = None
+    # Zone render fields
+    entertainment_area_name: str | None = None
+    light_count: int | None = None
+
+
+# ---------------------------------------------------------------------------
+# Dependency helpers
+# ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# Field categories for coupling PATCH routing
+# ---------------------------------------------------------------------------
+# These parallel the Profile-level _PLAYER_FIELDS etc. but map to sub-entities.
+# Priority: deactivate > cava > pcm > render.
+
+_C_DEACTIVATE_FIELDS: frozenset[str] = frozenset({
+    # Changing these requires a full squeezelite + cava + DTLS restart because
+    # a new process (player_id) or a new Zone cannot be hot-swapped into a
+    # running session.
+    "player_id", "zone_id",
+    "lms_host", "lms_port", "player_name", "display_name", "alsa_device",
+    "follow_player_mac", "follow_mode",
+})
+# FK fields that do NOT require a full restart — handled via lighter live-update
+# paths in _apply_coupling_action().
+_C_LIVE_FK_FIELDS: frozenset[str] = frozenset({
+    "analyser_id",        # → cava restart + PCM pipeline rebuild
+    "energy_profile_id",  # → update_render only
+})
+_C_CAVA_FIELDS: frozenset[str] = frozenset({
+    "bars", "lower_cutoff_freq", "higher_cutoff_freq",
+})
+_C_PCM_FIELDS: frozenset[str] = frozenset({
+    "onset_method", "onset_delta", "onset_alpha", "superflux_mu", "superflux_lag",
+    "use_hpss_separation", "bass_hz", "mid_hz",
+})
+_C_RENDER_FIELDS: frozenset[str] = frozenset({
+    "entertainment_area_name", "light_count",
+    # EnergyProfile patch fields that propagate render changes:
+    "high_energy_effect_id", "low_energy_effect_id",
+    "blend_start", "blend_end", "blend_response",
+    "energy_source", "lufs_floor", "lufs_ceiling", "adaptation_tau_s",
+})
+
+# Which sub-entity owns each inline field in CouplingPatchBody
+_C_PLAYER_INLINE: frozenset[str] = frozenset({
+    "lms_host", "lms_port", "player_name", "alsa_device",
+})
+_C_ANALYSER_INLINE: frozenset[str] = frozenset({
+    "bars", "lower_cutoff_freq", "higher_cutoff_freq",
+    "onset_method", "onset_delta", "onset_alpha", "superflux_mu", "superflux_lag",
+    "use_hpss_separation", "band_normalise",
+})
+_C_EFFECT_INLINE: frozenset[str] = frozenset({
+    "bass_hz", "mid_hz",
+})
+_C_ZONE_INLINE: frozenset[str] = frozenset({"entertainment_area_name", "light_count"})
+_C_FK_FIELDS: frozenset[str] = frozenset({
+    "player_id", "zone_id", "analyser_id", "energy_profile_id",
+})
+# Fields that live directly on Coupling (not on a sub-entity) and are set
+# via setattr(coupling, field, value) in the patch handler.
+_C_COUPLING_DIRECT_FIELDS: frozenset[str] = frozenset({
+    "name", "enabled",
+})
+
+
+def _assert_name_unique(
+    name: str,
+    id_names: list[tuple[str, str]],
+    entity_label: str,
+    exclude_id: str | None = None,
+) -> None:
+    lower = name.strip().lower()
+    for eid, ename in id_names:
+        if eid != exclude_id and ename.strip().lower() == lower:
+            raise HTTPException(status_code=409, detail=f"{entity_label} name already in use")
+
+
+def _clone_dataclass(entity):
+    """Return an independent shallow copy of a dataclass entity.
+
+    Used by BLOCKER 4's transactional restart-cava flow to snapshot storage
+    entities before staging a write, so a runtime failure can roll back to
+    the pristine values.
+    """
+    return replace(entity)
+
+
+def _unique_copy_name(base: str, existing_lower: set[str]) -> str:
+    candidate = f"{base} (copy)"
+    if candidate.lower() not in existing_lower:
+        return candidate
+    n = 2
+    while True:
+        candidate = f"{base} (copy {n})"
+        if candidate.lower() not in existing_lower:
+            return candidate
+        n += 1
+
+
+async def _apply_coupling_action(
+    coupling: Coupling,
+    storage: Storage,
+    manager: PlayerManager,
+    changed: set[str],
+) -> None:
+    """Rebuild Profile from entities and call the right PlayerManager action.
+
+    Called after entity saves so the Profile reflects the updated values.
+    Uses _build_engine_profile from player_manager (single source of truth).
+
+    Routing depends on ``profile.bars_source``:
+      * pcm_pipeline sessions:  spectrum / band changes rebuild the running
+                                CanonicalAnalysisPipeline via
+                                ``replace_pcm_analyser`` — there is no cava
+                                process to restart.
+      * cava sessions:          spectrum / band changes are handled by
+                                ``restart_cava`` (external CAVA / FIFO path).
+
+    Cross-mode analyser change (canonical ↔ FIFO):
+      A swapped or edited Analyser with a different ``bars_source`` than
+      the currently active session cannot be hot-swapped
+      — SyncEngine initialisation differs between the two paths.  Such a
+      change triggers a full deactivate + reactivate cycle.
+    """
+    profile = _build_engine_profile(coupling, storage)
+    if not profile:
+        return
+    mellow_profile = _build_mellow_profile(coupling, storage)
+
+    if changed & _C_DEACTIVATE_FIELDS:
+        await manager.deactivate()
+        return
+
+    # Cross-mode analyser edit or swap: the currently active session runs on
+    # bars_source X, and the updated analyser has bars_source Y ≠ X.  Neither
+    # replace_pcm_analyser (needs an existing pcm_pipeline session) nor
+    # restart_cava (needs a running cava/FIFO) can bridge that boundary.
+    # A full deactivate + reactivate is required.
+    old_bars_source = manager.active_bars_source
+    if old_bars_source is not None and old_bars_source != profile.bars_source:
+        await manager.deactivate()
+        await manager.activate_coupling(coupling)
+        return
+
+    # A new SpectrumEngine (spectrum_backend swap) or any change to the bar
+    # geometry (bars / cutoffs) or the Analyser identity (analyser_id) needs
+    # the analyser to be rebuilt.  Route via the appropriate path for the
+    # active session's bars_source.
+    spectrum_rebuild_fields = {
+        "spectrum_backend", "bars", "lower_cutoff_freq", "higher_cutoff_freq",
+    }
+    needs_spectrum_rebuild = bool(changed & (spectrum_rebuild_fields | {"analyser_id"}))
+
+    if needs_spectrum_rebuild:
+        if profile.bars_source == "pcm_pipeline":
+            manager.replace_pcm_analyser(profile)
+        else:
+            await manager.restart_cava()
+
+    if changed & (_C_PCM_FIELDS | {"analyser_id"}):
+        manager.update_onset_pipeline(profile)
+    manager.update_render(profile, mellow_profile)
+
+
+def _storage(request: Request) -> Storage:
+    return request.app.state.storage
+
+
+def _manager(request: Request) -> PlayerManager:
+    return request.app.state.player_manager
+
+
+# ---------------------------------------------------------------------------
+# Player latencies
+# ---------------------------------------------------------------------------
+
+
+@router.get("/player-latencies")
+async def list_player_latencies(request: Request):
+    storage = _storage(request)
+    return [pl.to_dict() for pl in storage.list_player_latencies()]
+
+
+@router.post("/player-latencies", status_code=201)
+async def create_player_latency(request: Request, body: PlayerLatencyCreateBody):
+    storage = _storage(request)
+    manager = _manager(request)
+
+    pl = PlayerLatency(
+        player_mac=body.player_mac.strip().lower(),
+        name=body.name,
+        strategy=body.strategy,
+        fixed_delay_ms=body.fixed_delay_ms,
+        speaker_ip=body.speaker_ip,
+    )
+    storage.save_player_latency(pl)
+    await manager.refresh_probe()
+    return JSONResponse(content=pl.to_dict(), status_code=201)
+
+
+@router.patch("/player-latencies/{player_mac}")
+async def patch_player_latency(player_mac: str, request: Request, body: PlayerLatencyPatchBody):
+    storage = _storage(request)
+    manager = _manager(request)
+
+    pl = storage.get_player_latency(player_mac)
+    if pl is None:
+        raise HTTPException(status_code=404, detail="Player latency config not found")
+
+    updates = body.model_dump(exclude_unset=True)
+    for field, value in updates.items():
+        setattr(pl, field, value)
+
+    storage.save_player_latency(pl)
+    await manager.refresh_probe()
+    return pl.to_dict()
+
+
+@router.delete("/player-latencies/{player_mac}", status_code=204)
+async def delete_player_latency(player_mac: str, request: Request):
+    storage = _storage(request)
+    manager = _manager(request)
+    storage.delete_player_latency(player_mac)
+    await manager.refresh_probe()
+
+
+# ---------------------------------------------------------------------------
+# LMS discovery
+# ---------------------------------------------------------------------------
+
+
+@router.get("/lms/discover")
+async def lms_discover():
+    servers = await discover_lms(timeout=3.0)
+    return [{"host": s.host, "name": s.name, "port": s.json_port} for s in servers]
+
+
+@router.get("/lms/players")
+async def lms_list_players(host: str, request: Request):
+    """Return external LMS players on *host* as {playerid, name} objects.
+
+    Exclude all registered LampaStream player identities from follow targets.
+
+    Used by the Virtual Player editor to populate the 'Follow player' dropdown.
+    Raises 400 if host is empty, 502 if the LMS CLI is unreachable.
+    """
+    if not host:
+        raise HTTPException(status_code=400, detail="host query parameter is required")
+    try:
+        players = await asyncio.to_thread(list_lms_players, host)
+    except OSError as exc:
+        raise HTTPException(
+            status_code=502, detail=f"Cannot reach LMS at {host}: {exc}"
+        ) from exc
+    managed_macs = {
+        player.player_mac.strip().lower()
+        for player in _storage(request).list_virtual_players()
+        if player.player_mac.strip()
+    }
+    return [
+        player for player in players
+        if player["playerid"].strip().lower() not in managed_macs
+    ]
+
+
+# ---------------------------------------------------------------------------
+# Status
+# ---------------------------------------------------------------------------
+
+
+@router.get("/status")
+async def get_status(request: Request):
+    manager = _manager(request)
+    bars = manager.last_bars
+    bars_stats = {
+        "mean": round(sum(bars) / len(bars), 4) if bars else None,
+        "max": round(max(bars), 4) if bars else None,
+        "n": len(bars),
+    }
+    return {
+        "version": _VERSION_STRING,
+        "active_coupling_id": manager.active_coupling_id,
+        "active_coupling_name": manager.active_coupling_name,
+        "active_player_type": manager.active_player_type,
+        "analysis_stopping": manager.analysis_stopping,
+        "sync_master": manager.detected_sync_master,
+        "sync_master_name": manager.detected_sync_master_name,
+        "applied_delay_ms": manager.applied_delay_ms,
+        "latency_warning": manager.latency_warning,
+        "processes": manager.process_status,
+        "bridge_connected": manager.bridge_connected,
+        "active_effect": manager.active_effect,
+        "onset_method": manager.active_onset_method,
+        "airplay_receiving": manager.airplay_receiving,
+        "bars_stats": bars_stats,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Controllers
+# ---------------------------------------------------------------------------
+
+
+@router.post("/controllers/pair", status_code=201)
+async def pair_controller(request: Request, body: ControllerPairBody):
+    """Pair with a Hue Bridge and store it as a Controller."""
+    storage = _storage(request)
+    try:
+        bridge = await hue_bridge.pair(body.host, bridge_name=body.name)
+    except TimeoutError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Pairing timed out. Press the physical link button on the bridge, "
+                "then retry within ~30 seconds."
+            ),
+        ) from exc
+    controller = Controller(
+        id=bridge.id,
+        name=bridge.name,
+        type=ControllerType.HUE,
+        host=bridge.host,
+        app_key=bridge.app_key,
+        client_key=bridge.client_key,
+    )
+    storage.save_controller(controller)
+    return JSONResponse(content=controller.to_safe_dict(), status_code=201)
+
+
+@router.get("/controllers")
+async def list_controllers(request: Request):
+    return [c.to_safe_dict() for c in _storage(request).list_controllers()]
+
+
+@router.post("/controllers", status_code=201)
+async def create_controller(request: Request, body: ControllerCreateBody):
+    storage = _storage(request)
+    try:
+        ct = ControllerType(body.type)
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=422, detail=f"Unknown controller type: {body.type!r}"
+        ) from exc
+    controller = Controller(
+        name=body.name,
+        type=ct,
+        host=body.host,
+        app_key=body.app_key,
+        client_key=body.client_key,
+    )
+    storage.save_controller(controller)
+    return JSONResponse(content=controller.to_safe_dict(), status_code=201)
+
+
+@router.get("/controllers/{controller_id}")
+async def get_controller(controller_id: str, request: Request):
+    c = _storage(request).get_controller(controller_id)
+    if c is None:
+        raise HTTPException(status_code=404, detail="Controller not found")
+    return c.to_safe_dict()
+
+
+@router.patch("/controllers/{controller_id}")
+async def patch_controller(controller_id: str, request: Request, body: ControllerPatchBody):
+    storage = _storage(request)
+    c = storage.get_controller(controller_id)
+    if c is None:
+        raise HTTPException(status_code=404, detail="Controller not found")
+    for field, value in body.model_dump(exclude_unset=True).items():
+        setattr(c, field, value)
+    storage.save_controller(c)
+    return c.to_safe_dict()
+
+
+@router.get("/controllers/{controller_id}/areas")
+async def controller_areas(controller_id: str, request: Request):
+    storage = _storage(request)
+    controller = storage.get_controller(controller_id)
+    if controller is None:
+        raise HTTPException(status_code=404, detail="Controller not found")
+    bridge = BridgeConfig(
+        id=controller.id,
+        name=controller.name,
+        host=controller.host,
+        app_key=controller.app_key,
+        client_key=controller.client_key,
+    )
+    areas = await hue_bridge.list_entertainment_areas(bridge)
+    return [{"id": a.id, "name": a.name, "light_count": a.light_count} for a in areas]
+
+
+@router.delete("/controllers/{controller_id}", status_code=204)
+async def delete_controller(controller_id: str, request: Request):
+    _storage(request).delete_controller(controller_id)
+
+
+# ---------------------------------------------------------------------------
+# VirtualPlayers
+# ---------------------------------------------------------------------------
+
+
+@router.get("/virtual-players")
+async def list_virtual_players(request: Request):
+    return [p.to_dict() for p in _storage(request).list_virtual_players()]
+
+
+@router.post("/virtual-players", status_code=201)
+async def create_virtual_player(request: Request, body: VirtualPlayerCreateBody):
+    if body.type not in VIRTUAL_PLAYER_TYPES:
+        raise HTTPException(status_code=422, detail=f"Unknown player type {body.type!r}")
+    storage = _storage(request)
+    _assert_name_unique(
+        body.player_name,
+        [(p.id, p.player_name) for p in storage.list_virtual_players()],
+        "VirtualPlayer",
+    )
+    mac = body.player_mac or generate_locally_administered_mac()
+    player = VirtualPlayer(
+        type=VirtualPlayerType(body.type),
+        lms_host=body.lms_host,
+        lms_port=body.lms_port,
+        player_name=body.player_name,
+        display_name=body.display_name,
+        player_mac=mac,
+        alsa_device=body.alsa_device,
+        follow_player_mac=body.follow_player_mac,
+        follow_mode=body.follow_mode,
+    )
+    storage.save_virtual_player(player)
+    return JSONResponse(content=player.to_dict(), status_code=201)
+
+
+@router.get("/virtual-players/{player_id}")
+async def get_virtual_player(player_id: str, request: Request):
+    p = _storage(request).get_virtual_player(player_id)
+    if p is None:
+        raise HTTPException(status_code=404, detail="VirtualPlayer not found")
+    return p.to_dict()
+
+
+@router.patch("/virtual-players/{player_id}")
+async def patch_virtual_player(player_id: str, request: Request, body: VirtualPlayerPatchBody):
+    storage = _storage(request)
+    manager = _manager(request)
+    player = storage.get_virtual_player(player_id)
+    if player is None:
+        raise HTTPException(status_code=404, detail="VirtualPlayer not found")
+    updates = body.model_dump(exclude_unset=True)
+    if "follow_mode" in updates and updates["follow_mode"] is None:
+        raise HTTPException(status_code=422, detail="follow_mode cannot be null")
+    if "type" in updates:
+        if updates["type"] not in VIRTUAL_PLAYER_TYPES:
+            raise HTTPException(status_code=422, detail=f"Unknown player type {updates['type']!r}")
+        updates["type"] = VirtualPlayerType(updates["type"])
+    if "player_name" in updates:
+        _assert_name_unique(
+            updates["player_name"],
+            [(p.id, p.player_name) for p in storage.list_virtual_players()],
+            "VirtualPlayer",
+            exclude_id=player_id,
+        )
+    for field, value in updates.items():
+        setattr(player, field, value)
+    storage.save_virtual_player(player)
+    # If active coupling uses this player and any fields changed, deactivate.
+    active_id = storage.get_active_coupling_id()
+    if updates and active_id:
+        coupling = storage.get_coupling(active_id)
+        active_fields = set(updates.keys())
+        if coupling and coupling.player_id == player_id and active_fields:
+            await _apply_coupling_action(coupling, storage, manager, active_fields)
+    return player.to_dict()
+
+
+@router.delete("/virtual-players/{player_id}", status_code=204)
+async def delete_virtual_player(player_id: str, request: Request):
+    _storage(request).delete_virtual_player(player_id)
+
+
+# ---------------------------------------------------------------------------
+# Zones
+# ---------------------------------------------------------------------------
+
+
+@router.get("/zones")
+async def list_zones(request: Request):
+    return [z.to_dict() for z in _storage(request).list_zones()]
+
+
+@router.post("/zones", status_code=201)
+async def create_zone(request: Request, body: ZoneCreateBody):
+    storage = _storage(request)
+    _assert_name_unique(body.name, [(z.id, z.name) for z in storage.list_zones()], "Zone")
+    zone = Zone(
+        name=body.name,
+        controller_id=body.controller_id,
+        entertainment_area_id=body.entertainment_area_id,
+        entertainment_area_name=body.entertainment_area_name,
+        light_count=body.light_count,
+    )
+    storage.save_zone(zone)
+    return JSONResponse(content=zone.to_dict(), status_code=201)
+
+
+@router.get("/zones/{zone_id}")
+async def get_zone(zone_id: str, request: Request):
+    zone = _storage(request).get_zone(zone_id)
+    if zone is None:
+        raise HTTPException(status_code=404, detail="Zone not found")
+    return zone.to_dict()
+
+
+@router.patch("/zones/{zone_id}")
+async def patch_zone(zone_id: str, request: Request, body: ZonePatchBody):
+    storage = _storage(request)
+    manager = _manager(request)
+    zone = storage.get_zone(zone_id)
+    if zone is None:
+        raise HTTPException(status_code=404, detail="Zone not found")
+    updates = body.model_dump(exclude_unset=True)
+    if "name" in updates:
+        _assert_name_unique(
+            updates["name"],
+            [(z.id, z.name) for z in storage.list_zones()],
+            "Zone",
+            exclude_id=zone_id,
+        )
+    for field, value in updates.items():
+        setattr(zone, field, value)
+    storage.save_zone(zone)
+    # entertainment_area_name and light_count are render-category changes.
+    active_id = storage.get_active_coupling_id()
+    render_changed = set(updates.keys()) & _C_RENDER_FIELDS
+    if render_changed and active_id:
+        coupling = storage.get_coupling(active_id)
+        if coupling and coupling.zone_id == zone_id:
+            await _apply_coupling_action(coupling, storage, manager, render_changed)
+    return zone.to_dict()
+
+
+@router.delete("/zones/{zone_id}", status_code=204)
+async def delete_zone(zone_id: str, request: Request):
+    _storage(request).delete_zone(zone_id)
+
+
+@router.get("/zones/{zone_id}/channels")
+async def get_zone_channels(zone_id: str, request: Request):
+    """Return channel IDs and normalised (x, y, z) positions for a Zone.
+
+    Fetches live from the Hue Bridge; no active session required.
+    Positions are in the range -1.0…+1.0 per axis as reported by the bridge.
+    """
+    storage = _storage(request)
+    zone = storage.get_zone(zone_id)
+    if zone is None:
+        raise HTTPException(status_code=404, detail="Zone not found")
+    controller = storage.get_controller(zone.controller_id)
+    if controller is None:
+        raise HTTPException(status_code=404, detail="Controller not found")
+    bridge = BridgeConfig(
+        id=controller.id,
+        name=controller.name,
+        host=controller.host,
+        app_key=controller.app_key,
+        client_key=controller.client_key,
+    )
+    channels = await get_channel_infos(bridge, zone.entertainment_area_id)
+    return [
+        {"channel_id": ch.channel_id, "x": ch.position.x, "y": ch.position.y, "z": ch.position.z}
+        for ch in channels
+    ]
+
+
+# ---------------------------------------------------------------------------
+# Analysers
+# ---------------------------------------------------------------------------
+
+
+@router.get("/analysers")
+async def list_analysers(request: Request):
+    return [ac.to_dict() for ac in _storage(request).list_analysers()]
+
+
+@router.post("/analysers", status_code=201)
+async def create_analyser(request: Request, body: AnalyserCreateBody):
+    storage = _storage(request)
+    _assert_name_unique(body.name, [(a.id, a.name) for a in storage.list_analysers()], "Analyser")
+    try:
+        ac = Analyser(
+            name=body.name,
+            onset_method=body.onset_method,
+            onset_delta=body.onset_delta,
+            onset_alpha=body.onset_alpha,
+            superflux_mu=body.superflux_mu,
+            superflux_lag=body.superflux_lag,
+            bars=body.bars,
+            lower_cutoff_freq=body.lower_cutoff_freq,
+            higher_cutoff_freq=body.higher_cutoff_freq,
+            use_hpss_separation=body.use_hpss_separation,
+            band_normalise=body.band_normalise,
+            bars_source=body.bars_source,
+            spectrum_backend=body.spectrum_backend,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    storage.save_analyser(ac)
+    return JSONResponse(content=ac.to_dict(), status_code=201)
+
+
+@router.get("/analysers/{ac_id}")
+async def get_analyser(ac_id: str, request: Request):
+    ac = _storage(request).get_analyser(ac_id)
+    if ac is None:
+        raise HTTPException(status_code=404, detail="Analyser not found")
+    return ac.to_dict()
+
+
+@router.patch("/analysers/{ac_id}")
+async def patch_analyser(ac_id: str, request: Request, body: AnalyserPatchBody):
+    storage = _storage(request)
+    manager = _manager(request)
+    ac = storage.get_analyser(ac_id)
+    if ac is None:
+        raise HTTPException(status_code=404, detail="Analyser not found")
+    old_ac = replace(ac)  # snapshot for transactional rollback
+    updates = body.model_dump(exclude_unset=True)
+    if "name" in updates:
+        _assert_name_unique(
+            updates["name"],
+            [(a.id, a.name) for a in storage.list_analysers()],
+            "Analyser",
+            exclude_id=ac_id,
+        )
+    for field, value in updates.items():
+        setattr(ac, field, value)
+    try:
+        ac.__post_init__()
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    # Save candidate config first (needed so _build_engine_profile reads new values).
+    storage.save_analyser(ac)
+    # Trigger restart if the active coupling uses this Analyser.
+    active_id = storage.get_active_coupling_id()
+    active_fields = set(updates.keys()) - {"name"}
+    if active_fields and active_id:
+        coupling = storage.get_coupling(active_id)
+        if coupling and coupling.analyser_id == ac_id:
+            try:
+                await _apply_coupling_action(coupling, storage, manager, active_fields)
+            except (RuntimeError, OSError) as exc:
+                storage.save_analyser(old_ac)
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"Engine activation failed (config rolled back): {exc}",
+                ) from exc
+    return ac.to_dict()
+
+
+@router.delete("/analysers/{ac_id}", status_code=204)
+async def delete_analyser(ac_id: str, request: Request):
+    _storage(request).delete_analyser(ac_id)
+
+
+@router.post("/analysers/{ac_id}/clone", status_code=201)
+async def clone_analyser(ac_id: str, request: Request):
+    """Shallow-clone an Analyser: new id, copied configuration, no references to preserve."""
+    storage = _storage(request)
+    ac = storage.get_analyser(ac_id)
+    if ac is None:
+        raise HTTPException(status_code=404, detail="Analyser not found")
+    new_ac = replace(
+        ac,
+        id=str(uuid.uuid4()),
+        name=_unique_copy_name(ac.name, {a.name.lower() for a in storage.list_analysers()}),
+    )
+    storage.save_analyser(new_ac)
+    return new_ac.to_dict()
+
+
+# ---------------------------------------------------------------------------
+# Effects
+# ---------------------------------------------------------------------------
+
+
+@router.get("/effects")
+async def list_effects_route(request: Request):
+    return [e.to_dict() for e in _storage(request).list_effects()]
+
+
+@router.post("/effects", status_code=201)
+async def create_effect_route(request: Request, body: EffectCreateBody):
+    storage = _storage(request)
+    _assert_name_unique(body.name, [(e.id, e.name) for e in storage.list_effects()], "Effect")
+    if body.effect_type not in EFFECT_IDS:
+        raise HTTPException(
+            status_code=422, detail=f"Unknown effect: {body.effect_type!r}"
+        )
+    effect = Effect(
+        name=body.name,
+        effect_type=body.effect_type,
+        effect_speed=body.effect_speed,
+        effect_decay=body.effect_decay,
+        sensitivity=body.sensitivity,
+        brightness_floor=body.brightness_floor,
+        bass_hz=body.bass_hz,
+        mid_hz=body.mid_hz,
+        exertion_clip=body.exertion_clip,
+        onset_flash_intensity=body.onset_flash_intensity,
+    )
+    storage.save_effect(effect)
+    return JSONResponse(content=effect.to_dict(), status_code=201)
+
+
+@router.get("/effects/{effect_id}")
+async def get_effect_route(effect_id: str, request: Request):
+    effect = _storage(request).get_effect(effect_id)
+    if effect is None:
+        raise HTTPException(status_code=404, detail="Effect not found")
+    return effect.to_dict()
+
+
+@router.patch("/effects/{effect_id}")
+async def patch_effect_route(effect_id: str, request: Request, body: EffectPatchBody):
+    storage = _storage(request)
+    manager = _manager(request)
+    effect = storage.get_effect(effect_id)
+    if effect is None:
+        raise HTTPException(status_code=404, detail="Effect not found")
+    updates = body.model_dump(exclude_unset=True)
+    if "name" in updates:
+        _assert_name_unique(
+            updates["name"],
+            [(e.id, e.name) for e in storage.list_effects()],
+            "Effect",
+            exclude_id=effect_id,
+        )
+    for field, value in updates.items():
+        if field == "effect_type" and value not in EFFECT_IDS:
+            raise HTTPException(
+                status_code=422, detail=f"Unknown effect: {value!r}"
+            )
+        setattr(effect, field, value)
+    storage.save_effect(effect)
+    # Trigger render/pcm update if the active coupling uses this Effect
+    # (via its energy_profile's high_energy_effect_id).
+    active_id = storage.get_active_coupling_id()
+    active_fields = set(updates.keys()) - {"name"}
+    if active_fields and active_id:
+        coupling = storage.get_coupling(active_id)
+        if coupling and coupling.energy_profile_id:
+            cf = storage.get_energy_profile(coupling.energy_profile_id)
+            if cf and cf.high_energy_effect_id == effect_id:
+                await _apply_coupling_action(coupling, storage, manager, active_fields)
+    return effect.to_dict()
+
+
+@router.delete("/effects/{effect_id}", status_code=204)
+async def delete_effect_route(effect_id: str, request: Request):
+    _storage(request).delete_effect(effect_id)
+
+
+@router.post("/effects/{effect_id}/clone", status_code=201)
+async def clone_effect(effect_id: str, request: Request):
+    """Shallow-clone an Effect: new id, copied configuration, no references to preserve."""
+    storage = _storage(request)
+    effect = storage.get_effect(effect_id)
+    if effect is None:
+        raise HTTPException(status_code=404, detail="Effect not found")
+    new_effect = replace(
+        effect,
+        id=str(uuid.uuid4()),
+        name=_unique_copy_name(effect.name, {e.name.lower() for e in storage.list_effects()}),
+    )
+    storage.save_effect(new_effect)
+    return new_effect.to_dict()
+
+
+# ---------------------------------------------------------------------------
+# EnergyProfiles
+# ---------------------------------------------------------------------------
+
+
+@router.get("/energy-profiles")
+async def list_energy_profiles_route(request: Request):
+    return [ep.to_dict() for ep in _storage(request).list_energy_profiles()]
+
+
+@router.post("/energy-profiles", status_code=201)
+async def create_energy_profile_route(request: Request, body: EnergyProfileCreateBody):
+    storage = _storage(request)
+    _assert_name_unique(
+        body.name, [(x.id, x.name) for x in storage.list_energy_profiles()], "EnergyProfile"
+    )
+    try:
+        ep = EnergyProfile(**body.model_dump())
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    storage.save_energy_profile(ep)
+    return JSONResponse(content=ep.to_dict(), status_code=201)
+
+
+@router.get("/energy-profiles/{ep_id}")
+async def get_energy_profile_route(ep_id: str, request: Request):
+    ep = _storage(request).get_energy_profile(ep_id)
+    if ep is None:
+        raise HTTPException(status_code=404, detail="EnergyProfile not found")
+    return ep.to_dict()
+
+
+@router.patch("/energy-profiles/{ep_id}")
+async def patch_energy_profile_route(ep_id: str, request: Request, body: EnergyProfilePatchBody):
+    storage = _storage(request)
+    manager = _manager(request)
+    ep = storage.get_energy_profile(ep_id)
+    if ep is None:
+        raise HTTPException(status_code=404, detail="EnergyProfile not found")
+    updates = body.model_dump(exclude_unset=True)
+    if "name" in updates:
+        _assert_name_unique(
+            updates["name"],
+            [(x.id, x.name) for x in storage.list_energy_profiles()],
+            "EnergyProfile",
+            exclude_id=ep_id,
+        )
+    try:
+        ep = replace(ep, **updates)
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    storage.save_energy_profile(ep)
+    # If the active coupling uses this EnergyProfile, trigger update_render.
+    active_id = storage.get_active_coupling_id()
+    active_fields = set(updates.keys()) - {"name"}
+    if active_fields and active_id:
+        coupling = storage.get_coupling(active_id)
+        if coupling and coupling.energy_profile_id == ep_id:
+            await _apply_coupling_action(coupling, storage, manager, active_fields)
+    return ep.to_dict()
+
+
+@router.delete("/energy-profiles/{ep_id}", status_code=204)
+async def delete_energy_profile_route(ep_id: str, request: Request):
+    _storage(request).delete_energy_profile(ep_id)
+
+
+@router.post("/energy-profiles/{ep_id}/clone", status_code=201)
+async def clone_energy_profile(ep_id: str, request: Request):
+    """Shallow-clone an EnergyProfile: new id, copied scalar blend fields,
+    preserved references to high_energy_effect_id and low_energy_effect_id."""
+    storage = _storage(request)
+    ep = storage.get_energy_profile(ep_id)
+    if ep is None:
+        raise HTTPException(status_code=404, detail="EnergyProfile not found")
+    new_ep = replace(
+        ep,
+        id=str(uuid.uuid4()),
+        name=_unique_copy_name(ep.name, {x.name.lower() for x in storage.list_energy_profiles()}),
+    )
+    storage.save_energy_profile(new_ep)
+    return new_ep.to_dict()
+
+
+# ---------------------------------------------------------------------------
+# Couplings
+# ---------------------------------------------------------------------------
+
+
+@router.get("/couplings")
+async def list_couplings(request: Request):
+    return [c.to_dict() for c in _storage(request).list_couplings()]
+
+
+@router.post("/couplings", status_code=201)
+async def create_coupling(request: Request, body: CouplingCreateBody):
+    storage = _storage(request)
+    _assert_name_unique(
+        body.name, [(c.id, c.name) for c in storage.list_couplings()], "Coupling"
+    )
+    coupling = Coupling(
+        name=body.name,
+        player_id=body.player_id,
+        analyser_id=body.analyser_id,
+        zone_id=body.zone_id,
+        energy_profile_id=body.energy_profile_id,
+        enabled=body.enabled,
+    )
+    storage.save_coupling(coupling)
+    return JSONResponse(content=coupling.to_dict(), status_code=201)
+
+
+# Register /couplings/deactivate BEFORE /couplings/{coupling_id} so FastAPI
+# does not route the literal string "deactivate" as a coupling ID.
+@router.post("/couplings/deactivate")
+async def deactivate_coupling(request: Request):
+    manager = _manager(request)
+    storage = _storage(request)
+    try:
+        await manager.deactivate()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    storage.set_active_coupling_id(None)
+    return {"active_id": None}
+
+
+class RestartCouplingCavaBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    """Optionally update frequency cutoffs and/or band boundaries while restarting cava.
+
+    Saving these avoids going through PATCH /couplings/{id}, which could trigger
+    heavier session actions. The endpoint dispatches to the active owner:
+    canonical analyser replacement or external CAVA process restart.
+    """
+
+    lower_cutoff_freq: int | None = None
+    higher_cutoff_freq: int | None = None
+    bass_hz: int | None = None
+    mid_hz: int | None = None
+
+
+class TransportBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    action: TransportAction
+
+
+@router.post("/couplings/{coupling_id}/transport")
+async def control_coupling_transport(coupling_id: str, body: TransportBody, request: Request):
+    if _storage(request).get_coupling(coupling_id) is None:
+        raise HTTPException(status_code=404, detail="Coupling not found")
+    try:
+        target = await _manager(request).control_followed_player(coupling_id, body.action)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except OSError as exc:
+        raise HTTPException(status_code=502, detail="LMS transport command failed") from exc
+    return {"ok": True, "target_mac": target}
+
+
+# Register /couplings/{id}/restart-cava BEFORE /couplings/{id} so FastAPI
+# does not swallow the literal path segment as the coupling_id.
+@router.post("/couplings/{coupling_id}/restart-cava")
+async def restart_coupling_cava(
+    coupling_id: str, request: Request, body: RestartCouplingCavaBody
+):
+    """Restart cava for the active coupling, optionally persisting new cutoff values."""
+    manager = _manager(request)
+    storage = _storage(request)
+
+    if storage.get_active_coupling_id() != coupling_id:
+        raise HTTPException(status_code=400, detail="Coupling is not active")
+
+    has_updates = any(
+        v is not None
+        for v in (body.lower_cutoff_freq, body.higher_cutoff_freq, body.bass_hz, body.mid_hz)
+    )
+
+    # BLOCKER 4 — snapshot-then-act-then-commit.
+    #
+    # The pre-fix flow saved analyser and effect settings BEFORE the runtime
+    # rebuild.  When the runtime step raised (e.g. RuntimeError from
+    # replace_pcm_analyser), storage had already moved on but the running
+    # session was untouched — leaving stored settings and runtime state
+    # permanently disagreeing.  We now:
+    #   1. Snapshot the current analyser / effect entities to memory.
+    #   2. Compute the proposed post-write state but only stage it.
+    #   3. Attempt the runtime change with the STAGED values.
+    #   4. On success: persist the staged values.
+    #   5. On runtime failure: do NOT persist; raise HTTP 409 so the caller
+    #      knows the request was rejected atomically.
+    coupling = storage.get_coupling(coupling_id)
+    if coupling is None:
+        raise HTTPException(status_code=404, detail="Coupling not found")
+
+    analyser_snapshot: Analyser | None = None
+    effect_snapshot: Effect | None = None
+    proposed_analyser: Analyser | None = None
+    proposed_effect: Effect | None = None
+
+    if has_updates:
+        ac = storage.get_analyser(coupling.analyser_id)
+        if ac is None:
+            raise HTTPException(status_code=404, detail="Analyser not found")
+        analyser_snapshot = _clone_dataclass(ac)
+        proposed_analyser = _clone_dataclass(ac)
+        if body.lower_cutoff_freq is not None:
+            proposed_analyser.lower_cutoff_freq = body.lower_cutoff_freq
+        if body.higher_cutoff_freq is not None:
+            proposed_analyser.higher_cutoff_freq = body.higher_cutoff_freq
+
+        energy_profile = storage.get_energy_profile(coupling.energy_profile_id)
+        if energy_profile is not None:
+            effect = storage.get_effect(energy_profile.high_energy_effect_id)
+            if effect is not None:
+                changed_effect = False
+                if body.bass_hz is not None:
+                    changed_effect = True
+                if body.mid_hz is not None:
+                    changed_effect = True
+                if changed_effect:
+                    effect_snapshot = _clone_dataclass(effect)
+                    proposed_effect = _clone_dataclass(effect)
+                    if body.bass_hz is not None:
+                        proposed_effect.bass_hz = body.bass_hz
+                    if body.mid_hz is not None:
+                        proposed_effect.mid_hz = body.mid_hz
+
+    # Persist the proposed values IN MEMORY only, so _build_engine_profile
+    # sees the intended state without committing to disk yet.  On success
+    # we save at the end; on failure we restore from the snapshots.
+    #
+    # Because storage.get_analyser() returns a shared reference into the
+    # storage backing, we cannot mutate freely without also touching the
+    # in-memory state; the transactional guarantee is therefore rollback
+    # from the pristine snapshot on failure.
+    if proposed_analyser is not None:
+        storage.save_analyser(proposed_analyser)
+    if proposed_effect is not None:
+        storage.save_effect(proposed_effect)
+
+    # Route to the correct rebuild path for the active session.  A
+    # canonical/pcm_pipeline session has no external cava process to
+    # restart — the equivalent operation is replace_pcm_analyser, which
+    # rebuilds the running CanonicalAnalysisPipeline with the persisted
+    # analyser configuration.  Only sessions whose bars_source is "cava"
+    # (external CAVA/FIFO) actually restart the cava process.
+    try:
+        if manager.active_bars_source == "pcm_pipeline":
+            profile = _build_engine_profile(coupling, storage)
+            if profile is None:
+                # Rollback storage before signalling the caller.
+                if analyser_snapshot is not None:
+                    storage.save_analyser(analyser_snapshot)
+                if effect_snapshot is not None:
+                    storage.save_effect(effect_snapshot)
+                raise HTTPException(
+                    status_code=422,
+                    detail="Coupling has broken FK references",
+                )
+            manager.replace_pcm_analyser(profile)
+        else:
+            await manager.restart_cava()
+    except HTTPException:
+        raise
+    except Exception as exc:
+        # BLOCKER 4 rollback: undo the staged persistence so the stored
+        # settings and the running runtime agree.
+        if analyser_snapshot is not None:
+            try:
+                storage.save_analyser(analyser_snapshot)
+            except Exception:  # noqa: BLE001 - best-effort rollback
+                pass
+        if effect_snapshot is not None:
+            try:
+                storage.save_effect(effect_snapshot)
+            except Exception:  # noqa: BLE001 - best-effort rollback
+                pass
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return {"ok": True}
+
+
+@router.get("/couplings/{coupling_id}")
+async def get_coupling(coupling_id: str, request: Request):
+    c = _storage(request).get_coupling(coupling_id)
+    if c is None:
+        raise HTTPException(status_code=404, detail="Coupling not found")
+    return c.to_dict()
+
+
+@router.patch("/couplings/{coupling_id}")
+async def patch_coupling(coupling_id: str, request: Request, body: CouplingPatchBody):
+    """Omnibus PATCH: routes each field to the appropriate sub-entity and
+    triggers the minimum necessary session action on the active coupling."""
+    storage = _storage(request)
+    manager = _manager(request)
+
+    coupling = storage.get_coupling(coupling_id)
+    if coupling is None:
+        raise HTTPException(status_code=404, detail="Coupling not found")
+
+    updates = body.model_dump(exclude_unset=True)
+    if not updates:
+        return coupling.to_dict()
+
+    if "name" in updates:
+        _assert_name_unique(
+            updates["name"],
+            [(c.id, c.name) for c in storage.list_couplings()],
+            "Coupling",
+            exclude_id=coupling_id,
+        )
+
+    was_active = storage.get_active_coupling_id() == coupling_id
+
+    # Resolve sub-entities for inline field updates
+    player = storage.get_virtual_player(coupling.player_id) if coupling.player_id else None
+    ac = (
+        storage.get_analyser(coupling.analyser_id)
+        if coupling.analyser_id
+        else None
+    )
+    zone = (
+        storage.get_zone(coupling.zone_id)
+        if coupling.zone_id
+        else None
+    )
+    cf_inline = (
+        storage.get_energy_profile(coupling.energy_profile_id)
+        if coupling.energy_profile_id else None
+    )
+    effect_inline = (
+        storage.get_effect(cf_inline.high_energy_effect_id)
+        if cf_inline and cf_inline.high_energy_effect_id
+        else None
+    )
+
+    player_changed = ac_changed = zone_changed = effect_changed = False
+
+    for field, value in updates.items():
+        if field in _C_COUPLING_DIRECT_FIELDS | _C_FK_FIELDS:
+            setattr(coupling, field, value)
+        elif field in _C_PLAYER_INLINE and player:
+            setattr(player, field, value)
+            player_changed = True
+        elif field in _C_ANALYSER_INLINE and ac:
+            setattr(ac, field, value)
+            ac_changed = True
+        elif field in _C_ZONE_INLINE and zone:
+            setattr(zone, field, value)
+            zone_changed = True
+        elif field in _C_EFFECT_INLINE and effect_inline:
+            setattr(effect_inline, field, value)
+            effect_changed = True
+
+    storage.save_coupling(coupling)
+    if player_changed and player:
+        storage.save_virtual_player(player)
+    if ac_changed and ac:
+        storage.save_analyser(ac)
+    if zone_changed and zone:
+        storage.save_zone(zone)
+    if effect_changed and effect_inline:
+        storage.save_effect(effect_inline)
+
+    if was_active:
+        changed = set(updates.keys())
+        actionable = (
+            _C_DEACTIVATE_FIELDS | _C_LIVE_FK_FIELDS
+            | _C_CAVA_FIELDS | _C_PCM_FIELDS | _C_RENDER_FIELDS
+        )
+        if changed & actionable:
+            await _apply_coupling_action(coupling, storage, manager, changed)
+
+    return coupling.to_dict()
+
+
+@router.delete("/couplings/{coupling_id}", status_code=204)
+async def delete_coupling(coupling_id: str, request: Request):
+    storage = _storage(request)
+    manager = _manager(request)
+    if storage.get_active_coupling_id() == coupling_id:
+        await manager.deactivate()
+    storage.delete_coupling(coupling_id)
+
+
+@router.post("/couplings/{coupling_id}/clone", status_code=201)
+async def clone_coupling(coupling_id: str, request: Request):
+    """Shallow-clone a Coupling, preserving all entity references.
+
+    Creates a new Coupling with the same player_id, zone_id, analyser_id, and
+    energy_profile_id.  Does NOT clone any referenced entities — the Analyser,
+    EnergyProfile, and Effects are shared by reference.
+    The new Coupling is named "<original name> (copy)".
+    """
+    storage = _storage(request)
+    coupling = storage.get_coupling(coupling_id)
+    if coupling is None:
+        raise HTTPException(status_code=404, detail="Coupling not found")
+
+    new_coupling = replace(
+        coupling,
+        id=str(uuid.uuid4()),
+        name=_unique_copy_name(coupling.name, {c.name.lower() for c in storage.list_couplings()}),
+    )
+    storage.save_coupling(new_coupling)
+    return new_coupling.to_dict()
+
+
+@router.post("/couplings/{coupling_id}/activate")
+async def activate_coupling(coupling_id: str, request: Request):
+    """Activate a Coupling via PlayerManager.activate_coupling()."""
+    storage = _storage(request)
+    manager = _manager(request)
+
+    coupling = storage.get_coupling(coupling_id)
+    if coupling is None:
+        raise HTTPException(status_code=404, detail="Coupling not found")
+
+    try:
+        await manager.activate_coupling(coupling)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return {"active_id": coupling_id, "warnings": []}
+
+
+# Full backups deliberately include credentials, unlike ordinary entity responses.
+_BACKUP_HEADERS = {'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff'}
+
+
+@router.get('/config/export')
+async def export_config(request: Request):
+    try:
+        backup = export_configuration(_storage(request))
+        raw = encode_backup(backup)
+    except BackupError as exc:
+        return JSONResponse(status_code=422, headers=_BACKUP_HEADERS,
+                            content={'detail': {
+                                'code': 'invalid_configuration', 'message': str(exc)}})
+    stamp = backup['created_at'].replace(':', '')
+    return Response(raw, media_type='application/json', headers={
+        **_BACKUP_HEADERS,
+        'Content-Disposition': f'attachment; filename="lampastream-backup-{stamp}.json"',
+    })
+
+
+@router.post('/config/import')
+async def import_config(request: Request):
+    def error(status: int, code: str, message: str):
+        return JSONResponse(status_code=status, headers=_BACKUP_HEADERS,
+                            content={'detail': {'code': code, 'message': message}})
+
+    if request.headers.get('content-type', '').split(';')[0].strip().lower() != 'application/json':
+        return error(415, 'json_required', 'Upload the JSON backup as application/json')
+    raw = bytearray()
+    async for chunk in request.stream():
+        if len(raw) + len(chunk) > MAX_BACKUP_BYTES:
+            return error(413, 'backup_too_large', 'Backup exceeds the 4 MiB limit')
+        raw.extend(chunk)
+    try:
+        backup = decode_backup(bytes(raw))
+    except BackupError as exc:
+        return error(422, 'invalid_backup', str(exc))
+    # No stop/reload transaction is needed: insist on successful teardown before
+    # any persistent change. This also excludes sessions with retiring readers.
+    if not _manager(request).configuration_restore_ready:
+        return error(409, 'runtime_active',
+                     'Deactivate the current Coupling and finish pending teardown before restore')
+    try:
+        restore_configuration(_storage(request), backup)
+    except BackupError as exc:
+        return error(409, 'restore_failed', str(exc))
+    return JSONResponse(headers=_BACKUP_HEADERS, content={
+        'status': 'restored', 'runtime': 'inactive', 'restart_required': False,
+        'safety_backup_created': True,
+        'message': 'Configuration restored. Activate a restored Coupling when ready.',
+    })

@@ -17,11 +17,11 @@ from typing import NamedTuple
 
 import pytest
 
-from huesync.models import EFFECT_IDS, ONSET_METHODS
+from lampastream.models import EFFECT_IDS, ONSET_METHODS
 
 _ROOT = Path(__file__).parent.parent
-_API_PY = _ROOT / "src" / "huesync" / "api.py"
-_SYNC_ENGINE_PY = _ROOT / "src" / "huesync" / "sync_engine.py"
+_API_PY = _ROOT / "src" / "lampastream" / "api.py"
+_SYNC_ENGINE_PY = _ROOT / "src" / "lampastream" / "sync_engine.py"
 
 
 # ---------------------------------------------------------------------------

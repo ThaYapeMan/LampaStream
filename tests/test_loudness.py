@@ -6,11 +6,11 @@ import numpy as np
 import pytest
 from test_analysis_architecture import _make_cap, _make_frame
 
-from huesync.loudness_analyzer import KWeightedLoudnessAnalyzer
-from huesync.loudness_meter import SAMPLE_RATE, SILENCE_LUFS, _self_check
-from huesync.models import Profile
-from huesync.spectrum_engine import SharedAnalysisFrame
-from huesync.sync_engine import StereoMagStft, SyncEngine
+from lampastream.loudness_analyzer import KWeightedLoudnessAnalyzer
+from lampastream.loudness_meter import SAMPLE_RATE, SILENCE_LUFS, _self_check
+from lampastream.models import Profile
+from lampastream.spectrum_engine import SharedAnalysisFrame
+from lampastream.sync_engine import StereoMagStft, SyncEngine
 
 
 def test_loudness_ebu_reference_landmarks_and_silence(capsys):
@@ -98,7 +98,7 @@ def test_loudness_publication_preview_eos_and_epoch_reset():
         assert engine.last_loudness == cap.latest_loudness()
         # A newer CAVA-like spectrum interval must not erase the meter preview
         # or be replaced by a delayed loudness record in the Effects snapshot.
-        from huesync.spectrum_engine import ProcessorUpdate
+        from lampastream.spectrum_engine import ProcessorUpdate
         newer = cap._publish_by_interval(
             epoch_id='ep-1',
             spectrum_updates=[ProcessorUpdate('cavacore', 24000, 24480, bars=[.9])],

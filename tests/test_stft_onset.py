@@ -4,13 +4,13 @@ Verifies that:
 1. The pipeline detects a known transient in otherwise silent audio.
 2. The 100 Hz STFT path detects the same transient earlier (in samples)
    than a simulated 30 Hz onset path, matching the timing advantage
-   described in docs/HueSync_pcm_tap_spec.md.
+   described in docs/LampaStream_pcm_tap_spec.md.
 """
 
 import numpy as np
 
-from huesync.pcm_source import WINDOW_SIZE
-from huesync.sync_engine import OnsetDetector, StftOnsetPipeline
+from lampastream.pcm_source import WINDOW_SIZE
+from lampastream.sync_engine import OnsetDetector, StftOnsetPipeline
 
 _SR = 44100
 _HOP_100 = round(_SR * 0.010)   # 441 samples  (100 Hz STFT path)

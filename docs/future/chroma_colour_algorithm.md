@@ -1,4 +1,4 @@
-# HueSync — chroma-based colour mapping
+# LampaStream — chroma-based colour mapping
 
 The principled answer to "which colour should this music be". Replaces the
 ad-hoc `bass_brightness` mode, which had no basis in anything and looks it.
@@ -87,7 +87,7 @@ and it is harmony we want the colour from.
 
 **This means the direct PCM tap**, reading `/dev/shm/squeezelite-<mac>`
 alongside cava, rather than consuming cava's bars. That is stage 3 in
-`HueSync_analysis_layer_options_v2.md`.
+`LampaStream_analysis_layer_options_v2.md`.
 
 librosa provides `chroma_stft` and `chroma_cqt` under an ISC licence, so this
 is available without a licence problem. CPU cost on a 2-vCPU LXC needs

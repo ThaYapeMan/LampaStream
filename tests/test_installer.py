@@ -46,15 +46,15 @@ def test_soxr_importable() -> None:
 
 def test_phase3_imports_available() -> None:
     """All Phase 3 runtime types must be importable."""
-    from huesync.canonicalizer import (  # noqa: F401
+    from lampastream.canonicalizer import (  # noqa: F401
         AudioCanonicalizer,
         CanonicalData,
         EndOfStream,
         StreamInvalidated,
         TemporarilyNoData,
     )
-    from huesync.pcm_source import AirPlayPipeStereoSource  # noqa: F401
-    from huesync.sync_engine import (  # noqa: F401
+    from lampastream.pcm_source import AirPlayPipeStereoSource  # noqa: F401
+    from lampastream.sync_engine import (  # noqa: F401
         CanonicalAnalysisPipeline,
         StereoMagStft,
     )
@@ -64,7 +64,7 @@ def test_phase3_imports_available() -> None:
 # AirPlay PCM source contract
 # ---------------------------------------------------------------------------
 
-_EXPECTED_FIFO = "/run/huesync/airplay.pcm"
+_EXPECTED_FIFO = "/run/lampastream/airplay.pcm"
 _EXPECTED_RATE = 44100
 _EXPECTED_FORMAT = "S16_LE"
 _EXPECTED_CHANNELS = 2
@@ -72,7 +72,7 @@ _EXPECTED_CHANNELS = 2
 
 def test_airplay_fifo_path_constant() -> None:
     """The AIRPLAY_PIPE constant in pcm_source.py must match the deployment path."""
-    from huesync.pcm_source import AIRPLAY_PIPE
+    from lampastream.pcm_source import AIRPLAY_PIPE
 
     assert str(AIRPLAY_PIPE) == _EXPECTED_FIFO, (
         f"AIRPLAY_PIPE={AIRPLAY_PIPE!r} but installer uses {_EXPECTED_FIFO!r}"
@@ -81,8 +81,8 @@ def test_airplay_fifo_path_constant() -> None:
 
 def test_shairport_config_pcm_contract(tmp_path: Path) -> None:
     """_configure_shairport_name() must embed the correct PCM contract constants."""
-    from huesync.player_manager import PlayerManager
-    from huesync.storage import Storage
+    from lampastream.player_manager import PlayerManager
+    from lampastream.storage import Storage
 
     storage = Storage(tmp_path / "config.json")
     manager = PlayerManager(storage)
@@ -104,8 +104,8 @@ def test_shairport_config_pcm_contract(tmp_path: Path) -> None:
 
 def test_shairport_config_name_substitution(tmp_path: Path) -> None:
     """_configure_shairport_name() must embed the provided name."""
-    from huesync.player_manager import PlayerManager
-    from huesync.storage import Storage
+    from lampastream.player_manager import PlayerManager
+    from lampastream.storage import Storage
 
     storage = Storage(tmp_path / "config.json")
     manager = PlayerManager(storage)
@@ -121,8 +121,8 @@ def test_shairport_config_name_substitution(tmp_path: Path) -> None:
 
 def test_shairport_config_idempotent(tmp_path: Path) -> None:
     """Calling _configure_shairport_name() twice with the same name gives identical output."""
-    from huesync.player_manager import PlayerManager
-    from huesync.storage import Storage
+    from lampastream.player_manager import PlayerManager
+    from lampastream.storage import Storage
 
     storage = Storage(tmp_path / "config.json")
     manager = PlayerManager(storage)
@@ -130,9 +130,9 @@ def test_shairport_config_idempotent(tmp_path: Path) -> None:
     manager._SHAIRPORT_CONF = conf_path
 
     with patch("subprocess.run"):
-        manager._configure_shairport_name("HueSync")
+        manager._configure_shairport_name("LampaStream")
         text1 = conf_path.read_text()
-        manager._configure_shairport_name("HueSync")
+        manager._configure_shairport_name("LampaStream")
         text2 = conf_path.read_text()
 
     assert text1 == text2, "Config must be identical on repeated calls with the same name"
@@ -145,31 +145,31 @@ def test_shairport_config_idempotent(tmp_path: Path) -> None:
 
 def test_shairport_no_restart_on_identical_config(tmp_path: Path) -> None:
     """Second call with same name must not invoke systemctl restart."""
-    from huesync.player_manager import PlayerManager
-    from huesync.storage import Storage
+    from lampastream.player_manager import PlayerManager
+    from lampastream.storage import Storage
 
     storage = Storage(tmp_path / "config.json")
     manager = PlayerManager(storage)
     manager._SHAIRPORT_CONF = tmp_path / "shairport-sync.conf"
 
     with patch("subprocess.run") as mock_run:
-        manager._configure_shairport_name("HueSync")
+        manager._configure_shairport_name("LampaStream")
         assert mock_run.call_count == 1, "First call (config absent) must restart"
-        manager._configure_shairport_name("HueSync")
+        manager._configure_shairport_name("LampaStream")
         assert mock_run.call_count == 1, "Identical config must not restart"
 
 
 def test_shairport_restart_on_advertised_name_change(tmp_path: Path) -> None:
     """Changing the advertised name must write config and restart exactly once per change."""
-    from huesync.player_manager import PlayerManager
-    from huesync.storage import Storage
+    from lampastream.player_manager import PlayerManager
+    from lampastream.storage import Storage
 
     storage = Storage(tmp_path / "config.json")
     manager = PlayerManager(storage)
     manager._SHAIRPORT_CONF = tmp_path / "shairport-sync.conf"
 
     with patch("subprocess.run") as mock_run:
-        manager._configure_shairport_name("HueSync")
+        manager._configure_shairport_name("LampaStream")
         assert mock_run.call_count == 1
 
         manager._configure_shairport_name("Living Room")  # name changed
@@ -183,8 +183,8 @@ def test_shairport_no_file_rewrite_on_identical_config(tmp_path: Path) -> None:
     """File is not rewritten (mtime unchanged) when config already matches desired."""
     import time
 
-    from huesync.player_manager import PlayerManager
-    from huesync.storage import Storage
+    from lampastream.player_manager import PlayerManager
+    from lampastream.storage import Storage
 
     storage = Storage(tmp_path / "config.json")
     manager = PlayerManager(storage)
@@ -192,13 +192,13 @@ def test_shairport_no_file_rewrite_on_identical_config(tmp_path: Path) -> None:
     manager._SHAIRPORT_CONF = conf_path
 
     with patch("subprocess.run"):
-        manager._configure_shairport_name("HueSync")
+        manager._configure_shairport_name("LampaStream")
 
     mtime_ns = conf_path.stat().st_mtime_ns
     time.sleep(0.05)  # ensure any rewrite would update mtime
 
     with patch("subprocess.run"):
-        manager._configure_shairport_name("HueSync")  # should skip write
+        manager._configure_shairport_name("LampaStream")  # should skip write
 
     assert conf_path.stat().st_mtime_ns == mtime_ns, (
         "File must not be rewritten when config is already identical"
@@ -209,8 +209,8 @@ def test_shairport_systemctl_failure_graceful_no_retry(tmp_path: Path) -> None:
     """systemctl failure logs a warning and does not retry; no exception raised."""
     import subprocess as _sp
 
-    from huesync.player_manager import PlayerManager
-    from huesync.storage import Storage
+    from lampastream.player_manager import PlayerManager
+    from lampastream.storage import Storage
 
     storage = Storage(tmp_path / "config.json")
     manager = PlayerManager(storage)
@@ -224,15 +224,15 @@ def test_shairport_systemctl_failure_graceful_no_retry(tmp_path: Path) -> None:
         raise _sp.CalledProcessError(1, cmd)
 
     with patch("subprocess.run", side_effect=failing_run):
-        manager._configure_shairport_name("HueSync")  # must not raise
+        manager._configure_shairport_name("LampaStream")  # must not raise
 
     assert call_count == 1, "systemctl must be called exactly once, not retried"
 
 
 def test_shairport_pcm_contract_preserved_after_idempotent_skip(tmp_path: Path) -> None:
     """After an idempotent skip, the on-disk config still contains the correct PCM contract."""
-    from huesync.player_manager import PlayerManager
-    from huesync.storage import Storage
+    from lampastream.player_manager import PlayerManager
+    from lampastream.storage import Storage
 
     storage = Storage(tmp_path / "config.json")
     manager = PlayerManager(storage)
@@ -240,8 +240,8 @@ def test_shairport_pcm_contract_preserved_after_idempotent_skip(tmp_path: Path) 
     manager._SHAIRPORT_CONF = conf_path
 
     with patch("subprocess.run"):
-        manager._configure_shairport_name("HueSync")
-        manager._configure_shairport_name("HueSync")  # idempotent skip
+        manager._configure_shairport_name("LampaStream")
+        manager._configure_shairport_name("LampaStream")  # idempotent skip
 
     text = conf_path.read_text()
     assert f"output_rate = {_EXPECTED_RATE}" in text
@@ -258,18 +258,18 @@ def test_shairport_coupling_reactivation_no_restart(tmp_path: Path) -> None:
     deactivates and re-activates the same coupling without changing the name →
     the second activation must not restart shairport-sync.
     """
-    from huesync.player_manager import PlayerManager
-    from huesync.storage import Storage
+    from lampastream.player_manager import PlayerManager
+    from lampastream.storage import Storage
 
     storage = Storage(tmp_path / "config.json")
     manager = PlayerManager(storage)
     manager._SHAIRPORT_CONF = tmp_path / "shairport-sync.conf"
 
     with patch("subprocess.run") as mock_run:
-        manager._configure_shairport_name("HueSync")  # first activation
+        manager._configure_shairport_name("LampaStream")  # first activation
         assert mock_run.call_count == 1
 
-        manager._configure_shairport_name("HueSync")  # re-activation, same name
+        manager._configure_shairport_name("LampaStream")  # re-activation, same name
         assert mock_run.call_count == 1, (
             "Re-activating AirPlay coupling with unchanged name must not restart shairport"
         )
@@ -284,7 +284,7 @@ def test_shairport_configure_is_synchronous_asyncio_safe() -> None:
     """
     import inspect
 
-    from huesync.player_manager import PlayerManager
+    from lampastream.player_manager import PlayerManager
 
     assert not inspect.iscoroutinefunction(PlayerManager._configure_shairport_name), (
         "_configure_shairport_name must remain synchronous (not async def)"
@@ -330,7 +330,7 @@ def test_airplay_volume_upgrade_preserves_config(tmp_path: Path, setting: str) -
     updater = script.split("<< 'PY_VOLUME'\n", 1)[1].split("\nPY_VOLUME", 1)[0]
     config = tmp_path / "shairport-sync.conf"
     prefix = 'general = {\n  name = "Custom receiver";\n'
-    suffix = '}\npipe = { name = "/run/huesync/airplay.pcm"; }\n'
+    suffix = '}\npipe = { name = "/run/lampastream/airplay.pcm"; }\n'
     config.write_text(prefix + setting + suffix)
     config.chmod(0o640)
     subprocess.run([sys.executable, "-", str(config)], input=updater, text=True, check=True)
@@ -360,13 +360,13 @@ def test_airplay_volume_upgrade_rejects_ambiguous_config(tmp_path: Path) -> None
 
 
 def test_setup_airplay_sh_tmpfiles_d_directory_entry() -> None:
-    """setup-airplay.sh must create the /run/huesync directory via tmpfiles.d 'd' entry."""
+    """setup-airplay.sh must create the /run/lampastream directory via tmpfiles.d 'd' entry."""
     script = (ROOT / "scripts" / "setup-airplay.sh").read_text()
-    assert "d /run/huesync" in script, (
-        "setup-airplay.sh must write a tmpfiles.d 'd' entry for /run/huesync directory"
+    assert "d /run/lampastream" in script, (
+        "setup-airplay.sh must write a tmpfiles.d 'd' entry for /run/lampastream directory"
     )
-    assert "huesync huesync" in script, (
-        "tmpfiles.d directory entry must set ownership to huesync huesync"
+    assert "lampastream lampastream" in script, (
+        "tmpfiles.d directory entry must set ownership to lampastream lampastream"
     )
 
 
@@ -374,12 +374,12 @@ def test_setup_airplay_sh_tmpfiles_d_fifo_entry() -> None:
     """setup-airplay.sh must pre-create the AirPlay FIFO via tmpfiles.d 'p' entry.
 
     Without this, the FIFO is only created when iOS connects (shairport-sync
-    pipe backend activation), so HueSync's open() raises OSError if a coupling
+    pipe backend activation), so LampaStream's open() raises OSError if a coupling
     is activated before the first iOS AirPlay session.  The 'p' entry creates
     the FIFO at boot, making the path available immediately.
     """
     script = (ROOT / "scripts" / "setup-airplay.sh").read_text()
-    assert "p /run/huesync/airplay.pcm" in script, (
+    assert "p /run/lampastream/airplay.pcm" in script, (
         "setup-airplay.sh must write a tmpfiles.d 'p' entry to pre-create the AirPlay FIFO"
     )
 
@@ -387,30 +387,30 @@ def test_setup_airplay_sh_tmpfiles_d_fifo_entry() -> None:
 def test_setup_airplay_sh_tmpfiles_d_single_file() -> None:
     """Both tmpfiles.d entries must be written to the same file (no separate files)."""
     script = (ROOT / "scripts" / "setup-airplay.sh").read_text()
-    # Both entries appear in the same huesync-run.conf write operation.
-    assert "huesync-run.conf" in script
+    # Both entries appear in the same lampastream-run.conf write operation.
+    assert "lampastream-run.conf" in script
     # Both types present in same script context.
-    assert "d /run/huesync" in script
-    assert "p /run/huesync/airplay.pcm" in script
+    assert "d /run/lampastream" in script
+    assert "p /run/lampastream/airplay.pcm" in script
 
 
 # ---------------------------------------------------------------------------
-# systemd unit contract — /run/huesync owned by tmpfiles.d, NOT RuntimeDirectory
+# systemd unit contract — /run/lampastream owned by tmpfiles.d, NOT RuntimeDirectory
 # ---------------------------------------------------------------------------
 
 
-def test_huesync_service_no_runtime_directory() -> None:
-    """/run/huesync is a shared directory (huesync + shairport-sync); RuntimeDirectory
-    is for directories owned by one service.  huesync.service must NOT claim it.
+def test_lampastream_service_no_runtime_directory() -> None:
+    """/run/lampastream is a shared directory (lampastream + shairport-sync); RuntimeDirectory
+    is for directories owned by one service.  lampastream.service must NOT claim it.
 
     The authoritative lifecycle mechanism is tmpfiles.d (setup-airplay.sh).
     RuntimeDirectory with Preserve=yes would create a confusing second owner
     and is semantically wrong for a path shared with shairport-sync.
     """
-    unit = (ROOT / "systemd" / "huesync.service").read_text()
-    assert "RuntimeDirectory=huesync" not in unit, (
-        "huesync.service must NOT declare RuntimeDirectory=huesync — "
-        "/run/huesync is shared with shairport-sync; tmpfiles.d is the authoritative owner"
+    unit = (ROOT / "systemd" / "lampastream.service").read_text()
+    assert "RuntimeDirectory=lampastream" not in unit, (
+        "lampastream.service must NOT declare RuntimeDirectory=lampastream — "
+        "/run/lampastream is shared with shairport-sync; tmpfiles.d is the authoritative owner"
     )
 
 
@@ -435,10 +435,10 @@ def test_validate_script_exists() -> None:
 
 def test_update_delegates_to_authoritative_installer() -> None:
     script = (ROOT / "scripts" / "update.sh").read_text()
-    assert 'exec "$REPO_DIR/scripts/install-huesync.sh"' in script
+    assert 'exec "$REPO_DIR/scripts/install-lampastream.sh"' in script
     assert 'pip install' not in script
-    installer = (ROOT / "scripts" / "install-huesync.sh").read_text()
-    assert 'systemctl restart avahi-daemon nqptp shairport-sync huesync' in installer
+    installer = (ROOT / "scripts" / "install-lampastream.sh").read_text()
+    assert 'systemctl restart avahi-daemon nqptp shairport-sync lampastream' in installer
 
 
 def test_update_script_contains_git_pull() -> None:
@@ -469,7 +469,7 @@ def test_validate_script_no_fifo_reads() -> None:
     """scripts/validate.sh must not contain commands that consume PCM from the FIFO."""
     script = (ROOT / "scripts" / "validate.sh").read_text()
     # Commands that would consume PCM — none of these should appear as active code.
-    for forbidden in ["cat $FIFO", "cat /run/huesync", "dd if=", "ffmpeg"]:
+    for forbidden in ["cat $FIFO", "cat /run/lampastream", "dd if=", "ffmpeg"]:
         assert forbidden not in script, (
             f"scripts/validate.sh must not consume FIFO content (found: {forbidden!r})"
         )
@@ -593,7 +593,7 @@ def test_validate_script_fd_zero_is_allowed() -> None:
     """
     script = (ROOT / "scripts" / "validate.sh").read_text()
     # Must not emit a FAIL or misleading "expected: writer + reader" when N==0.
-    assert "expected: shairport-sync writer + huesync reader" not in script, (
+    assert "expected: shairport-sync writer + lampastream reader" not in script, (
         "validate.sh must not claim writer+reader are expected — "
         "0 FDs is valid when no AirPlay session is active"
     )

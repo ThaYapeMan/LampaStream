@@ -11,14 +11,14 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-SCRIPT = ROOT / 'scripts/install-huesync.sh'
+SCRIPT = ROOT / 'scripts/install-lampastream.sh'
 
 
 def test_help_and_unsupported_platform_are_read_only(tmp_path):
     env = dict(os.environ, HOME=str(tmp_path))
     result = subprocess.run([str(SCRIPT), '--help'], env=env, capture_output=True, text=True)
     assert result.returncode == 0 and '--check' in result.stdout
-    for requirement in ('existing HueSync target installation', 'Debian 13 (trixie)',
+    for requirement in ('existing LampaStream target installation', 'Debian 13 (trixie)',
                         'x86_64', 'systemd running', '/run/systemd/system',
                         'Does not install, migrate or modify the host', 'docs/testing.md'):
         assert requirement in result.stdout
@@ -36,7 +36,7 @@ def test_help_and_unsupported_platform_are_read_only(tmp_path):
 def test_shell_syntax():
     # Windows-mounted checkouts can appear executable despite Git's stored mode.
     entry = subprocess.check_output(
-        ['git', 'ls-files', '-s', 'scripts/install-huesync.sh'], cwd=ROOT, text=True)
+        ['git', 'ls-files', '-s', 'scripts/install-lampastream.sh'], cwd=ROOT, text=True)
     assert entry.startswith('100755 '), 'Fresh clones must support the executable installer'
     subprocess.run(['bash', '-n', str(SCRIPT), str(ROOT / 'scripts/setup-airplay.sh'),
                     str(ROOT / 'scripts/build-squeezelite.sh')], check=True)
@@ -53,10 +53,10 @@ def test_dependency_and_phase_contract():
     assert 'sha256sum --check' in text
     assert 'git archive' not in text  # invocation includes explicit repo/safety options
     assert 'archive HEAD' in text
-    assert text.index('-m huesync.migration') < text.index('systemctl restart avahi-daemon')
+    assert text.index('-m lampastream.migration') < text.index('systemctl restart avahi-daemon')
     assert text.index('verify "$RELEASE/venv"') < text.index('systemctl restart avahi-daemon')
     assert 'pip install -e' not in text
-    assert 'HUESYNC_DEFER_START=1' in text
+    assert 'LAMPASTREAM_DEFER_START=1' in text
 
 
 def test_check_branch_never_installs_or_migrates():
@@ -64,7 +64,7 @@ def test_check_branch_never_installs_or_migrates():
     check = text.split('if [[ "$CHECK" == 1 ]]; then', 1)[1].split('\nfi', 1)[0]
     assert 'verify "$PREFIX/.venv"' in check
     assert 'exit 0' in check
-    for forbidden in ('apt-get', 'mkdir', 'chown', 'systemctl restart', '-m huesync.migration'):
+    for forbidden in ('apt-get', 'mkdir', 'chown', 'systemctl restart', '-m lampastream.migration'):
         assert forbidden not in check
     verification = (ROOT / 'scripts/verify-install.py').read_text()
     assert 'check=True' in verification
@@ -86,27 +86,27 @@ def test_build_commit_generated_without_source_mutation(tmp_path, monkeypatch):
     hook_type = load_hook(monkeypatch)
     hook = hook_type()
     hook.root = str(tmp_path)
-    tracked = tmp_path / 'src/huesync/_commit.py'
+    tracked = tmp_path / 'src/lampastream/_commit.py'
     tracked.parent.mkdir(parents=True)
     tracked.write_text('COMMIT = "stale"\n')
-    monkeypatch.setenv('HUESYNC_BUILD_COMMIT', '123456789abcdef')
+    monkeypatch.setenv('LAMPASTREAM_BUILD_COMMIT', '123456789abcdef')
     monkeypatch.setattr(hook, '_build_cavacore', lambda: Path(
         hook._generated.name, '_libcavacore.so').write_bytes(b'test boundary'))
     data = {}
     hook.initialize('standard', data)
     generated = {dest: Path(src) for src, dest in data['force_include'].items()}
-    assert generated['huesync/_commit.py'].read_text() == 'COMMIT = "123456789abcdef"\n'
-    assert generated['huesync/cavacore/_libcavacore.so'].exists()
+    assert generated['lampastream/_commit.py'].read_text() == 'COMMIT = "123456789abcdef"\n'
+    assert generated['lampastream/cavacore/_libcavacore.so'].exists()
     assert tracked.read_text() == 'COMMIT = "stale"\n'
     assert data['pure_python'] is False and data['infer_tag'] is True
     hook.finalize('standard', data, '')
-    assert not generated['huesync/_commit.py'].exists()
+    assert not generated['lampastream/_commit.py'].exists()
 
 
 def test_metadata_rejects_injected_non_revision(tmp_path, monkeypatch):
     hook = load_hook(monkeypatch)()
     hook.root = str(tmp_path)
-    monkeypatch.setenv('HUESYNC_BUILD_COMMIT', 'bad";code')
+    monkeypatch.setenv('LAMPASTREAM_BUILD_COMMIT', 'bad";code')
     with pytest.raises(ValueError, match='hexadecimal'):
         hook.initialize('standard', {})
 
@@ -115,7 +115,7 @@ def test_every_service_must_be_active():
     text = SCRIPT.read_text()
     function = text.split('verify_services() {', 1)[1].split('\n}', 1)[0]
     # Model systemctl's real any-active exit convention: a single failed unit
-    # must be caught even though HueSync and the other services are active.
+    # must be caught even though LampaStream and the other services are active.
     shell = '''fail() { echo "$*"; exit 1; }
 systemctl() { [[ "$*" != *shairport-sync* ]]; }
 verify_services() {'''+function+'\n}\nverify_services\n'
@@ -194,8 +194,8 @@ def test_node_bootstrap_pin_matches_ci_and_locked_jsdom_engine():
     ('DAEMON=/usr/bin/squeezelite\nNAME=receiver', True),
     ('DAEMON="/usr/bin/squeezelite"', True),
     ('{ path=/usr/local/bin/squeezelite ; }', False),
-    ('{ path=/usr/local/bin/huesync-squeezelite-fifo ; }', False),
-    ('/opt/huesync/.venv/bin/huesync', False),
+    ('{ path=/usr/local/bin/lampastream-squeezelite-fifo ; }', False),
+    ('/opt/lampastream/.venv/bin/lampastream', False),
 ])
 def test_conflicting_squeezelite_definition(definition, conflict):
     body = SCRIPT.read_text().split('squeezelite_conflict_definition() {', 1)[1].split('\n}', 1)[0]
@@ -224,7 +224,7 @@ systemctl() {{
  echo "$*" >> '{calls}'
  case "$1" in
  list-unit-files) printf 'autovt@.service alias\ngetty@.service enabled\n'
- printf 'squeezelite.service enabled\nhuesync-fifo.service enabled\n' ;;
+ printf 'squeezelite.service enabled\nlampastream-fifo.service enabled\n' ;;
  list-units) printf 'room-receiver.service loaded active running receiver\n'
  echo 'getty@tty1.service loaded active running Getty' ;;
  show)
@@ -236,7 +236,7 @@ systemctl() {{
    --property=ExecStart)
     case "$2" in
      squeezelite.service) echo '/usr/local/bin/squeezelite' ;;
-     huesync-fifo.service) echo '/usr/local/bin/huesync-squeezelite-fifo' ;;
+     lampastream-fifo.service) echo '/usr/local/bin/lampastream-squeezelite-fifo' ;;
      *) echo '{init}/room-receiver start' ;;
     esac ;;
    --property=SourcePath) [[ "$2" != room-receiver.service ]] || echo '{init}/room-receiver' ;;
@@ -253,7 +253,7 @@ systemctl() {{
     assert not any('@.service' in c for c in commands)
     assert 'show getty@tty1.service --property=ExecStart --value' in commands
     assert 'stop squeezelite.service' not in commands
-    assert 'stop huesync-fifo.service' not in commands
+    assert 'stop lampastream-fifo.service' not in commands
     if mode == 'install':
         assert commands.index('disable room-receiver.service') < commands.index(
             'stop room-receiver.service')
@@ -274,12 +274,12 @@ def test_airplay_metadata_build_fifo_and_service_arguments(tmp_path):
     subprocess.run(['bash', '-c', configure], cwd=tmp_path, check=True)
     assert '--with-metadata' in (tmp_path / 'arguments').read_text().splitlines()
     # Execute the actual tmpfiles declaration with only its destination redirected.
-    declaration = text[text.index("printf 'd /run/huesync"):text.index('\nsystemd-tmpfiles')]
+    declaration = text[text.index("printf 'd /run/lampastream"):text.index('\nsystemd-tmpfiles')]
     destination = tmp_path / 'tmpfiles.conf'
-    subprocess.run(['bash', '-c', declaration.replace('/etc/tmpfiles.d/huesync-run.conf',
+    subprocess.run(['bash', '-c', declaration.replace('/etc/tmpfiles.d/lampastream-run.conf',
                                                      str(destination))], check=True)
-    assert 'p /run/huesync/airplay.metadata 0600 huesync huesync -' in destination.read_text()
-    assert '--metadata-enable --metadata-pipename=/run/huesync/airplay.metadata' in text
+    assert 'p /run/lampastream/airplay.metadata 0600 lampastream lampastream -' in destination.read_text()
+    assert '--metadata-enable --metadata-pipename=/run/lampastream/airplay.metadata' in text
 
 
 @pytest.mark.parametrize('name,expected', [

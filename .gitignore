@@ -13,7 +13,7 @@ config.yaml
 
 # Runtime artifacts
 *.fifo
-huesync.db
+lampastream.db
 cava_0.10.7+dfsg-1_amd64.deb
 
 # Test audio files — binary, too large for the repo
@@ -31,4 +31,4 @@ web/test-results/
 tests/tmp_accept/
 
 # cavacore native build artefact — compiled by hatch_build.py during pip install
-src/huesync/cavacore/_libcavacore.so
+src/lampastream/cavacore/_libcavacore.so

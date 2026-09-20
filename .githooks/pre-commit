@@ -10,7 +10,7 @@
 #      Python-only changes).
 #   2. Runs 'npm run build' in web/ (TypeScript typecheck + Vite bundle).
 #      A TypeScript compilation error aborts the commit immediately.
-#   3. Stages the rebuilt bundle (src/huesync/webui/) automatically so the
+#   3. Stages the rebuilt bundle (src/lampastream/webui/) automatically so the
 #      committed bundle always matches the committed source — prevents the
 #      "stale bundle pushed to LXC" class of bugs.
 
@@ -36,8 +36,8 @@ cd "$REPO_ROOT/web"
 npm run build
 
 # Step 3: stage the rebuilt bundle so the commit includes the up-to-date files.
-echo "[pre-commit] Staging rebuilt bundle (src/huesync/webui/)..."
+echo "[pre-commit] Staging rebuilt bundle (src/lampastream/webui/)..."
 cd "$REPO_ROOT"
-git add src/huesync/webui/
+git add src/lampastream/webui/
 
 echo "[pre-commit] Frontend build OK — bundle staged."

@@ -85,7 +85,7 @@ npm run test:e2e
 
 `npm test` runs Vitest with Testing Library for unit/component tests.
 `npm run build` runs TypeScript checking and Vite's production build. Playwright's
-`webServer` runs `npx vite preview` against `src/huesync/webui`, so the build must
+`webServer` runs `npx vite preview` against `src/lampastream/webui`, so the build must
 precede e2e execution. The current Playwright config has no browser projects or
 browser override; it uses Chromium. Browser installation includes its system
 dependencies and requires package-install privileges. The final CI step checks

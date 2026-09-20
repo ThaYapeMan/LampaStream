@@ -1,6 +1,6 @@
 # API operations
 
-HueSync serves the web application/API on port 8420. The running application exposes
+LampaStream serves the web application/API on port 8420. The running application exposes
 FastAPI's `/docs` and `/openapi.json`; use those generated schemas for REST request
 and response bodies. The [REST endpoint index](#rest-endpoint-index) below lists current
 methods and paths without needing a running app. OpenAPI does not describe WebSocket
@@ -72,7 +72,7 @@ unbound references can also be empty strings.
 | Field | JSON type | Meaning |
 |---|---|---|
 | `type` | string | Always `"status"` |
-| `version` | string | HueSync version plus commit, formatted `version+commit` |
+| `version` | string | LampaStream version plus commit, formatted `version+commit` |
 | `active_coupling_id` | string or null | Current owned Coupling ID |
 | `active_coupling_name` | string or null | Current Coupling name |
 | `active_zone_id` | string or null | Coupling's Zone reference |
@@ -168,7 +168,7 @@ no authentication; use trusted-network access only. See the authoritative
 ## REST endpoint index
 
 Methods and paths below are taken from the router definitions in
-[`src/huesync/api.py`](../src/huesync/api.py), including its `/api` prefix.
+[`src/lampastream/api.py`](../src/lampastream/api.py), including its `/api` prefix.
 Request/response bodies, query parameters and validation remain in `/docs` and
 `/openapi.json`. These are REST routes; `/ws/preview` is documented separately above.
 

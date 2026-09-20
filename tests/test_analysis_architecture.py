@@ -1,4 +1,4 @@
-"""Tests for the final HueSync analysis architecture.
+"""Tests for the final LampaStream analysis architecture.
 
 Verifies the AnalysisProcessor composition layer:
   - SharedAnalysisFrame data contract
@@ -23,9 +23,9 @@ from unittest.mock import MagicMock
 import numpy as np
 import pytest
 
-from huesync.canonicalizer import AnalysisPcmFrame
-from huesync.models import Analyser, Profile
-from huesync.pcm_source import (
+from lampastream.canonicalizer import AnalysisPcmFrame
+from lampastream.models import Analyser, Profile
+from lampastream.pcm_source import (
     _HDR_FMT,
     _HDR_OFFSET,
     _MMAP_SIZE_V1,
@@ -35,7 +35,7 @@ from huesync.pcm_source import (
     ShmContinuityEvent,
     SqueezeliteShmSource,
 )
-from huesync.spectrum_engine import (
+from lampastream.spectrum_engine import (
     ProcessorUpdate,
     PublicationRecord,
     SharedAnalysis,
@@ -44,7 +44,7 @@ from huesync.spectrum_engine import (
     SpectrumUpdate,
     V2SpectrumEngine,
 )
-from huesync.sync_engine import (
+from lampastream.sync_engine import (
     BeatDetector,
     CanonicalAnalysisPipeline,
 )
@@ -650,7 +650,7 @@ def test_stop_timeout_defers_close_to_worker_finally():
 
     class _BlockingSource:
         def read(self):
-            from huesync.canonicalizer import TemporarilyNoData
+            from lampastream.canonicalizer import TemporarilyNoData
             # Block until the test releases us; simulates a wedged read.
             release_read.wait(2.0)
             return TemporarilyNoData()
@@ -728,7 +728,7 @@ def test_m3_drain_publications_via_threaded_worker():
             self._sent = False
 
         def read(self):
-            from huesync.canonicalizer import TemporarilyNoData
+            from lampastream.canonicalizer import TemporarilyNoData
             if not self._sent:
                 self._sent = True
                 done.set()
@@ -1150,7 +1150,7 @@ def test_acceptance_rejects_unknown_engine():
 
 def test_acceptance_uses_registry():
     """ENGINES registry contains at least 'v2'; CLI choices are derived from it."""
-    from huesync.spectrum_engine import ENGINES
+    from lampastream.spectrum_engine import ENGINES
     assert "v2" in ENGINES
     assert "cavacore" in ENGINES  # registered even if not available on this system
 
@@ -1397,7 +1397,7 @@ def test_cava_eos_tail_clamped():
 
 def test_stereo_source_rejects_v0_when_require_v1(tmp_path):
     """SqueezeliteShmStereoSource.open(require_v1=True) raises for v0-only SHM."""
-    from huesync.pcm_source import SqueezeliteShmStereoSource
+    from lampastream.pcm_source import SqueezeliteShmStereoSource
     p = tmp_path / "shm"
     header = _struct.pack(_HDR_FMT, VIS_BUF_SIZE, 0, 1, 44100, 0)
     p.write_bytes(bytes(_HDR_OFFSET) + header + bytes(VIS_BUF_SIZE * 2))
@@ -1413,7 +1413,7 @@ def test_stereo_source_rejects_v0_when_require_v1(tmp_path):
 
 def test_stereo_source_v1_buf_offset_is_120(tmp_path):
     """v1 mode reads PCM from offset 120, not 80 (the extension is between)."""
-    from huesync.pcm_source import (
+    from lampastream.pcm_source import (
         _BUF_OFFSET_V1,
         SqueezeliteShmStereoSource,
     )
@@ -1766,7 +1766,7 @@ def test_terminal_latest_survives_temporarily_no_data_path():
     inject a TemporarilyNoData result into the worker's canonical result
     handling to verify the latest publication survives.
     """
-    from huesync.canonicalizer import TemporarilyNoData
+    from lampastream.canonicalizer import TemporarilyNoData
     cap = _make_cap()
     # Produce at least one publication.
     for i in range(10):
@@ -1795,7 +1795,7 @@ def test_queue_overflow_exact_drops():
     cap = _make_cap()
     # Force publications by calling _publish directly with dummy records so
     # STFT warmup does not affect the drop-count math.
-    from huesync.types import AudioFeatures
+    from lampastream.types import AudioFeatures
     features = AudioFeatures(
         bars=[0.0] * 30, bass=0.0, mid=0.0, full=0.0, centroid=0.0,
         onset=False, onset_strength=0.0,
@@ -1878,7 +1878,7 @@ def test_acceptance_cava_metadata_when_available():
 
     Skipped when the native library is not built.
     """
-    from huesync.spectrum_engine import ENGINES
+    from lampastream.spectrum_engine import ENGINES
     if not ENGINES["cavacore"].check_available():
         pytest.skip("cavacore native library not available")
     (_rows, info), _acc = _analyse_sine(0.5, backend="cavacore")
@@ -1899,7 +1899,7 @@ def test_publication_atomicity_lock_covers_all_state():
     cap = _make_cap()
     # Assert the three fields live behind the same lock; static check on
     # source structure would be brittle, so verify runtime invariant instead.
-    from huesync.types import AudioFeatures
+    from lampastream.types import AudioFeatures
     features = AudioFeatures(
         bars=[0.0] * 30, bass=0.0, mid=0.0, full=0.0, centroid=0.0,
         onset=False, onset_strength=0.0,

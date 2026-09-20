@@ -1,6 +1,6 @@
-"""Tests for the core domain types in huesync.types."""
+"""Tests for the core domain types in lampastream.types."""
 
-from huesync.types import Colour, Position, UniformScene
+from lampastream.types import Colour, Position, UniformScene
 
 # ---------------------------------------------------------------------------
 # Colour

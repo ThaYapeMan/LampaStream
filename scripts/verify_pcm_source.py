@@ -2,7 +2,7 @@
 """Verify SqueezeliteShmSource against a live squeezelite instance.
 
 Polls read_new() for 5 seconds and prints per-poll stats + a summary.
-Run on LXC 112 while music is actively playing through a HueSync profile.
+Run on LXC 112 while music is actively playing through a LampaStream profile.
 
 Usage:
     .venv/bin/python3 scripts/verify_pcm_source.py <mac>
@@ -16,10 +16,10 @@ import sys
 import time
 from collections import Counter
 
-from huesync.pcm_source import SqueezeliteShmSource
+from lampastream.pcm_source import SqueezeliteShmSource
 
 # ---------------------------------------------------------------------------
-# Count torn-read discards via a custom log handler on huesync.pcm_source.
+# Count torn-read discards via a custom log handler on lampastream.pcm_source.
 # The torn-read path logs at DEBUG; enable that level only for this module.
 # ---------------------------------------------------------------------------
 
@@ -34,7 +34,7 @@ class _TornReadCounter(logging.Handler):
             self.total += 1
 
 
-_pcm_log = logging.getLogger("huesync.pcm_source")
+_pcm_log = logging.getLogger("lampastream.pcm_source")
 _pcm_log.setLevel(logging.DEBUG)
 _torn = _TornReadCounter()
 _pcm_log.addHandler(_torn)

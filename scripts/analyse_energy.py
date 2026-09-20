@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Offline analysis of HueSync energy captures produced by capture_energy.py.
+"""Offline analysis of LampaStream energy captures produced by capture_energy.py.
 
 Evaluates alternative EnergyProfile settings (blend_start, blend_end,
 blend_response) against a captured CSV without replaying audio or touching

@@ -37,8 +37,8 @@ Signal design for the vibrato test:
 
 import numpy as np
 
-from huesync.pcm_source import WINDOW_SIZE
-from huesync.sync_engine import OnsetDetector, SuperfluxDetector, SuperfluxStftPipeline
+from lampastream.pcm_source import WINDOW_SIZE
+from lampastream.sync_engine import OnsetDetector, SuperfluxDetector, SuperfluxStftPipeline
 
 _SR = 44100
 _HOP = round(_SR * 0.010)  # 441 samples

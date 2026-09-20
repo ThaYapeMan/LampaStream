@@ -11,7 +11,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from huesync.canonicalizer import (
+from lampastream.canonicalizer import (
     AudioCanonicalizer,
     CanonicalData,
     DataResult,
@@ -21,7 +21,7 @@ from huesync.canonicalizer import (
     StreamInvalidated,
     TemporarilyNoData,
 )
-from huesync.pcm_source import (
+from lampastream.pcm_source import (
     _BUF_OFFSET,
     _HDR_FMT,
     _HDR_OFFSET,
@@ -419,7 +419,7 @@ def test_airplay_stereo_sample_rate():
 
 
 def test_airplay_stereo_source_id_format():
-    p = Path("/run/huesync/airplay.pcm")
+    p = Path("/run/lampastream/airplay.pcm")
     src = AirPlayPipeStereoSource(path=p)
     assert src.source_id == f"airplay:{p}"
 

@@ -4,7 +4,7 @@
 
 @layer base {
   :root {
-    /* HueSync dark theme — colours taken from static/style.css */
+    /* LampaStream dark theme — colours taken from static/style.css */
     --background: 222 13% 10%;         /* #14161a */
     --foreground: 220 14% 91%;         /* #e6e8eb */
     --card: 222 12% 13%;               /* #1e2127 */

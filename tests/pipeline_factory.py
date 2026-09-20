@@ -1,6 +1,6 @@
 """Test construction of the production canonical pipeline (no compatibility wrapper)."""
-from huesync.spectrum_engine import make_spectrum_engine
-from huesync.sync_engine import CanonicalAnalysisPipeline
+from lampastream.spectrum_engine import make_spectrum_engine
+from lampastream.sync_engine import CanonicalAnalysisPipeline
 
 
 def make_pipeline(*, source, bars=30, lower_cutoff_freq=50, higher_cutoff_freq=10000,

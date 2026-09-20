@@ -11,7 +11,7 @@ import numpy as np
 import pytest
 from calib_audio import reconstruct_se, se_stats
 
-from huesync.sync_engine import SustainedEnergyTracker
+from lampastream.sync_engine import SustainedEnergyTracker
 
 # ---------------------------------------------------------------------------
 # Helpers

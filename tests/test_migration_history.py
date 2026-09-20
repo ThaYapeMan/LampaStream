@@ -2,8 +2,8 @@
 import json
 from pathlib import Path
 
-from huesync.migration import migrate_file
-from huesync.storage import Storage
+from lampastream.migration import migrate_file
+from lampastream.storage import Storage
 
 
 def complete_fixture_links(data):
@@ -229,7 +229,7 @@ def test_players_key_migrated_to_virtual_players(tmp_path: Path):
                 "name": "Old Player",
                 "lms_host": "10.0.0.1",
                 "lms_port": 9000,
-                "player_name": "HueSync",
+                "player_name": "LampaStream",
                 "player_mac": "aa:bb:cc:dd:ee:ff",
                 "alsa_device": "",
             }

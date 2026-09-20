@@ -86,7 +86,7 @@ describe('Effect routing — different effects', () => {
     const highFx = { id: 'e2', name: 'Spectrum RGB', effect_type: 'spectrum_rgb', effect_speed: 1, effect_decay: 0.3, sensitivity: 1, brightness_floor: 0, bass_hz: 250, mid_hz: 2000, exertion_clip: 3, onset_flash_intensity: 0 }
     const ep = { id: 'ep1', name: 'Test Profile', low_energy_effect_id: 'e1', high_energy_effect_id: 'e2', blend_start: 0.3, blend_end: 0.7, blend_response: 1 }
     const coupling = { id: 'c1', name: 'Test Coupling', player_id: 'p1', zone_id: 'z1', analyser_id: 'a1', energy_profile_id: 'ep1', enabled: true }
-    const player = { id: 'p1', type: 'LMS', lms_host: '', lms_port: 9000, player_name: 'HueSync', display_name: '', player_mac: '', alsa_device: '', follow_player_mac: '' }
+    const player = { id: 'p1', type: 'LMS', lms_host: '', lms_port: 9000, player_name: 'LampaStream', display_name: '', player_mac: '', alsa_device: '', follow_player_mac: '' }
 
     setupDefaultMocks({ players: [player], effects: [lowFx, highFx], energyProfiles: [ep], couplings: [coupling] })
 
@@ -109,7 +109,7 @@ describe('Effect routing — different effects', () => {
     const highFx = { id: 'e2', name: 'Spectrum RGB', effect_type: 'spectrum_rgb', effect_speed: 1, effect_decay: 0.3, sensitivity: 1, brightness_floor: 0, bass_hz: 250, mid_hz: 2000, exertion_clip: 3, onset_flash_intensity: 0 }
     const ep = { id: 'ep1', name: 'Test Profile', low_energy_effect_id: 'e1', high_energy_effect_id: 'e2', blend_start: 0.3, blend_end: 0.7, blend_response: 1 }
     const coupling = { id: 'c1', name: 'Test Coupling', player_id: 'p1', zone_id: 'z1', analyser_id: 'a1', energy_profile_id: 'ep1', enabled: true }
-    const player = { id: 'p1', type: 'LMS', lms_host: '', lms_port: 9000, player_name: 'HueSync', display_name: '', player_mac: '', alsa_device: '', follow_player_mac: '' }
+    const player = { id: 'p1', type: 'LMS', lms_host: '', lms_port: 9000, player_name: 'LampaStream', display_name: '', player_mac: '', alsa_device: '', follow_player_mac: '' }
 
     setupDefaultMocks({ players: [player], effects: [lowFx, highFx], energyProfiles: [ep], couplings: [coupling] })
     await renderAndSelectCoupling('c1')
@@ -128,7 +128,7 @@ describe('Effect routing — same effect (low == high by ID)', () => {
     const fx = { id: 'e1', name: 'Spectrum RGB', effect_type: 'spectrum_rgb', effect_speed: 1, effect_decay: 0.3, sensitivity: 1, brightness_floor: 0, bass_hz: 250, mid_hz: 2000, exertion_clip: 3, onset_flash_intensity: 0 }
     const ep = { id: 'ep1', name: 'Same Profile', low_energy_effect_id: 'e1', high_energy_effect_id: 'e1', blend_start: 0.3, blend_end: 0.7, blend_response: 1 }
     const coupling = { id: 'c1', name: 'Test Coupling', player_id: 'p1', zone_id: 'z1', analyser_id: 'a1', energy_profile_id: 'ep1', enabled: true }
-    const player = { id: 'p1', type: 'LMS', lms_host: '', lms_port: 9000, player_name: 'HueSync', display_name: '', player_mac: '', alsa_device: '', follow_player_mac: '' }
+    const player = { id: 'p1', type: 'LMS', lms_host: '', lms_port: 9000, player_name: 'LampaStream', display_name: '', player_mac: '', alsa_device: '', follow_player_mac: '' }
 
     setupDefaultMocks({ players: [player], effects: [fx], energyProfiles: [ep], couplings: [coupling] })
     await renderAndSelectCoupling('c1')
@@ -143,7 +143,7 @@ describe('Effect routing — same effect (low == high by ID)', () => {
     const fx = { id: 'e1', name: 'Spectrum RGB', effect_type: 'spectrum_rgb', effect_speed: 1, effect_decay: 0.3, sensitivity: 1, brightness_floor: 0, bass_hz: 250, mid_hz: 2000, exertion_clip: 3, onset_flash_intensity: 0 }
     const ep = { id: 'ep1', name: 'Same Profile', low_energy_effect_id: 'e1', high_energy_effect_id: 'e1', blend_start: 0.3, blend_end: 0.7, blend_response: 1 }
     const coupling = { id: 'c1', name: 'Test Coupling', player_id: 'p1', zone_id: 'z1', analyser_id: 'a1', energy_profile_id: 'ep1', enabled: true }
-    const player = { id: 'p1', type: 'LMS', lms_host: '', lms_port: 9000, player_name: 'HueSync', display_name: '', player_mac: '', alsa_device: '', follow_player_mac: '' }
+    const player = { id: 'p1', type: 'LMS', lms_host: '', lms_port: 9000, player_name: 'LampaStream', display_name: '', player_mac: '', alsa_device: '', follow_player_mac: '' }
 
     setupDefaultMocks({ players: [player], effects: [fx], energyProfiles: [ep], couplings: [coupling] })
     await renderAndSelectCoupling('c1')
@@ -167,7 +167,7 @@ describe('Effect equality — by ID, not name', () => {
     const fx2 = { id: 'e2', name: 'Same Name', effect_type: 'swirl', effect_speed: 1, effect_decay: 0.3, sensitivity: 1, brightness_floor: 0, bass_hz: 250, mid_hz: 2000, exertion_clip: 3, onset_flash_intensity: 0 }
     const ep = { id: 'ep1', name: 'Name-Equal Profile', low_energy_effect_id: 'e1', high_energy_effect_id: 'e2', blend_start: 0.3, blend_end: 0.7, blend_response: 1 }
     const coupling = { id: 'c1', name: 'Test Coupling', player_id: 'p1', zone_id: 'z1', analyser_id: 'a1', energy_profile_id: 'ep1', enabled: true }
-    const player = { id: 'p1', type: 'LMS', lms_host: '', lms_port: 9000, player_name: 'HueSync', display_name: '', player_mac: '', alsa_device: '', follow_player_mac: '' }
+    const player = { id: 'p1', type: 'LMS', lms_host: '', lms_port: 9000, player_name: 'LampaStream', display_name: '', player_mac: '', alsa_device: '', follow_player_mac: '' }
 
     setupDefaultMocks({ players: [player], effects: [fx1, fx2], energyProfiles: [ep], couplings: [coupling] })
     await renderAndSelectCoupling('c1')
@@ -184,7 +184,7 @@ describe('VirtualPlayer — LMS type', () => {
   beforeEach(() => { vi.clearAllMocks() })
 
   it('shows LMS and Follow Player label with resolved name', async () => {
-    const player = { id: 'p1', type: 'LMS', lms_host: '192.168.1.100', lms_port: 9000, player_name: 'HueSync LMS', display_name: '', player_mac: '', alsa_device: '', follow_player_mac: 'aa:bb:cc:dd:ee:ff' }
+    const player = { id: 'p1', type: 'LMS', lms_host: '192.168.1.100', lms_port: 9000, player_name: 'LampaStream LMS', display_name: '', player_mac: '', alsa_device: '', follow_player_mac: 'aa:bb:cc:dd:ee:ff' }
     const coupling = { id: 'c1', name: 'LMS Coupling', player_id: 'p1', zone_id: 'z1', analyser_id: 'a1', energy_profile_id: 'ep1', enabled: true }
     const ep = { id: 'ep1', name: 'Profile', low_energy_effect_id: 'e1', high_energy_effect_id: 'e1', blend_start: 0.3, blend_end: 0.7, blend_response: 1 }
     const fx = { id: 'e1', name: 'Spectrum RGB', effect_type: 'spectrum_rgb', effect_speed: 1, effect_decay: 0.3, sensitivity: 1, brightness_floor: 0, bass_hz: 250, mid_hz: 2000, exertion_clip: 3, onset_flash_intensity: 0 }
@@ -207,7 +207,7 @@ describe('VirtualPlayer — LMS type', () => {
   })
 
   it('does not show Advertised Player for LMS', async () => {
-    const player = { id: 'p1', type: 'LMS', lms_host: '192.168.1.100', lms_port: 9000, player_name: 'HueSync LMS', display_name: '', player_mac: '', alsa_device: '', follow_player_mac: 'aa:bb:cc:dd:ee:ff' }
+    const player = { id: 'p1', type: 'LMS', lms_host: '192.168.1.100', lms_port: 9000, player_name: 'LampaStream LMS', display_name: '', player_mac: '', alsa_device: '', follow_player_mac: 'aa:bb:cc:dd:ee:ff' }
     const coupling = { id: 'c1', name: 'LMS Coupling', player_id: 'p1', zone_id: 'z1', analyser_id: 'a1', energy_profile_id: 'ep1', enabled: true }
     const ep = { id: 'ep1', name: 'Profile', low_energy_effect_id: 'e1', high_energy_effect_id: 'e1', blend_start: 0.3, blend_end: 0.7, blend_response: 1 }
     const fx = { id: 'e1', name: 'Spectrum RGB', effect_type: 'spectrum_rgb', effect_speed: 1, effect_decay: 0.3, sensitivity: 1, brightness_floor: 0, bass_hz: 250, mid_hz: 2000, exertion_clip: 3, onset_flash_intensity: 0 }
@@ -232,7 +232,7 @@ describe('VirtualPlayer — AirPlay type', () => {
   beforeEach(() => { vi.clearAllMocks() })
 
   it('shows AirPlay and Advertised Player label', async () => {
-    const player = { id: 'p1', type: 'AirPlay', lms_host: '', lms_port: 9000, player_name: 'HueSync', display_name: 'HueSync', player_mac: '', alsa_device: '', follow_player_mac: '' }
+    const player = { id: 'p1', type: 'AirPlay', lms_host: '', lms_port: 9000, player_name: 'LampaStream', display_name: 'LampaStream', player_mac: '', alsa_device: '', follow_player_mac: '' }
     const coupling = { id: 'c1', name: 'AirPlay Coupling', player_id: 'p1', zone_id: 'z1', analyser_id: 'a1', energy_profile_id: 'ep1', enabled: true }
     const ep = { id: 'ep1', name: 'Profile', low_energy_effect_id: 'e1', high_energy_effect_id: 'e1', blend_start: 0.3, blend_end: 0.7, blend_response: 1 }
     const fx = { id: 'e1', name: 'Spectrum RGB', effect_type: 'spectrum_rgb', effect_speed: 1, effect_decay: 0.3, sensitivity: 1, brightness_floor: 0, bass_hz: 250, mid_hz: 2000, exertion_clip: 3, onset_flash_intensity: 0 }
@@ -241,12 +241,12 @@ describe('VirtualPlayer — AirPlay type', () => {
     await renderAndSelectCoupling('c1')
 
     const playerNode = await screen.findByTestId('node-virtual-player')
-    expect(within(playerNode).getByText(/Advertised Player.*HueSync/i)).toBeDefined()
+    expect(within(playerNode).getByText(/Advertised Player.*LampaStream/i)).toBeDefined()
     expect(within(playerNode).queryByText(/Follow Player/i)).toBeNull()
   })
 
   it('does not show Follow Player for AirPlay', async () => {
-    const player = { id: 'p1', type: 'AirPlay', lms_host: '', lms_port: 9000, player_name: 'HueSync', display_name: 'HueSync', player_mac: '', alsa_device: '', follow_player_mac: '' }
+    const player = { id: 'p1', type: 'AirPlay', lms_host: '', lms_port: 9000, player_name: 'LampaStream', display_name: 'LampaStream', player_mac: '', alsa_device: '', follow_player_mac: '' }
     const coupling = { id: 'c1', name: 'AirPlay Coupling', player_id: 'p1', zone_id: 'z1', analyser_id: 'a1', energy_profile_id: 'ep1', enabled: true }
     const ep = { id: 'ep1', name: 'Profile', low_energy_effect_id: 'e1', high_energy_effect_id: 'e1', blend_start: 0.3, blend_end: 0.7, blend_response: 1 }
     const fx = { id: 'e1', name: 'Spectrum RGB', effect_type: 'spectrum_rgb', effect_speed: 1, effect_decay: 0.3, sensitivity: 1, brightness_floor: 0, bass_hz: 250, mid_hz: 2000, exertion_clip: 3, onset_flash_intensity: 0 }
@@ -265,7 +265,7 @@ describe('Zone — controller type', () => {
   beforeEach(() => { vi.clearAllMocks() })
 
   it('shows Hue · 2 lights for a Hue-backed zone', async () => {
-    const player = { id: 'p1', type: 'LMS', lms_host: '', lms_port: 9000, player_name: 'HueSync', display_name: '', player_mac: '', alsa_device: '', follow_player_mac: '' }
+    const player = { id: 'p1', type: 'LMS', lms_host: '', lms_port: 9000, player_name: 'LampaStream', display_name: '', player_mac: '', alsa_device: '', follow_player_mac: '' }
     const coupling = { id: 'c1', name: 'Test Coupling', player_id: 'p1', zone_id: 'z1', analyser_id: 'a1', energy_profile_id: 'ep1', enabled: true }
     const ep = { id: 'ep1', name: 'Profile', low_energy_effect_id: 'e1', high_energy_effect_id: 'e1', blend_start: 0.3, blend_end: 0.7, blend_response: 1 }
     const fx = { id: 'e1', name: 'Spectrum RGB', effect_type: 'spectrum_rgb', effect_speed: 1, effect_decay: 0.3, sensitivity: 1, brightness_floor: 0, bass_hz: 250, mid_hz: 2000, exertion_clip: 3, onset_flash_intensity: 0 }
@@ -282,7 +282,7 @@ describe('Zone — controller type', () => {
     // If a controller with type 'wled' existed, it should show 'Wled'
     const altController = { id: 'c2', name: 'WLED Strip', type: 'wled', host: '10.0.0.2', app_key_configured: false, client_key_configured: false }
     const altZone = { id: 'z2', name: 'Kitchen Strip', controller_id: 'c2', entertainment_area_id: 'ea2', entertainment_area_name: 'Kitchen Strip', light_count: 5 }
-    const player = { id: 'p1', type: 'LMS', lms_host: '', lms_port: 9000, player_name: 'HueSync', display_name: '', player_mac: '', alsa_device: '', follow_player_mac: '' }
+    const player = { id: 'p1', type: 'LMS', lms_host: '', lms_port: 9000, player_name: 'LampaStream', display_name: '', player_mac: '', alsa_device: '', follow_player_mac: '' }
     const coupling = { id: 'c1', name: 'Test Coupling', player_id: 'p1', zone_id: 'z2', analyser_id: 'a1', energy_profile_id: 'ep1', enabled: true }
     const ep = { id: 'ep1', name: 'Profile', low_energy_effect_id: 'e1', high_energy_effect_id: 'e1', blend_start: 0.3, blend_end: 0.7, blend_response: 1 }
     const fx = { id: 'e1', name: 'Spectrum RGB', effect_type: 'spectrum_rgb', effect_speed: 1, effect_decay: 0.3, sensitivity: 1, brightness_floor: 0, bass_hz: 250, mid_hz: 2000, exertion_clip: 3, onset_flash_intensity: 0 }
@@ -314,7 +314,7 @@ describe('Missing references — graceful fallback', () => {
   })
 
   it('renders without crash when zone controller is missing', async () => {
-    const player = { id: 'p1', type: 'LMS', lms_host: '', lms_port: 9000, player_name: 'HueSync', display_name: '', player_mac: '', alsa_device: '', follow_player_mac: '' }
+    const player = { id: 'p1', type: 'LMS', lms_host: '', lms_port: 9000, player_name: 'LampaStream', display_name: '', player_mac: '', alsa_device: '', follow_player_mac: '' }
     const zoneNoCtrl = { id: 'z1', name: 'Orphan Zone', controller_id: 'nonexistent', entertainment_area_id: 'ea1', entertainment_area_name: 'Orphan Zone', light_count: 3 }
     const coupling = { id: 'c1', name: 'Test Coupling', player_id: 'p1', zone_id: 'z1', analyser_id: 'a1', energy_profile_id: 'ep1', enabled: true }
     const ep = { id: 'ep1', name: 'Profile', low_energy_effect_id: 'e1', high_energy_effect_id: 'e1', blend_start: 0.3, blend_end: 0.7, blend_response: 1 }

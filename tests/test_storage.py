@@ -1,8 +1,8 @@
 import tempfile
 from pathlib import Path
 
-from huesync.models import VirtualPlayer
-from huesync.storage import Storage
+from lampastream.models import VirtualPlayer
+from lampastream.storage import Storage
 
 
 def make_storage() -> Storage:

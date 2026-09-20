@@ -14,7 +14,7 @@ SpectrumProcessor wraps one registered SpectrumEngine.
 
 V2 DSP is unchanged by publication/lifecycle fixes. Embedded CAVA receives float64
 interleaved PCM scaled by 32768, then returns conditioned left/right bars which the
-adapter averages. Upstream temporal algorithms run at HueSync's chosen execution
+adapter averages. Upstream temporal algorithms run at LampaStream's chosen execution
 cadence; numeric identity with a CAVA frontend at another cadence is not promised.
 
 ## Beat family

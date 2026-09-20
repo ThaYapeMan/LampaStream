@@ -2,9 +2,9 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from huesync.models import Analyser, Profile
-from huesync.spectrum_engine import ProcessorUpdate, V2SpectrumEngine
-from huesync.sync_engine import CanonicalAnalysisPipeline, CavaPipeline, SyncEngine
+from lampastream.models import Analyser, Profile
+from lampastream.spectrum_engine import ProcessorUpdate, V2SpectrumEngine
+from lampastream.sync_engine import CanonicalAnalysisPipeline, CavaPipeline, SyncEngine
 
 
 def pipeline(enabled=False):
