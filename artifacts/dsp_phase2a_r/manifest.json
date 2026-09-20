@@ -1,0 +1,67 @@
+{
+  "phase": "2A-R",
+  "withdrawn_finding": "~19% bar-mapping divergence \u2014 caused by (n+1)/(n_bars+1) formula error; WITHDRAWN",
+  "corrected_formula": "edge[n] = lower * (upper/lower)^(n/n_bars) for n=0..n_bars",
+  "signals": {
+    "A": {
+      "label": "A_amplitude_step",
+      "sample_rate": 44100,
+      "channels": 2,
+      "format": "S16_LE",
+      "byte_length": 1587600,
+      "n_frames": 396900,
+      "duration_s": 9.0,
+      "sha256": "2f816e023be44ac1cff2052b0ab7ac6f62d0693ada8bbecc0c37377ac4db3eda"
+    },
+    "B": {
+      "label": "B_inphase_440",
+      "sample_rate": 44100,
+      "channels": 2,
+      "format": "S16_LE",
+      "byte_length": 882000,
+      "n_frames": 220500,
+      "duration_s": 5.0,
+      "sha256": "cd41c9806a59e91fbde5ede7272e114c6adafe508a3a476bfa737fc1224dd5b5"
+    },
+    "C": {
+      "label": "C_opposite_440",
+      "sample_rate": 44100,
+      "channels": 2,
+      "format": "S16_LE",
+      "byte_length": 882000,
+      "n_frames": 220500,
+      "duration_s": 5.0,
+      "sha256": "02670c978c6527296222f37784cefb106ccd734cbd06d3b08da04ac7aee6cec3"
+    },
+    "D": {
+      "label": "D_low_80hz",
+      "sample_rate": 44100,
+      "channels": 2,
+      "format": "S16_LE",
+      "byte_length": 705600,
+      "n_frames": 176400,
+      "duration_s": 4.0,
+      "sha256": "50070566b9dc11138bfec2b7ffc3b49b1904daf1cbbafea2f56ab2feef06b1f4"
+    },
+    "E": {
+      "label": "E_high_11025hz",
+      "sample_rate": 44100,
+      "channels": 2,
+      "format": "S16_LE",
+      "byte_length": 705600,
+      "n_frames": 176400,
+      "duration_s": 4.0,
+      "sha256": "43c5d504ea0d5041a7200749137a5f6aea1970238bcd3ea8f6e86f22cdef0bb0"
+    }
+  },
+  "config": {
+    "SR": 44100,
+    "N_BARS": 30,
+    "LOWER_HZ": 50.0,
+    "UPPER_HZ": 12000.0,
+    "CAVA_FRAMERATE": 60,
+    "CAVA_NOISE_REDUCTION": 77,
+    "WINDOW_SIZE": 2048
+  },
+  "numpy_version": "2.5.2"
+}
