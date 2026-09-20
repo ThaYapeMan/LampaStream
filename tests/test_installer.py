@@ -615,3 +615,137 @@ def test_validate_script_executes_canonical_smoke():
     assert result.returncode == 0, result.stderr
     assert 'Canonical PCM → V2 + Beat → PublicationRecord:' in result.stdout
     assert 'publications' in result.stdout
+
+
+# ---------------------------------------------------------------------------
+# HueSync → LampaStream display name migration
+# ---------------------------------------------------------------------------
+
+
+def test_huesync_display_names_rewritten(tmp_path: Path) -> None:
+    """player_name and display_name starting with HueSync are rewritten to LampaStream."""
+    import json
+
+    from lampastream.migration import migrate_file
+
+    config = tmp_path / "config.json"
+    data = {
+        "schema_version": 1,
+        "virtual_players": [
+            {"id": "vp1", "type": "LMS", "lms_host": "127.0.0.1", "lms_port": 3483,
+             "player_name": "HueSync LMS", "display_name": "HueSync Living Room",
+             "player_mac": "aa:bb:cc:dd:ee:ff", "alsa_device": "",
+             "follow_player_mac": "", "follow_mode": "manual"},
+        ],
+        "controllers": [], "zones": [], "analysers": [], "effects": [],
+        "energy_profiles": [], "couplings": [], "active_coupling_id": None,
+        "player_latencies": [],
+    }
+    config.write_text(json.dumps(data))
+    migrate_file(config)
+    result = json.loads(config.read_text())
+    players = result["virtual_players"]
+    assert players[0]["player_name"] == "LampaStream LMS"
+    assert players[0]["display_name"] == "LampaStream Living Room"
+
+
+def test_huesync_player_mac_unchanged(tmp_path: Path) -> None:
+    """player_mac must never be modified during display name migration."""
+    import json
+
+    from lampastream.migration import migrate_file
+
+    config = tmp_path / "config.json"
+    mac = "aa:bb:cc:dd:ee:ff"
+    data = {
+        "schema_version": 1,
+        "virtual_players": [
+            {"id": "vp1", "type": "LMS", "lms_host": "127.0.0.1", "lms_port": 3483,
+             "player_name": "HueSync LMS", "display_name": "",
+             "player_mac": mac, "alsa_device": "",
+             "follow_player_mac": "", "follow_mode": "manual"},
+        ],
+        "controllers": [], "zones": [], "analysers": [], "effects": [],
+        "energy_profiles": [], "couplings": [], "active_coupling_id": None,
+        "player_latencies": [],
+    }
+    config.write_text(json.dumps(data))
+    migrate_file(config)
+    result = json.loads(config.read_text())
+    assert result["virtual_players"][0]["player_mac"] == mac
+
+
+def test_huesync_display_name_rewrite_logged(tmp_path: Path, capsys) -> None:
+    """Each rewritten field is logged with the old and new value."""
+    import json
+
+    from lampastream.migration import migrate_file
+
+    config = tmp_path / "config.json"
+    data = {
+        "schema_version": 1,
+        "virtual_players": [
+            {"id": "vp1", "type": "LMS", "lms_host": "127.0.0.1", "lms_port": 3483,
+             "player_name": "HueSync LMS", "display_name": "HueSync Room",
+             "player_mac": "", "alsa_device": "",
+             "follow_player_mac": "", "follow_mode": "manual"},
+        ],
+        "controllers": [], "zones": [], "analysers": [], "effects": [],
+        "energy_profiles": [], "couplings": [], "active_coupling_id": None,
+        "player_latencies": [],
+    }
+    config.write_text(json.dumps(data))
+    migrate_file(config)
+    out = capsys.readouterr().out
+    assert "HueSync LMS" in out
+    assert "LampaStream LMS" in out
+    assert "HueSync Room" in out
+    assert "LampaStream Room" in out
+
+
+def test_huesync_display_name_migration_idempotent(tmp_path: Path) -> None:
+    """Second migrate_file run on already-migrated config is a no-op."""
+    import json
+
+    from lampastream.migration import migrate_file
+
+    config = tmp_path / "config.json"
+    data = {
+        "schema_version": 1,
+        "virtual_players": [
+            {"id": "vp1", "type": "LMS", "lms_host": "127.0.0.1", "lms_port": 3483,
+             "player_name": "LampaStream LMS", "display_name": "",
+             "player_mac": "", "alsa_device": "",
+             "follow_player_mac": "", "follow_mode": "manual"},
+        ],
+        "controllers": [], "zones": [], "analysers": [], "effects": [],
+        "energy_profiles": [], "couplings": [], "active_coupling_id": None,
+        "player_latencies": [],
+    }
+    config.write_text(json.dumps(data))
+    needed = migrate_file(config)
+    assert not needed, "Already-migrated config must require no migration"
+
+
+def test_non_huesync_names_untouched(tmp_path: Path) -> None:
+    """Names that don't start with HueSync are left unchanged."""
+    import json
+
+    from lampastream.migration import migrate_file
+
+    config = tmp_path / "config.json"
+    data = {
+        "schema_version": 1,
+        "virtual_players": [
+            {"id": "vp1", "type": "LMS", "lms_host": "127.0.0.1", "lms_port": 3483,
+             "player_name": "My Custom Player", "display_name": "Living Room",
+             "player_mac": "", "alsa_device": "",
+             "follow_player_mac": "", "follow_mode": "manual"},
+        ],
+        "controllers": [], "zones": [], "analysers": [], "effects": [],
+        "energy_profiles": [], "couplings": [], "active_coupling_id": None,
+        "player_latencies": [],
+    }
+    config.write_text(json.dumps(data))
+    needed = migrate_file(config)
+    assert not needed

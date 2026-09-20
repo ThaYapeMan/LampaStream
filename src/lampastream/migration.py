@@ -176,6 +176,23 @@ def _migrate_flat_residue(data: dict) -> None:
             data["couplings"].append(coupling)
 
 
+def _rename_huesync_display_names(data: dict) -> bool:
+    """Rewrite player_name/display_name fields from HueSync prefix to LampaStream.
+
+    Return True if any field was changed.
+    """
+    changed = False
+    for player in data.get("virtual_players", []):
+        for field in ("player_name", "display_name"):
+            value = player.get(field)
+            if isinstance(value, str) and value.startswith("HueSync"):
+                old = value
+                player[field] = "LampaStream" + value[len("HueSync"):]
+                print(f"MIGRATE {field}: {old!r} -> {player[field]!r}")
+                changed = True
+    return changed
+
+
 def convert(original: dict) -> dict:
     if not isinstance(original, dict):
         raise ValueError("Configuration must be a JSON object")
@@ -332,6 +349,7 @@ def migrate_file(path: Path, *, check: bool = False,
                 raise ValueError("Configuration changed or fingerprint missing; inspect again")
             source = _repair_dangling_player(original, *repair)
         data = convert(source)
+        _rename_huesync_display_names(data)
         if data == original:
             return False
     if check:

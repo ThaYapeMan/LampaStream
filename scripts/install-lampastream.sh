@@ -7,6 +7,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 PREFIX=/opt/lampastream
 CONFIG=/etc/lampastream/config.json
+HUESYNC_CONFIG=/etc/huesync/config.json
+HUESYNC_SERVICE=/etc/systemd/system/huesync.service
+HUESYNC_RULES=/etc/polkit-1/rules.d/49-huesync-airplay.rules
 # Build tools/headers; -dev packages pull the matching runtime shared libraries.
 mapfile -t NATIVE_BUILD_PACKAGES < "$SCRIPT_DIR/native-build-packages.txt"
 BUILD_PACKAGES=(git ca-certificates "${NATIVE_BUILD_PACKAGES[@]}" pkg-config patch python3-dev python3-venv
@@ -141,6 +144,78 @@ verify_services() {
         systemctl is-active --quiet "$unit" || fail "Service is not active: $unit"
     done
 }
+detect_layout() {
+    local has_new=0 has_old=0 huesync_dir
+    huesync_dir="$(dirname "$HUESYNC_CONFIG")"
+    [[ -f "$CONFIG" ]] && has_new=1
+    [[ -d "$huesync_dir" || -f "$HUESYNC_CONFIG" ]] && has_old=1
+    if [[ "$has_new" == 1 && "$has_old" == 1 ]]; then
+        printf 'Layout: mixed (old huesync and new lampastream coexist — migration incomplete)\n'
+        printf '  HueSync config: %s\n' "$HUESYNC_CONFIG"
+        printf '  LampaStream config: %s\n' "$CONFIG"
+    elif [[ "$has_new" == 1 ]]; then
+        printf 'Layout: lampastream (%s)\n' "$CONFIG"
+    elif [[ "$has_old" == 1 ]]; then
+        printf 'Layout: huesync (old layout — migration required on next install run)\n'
+        printf '  Found: %s\n' "$HUESYNC_CONFIG"
+    else
+        printf 'Layout: none (fresh install)\n'
+    fi
+}
+migrate_huesync_layout() {
+    local huesync_dir
+    huesync_dir="$(dirname "$HUESYNC_CONFIG")"
+    [[ -d "$huesync_dir" || -f "$HUESYNC_CONFIG" ]] || return 0
+    log 'Old huesync layout detected — migrating to lampastream'
+    if systemctl cat huesync.service >/dev/null 2>&1; then
+        systemctl is-active --quiet huesync.service 2>/dev/null && systemctl stop huesync.service || true
+        systemctl is-enabled --quiet huesync.service 2>/dev/null && systemctl disable huesync.service || true
+        log 'huesync.service stopped and disabled'
+    fi
+    if [[ -f "$HUESYNC_CONFIG" && ! -f "$CONFIG" ]]; then
+        install -d "$(dirname "$CONFIG")"
+        cp "$HUESYNC_CONFIG" "$CONFIG"
+        chown lampastream:lampastream "$CONFIG"
+        chmod 0640 "$CONFIG"
+        log "Config moved: $HUESYNC_CONFIG -> $CONFIG"
+    elif [[ -f "$HUESYNC_CONFIG" && -f "$CONFIG" ]]; then
+        log "Both configs present; retaining existing $CONFIG"
+    fi
+}
+cleanup_huesync_layout() {
+    local huesync_dir
+    huesync_dir="$(dirname "$HUESYNC_CONFIG")"
+    [[ -d "$huesync_dir" || -f "$HUESYNC_CONFIG" || -f "$HUESYNC_SERVICE" || -f "$HUESYNC_RULES" ]] || return 0
+    log 'Completing huesync -> lampastream cleanup (new unit verified and running)'
+    if [[ -f "$HUESYNC_SERVICE" ]]; then
+        rm -f "$HUESYNC_SERVICE"
+        log "Removed $HUESYNC_SERVICE"
+    fi
+    if [[ -f "$HUESYNC_RULES" ]]; then
+        rm -f "$HUESYNC_RULES"
+        log "Removed $HUESYNC_RULES"
+    fi
+    systemctl daemon-reload
+    if [[ -f "$HUESYNC_CONFIG" ]]; then
+        rm -f "$HUESYNC_CONFIG"
+        log "Removed $HUESYNC_CONFIG"
+    fi
+    if [[ -d "$huesync_dir" ]]; then
+        rmdir "$huesync_dir" 2>/dev/null && log "Removed $huesync_dir" || \
+            log "WARNING: $huesync_dir not empty; left in place"
+    fi
+    if id huesync >/dev/null 2>&1; then
+        userdel huesync && log "Removed huesync user" || \
+            log "WARNING: huesync user removal failed"
+    fi
+    if getent group huesync >/dev/null 2>&1; then
+        groupdel huesync && log "Removed huesync group" || \
+            log "WARNING: huesync group removal failed"
+    fi
+    printf '\nNOTE: Old venv at /opt/huesync/ was not moved (contains absolute paths).\n'
+    printf '      To reclaim space after verifying the new installation:\n'
+    printf '        sudo rm -rf /opt/huesync\n'
+}
 case "${1:-}" in
     --help|-h)
         cat <<'HELP'
@@ -162,6 +237,7 @@ trap 'printf "ERROR: installation/check failed at line %s: %s\n" "$LINENO" "$BAS
 platform
 repo_check
 if [[ "$CHECK" == 1 ]]; then
+    detect_layout
     squeezelite_conflicts check
     verify "$PREFIX/.venv"
     systemd-analyze verify /etc/systemd/system/lampastream.service
@@ -221,6 +297,7 @@ install -m 0755 "$WORK/bin/lampastream-squeezelite-fifo" /usr/local/bin/lampastr
 cmp "$WORK/bin/lampastream-squeezelite-fifo" /usr/local/bin/lampastream-squeezelite-fifo
 AIRPLAY_BUILD_DIR="$WORK/airplay" LAMPASTREAM_DEFER_START=1 LAMPASTREAM_DEPENDENCIES_READY=1 bash "$WORK/scripts/setup-airplay.sh"
 log '4/7 Migrate persisted configuration before starting current runtime'
+migrate_huesync_layout
 "$RELEASE/venv/bin/python" -I -B -m lampastream.migration "$CONFIG"
 chown lampastream:lampastream "$CONFIG"
 chmod 0640 "$CONFIG"
@@ -243,6 +320,7 @@ log '7/7 Start verified services'
 systemctl enable avahi-daemon nqptp shairport-sync lampastream
 systemctl restart avahi-daemon nqptp shairport-sync lampastream
 verify_services
+cleanup_huesync_layout
 curl --fail --retry 10 --retry-connrefused --retry-delay 1 http://127.0.0.1:8420/api/status >/dev/null
 repo_check
 printf '\nINSTALLATION COMPLETE\nGit commit: %s\nPython: %s\nSqueezelite: /usr/local/bin/squeezelite\n' "$COMMIT" "$RELEASE/venv"

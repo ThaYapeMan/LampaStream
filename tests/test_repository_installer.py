@@ -347,3 +347,265 @@ systemctl() {
     result = subprocess.run(['bash', '-c', shell], capture_output=True, text=True)
     assert result.returncode == 42
     assert 'Real inspection failure' in result.stderr
+
+
+def _migration_functions(script_text: str) -> str:
+    """Extract the three layout functions from the installer."""
+    start = script_text.index('detect_layout() {')
+    end = script_text.index('\ncase "${1:-}" in')
+    return script_text[start:end]
+
+
+def test_migrate_huesync_layout_moves_config(tmp_path):
+    """migrate_huesync_layout copies the old config and logs the move."""
+    text = SCRIPT.read_text()
+    functions = _migration_functions(text)
+    etc_huesync = tmp_path / 'etc' / 'huesync'
+    etc_huesync.mkdir(parents=True)
+    old_config = etc_huesync / 'config.json'
+    old_config.write_text('{"schema_version": 1}')
+    etc_lp = tmp_path / 'etc' / 'lampastream'
+    new_config = etc_lp / 'config.json'
+    shell = f'''set -Eeuo pipefail
+log() {{ echo "$*"; }}
+fail() {{ echo "$*"; exit 1; }}
+id() {{ return 0; }}
+install() {{
+    local d=""
+    while [[ "$1" == -* ]]; do shift 4 || shift; done
+    mkdir -p "$1"
+}}
+cp() {{ command cp "$@"; }}
+chown() {{ true; }}
+chmod() {{ true; }}
+systemctl() {{ return 1; }}
+HUESYNC_CONFIG="{old_config}"
+CONFIG="{new_config}"
+HUESYNC_SERVICE="{tmp_path}/etc/systemd/system/huesync.service"
+HUESYNC_RULES="{tmp_path}/etc/polkit-1/rules.d/49-huesync-airplay.rules"
+{functions}
+migrate_huesync_layout
+'''
+    result = subprocess.run(['bash', '-c', shell], capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    assert new_config.exists()
+    assert new_config.read_text() == '{"schema_version": 1}'
+    assert 'Config moved' in result.stdout
+
+
+def test_migrate_huesync_layout_idempotent(tmp_path):
+    """Running migrate_huesync_layout twice does not overwrite an existing new config."""
+    text = SCRIPT.read_text()
+    functions = _migration_functions(text)
+    etc_huesync = tmp_path / 'etc' / 'huesync'
+    etc_huesync.mkdir(parents=True)
+    old_config = etc_huesync / 'config.json'
+    old_config.write_text('{"old": true}')
+    etc_lp = tmp_path / 'etc' / 'lampastream'
+    etc_lp.mkdir(parents=True)
+    new_config = etc_lp / 'config.json'
+    new_config.write_text('{"new": true}')
+    shell = f'''set -Eeuo pipefail
+log() {{ echo "$*"; }}
+fail() {{ echo "$*"; exit 1; }}
+id() {{ return 0; }}
+install() {{ true; }}
+cp() {{ command cp "$@"; }}
+chown() {{ true; }}
+chmod() {{ true; }}
+systemctl() {{ return 1; }}
+HUESYNC_CONFIG="{old_config}"
+CONFIG="{new_config}"
+HUESYNC_SERVICE="{tmp_path}/etc/systemd/system/huesync.service"
+HUESYNC_RULES="{tmp_path}/etc/polkit-1/rules.d/49-huesync-airplay.rules"
+{functions}
+migrate_huesync_layout
+'''
+    result = subprocess.run(['bash', '-c', shell], capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    assert new_config.read_text() == '{"new": true}', "Existing new config must not be overwritten"
+    assert 'retaining existing' in result.stdout
+
+
+def test_migrate_huesync_no_old_layout_is_noop(tmp_path):
+    """migrate_huesync_layout does nothing when no old layout is present."""
+    text = SCRIPT.read_text()
+    functions = _migration_functions(text)
+    etc_lp = tmp_path / 'etc' / 'lampastream'
+    new_config = etc_lp / 'config.json'
+    shell = f'''set -Eeuo pipefail
+log() {{ echo "$*"; }}
+fail() {{ echo "$*"; exit 1; }}
+systemctl() {{ return 1; }}
+HUESYNC_CONFIG="{tmp_path}/etc/huesync/config.json"
+CONFIG="{new_config}"
+HUESYNC_SERVICE="{tmp_path}/etc/systemd/system/huesync.service"
+HUESYNC_RULES="{tmp_path}/etc/polkit-1/rules.d/49-huesync-airplay.rules"
+{functions}
+migrate_huesync_layout
+'''
+    result = subprocess.run(['bash', '-c', shell], capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    assert not new_config.exists()
+    assert 'migrating' not in result.stdout
+
+
+def test_cleanup_huesync_layout_removes_old_artifacts(tmp_path):
+    """cleanup_huesync_layout removes old unit, rules, config, user and group."""
+    text = SCRIPT.read_text()
+    functions = _migration_functions(text)
+    etc_huesync = tmp_path / 'etc' / 'huesync'
+    etc_huesync.mkdir(parents=True)
+    old_config = etc_huesync / 'config.json'
+    old_config.write_text('{}')
+    old_service = tmp_path / 'etc' / 'systemd' / 'system' / 'huesync.service'
+    old_service.parent.mkdir(parents=True)
+    old_service.write_text('[Unit]\nDescription=HueSync\n')
+    old_rules = tmp_path / 'etc' / 'polkit-1' / 'rules.d' / '49-huesync-airplay.rules'
+    old_rules.parent.mkdir(parents=True)
+    old_rules.write_text('polkit.addRule(function(){});')
+    shell = f'''set -Eeuo pipefail
+log() {{ echo "$*"; }}
+fail() {{ echo "$*"; exit 1; }}
+systemctl() {{ true; }}
+id() {{ return 0; }}
+userdel() {{ true; }}
+getent() {{ return 0; }}
+groupdel() {{ true; }}
+HUESYNC_CONFIG="{old_config}"
+CONFIG="{tmp_path}/etc/lampastream/config.json"
+HUESYNC_SERVICE="{old_service}"
+HUESYNC_RULES="{old_rules}"
+{functions}
+cleanup_huesync_layout
+'''
+    result = subprocess.run(['bash', '-c', shell], capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    assert not old_service.exists(), "Old service unit must be removed"
+    assert not old_rules.exists(), "Old polkit rules must be removed"
+    assert not old_config.exists(), "Old config must be removed"
+    assert not etc_huesync.exists(), "Old /etc/huesync must be removed"
+    assert '/opt/huesync' in result.stdout, "Manual cleanup notice must be printed"
+
+
+def test_cleanup_huesync_removes_unit_before_user(tmp_path):
+    """Removal order: old unit/rules removed before huesync user/group."""
+    text = SCRIPT.read_text()
+    functions = _migration_functions(text)
+    old_service = tmp_path / 'huesync.service'
+    old_service.write_text('[Unit]')
+    calls = tmp_path / 'calls'
+    shell = f'''set -Eeuo pipefail
+log() {{ echo "$*"; }}
+fail() {{ echo "$*"; exit 1; }}
+systemctl() {{ echo "systemctl $*" >> "{calls}"; true; }}
+id() {{ return 0; }}
+userdel() {{ echo "userdel $*" >> "{calls}"; true; }}
+getent() {{ return 0; }}
+groupdel() {{ echo "groupdel $*" >> "{calls}"; true; }}
+HUESYNC_CONFIG="{tmp_path}/missing-config"
+CONFIG="{tmp_path}/new-config"
+HUESYNC_SERVICE="{old_service}"
+HUESYNC_RULES="{tmp_path}/missing-rules"
+{functions}
+cleanup_huesync_layout
+'''
+    result = subprocess.run(['bash', '-c', shell], capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    call_lines = calls.read_text().splitlines()
+    reload_idx = next(i for i, line in enumerate(call_lines) if 'daemon-reload' in line)
+    userdel_idx = next(i for i, line in enumerate(call_lines) if line.startswith('userdel'))
+    assert reload_idx < userdel_idx, "daemon-reload (after unit removal) must precede userdel"
+
+
+def test_detect_layout_old(tmp_path):
+    """detect_layout reports huesync when only old config is present."""
+    text = SCRIPT.read_text()
+    functions = _migration_functions(text)
+    etc_huesync = tmp_path / 'etc' / 'huesync'
+    etc_huesync.mkdir(parents=True)
+    old_config = etc_huesync / 'config.json'
+    old_config.write_text('{}')
+    shell = f'''set -Eeuo pipefail
+log() {{ echo "$*"; }}
+HUESYNC_CONFIG="{old_config}"
+CONFIG="{tmp_path}/new-config"
+HUESYNC_SERVICE=""
+HUESYNC_RULES=""
+{functions}
+detect_layout
+'''
+    result = subprocess.run(['bash', '-c', shell], capture_output=True, text=True)
+    assert result.returncode == 0
+    assert 'huesync' in result.stdout.lower()
+    assert 'migration required' in result.stdout
+
+
+def test_detect_layout_new(tmp_path):
+    """detect_layout reports lampastream when only new config is present."""
+    text = SCRIPT.read_text()
+    functions = _migration_functions(text)
+    new_config = tmp_path / 'config.json'
+    new_config.write_text('{}')
+    shell = f'''set -Eeuo pipefail
+log() {{ echo "$*"; }}
+HUESYNC_CONFIG="{tmp_path}/missing"
+CONFIG="{new_config}"
+HUESYNC_SERVICE=""
+HUESYNC_RULES=""
+{functions}
+detect_layout
+'''
+    result = subprocess.run(['bash', '-c', shell], capture_output=True, text=True)
+    assert result.returncode == 0
+    assert 'lampastream' in result.stdout.lower()
+
+
+def test_detect_layout_mixed(tmp_path):
+    """detect_layout reports mixed when both old and new configs are present."""
+    text = SCRIPT.read_text()
+    functions = _migration_functions(text)
+    etc_huesync = tmp_path / 'etc' / 'huesync'
+    etc_huesync.mkdir(parents=True)
+    old_config = etc_huesync / 'config.json'
+    old_config.write_text('{}')
+    new_config = tmp_path / 'new-config.json'
+    new_config.write_text('{}')
+    shell = f'''set -Eeuo pipefail
+log() {{ echo "$*"; }}
+HUESYNC_CONFIG="{old_config}"
+CONFIG="{new_config}"
+HUESYNC_SERVICE=""
+HUESYNC_RULES=""
+{functions}
+detect_layout
+'''
+    result = subprocess.run(['bash', '-c', shell], capture_output=True, text=True)
+    assert result.returncode == 0
+    assert 'mixed' in result.stdout.lower()
+
+
+def test_detect_layout_fresh(tmp_path):
+    """detect_layout reports fresh install when neither layout is present."""
+    text = SCRIPT.read_text()
+    functions = _migration_functions(text)
+    shell = f'''set -Eeuo pipefail
+log() {{ echo "$*"; }}
+HUESYNC_CONFIG="{tmp_path}/missing-old"
+CONFIG="{tmp_path}/missing-new"
+HUESYNC_SERVICE=""
+HUESYNC_RULES=""
+{functions}
+detect_layout
+'''
+    result = subprocess.run(['bash', '-c', shell], capture_output=True, text=True)
+    assert result.returncode == 0
+    assert 'fresh' in result.stdout.lower()
+
+
+def test_check_branch_calls_detect_layout():
+    """The --check branch must call detect_layout before squeezelite_conflicts."""
+    text = SCRIPT.read_text()
+    check = text.split('if [[ "$CHECK" == 1 ]]; then', 1)[1].split('\nfi', 1)[0]
+    assert 'detect_layout' in check
+    assert text.index('detect_layout') < text.index('squeezelite_conflicts check')
