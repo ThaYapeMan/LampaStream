@@ -216,16 +216,20 @@ export function EnergyBlendEditor({
 
 export type EnergySetting = 'energy_source' | 'lufs_floor' | 'lufs_ceiling' | 'adaptation_tau_s'
   | 'peak_envelope_auto' | 'peak_attack_s' | 'peak_release_s'
+  | 'peak_reshape_enabled' | 'peak_reshape_power'
 
 type EnergySettings = {
   source: string; floor: string; ceiling: string; tau: string
   peakAuto: boolean; attack: string; release: string
+  reshapeEnabled?: boolean; reshapePower?: string
 }
 
-export function validateEnergySettings({ source, floor, ceiling, tau, peakAuto, attack, release }: EnergySettings): string | null {
+export function validateEnergySettings({ source, floor, ceiling, tau, peakAuto, attack, release, reshapeEnabled = false, reshapePower = '0.4' }: EnergySettings): string | null {
   if ([floor, ceiling, tau].some(v => !v.trim() || !Number.isFinite(Number(v)))) return 'Energy source settings must be finite'
   if (Number(floor) >= Number(ceiling)) return 'lufs_floor must be below lufs_ceiling'
   if (Number(tau) <= 0) return 'adaptation_tau_s must be positive'
+  if (reshapeEnabled && (!reshapePower.trim() || !Number.isFinite(Number(reshapePower))
+      || Number(reshapePower) <= 0 || Number(reshapePower) > 1)) return 'peak_reshape_power must be finite and in (0, 1]'
   if (source === 'peak_envelope' && !peakAuto) {
     if ([attack, release].some(v => !v.trim() || !Number.isFinite(Number(v)))) return 'Energy source settings must be finite'
     if (Number(attack) <= 0 || Number(release) <= 0) return 'peak_attack_s and peak_release_s must be positive'
@@ -235,14 +239,15 @@ export function validateEnergySettings({ source, floor, ceiling, tau, peakAuto, 
 }
 
 // Shared labels, fields and validation; the profile workspace retains its cards.
-export function EnergySourceControls({ source, floor, ceiling, tau, peakAuto = true, attack = '0.05', release = '2', onChange, compact = false, disabled = false, pending = false, onCommit, onStep, header }: {
+export function EnergySourceControls({ source, floor, ceiling, tau, peakAuto = true, attack = '0.05', release = '2', reshapeEnabled = false, reshapePower = '0.4', onChange, compact = false, disabled = false, pending = false, onCommit, onStep, header }: {
   source: string; floor: string; ceiling: string; tau: string
   peakAuto?: boolean; attack?: string; release?: string
+  reshapeEnabled?: boolean; reshapePower?: string
   onChange: (field: EnergySetting, value: string) => void
   compact?: boolean; disabled?: boolean; pending?: boolean; onCommit?: () => void
   onStep?: (field: EnergySetting, value: string) => void; header?: ReactNode
 }) {
-  const error = validateEnergySettings({ source, floor, ceiling, tau, peakAuto, attack, release })
+  const error = validateEnergySettings({ source, floor, ceiling, tau, peakAuto, attack, release, reshapeEnabled, reshapePower })
   const fields = source === 'loudness_fixed'
     ? [{ field: 'lufs_floor' as const, label: 'Floor', unit: 'LUFS', value: floor },
        { field: 'lufs_ceiling' as const, label: 'Ceiling', unit: 'LUFS', value: ceiling }]
@@ -308,6 +313,24 @@ export function EnergySourceControls({ source, floor, ceiling, tau, peakAuto = t
             onChange={e => onChange(field, e.target.value)} onBlur={onCommit}
             onKeyDown={e => { if (e.key === 'Enter' && onCommit) { e.preventDefault(); e.currentTarget.blur() } }} />
         </span>
+      </label>)}
+    </div>}
+    {source === 'peak_envelope' && <div role="group" aria-label="Reshape settings" className="space-y-2 border-t border-border/50 pt-2">
+      <label className="flex items-center gap-2 text-xs">
+        <input type="checkbox" checked={reshapeEnabled} disabled={disabled || pending}
+          onChange={e => onChange('peak_reshape_enabled', String(e.target.checked))} />
+        Reshape
+      </label>
+      {reshapeEnabled && (compact ? <CompactEnergyNumber testId="field-peak-reshape-power"
+        label="Reshape power" unit="" value={reshapePower} step={0.1}
+        disabled={disabled || pending} invalid={!!error}
+        onChange={v => onChange('peak_reshape_power', v)} onCommit={onCommit}
+        onStep={v => onStep?.('peak_reshape_power', v)} /> : <label className="block space-y-1 text-xs">
+        Reshape power
+        <Input type="number" min="0.001" max="1" step="0.1" value={reshapePower}
+          data-testid="field-peak-reshape-power" disabled={disabled || pending} aria-invalid={!!error}
+          onChange={e => onChange('peak_reshape_power', e.target.value)} onBlur={onCommit}
+          onKeyDown={e => { if (e.key === 'Enter' && onCommit) { e.preventDefault(); e.currentTarget.blur() } }} />
       </label>)}
     </div>}
     {error && <p role="alert" className="text-xs text-destructive">{error}</p>}

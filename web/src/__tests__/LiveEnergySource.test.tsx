@@ -148,3 +148,32 @@ it('patches peak Auto/Manual and validates attack and release before committing'
   await waitFor(() => expect(screen.queryByTestId('field-peak-attack')).not.toBeInTheDocument())
   expect(updateEnergyProfile).toHaveBeenLastCalledWith('e', {peak_envelope_auto:true})
 })
+
+it('persists reshape independently of Auto/Manual and validates its compact field', async () => {
+  const user = userEvent.setup()
+  render(<Harness />)
+  expect(screen.queryByRole('checkbox', {name:'Reshape'})).not.toBeInTheDocument()
+  await user.click(screen.getByRole('radio', {name:'Peak envelope'}))
+  await user.click(await screen.findByRole('checkbox', {name:'Reshape'}))
+  await waitFor(() => expect(updateEnergyProfile).toHaveBeenLastCalledWith('e', {peak_reshape_enabled:true}))
+  const power = await screen.findByRole('spinbutton', {name:'Reshape power'})
+  expect(power).toHaveValue(.4)
+  await user.clear(power); await user.type(power, '0.8'); await user.keyboard('{Enter}')
+  await waitFor(() => expect(updateEnergyProfile).toHaveBeenLastCalledWith('e', {peak_reshape_power:.8}))
+  await user.click(screen.getByRole('button', {name:'Manual'}))
+  expect(screen.getByRole('checkbox', {name:'Reshape'})).toBeChecked()
+  expect(power).toHaveValue(.8)
+  const calls = vi.mocked(updateEnergyProfile).mock.calls.length
+  await user.clear(power); await user.type(power, '0'); await user.tab()
+  expect(screen.getByRole('alert')).toHaveTextContent('peak_reshape_power')
+  expect(updateEnergyProfile).toHaveBeenCalledTimes(calls)
+  await user.click(screen.getByRole('checkbox', {name:'Reshape'}))
+  await waitFor(() => expect(updateEnergyProfile).toHaveBeenLastCalledWith('e', {peak_reshape_enabled:false}))
+  expect(screen.queryByRole('spinbutton', {name:'Reshape power'})).not.toBeInTheDocument()
+})
+
+it('hides enabled reshape in Standard mode', () => {
+  render(<LiveEnergySource active profile={{...initial, energy_source:'peak_envelope', peak_reshape_enabled:true}} onUpdated={vi.fn()} />)
+  expect(screen.queryByRole('checkbox', {name:'Reshape'})).not.toBeInTheDocument()
+  expect(screen.queryByRole('spinbutton', {name:'Reshape power'})).not.toBeInTheDocument()
+})

@@ -223,6 +223,8 @@ export interface EnergyProfile {
   peak_envelope_auto?: boolean
   peak_attack_s?: number
   peak_release_s?: number
+  peak_reshape_enabled?: boolean
+  peak_reshape_power?: number
 }
 
 export interface Coupling {

@@ -938,3 +938,34 @@ def test_sync_group_activation_never_schedules_manual_unsync(tmp_path, bars_sour
             await manager._teardown_session(session)
             unsync.assert_not_awaited()
     asyncio.run(run())
+
+
+def test_reshape_reaches_all_runtime_profiles(tmp_path: Path) -> None:
+    from unittest.mock import AsyncMock, MagicMock, patch
+
+    from lampastream.player_manager import _build_mellow_profile
+
+    storage, coupling = _make_full_storage(tmp_path)
+    energy = storage.get_energy_profile(coupling.energy_profile_id)
+    energy.energy_source = "peak_envelope"
+    energy.peak_reshape_enabled = True
+    energy.peak_reshape_power = .8
+    energy.low_energy_effect_id = energy.high_energy_effect_id
+    storage.save_energy_profile(energy)
+    for profile in (_build_engine_profile(coupling, storage),
+                    _build_mellow_profile(coupling, storage)):
+        assert profile.peak_reshape_enabled is True
+        assert profile.peak_reshape_power == .8
+    manager = PlayerManager(storage)
+    area = MagicMock(id="ae-001", name="Living Room AE")
+    with (
+        patch("lampastream.player_manager.list_entertainment_areas",
+              new=AsyncMock(return_value=[area])),
+        patch("lampastream.player_manager.get_channel_infos",
+              new=AsyncMock(return_value=[])),
+        patch.object(manager, "_activate_lms", new_callable=AsyncMock) as activate,
+    ):
+        asyncio.run(manager.activate_coupling(coupling))
+    profile = activate.call_args.args[1]
+    assert profile.peak_reshape_enabled is True
+    assert profile.peak_reshape_power == .8

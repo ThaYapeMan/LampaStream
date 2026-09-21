@@ -209,3 +209,110 @@ def test_sync_engine_copies_latest_rms_into_peak_input(monkeypatch):
         asyncio.run(engine.run(MagicMock()))
     assert engine.last_energy_input == 1
     assert record.features.level is None  # Rendering must not rewrite publications.
+
+
+@pytest.mark.parametrize('auto', [True, False])
+def test_reshape_off_bit_identical_to_pre_reshape_peak_envelope(auto):
+    """Freeze 4ab12c3's AGC and reuse the mastered-level regression waveform."""
+    profile = Profile(energy_source='peak_envelope', peak_envelope_auto=auto,
+                      peak_attack_s=.2, peak_release_s=4, peak_reshape_enabled=False,
+                      peak_reshape_power=-1)  # Unused values cannot affect the old path.
+    selector = EnergyInput(profile)
+    envelope = None
+    last_t = None
+    attack, release = (.05, 2.0) if auto else (.2, 4)
+    samples = [(peak_features(.8 + .04 * math.sin(i * .1), lufs=-5), i * .01)
+               for i in range(12000)]
+    samples += [(peak_features(level), t) for level, t in
+                [(None, 121), (math.nan, 122), (math.inf, 123), (0, 124), (.2, 123)]]
+    for frame, t in samples:
+        # Exact pre-task peak branch, including missing input and backward time.
+        dt = max(0.0, t - last_t) if last_t is not None else 0.0
+        last_t = t
+        level = frame.level
+        if level is None or not math.isfinite(level):
+            expected = 0.0
+        else:
+            if envelope is None:
+                envelope = level
+            else:
+                k = attack if level > envelope else release
+                envelope += (1 - math.exp(-dt / max(k, 1e-6))) * (level - envelope)
+            expected = max(0.0, min(1.0, level / max(envelope, 1e-6)))
+        actual = selector.select(frame, t)
+        assert actual.hex() == expected.hex()
+        assert selector._peak_envelope == envelope
+
+
+@pytest.mark.parametrize('auto', [True, False])
+def test_reshape_power_direction_and_varying_bars(auto):
+    import numpy as np
+
+    results = {}
+    for power in (.4, .8):
+        selector = EnergyInput(Profile(energy_source='peak_envelope', peak_envelope_auto=auto,
+                                     peak_reshape_enabled=True, peak_reshape_power=power))
+        frame = peak_features(.6)
+        frame.bars = [0, .01, .16, .81]
+        expected = float(np.mean([b ** power for b in frame.bars]))
+        selector.select(frame, 0)
+        assert selector._peak_envelope == expected
+        assert expected != frame.level
+        first = expected
+        frame.bars = [0, .0001, .04, .25]
+        second = float(np.mean([b ** power for b in frame.bars]))
+        output = selector.select(frame, .01)
+        envelope = first + (1 - math.exp(-.01 / 2)) * (second - first)
+        assert selector._peak_envelope == envelope
+        assert output == second / envelope
+        results[power] = (first, second, output)
+    assert all(higher < lower for higher, lower in zip(results[.8], results[.4], strict=True))
+
+
+def test_reshape_empty_negative_and_nonfinite_bars():
+    selector = EnergyInput(Profile(energy_source='peak_envelope', peak_reshape_enabled=True))
+    frame = peak_features(None)  # Reshape does not require the RMS scalar.
+    frame.bars = [-1, .25]
+    selector.select(frame, 0)
+    assert selector._peak_envelope == (.25 ** .4) / 2
+    for invalid in (math.nan, math.inf, -math.inf):
+        before = selector._peak_envelope
+        frame.bars = [invalid, .5]
+        assert selector.select(frame, 1) == 0
+        assert selector._peak_envelope == before
+    frame.bars = []
+    before = selector._peak_envelope
+    assert selector.select(frame, 2) == 0
+    assert selector._peak_envelope < before
+
+
+@pytest.mark.parametrize('model', [Profile, EnergyProfile])
+@pytest.mark.parametrize('power', [0, -1, 1.01, math.nan, math.inf, -math.inf])
+@pytest.mark.parametrize('auto', [True, False])
+def test_reshape_validation_is_independent_of_agc(model, power, auto):
+    with pytest.raises(ValueError, match='peak_reshape_power'):
+        model(peak_reshape_enabled=True, peak_reshape_power=power, peak_envelope_auto=auto)
+    # Auto already ignores unused manual settings. Disabled reshape follows suit.
+    model(peak_reshape_enabled=False, peak_reshape_power=power, peak_envelope_auto=auto)
+
+
+@pytest.mark.parametrize('model', [Profile, EnergyProfile])
+@pytest.mark.parametrize('reshape', [True, False])
+def test_manual_agc_validation_is_independent_of_reshape(model, reshape):
+    with pytest.raises(ValueError, match='peak_attack_s'):
+        model(peak_reshape_enabled=reshape, peak_reshape_power=.4,
+              peak_envelope_auto=False, peak_attack_s=0)
+    model(peak_reshape_enabled=reshape, peak_envelope_auto=True, peak_attack_s=-1)
+    model(peak_reshape_enabled=reshape, peak_envelope_auto=False)
+
+
+@pytest.mark.parametrize('model', [Profile, EnergyProfile])
+def test_reshape_defaults_roundtrip_and_boolean_validation(model):
+    legacy = model.from_dict({})
+    assert legacy.peak_reshape_enabled is False
+    assert legacy.peak_reshape_power == .4
+    configured = model(peak_reshape_enabled=True, peak_reshape_power=.8)
+    assert model.from_dict(configured.to_dict()) == configured
+    for invalid in ('false', 1, None):
+        with pytest.raises(ValueError, match='peak_reshape_enabled'):
+            model(peak_reshape_enabled=invalid)

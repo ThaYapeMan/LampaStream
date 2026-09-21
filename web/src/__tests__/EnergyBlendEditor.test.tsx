@@ -24,3 +24,18 @@ describe('energy settings validation', () => {
     expect(validateEnergySettings({...settings, source:'loudness_adaptive', tau:'0'})).toBe('adaptation_tau_s must be positive')
   })
 })
+
+it.each([true, false])('validates reshape independently of Auto=%s', peakAuto => {
+  for (const reshapePower of ['', 'NaN', 'Infinity', '0', '-1', '1.1']) {
+    expect(validateEnergySettings({...settings, peakAuto, reshapeEnabled:true, reshapePower}))
+      .toBe('peak_reshape_power must be finite and in (0, 1]')
+    expect(validateEnergySettings({...settings, peakAuto, reshapeEnabled:false, reshapePower})).toBeNull()
+  }
+  expect(validateEnergySettings({...settings, peakAuto, reshapeEnabled:true, reshapePower:'0.4'})).toBeNull()
+})
+
+it.each([true, false])('still validates Manual AGC with reshape=%s', reshapeEnabled => {
+  expect(validateEnergySettings({...settings, reshapeEnabled, reshapePower:'0.4', attack:'0'}))
+    .toBe('peak_attack_s and peak_release_s must be positive')
+  expect(validateEnergySettings({...settings, peakAuto:true, reshapeEnabled, reshapePower:'0.4', attack:'bad'})).toBeNull()
+})

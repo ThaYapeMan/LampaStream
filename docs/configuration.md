@@ -316,9 +316,9 @@ deployment check.
 
 ### Peak envelope (`peak_envelope`)
 
-Peak envelope uses unweighted, phase-safe stereo RMS (`AudioFeatures.level`),
-not momentary LUFS or normalised spectrum bars. It follows rising RMS quickly
-and falling RMS slowly, then divides the current RMS by that envelope and clamps
+With reshape disabled (the default), peak envelope uses unweighted, phase-safe
+stereo RMS (`AudioFeatures.level`) with exactly the previous behavior. It follows
+rising input quickly and falling input slowly, then divides the input by that envelope and clamps
 the result to 0..1. The RMS window is 2048 canonical samples (about 42.7 ms at
 48 kHz), published on the existing shared-hop clock by the loudness processor.
 Missing or non-finite RMS produces zero without updating the envelope; measured
@@ -333,6 +333,23 @@ that input gives a ratio of 1.0. Rising transients can also reach the clamp whil
 the finite attack catches up. The current `loudness_adaptive` implementation has
 a six-LU minimum span and converges near 0.5 on a strictly constant LUFS input;
 this change leaves that implementation intact.
+
+Peak envelope has two independently configured stages: optional **Reshape**, then
+AGC. Expert mode exposes a separate **Reshape** toggle for this source only.
+`peak_reshape_enabled` defaults to `false`; enabling it replaces the RMS input
+with `mean(max(0, bar) ** peak_reshape_power)` over the current spectrum bars.
+`peak_reshape_power` defaults to **0.4** and must be finite and in **(0, 1]** when
+enabled. Higher powers produce lower values for bars between zero and one;
+exponents below one lift those bars relative to their original values. This is a
+bar-to-scalar transform, not a change to the spectrum or other energy sources.
+Empty bars produce zero; negative bars are clamped to zero. Non-finite bars
+produce zero without training the envelope. A constant scalar still converges to
+an AGC ratio of 1. Reshape works in both Auto and Manual and never disables AGC.
+
+Disabled reshape ignores its unused power, following Auto's treatment of unused
+manual time constants. Enabled reshape and Manual AGC validate independently.
+Persisted JSON still requires correctly typed, finite numeric values, as it does
+for the existing settings. Both stages remain hidden in Standard mode.
 
 In Expert mode, **Auto** uses preset attack/release time constants of **0.05 s**
 and **2.0 s**, regardless of stored manual values. The envelope self-calibrates

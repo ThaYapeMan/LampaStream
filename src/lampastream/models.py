@@ -27,6 +27,7 @@ ENERGY_SOURCES: frozenset[str] = frozenset({
 def _validate_energy_source(
     source: str, floor: float, ceiling: float, tau: float,
     peak_envelope_auto: bool = True, peak_attack_s: float = 0.05, peak_release_s: float = 2.0,
+    peak_reshape_enabled: bool = False, peak_reshape_power: float = 0.4,
 ) -> None:
     if source not in ENERGY_SOURCES:
         raise ValueError("Invalid energy_source")
@@ -36,6 +37,11 @@ def _validate_energy_source(
         raise ValueError("lufs_floor must be below lufs_ceiling")
     if tau <= 0:
         raise ValueError("adaptation_tau_s must be positive")
+    if not isinstance(peak_reshape_enabled, bool):
+        raise ValueError("peak_reshape_enabled must be a boolean")
+    if peak_reshape_enabled and (not math.isfinite(peak_reshape_power)
+                                 or not 0 < peak_reshape_power <= 1):
+        raise ValueError("peak_reshape_power must be finite and in (0, 1]")
     if not peak_envelope_auto:
         if not all(math.isfinite(v) for v in (peak_attack_s, peak_release_s)):
             raise ValueError("Energy source settings must be finite")
@@ -172,6 +178,8 @@ class Profile:
     peak_envelope_auto: bool = True
     peak_attack_s: float = 0.05
     peak_release_s: float = 2.0
+    peak_reshape_enabled: bool = False
+    peak_reshape_power: float = 0.4
     blend_response: float = 0.1
     sensitivity: float = 1.0  # multiplier applied to bar values before mapping
     brightness_floor: float = 0.15  # minimum brightness so lights never go fully dark
@@ -234,7 +242,8 @@ class Profile:
     def __post_init__(self) -> None:
         _validate_energy_source(
             self.energy_source, self.lufs_floor, self.lufs_ceiling, self.adaptation_tau_s,
-            self.peak_envelope_auto, self.peak_attack_s, self.peak_release_s)
+            self.peak_envelope_auto, self.peak_attack_s, self.peak_release_s,
+            self.peak_reshape_enabled, self.peak_reshape_power)
 
         if self.bars_source not in _VALID_BARS_SOURCES:
             raise ValueError(
@@ -530,12 +539,15 @@ class EnergyProfile:
     peak_envelope_auto: bool = True
     peak_attack_s: float = 0.05
     peak_release_s: float = 2.0
+    peak_reshape_enabled: bool = False
+    peak_reshape_power: float = 0.4
     blend_response: float = 0.1  # EMA alpha for mix smoothing
 
     def __post_init__(self) -> None:
         _validate_energy_source(
             self.energy_source, self.lufs_floor, self.lufs_ceiling, self.adaptation_tau_s,
-            self.peak_envelope_auto, self.peak_attack_s, self.peak_release_s)
+            self.peak_envelope_auto, self.peak_attack_s, self.peak_release_s,
+            self.peak_reshape_enabled, self.peak_reshape_power)
 
     def to_dict(self) -> dict:
         return {
@@ -553,6 +565,8 @@ class EnergyProfile:
             "peak_envelope_auto": self.peak_envelope_auto,
             "peak_attack_s": self.peak_attack_s,
             "peak_release_s": self.peak_release_s,
+            "peak_reshape_enabled": self.peak_reshape_enabled,
+            "peak_reshape_power": self.peak_reshape_power,
         }
 
     @classmethod

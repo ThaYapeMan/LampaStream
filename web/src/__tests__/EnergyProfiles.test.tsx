@@ -552,3 +552,57 @@ it('shows peak controls only in Expert and preserves Manual values through Stand
     energy_source:'peak_envelope', peak_envelope_auto:false, peak_attack_s:.1, peak_release_s:2,
   }))
 })
+
+it('keeps reshape separate from Auto/Manual, Expert-only, and persists it through Standard saves', async () => {
+  const user = await renderAndOpen()
+  expect(screen.queryByRole('checkbox', {name:'Reshape'})).not.toBeInTheDocument()
+  await user.click(screen.getByTestId('mode-expert-btn'))
+  expect(screen.queryByRole('checkbox', {name:'Reshape'})).not.toBeInTheDocument()
+  await user.click(screen.getByRole('button', {name:/^Peak envelope/}))
+  expect(screen.getByRole('button', {name:'Auto', exact:true})).toHaveAttribute('aria-pressed', 'true')
+  const toggle = screen.getByRole('checkbox', {name:'Reshape'})
+  expect(toggle).not.toBeChecked()
+  expect(screen.queryByLabelText('Reshape power')).not.toBeInTheDocument()
+  await user.click(toggle)
+  const power = screen.getByLabelText('Reshape power')
+  expect(power).toHaveValue(.4)
+  await user.clear(power); await user.type(power, '0.8')
+  await user.click(screen.getByRole('button', {name:'Manual', exact:true}))
+  expect(power).toHaveValue(.8)
+  expect(toggle).toBeChecked()
+  await user.click(toggle)
+  expect(screen.getByLabelText('Attack (s)')).toBeInTheDocument()
+  await user.click(toggle)
+  await user.click(screen.getByRole('button', {name:'Auto', exact:true}))
+  expect(screen.getByLabelText('Reshape power')).toHaveValue(.8)
+  for (const source of [/^Sustained/, /^Fixed loudness/, /^Adaptive loudness/]) {
+    await user.click(screen.getByRole('button', {name:source}))
+    expect(screen.queryByRole('checkbox', {name:'Reshape'})).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Reshape power')).not.toBeInTheDocument()
+  }
+  await user.click(screen.getByRole('button', {name:/^Peak envelope/}))
+  await user.click(screen.getByTestId('mode-standard-btn'))
+  expect(screen.queryByRole('checkbox', {name:'Reshape'})).not.toBeInTheDocument()
+  expect(screen.queryByLabelText('Reshape power')).not.toBeInTheDocument()
+  await user.click(screen.getByRole('button', {name:/^Save$/}))
+  expect(mapi.updateEnergyProfile).toHaveBeenCalledWith('ep1', expect.objectContaining({
+    peak_reshape_enabled:true, peak_reshape_power:.8, peak_envelope_auto:true,
+  }))
+})
+
+it('blocks invalid enabled reshape in Auto and ignores the unused power when disabled', async () => {
+  const user = await renderAndOpen()
+  await user.click(screen.getByTestId('mode-expert-btn'))
+  await user.click(screen.getByRole('button', {name:/^Peak envelope/}))
+  await user.click(screen.getByRole('checkbox', {name:'Reshape'}))
+  const power = screen.getByLabelText('Reshape power')
+  await user.clear(power); await user.type(power, '0')
+  await user.click(screen.getByRole('button', {name:/^Save$/}))
+  expect(screen.getAllByRole('alert')[0]).toHaveTextContent('peak_reshape_power must be finite and in (0, 1]')
+  expect(mapi.updateEnergyProfile).not.toHaveBeenCalled()
+  await user.click(screen.getByRole('checkbox', {name:'Reshape'}))
+  await user.click(screen.getByRole('button', {name:/^Save$/}))
+  expect(mapi.updateEnergyProfile).toHaveBeenCalledWith('ep1', expect.objectContaining({
+    peak_reshape_enabled:false, peak_reshape_power:0,
+  }))
+})

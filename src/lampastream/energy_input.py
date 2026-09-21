@@ -3,12 +3,14 @@ from __future__ import annotations
 
 import math
 
+import numpy as np
+
 from .models import Profile
 from .types import AudioFeatures
 
 
 class EnergyInput:
-    """Sustained energy, LUFS windows, or a linear RMS peak envelope.
+    """Sustained energy, LUFS windows, or a peak envelope with optional bar reshape.
 
     Adaptive mode starts at [-30, -8] LUFS, expands with a 1 s time constant
     and contracts with the configured time constant. A six-LU minimum span
@@ -24,6 +26,8 @@ class EnergyInput:
         self.tau = profile.adaptation_tau_s
         self.peak_attack_s = 0.05 if profile.peak_envelope_auto else profile.peak_attack_s
         self.peak_release_s = 2.0 if profile.peak_envelope_auto else profile.peak_release_s
+        self.peak_reshape_enabled = profile.peak_reshape_enabled
+        self.peak_reshape_power = profile.peak_reshape_power
         self._peak_envelope: float | None = None
         self.adaptive_floor = -30.0
         self.adaptive_ceiling = -8.0
@@ -38,6 +42,12 @@ class EnergyInput:
         self._last_t = t
         if self.mode == "peak_envelope":
             level = features.level
+            if self.peak_reshape_enabled:
+                if any(not math.isfinite(b) for b in features.bars):
+                    return 0.0
+                level = (float(np.mean([max(0.0, b) ** self.peak_reshape_power
+                                        for b in features.bars]))
+                         if len(features.bars) else 0.0)
             if level is None or not math.isfinite(level):
                 return 0.0
             if self._peak_envelope is None:

@@ -267,6 +267,8 @@ class EnergyProfileCreateBody(BaseModel):
     peak_envelope_auto: bool = True
     peak_attack_s: float = 0.05
     peak_release_s: float = 2.0
+    peak_reshape_enabled: bool = False
+    peak_reshape_power: float = 0.4
     blend_response: float = 0.1
 
 
@@ -286,6 +288,8 @@ class EnergyProfilePatchBody(BaseModel):
     peak_envelope_auto: bool | None = None
     peak_attack_s: float | None = None
     peak_release_s: float | None = None
+    peak_reshape_enabled: bool | None = None
+    peak_reshape_power: float | None = None
     blend_response: float | None = None
 
 
@@ -386,6 +390,7 @@ _C_RENDER_FIELDS: frozenset[str] = frozenset({
     "blend_start", "blend_end", "blend_response",
     "energy_source", "lufs_floor", "lufs_ceiling", "adaptation_tau_s",
     "peak_envelope_auto", "peak_attack_s", "peak_release_s",
+    "peak_reshape_enabled", "peak_reshape_power",
 })
 
 # Which sub-entity owns each inline field in CouplingPatchBody

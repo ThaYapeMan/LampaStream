@@ -43,6 +43,7 @@ const ENERGY_PROFILE_DEFAULTS = {
   blend_end:      0.7,
   blend_response: 0.1,
   energy_source: 'peak_envelope', peak_envelope_auto: true, peak_attack_s: 0.05, peak_release_s: 2.0,
+  peak_reshape_enabled: false, peak_reshape_power: 0.4,
   lufs_floor: -30, lufs_ceiling: -8, adaptation_tau_s: 60,
 } as const
 
@@ -62,6 +63,8 @@ interface FormState {
   peak_envelope_auto: string
   peak_attack_s: string
   peak_release_s: string
+  peak_reshape_enabled: string
+  peak_reshape_power: string
 }
 
 function defaultForm(ep?: EnergyProfile): FormState {
@@ -74,6 +77,8 @@ function defaultForm(ep?: EnergyProfile): FormState {
     peak_envelope_auto: String(ep?.peak_envelope_auto ?? true),
     peak_attack_s: String(ep?.peak_attack_s ?? 0.05),
     peak_release_s: String(ep?.peak_release_s ?? 2.0),
+    peak_reshape_enabled: String(ep?.peak_reshape_enabled ?? ENERGY_PROFILE_DEFAULTS.peak_reshape_enabled),
+    peak_reshape_power: String(ep?.peak_reshape_power ?? ENERGY_PROFILE_DEFAULTS.peak_reshape_power),
     high_energy_effect_id: ep?.high_energy_effect_id ?? '',
     low_energy_effect_id:  ep?.low_energy_effect_id  ?? '',
     blend_start:    String(ep?.blend_start    ?? ENERGY_PROFILE_DEFAULTS.blend_start),
@@ -422,7 +427,8 @@ export function EnergyProfiles({ activeCouplingId = null, initialProfileId, expe
     try {
       const validation = validateEnergySettings({ source: form.energy_source, floor: form.lufs_floor,
         ceiling: form.lufs_ceiling, tau: form.adaptation_tau_s,
-        peakAuto: form.peak_envelope_auto === 'true', attack: form.peak_attack_s, release: form.peak_release_s })
+        peakAuto: form.peak_envelope_auto === 'true', attack: form.peak_attack_s, release: form.peak_release_s,
+        reshapeEnabled: form.peak_reshape_enabled === 'true', reshapePower: form.peak_reshape_power })
       if (validation) throw new Error(validation)
       const body = {
         name: form.name,
@@ -433,6 +439,9 @@ export function EnergyProfiles({ activeCouplingId = null, initialProfileId, expe
         peak_envelope_auto: form.peak_envelope_auto === 'true',
         peak_attack_s: parseFloat(form.peak_attack_s),
         peak_release_s: parseFloat(form.peak_release_s),
+        peak_reshape_enabled: form.peak_reshape_enabled === 'true',
+        peak_reshape_power: Number.isFinite(parseFloat(form.peak_reshape_power))
+          ? parseFloat(form.peak_reshape_power) : ENERGY_PROFILE_DEFAULTS.peak_reshape_power,
         high_energy_effect_id: form.high_energy_effect_id,
         low_energy_effect_id:  form.low_energy_effect_id,
         blend_start:    parseFloat(form.blend_start),
@@ -744,7 +753,8 @@ export function EnergyProfiles({ activeCouplingId = null, initialProfileId, expe
                   <EnergySourceControls source={form.energy_source} floor={form.lufs_floor}
                     ceiling={form.lufs_ceiling} tau={form.adaptation_tau_s}
                     peakAuto={form.peak_envelope_auto === 'true'} attack={form.peak_attack_s}
-                    release={form.peak_release_s} onChange={set} />
+                    release={form.peak_release_s} reshapeEnabled={form.peak_reshape_enabled === 'true'}
+                    reshapePower={form.peak_reshape_power} onChange={set} />
                   <Separator />
                   <div className="space-y-3">
                     <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">

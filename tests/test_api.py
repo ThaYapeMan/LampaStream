@@ -1669,3 +1669,28 @@ def test_peak_energy_api_defaults_validation_and_live_propagation(client):
     assert client.patch(endpoint, json={"peak_envelope_auto": True}).status_code == 200
     assert client._manager.update_render.call_args.args[0].peak_envelope_auto is True
     client._manager.deactivate.assert_not_awaited()
+
+
+def test_reshape_api_roundtrip_validation_and_live_propagation(client):
+    coupling = _make_full_coupling(client._storage)
+    client._storage.set_active_coupling_id(coupling.id)
+    endpoint = f"/api/energy-profiles/{coupling.energy_profile_id}"
+    profile = client._storage.get_energy_profile(coupling.energy_profile_id)
+    assert profile.peak_reshape_enabled is False
+    assert profile.peak_reshape_power == .4
+    for auto in (True, False):
+        body = {"energy_source": "peak_envelope", "peak_envelope_auto": auto,
+                "peak_reshape_enabled": True, "peak_reshape_power": .8}
+        response = client.patch(endpoint, json=body)
+        assert response.status_code == 200
+        for key, value in body.items():
+            assert response.json()[key] == value
+            assert getattr(client._manager.update_render.call_args.args[0], key) == value
+        original = client._storage.get_energy_profile(profile.id).to_dict()
+        assert client.patch(endpoint, json={"peak_reshape_power": 0}).status_code == 400
+        assert client._storage.get_energy_profile(profile.id).to_dict() == original
+    assert client.patch(endpoint, json={"peak_attack_s": -1}).status_code == 400
+    assert client.patch(endpoint, json={"peak_reshape_enabled": False,
+                                        "peak_reshape_power": 0}).status_code == 200
+    assert client.patch(endpoint, json={"peak_reshape_enabled": True}).status_code == 400
+    client._manager.deactivate.assert_not_awaited()
