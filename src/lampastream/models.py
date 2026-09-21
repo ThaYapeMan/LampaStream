@@ -425,7 +425,7 @@ class Analyser:
     bars: int = 30
     lower_cutoff_freq: int = 50
     higher_cutoff_freq: int = 12000
-    # HPSS: parallel harmonic/percussive separation on the PCM tap.
+    # HPSS: harmonic/percussive separation on canonical PCM or the legacy PCM tap.
     # CPU cost ~1 ms/frame at 100 Hz on a 2-vCPU LXC — disabled by default.
     use_hpss_separation: bool = False
     band_normalise: bool = False

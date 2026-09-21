@@ -541,7 +541,7 @@ function AnalyserWorkspace({ analyser, couplings, players, onSaved, onDeleted, o
         {draft.bars_source === 'cava' && usedByAirPlay && (
           <p role="status" className="text-xs text-amber-500 mt-1.5">
             ⚠ Also used by an AirPlay coupling — the Cava audio source has no effect there.
-            AirPlay uses canonical PCM analysis; the legacy HPSS tap does not apply.
+            AirPlay uses canonical PCM analysis, including optional HPSS separation.
           </p>
         )}
       </div>
@@ -799,7 +799,7 @@ function AnalyserWorkspace({ analyser, couplings, players, onSaved, onDeleted, o
             <div data-testid="section-advanced-processing">
               <ConfigSection
                 title="Harmonic / Percussive Separation"
-                onReset={isPcm ? undefined : resetHpss}
+                onReset={resetHpss}
                 isAtDefault={isDefaultHpss}
                 resetTestId="reset-hpss"
               >
@@ -807,20 +807,18 @@ function AnalyserWorkspace({ analyser, couplings, players, onSaved, onDeleted, o
                   <input
                     id="hpss-check"
                     type="checkbox"
-                    disabled={isPcm}
                     checked={draft.use_hpss_separation}
                     onChange={e => setDraft(d => ({ ...d, use_hpss_separation: e.target.checked }))}
                     className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
                     data-testid="field-use-hpss"
                   />
                   <div>
-                    <label htmlFor="hpss-check" className={cn("text-sm font-medium", isPcm ? "text-muted-foreground/50 cursor-not-allowed" : "cursor-pointer")}>
+                    <label htmlFor="hpss-check" className="text-sm font-medium cursor-pointer">
                       Enable separation
                     </label>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      {isPcm
-                        ? 'Only applies to the Cava audio source (legacy PCM tap); canonical PCM analysis does not use HPSS.'
-                        : 'Splits audio into rhythm and melody layers. Beat-driven effects react to percussion; energy-based effects react to melody and harmony.'}
+                      Splits audio into rhythm and melody layers on either PCM spectrum backend.
+                      External CAVA requires its optional PCM tap. Adds processing work when enabled.
                     </p>
                   </div>
                 </div>

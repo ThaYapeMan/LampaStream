@@ -929,20 +929,21 @@ describe('Architecture-aware controls', () => {
     expect(mapi.updateAnalyser).toHaveBeenCalledWith('a1', expect.objectContaining({ bars_source: 'cava', spectrum_backend: 'v2' }))
   })
 
-  it('disables HPSS in PCM without erasing its saved value, and re-enables it for FIFO', async () => {
-    const user = await renderAndSelect({ ...BASE, bars_source: 'pcm_pipeline', use_hpss_separation: true })
+  it.each(['v2', 'cavacore'])('enables and saves HPSS on canonical %s and FIFO', async spectrum_backend => {
+    const user = await renderAndSelect({ ...BASE, bars_source: 'pcm_pipeline', spectrum_backend, use_hpss_separation: false })
     const checkbox = screen.getByTestId('field-use-hpss')
-    expect(checkbox).toBeDisabled()
-    expect(checkbox).toBeChecked()
-    expect(screen.getByText(/Only applies to the Cava audio source/)).toBeInTheDocument()
-    expect(screen.queryByTestId('reset-hpss')).toBeNull()
+    expect(checkbox).toBeEnabled()
+    expect(checkbox).not.toBeChecked()
+    expect(screen.getByText(/Splits audio into rhythm and melody layers on either PCM/)).toBeInTheDocument()
     await user.click(checkbox)
     await user.click(screen.getByTestId('analyser-save-btn'))
-    expect(mapi.updateAnalyser).toHaveBeenCalledWith('a1', expect.objectContaining({ use_hpss_separation: true }))
+    expect(mapi.updateAnalyser).toHaveBeenCalledWith('a1', expect.objectContaining({ use_hpss_separation: true, spectrum_backend }))
+    await user.click(screen.getByTestId('reset-hpss'))
+    expect(checkbox).not.toBeChecked()
     await user.click(screen.getByTestId('opt-bars-source-cava'))
     expect(checkbox).toBeEnabled()
     await user.click(checkbox)
-    expect(checkbox).not.toBeChecked()
+    expect(checkbox).toBeChecked()
   })
 
   it.each(['AirPlay', 'LMS'])('warns only for an AirPlay coupling referencing this analyser (%s)', async type => {

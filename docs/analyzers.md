@@ -56,10 +56,32 @@ energy. No additional analysis architecture or dependency is introduced.
 ## Legacy external CAVA
 
 `bars_source=cava` selects the LMS external process/FIFO route. It can have its legacy
-PCM/onset/HPSS tap; those controls do not imply a canonical HPSS/Loudness processor.
-`use_hpss_separation` is a legacy tap setting, not implementation of the future
-canonical families. External FIFO is outside ENGINES and incompatible with an
+PCM/onset/HPSS tap. HPSS also runs on canonical PCM with either V2 or CAVA Core;
+canonical loudness metering remains independent of the optional legacy tap. External FIFO is outside ENGINES and incompatible with an
 embedded `cavacore` request.
+
+### Optional HPSS on both routes
+
+`use_hpss_separation` enables the existing `PcmHpss` algorithm on canonical PCM
+for both LMS and AirPlay, independently of `spectrum_backend`. The optional
+`hpss_analyzer` processor publishes `percussive_energy`, `harmonic_energy` and
+`hpss_active` through the existing exact-interval publication path. Live Effects
+use the freshest HPSS contribution even when newer Spectrum records lack HPSS.
+
+The algorithm is unchanged: canonical stereo is projected to `(L+R)/2`, matching
+the legacy mono tap, then processed with the existing rolling STFT and median
+filters. This projection can cancel opposite-phase channels; it is not the
+phase-safe stereo RMS used by the peak-envelope energy source. Canonical HPSS
+runs at 48 kHz, whereas the legacy tap uses its source rate. Both use a 2048-sample
+window and approximately 10 ms hop; cross-route sample-for-sample equivalence at
+different sample rates is not claimed.
+
+HPSS is inactive until a complete window is available. It emits no padded tail at
+EOS, resets on invalidation/new epochs, and starts fresh when enabled live. The
+last valid contribution remains available at clean EOS. Disabling restores zero
+HPSS fractions and the Effects fallback. Enabling adds FFT/median-filter work;
+target-device CPU budget and musical A/B checks remain deployment validation.
+The external FIFO route still requires its optional readable PCM side-tap.
 
 ### Optional canonical colour normalisation
 

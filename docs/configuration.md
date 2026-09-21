@@ -34,7 +34,7 @@ spectrum_backend. Unknown IDs and incompatible combinations raise explicit error
 | `onset_alpha` | 0.9 | Adaptive suppression decay |
 | `superflux_mu` | 3 | Superflux setting |
 | `superflux_lag` | 2 | Superflux lag |
-| `use_hpss_separation` | false | Legacy PCM-tap option |
+| `use_hpss_separation` | false | Optional HPSS on canonical PCM (both engines) or the legacy PCM tap |
 
 For embedded CAVA, set **both** `bars_source=pcm_pipeline` and
 `spectrum_backend=cavacore`. The external FIFO combination is rejected. AirPlay

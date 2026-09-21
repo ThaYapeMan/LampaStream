@@ -38,6 +38,7 @@ from .canonicalizer import (
     TemporarilyNoData,
 )
 from .energy_input import EnergyInput
+from .hpss_analyzer import HpssAnalyzer
 from .latency import NoLatencyProbe
 from .loudness_analyzer import KWeightedLoudnessAnalyzer
 from .models import Profile
@@ -1013,6 +1014,7 @@ class CanonicalAnalysisPipeline:
         mid_hz: int,
         band_normalise: bool = False,
         exertion_clip: float = BandNormaliser.DEFAULT_EXERTION_CLIP,
+        use_hpss_separation: bool = False,
     ) -> None:
         self._normalise_lock = threading.Lock()
         self._band_normalise = band_normalise
@@ -1032,8 +1034,10 @@ class CanonicalAnalysisPipeline:
             bass_hz=bass_hz,
             mid_hz=mid_hz,
         )
+        self._hpss_analyzer = HpssAnalyzer(use_hpss_separation)
         self._processors: tuple[AnalysisProcessor, ...] = (
-            self._spectrum_processor, self._beat_detector, KWeightedLoudnessAnalyzer()
+            self._spectrum_processor, self._beat_detector, KWeightedLoudnessAnalyzer(),
+            self._hpss_analyzer,
         )
         self._bar_stft = StereoMagStft(_CAP_SAMPLE_RATE)
         self._canonicalizer = AudioCanonicalizer()
@@ -1044,6 +1048,7 @@ class CanonicalAnalysisPipeline:
         self._preview_spectrum: tuple[str | None, list[float], list[float] | None] = (
             None, [], None)
         self._latest_loudness_pub: PublicationRecord | None = None
+        self._latest_hpss_pub: PublicationRecord | None = None
         self._pub_seq: int = 0
         self._pub_lock = threading.Lock()
         self._pub_queue: deque[PublicationRecord] = deque(maxlen=1000)
@@ -1116,6 +1121,23 @@ class CanonicalAnalysisPipeline:
     def v2_bar_smooth(self) -> list[float] | None:
         """V2 per-bar falloff state (None for non-V2 engines or before first frame)."""
         return getattr(self._spectrum_processor._engine, "v2_bar_smooth", None)
+
+    def latest_hpss(self) -> tuple[bool, float, float]:
+        """Fresh HPSS for live Effects, independent of Spectrum readiness."""
+        if not self._hpss_analyzer.enabled:
+            return False, 0.0, 0.0
+        with self._pub_lock:
+            record = self._latest_hpss_pub
+            if record is None:
+                return False, 0.0, 0.0
+            return (True, record.features.percussive_energy, record.features.harmonic_energy)
+
+    def set_hpss_enabled(self, enabled: bool) -> None:
+        """Apply the optional processor setting without restarting the source."""
+        if enabled != self._hpss_analyzer.enabled:
+            self._hpss_analyzer.set_enabled(enabled)
+            with self._pub_lock:
+                self._latest_hpss_pub = None
 
     def latest_level(self) -> float | None:
         """Freshest raw stereo RMS from the existing loudness publication."""
@@ -1256,6 +1278,12 @@ class CanonicalAnalysisPipeline:
                         or (record.sample_end, record.sample_pos)
                         >= (previous.sample_end, previous.sample_pos)):
                     self._latest_loudness_pub = record
+            if features.hpss_active:
+                previous = self._latest_hpss_pub
+                if (previous is None or record.epoch != previous.epoch
+                        or (record.sample_end, record.sample_pos)
+                        >= (previous.sample_end, previous.sample_pos)):
+                    self._latest_hpss_pub = record
             # Bounded queue: count drops rather than blocking DSP.
             maxlen = self._pub_queue.maxlen
             if maxlen is not None and len(self._pub_queue) == maxlen:
@@ -1277,8 +1305,11 @@ class CanonicalAnalysisPipeline:
         onset_bass = onset_mid = onset_treble = False
         onset_bass_str = onset_mid_str = onset_treble_str = 0.0
         momentary = short_term = level = None
+        percussive = harmonic = None
 
         for pu in onset_batch:
+            if pu.percussive_energy is not None:
+                percussive, harmonic = pu.percussive_energy, pu.harmonic_energy
             if pu.level is not None:
                 level = pu.level
             if pu.loudness_momentary_lufs is not None:
@@ -1321,7 +1352,9 @@ class CanonicalAnalysisPipeline:
             onset_mid_strength=onset_mid_str,
             onset_treble_strength=onset_treble_str,
             sustained_energy=None,
-            hpss_active=False,
+            hpss_active=percussive is not None,
+            percussive_energy=percussive if percussive is not None else 0.0,
+            harmonic_energy=harmonic if harmonic is not None else 0.0,
             relative_exertion=full,
             level=level,
             loudness_momentary_lufs=momentary,
@@ -1353,6 +1386,7 @@ class CanonicalAnalysisPipeline:
             with self._pub_lock:
                 self._latest_pub = None
                 self._latest_loudness_pub = None
+                self._latest_hpss_pub = None
             self._current_epoch_id = epoch_id
             self._epoch_start_sample_pos = frame.sample_pos
             self._stft_frame_count = 0
@@ -1630,6 +1664,7 @@ class CanonicalAnalysisPipeline:
                         with self._pub_lock:
                             self._latest_pub = None
                             self._latest_loudness_pub = None
+                            self._latest_hpss_pub = None
                     elif isinstance(cresult, EndOfStream):
                         # EOS: flush carry buffer; _latest_pub survives.
                         self._flush_engine()
@@ -1641,6 +1676,7 @@ class CanonicalAnalysisPipeline:
             with self._pub_lock:
                 self._latest_pub = None
                 self._latest_loudness_pub = None
+                self._latest_hpss_pub = None
         finally:
             # If stop() timed out and returned False, it deliberately skipped
             # closing processors — the worker was still touching native
@@ -2617,6 +2653,7 @@ class SyncEngine:
         # rebuild its BeatDetector so the new onset parameters take effect.
         if isinstance(self._analyser, CanonicalAnalysisPipeline):
             self._analyser.rebuild_beat_detector(profile)
+            self._analyser.set_hpss_enabled(profile.use_hpss_separation)
         log.info(
             "[diag] update_onset_pipeline: method=%s (BandNormaliser EMA preserved, "
             "frame counter=%d)",
@@ -2986,7 +3023,10 @@ class SyncEngine:
                 # Copy only for rendering: PublicationRecord remains authoritative.
                 if isinstance(self._analyser, CanonicalAnalysisPipeline):
                     momentary, short_term = self._analyser.latest_loudness()
-                    features = replace(features, level=self._analyser.latest_level(),
+                    hpss_active, percussive, harmonic = self._analyser.latest_hpss()
+                    features = replace(features, hpss_active=hpss_active,
+                                       percussive_energy=percussive, harmonic_energy=harmonic,
+                                       level=self._analyser.latest_level(),
                                        loudness_momentary_lufs=momentary,
                                        loudness_short_term_lufs=short_term)
                 scene: Scene = self._effect.render(features, t)

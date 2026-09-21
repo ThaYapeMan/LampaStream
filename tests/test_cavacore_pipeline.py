@@ -132,8 +132,8 @@ def test_silence_latest_returns_none_or_zeros() -> None:
     """After silence only, bars should be zero (cavacore autosens handles this)."""
     p = _make_cava_pipeline()
     # Feed enough silence to fill cavacore's rolling buffer
-    for _ in range(40):
-        p.feed(_make_canonical_frame(_silence(_HOP)))
+    for i in range(40):
+        p.feed(_make_canonical_frame(_silence(_HOP), sample_pos=i * _HOP))
     features = p.latest()
     # Either None (STFT warmup not done) or zero bars
     if features is not None:
@@ -271,7 +271,7 @@ def test_multiple_epoch_transitions_stable() -> None:
 def test_processing_latency_per_hop() -> None:
     """Measure wall-clock time per 480-sample hop and report it.
 
-    This is informational — no hard latency threshold is enforced.
+    This environment-sensitive test still enforces the realtime budget below.
     The test verifies that processing is at least 10× faster than realtime
     (10ms realtime / 10× = must complete < 1ms per hop on any reasonable machine).
     """
@@ -359,33 +359,37 @@ def test_onset_not_gated_by_cava_bar_energy() -> None:
         assert isinstance(features.onset, bool)
 
 
-def test_onset_same_regardless_of_backend_context() -> None:
-    """Onset detection must not be suppressed based on cavacore bar state.
-
-    Feed 2s of silence then a sharp transient.  In V2 the onset fires; in
-    cavacore the bars may still be near zero during the first cavacore block.
-    Both pipelines must agree on onset presence within a few frames.
-    """
-    pre_silence = _silence(_CANONICAL_RATE * 2)  # 2s — cavacore autosens settles
-    impulse_block = _sine_stereo(1000.0, _HOP, amplitude=1.0)
-
-    def _collect_onset_after_impulse(pipeline: object) -> bool:
-        _feed(pipeline, pre_silence)
-        # Feed one loud burst frame
-        frame = _make_canonical_frame(impulse_block)
-        pipeline.feed(frame)  # type: ignore[union-attr]
-        f = pipeline.latest()  # type: ignore[union-attr]
-        return f.onset if f is not None else False
-
-    v2 = _make_v2_pipeline()
-    cava = _make_cava_pipeline()
-    onset_v2 = _collect_onset_after_impulse(v2)
-    onset_cava = _collect_onset_after_impulse(cava)
-
-    # Both or neither; the cava onset must not be permanently suppressed.
-    # (They may differ on this one frame, but both must be able to produce True.)
-    assert isinstance(onset_v2, bool)
-    assert isinstance(onset_cava, bool)
+@pytest.mark.parametrize("method", ["combined", "multiband", "superflux"])
+@pytest.mark.parametrize("chunk", [137, 240, 480, 4096])
+def test_onset_same_regardless_of_backend_context(method, chunk) -> None:
+    """Compare every Beat event/strength at its real interval, not latest Spectrum."""
+    pcm = _silence(24000)
+    rng = np.random.default_rng(42)
+    for start in (4800, 12000, 19200):
+        burst = rng.uniform(-1, 1, (960, 1)).astype(np.float32)
+        pcm[start:start + 960] = burst * np.exp(-np.arange(960)[:, None] / 240)
+    fields = ("onset", "onset_strength", "onset_bass", "onset_mid", "onset_treble",
+              "onset_bass_strength", "onset_mid_strength", "onset_treble_strength")
+    results = []
+    for make in (_make_v2_pipeline, _make_cava_pipeline):
+        pipeline = make(onset_method=method)
+        try:
+            records = []
+            for pos in range(0, len(pcm), chunk):
+                records.extend(pipeline.feed(_make_canonical_frame(
+                    pcm[pos:pos + chunk], sample_pos=pos)))
+            records.extend(pipeline.end_of_stream())
+            events = [(r.sample_pos, r.sample_end,
+                       *(getattr(r.features, name) for name in fields))
+                      for r in records if "beat_detector" in r.effective_processor_ids]
+            assert any(event[2] for event in events), "Parity must not be vacuous silence"
+            assert len({event[:2] for event in events}) == len(events)
+            # Delivery order differs when Spectrum merges with newer Beat intervals.
+            # Compare the complete event-time sequence without changing publication order.
+            results.append(sorted(events))
+        finally:
+            pipeline.stop()
+    assert results[0] == results[1]
 
 
 # ---------------------------------------------------------------------------
@@ -423,8 +427,9 @@ def test_is_cavacore_available_returns_true_when_so_built() -> None:
 def test_onset_fanout_two_half_blocks() -> None:
     """Two 240-frame inputs: all 480 frames reach onset STFT; cavacore executes once.
 
-    cavacore's carry-buffer buffers the first 240 frames (returns None) and only
-    produces bars on the second call (480 total).  The STFT must be pushed on BOTH
+    SpectrumProcessor buffers the first 240 frames without calling native CAVA,
+    then executes one complete block on the second call (480 total). The STFT
+    must be pushed on BOTH
     calls — onset analysis must not be skipped when cavacore returns None.
     """
     p = _make_cava_pipeline()
@@ -453,14 +458,16 @@ def test_onset_fanout_two_half_blocks() -> None:
 
     half = np.zeros((240, 2), dtype=np.float32)
     p.feed(_make_canonical_frame(half, sample_pos=0))
+    assert cava_none[0] == cava_hit[0] == 0
+    np.testing.assert_array_equal(p._spectrum_processor._cava_carry, half)
     p.feed(_make_canonical_frame(half, sample_pos=240))
 
     assert stft_call_count[0] == 2, f"STFT push called {stft_call_count[0]}× (expected 2)"
     assert stft_total_frames[0] == 480, (
         f"STFT received {stft_total_frames[0]} frames (expected 480)"
     )
-    assert cava_none[0] == 1, (
-        f"cavacore returned None {cava_none[0]}× (expected 1 — first half-block)"
+    assert cava_none[0] == 0, (
+        "SpectrumProcessor must only send complete blocks to native CAVA"
     )
     assert cava_hit[0] == 1, (
         f"cavacore produced bars {cava_hit[0]}× (expected 1 — second half-block)"
@@ -532,11 +539,20 @@ def test_clean_eos_tail_flushed() -> None:
 
     pcm = _sine_stereo(440.0, 239)
     p.feed(_make_canonical_frame(pcm))
-    assert p._spectrum_processor._engine._cava.pending_frames == 239
+    np.testing.assert_array_equal(p._spectrum_processor._cava_carry, pcm)
 
-    p.end_of_stream()
+    native = p._spectrum_processor._engine._cava
+    execute = MagicMock(wraps=native.execute)
+    native.execute = execute
+    records = p.end_of_stream()
+    execute.assert_called_once()
+    delivered = execute.call_args.args[0]
+    np.testing.assert_array_equal(delivered[:239], pcm)
+    np.testing.assert_array_equal(delivered[239:], 0)
+    assert [(r.sample_pos, r.sample_end) for r in records] == [(0, 239)]
+    assert p.end_of_stream() == []
 
-    assert p._spectrum_processor._engine._cava.pending_frames == 0, (
+    assert p._spectrum_processor._cava_carry is None, (
         "carry buffer must be empty after EOS flush"
     )
 
@@ -547,11 +563,16 @@ def test_invalidated_stream_discards_pending_without_flush() -> None:
 
     pcm = _sine_stereo(440.0, 239)
     p.feed(_make_canonical_frame(pcm))
-    assert p._spectrum_processor._engine._cava.pending_frames == 239
+    np.testing.assert_array_equal(p._spectrum_processor._cava_carry, pcm)
 
+    native = p._spectrum_processor._engine._cava
+    execute = MagicMock(wraps=native.execute)
+    native.execute = execute
     p._reset_dsp()
+    execute.assert_not_called()
+    assert p.end_of_stream() == []
 
-    assert p._spectrum_processor._engine._cava.pending_frames == 0, (
+    assert p._spectrum_processor._cava_carry is None, (
         "new backend after reset must have no pending frames"
     )
 
@@ -574,12 +595,14 @@ def test_eos_flush_with_non_silent_carry() -> None:
 
     _feed(p, _sine_stereo(440.0, _HOP * 10))  # warm up STFT + cavacore
     # Feed a partial block to leave audio in the carry buffer.
-    p.feed(_make_canonical_frame(_sine_stereo(440.0, 239)))
-    assert p._spectrum_processor._engine._cava.pending_frames > 0
+    tail = _sine_stereo(440.0, 239)
+    p.feed(_make_canonical_frame(tail, sample_pos=_HOP * 10))
+    np.testing.assert_array_equal(p._spectrum_processor._cava_carry, tail)
 
-    p.end_of_stream()
+    records = p.end_of_stream()
+    assert [(r.sample_pos, r.sample_end) for r in records] == [(4800, 5039)]
 
-    assert p._spectrum_processor._engine._cava.pending_frames == 0
+    assert p._spectrum_processor._cava_carry is None
 
 
 # ---------------------------------------------------------------------------
@@ -639,7 +662,7 @@ _make_canonical_pipeline returns CanonicalAnalysisPipeline for spectrum_backend=
 
     src = MagicMock()
     src.running = True
-    profile = Profile(spectrum_backend="cavacore", bars=30)
+    profile = Profile(bars_source="pcm_pipeline", spectrum_backend="cavacore", bars=30)
     pipeline = _make_canonical_pipeline(src, profile)
     assert isinstance(pipeline, CanonicalAnalysisPipeline)
     assert pipeline.effective_spectrum_backend == "cavacore"
@@ -653,7 +676,8 @@ def test_factory_same_source_accepted_by_both_backends() -> None:
     src = MagicMock()
     src.running = True
     v2 = _make_canonical_pipeline(src, Profile(spectrum_backend="v2", bars=30))
-    cava = _make_canonical_pipeline(src, Profile(spectrum_backend="cavacore", bars=30))
+    cava = _make_canonical_pipeline(
+        src, Profile(bars_source="pcm_pipeline", spectrum_backend="cavacore", bars=30))
     assert isinstance(v2, CanonicalAnalysisPipeline)
     assert isinstance(cava, CanonicalAnalysisPipeline)
 
@@ -682,3 +706,15 @@ def test_worker_starts_and_stops_cleanly() -> None:
     assert p._thread is None or not p._thread.is_alive(), (
         "Worker thread must terminate within 2 s of stop()"
     )
+
+
+@pytest.mark.parametrize("bad_start", [0, 9600])
+def test_loudness_rejects_discontinuous_same_epoch_pcm(bad_start):
+    """Absolute hop starts require contiguous transport positions within an epoch."""
+    cap = _make_v2_pipeline()
+    try:
+        cap.feed(_make_canonical_frame(_silence(4800)))
+        with pytest.raises(ValueError, match="Shared loudness hop outside canonical PCM frame"):
+            cap.feed(_make_canonical_frame(_silence(480), sample_pos=bad_start))
+    finally:
+        cap.stop()

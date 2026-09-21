@@ -74,6 +74,7 @@ def _make_canonical_pipeline(
         mid_hz=profile.mid_hz,
         band_normalise=profile.band_normalise,
         exertion_clip=profile.exertion_clip,
+        use_hpss_separation=profile.use_hpss_separation,
     )
 
 

@@ -661,7 +661,7 @@ def test_v2_sustained_energy_is_none():
 
 
 def test_v2_hpss_inactive():
-    """Phase 3 AirPlay path: hpss_active=False (AirPlay HPSS is Phase 4 work)."""
+    """Canonical HPSS stays inactive unless explicitly enabled."""
     p = _make_pipeline()
     sig = _sine_stereo(440, 440, 0.5, 0.5, n=3 * _CANONICAL_RATE)
     _feed_pipeline(p, sig, epoch_id="ep-1")

@@ -9,6 +9,7 @@ Audio ingress → CanonicalAnalysisPipeline → SharedAnalysisFrame
         ├─ SpectrumProcessor → SpectrumEngine → V2 / CAVA Core / future
         ├─ BeatDetector → combined / multiband / Superflux onset algorithm
         ├─ LoudnessAnalyzer → KWeightedLoudnessAnalyzer → BS.1770 meter
+        ├─ HpssAnalyzer → existing PcmHpss (optional)
         └─ ChromaAnalyzer → future algorithm (extension protocol only)
     → PublicationRecord → AudioFeatures → Effects → Scene → output driver
 ```
