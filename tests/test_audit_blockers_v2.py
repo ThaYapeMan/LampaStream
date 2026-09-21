@@ -10,8 +10,7 @@ this branch.  The blockers covered:
      replacements without ever falling back to v0 under require_v1.
   3. Replace-analyser timeout must close the candidate exactly once and
      leave the runtime in a usable or explicitly deactivated state.
-  4. PlayerManager.restart_cava must be transactional — a failed
-     ``_start_cava`` must not corrupt session profile / runtime.
+  4. Canonical analyser replacement must preserve runtime ownership on failure.
   5. Producer patch must wrap init, silence, and vis_stop transitions
      in the seqlock protocol.
   6. Processor interval publication must key by exact
@@ -23,7 +22,6 @@ this branch.  The blockers covered:
 
 from __future__ import annotations
 
-import asyncio
 import re
 import struct
 from pathlib import Path
@@ -434,68 +432,6 @@ def test_timeout_replacement_does_not_close_old_processors_early():
 # ---------------------------------------------------------------------------
 
 
-def test_restart_cava_rolls_back_session_on_start_failure(monkeypatch, tmp_path):
-    """When _start_cava raises after the profile has been swapped,
-    session.profile / session.coupling must roll back to the pre-call
-    snapshot — the storage/session/runtime views must agree.
-
-    Would FAIL on 7dc457b: on _start_cava failure, session.profile was
-    left at the NEW value and session.cava at None, so subsequent
-    checks would see a mismatched state.
-    """
-    from lampastream.models import Coupling, Profile
-    from lampastream.player_manager import ActiveSession, PlayerManager
-
-    # Build a minimal storage stub with the coupling / dependencies
-    # restart_cava needs.
-    manager = PlayerManager.__new__(PlayerManager)
-    manager._active = None
-    manager.storage = MagicMock()
-
-    old_profile = Profile(name="OLD", bars=16)
-    new_profile = Profile(name="NEW", bars=32)
-    old_coupling = MagicMock(id="c1", spec=Coupling)
-    new_coupling = MagicMock(id="c1", spec=Coupling)
-
-    session = ActiveSession.__new__(ActiveSession)
-    session.coupling = old_coupling
-    session.profile = old_profile
-    session.cava = None  # no old cava to terminate
-    session.sync_engine = None
-    session.squeezelite = None
-    session.fifo_path = tmp_path / "fifo"
-    session.cava_conf_path = tmp_path / "cava.conf"
-    session.cava_log_path = tmp_path / "cava.log"
-    manager._active = session
-
-    manager.storage.get_coupling.return_value = new_coupling
-    monkeypatch.setattr(
-        "lampastream.player_manager._build_engine_profile",
-        lambda coupling, storage: new_profile,
-    )
-
-    call_count = {"n": 0}
-
-    def failing_start_cava(sess, prof):
-        call_count["n"] += 1
-        # First call is with new profile — inject failure here.
-        if prof is new_profile:
-            raise OSError("simulated cava start failure")
-        # Rollback attempts to start with the OLD profile — let it "succeed"
-        # so we can observe the rolled-back state.
-        # (Do nothing; session.cava stays None as it started.)
-        return None
-
-    monkeypatch.setattr(manager, "_start_cava", failing_start_cava)
-
-    with pytest.raises(OSError, match="simulated cava start failure"):
-        asyncio.run(manager.restart_cava())
-
-    # Session state must have rolled back.
-    assert session.profile is old_profile, (
-        "restart_cava must restore session.profile on _start_cava failure"
-    )
-    assert session.coupling is old_coupling
 
 
 # ---------------------------------------------------------------------------

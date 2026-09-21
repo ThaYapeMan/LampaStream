@@ -767,13 +767,13 @@ def test_h5_analyser_invalid_bars_source_raises():
 
 
 def test_h5_profile_valid_bars_sources_accepted():
-    for src in ("cava", "pcm_pipeline"):
+    for src in ("pcm_pipeline",):
         p = Profile(bars_source=src)
         assert p.bars_source == src
 
 
 def test_h5_analyser_valid_bars_sources_accepted():
-    for src in ("cava", "pcm_pipeline"):
+    for src in ("pcm_pipeline",):
         a = Analyser(bars_source=src)
         assert a.bars_source == src
 
@@ -1920,3 +1920,10 @@ def test_publication_atomicity_lock_covers_all_state():
     assert cap._latest_pub is rec
     with cap._pub_lock:
         assert cap._pub_queue[-1] is rec
+
+
+@pytest.mark.parametrize("model", [Profile, Analyser])
+def test_external_cava_source_is_retired(model):
+    with pytest.raises(ValueError, match="bars_source"):
+        model(bars_source="cava")
+    assert model().bars_source == "pcm_pipeline"

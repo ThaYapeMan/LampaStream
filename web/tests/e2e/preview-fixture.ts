@@ -19,7 +19,7 @@ export async function setupPreview(page: Page) {
     socket = ws
     ws.send(JSON.stringify({ type: 'status', active_coupling_id: 'c', active_energy_profile_id: 'e',
       active_player_type: 'LMS', active_zone_id: 'z', active_bars_source: 'pcm_pipeline',
-      effect_type: 'spectrum_rgb', processes: { squeezelite: true, cava: false }, applied_delay_ms: 1100,
+      effect_type: 'spectrum_rgb', processes: { squeezelite: true }, applied_delay_ms: 1100,
       follow_target_mac: 'aa:bb:cc:dd:ee:ff', follow_target_name: 'Room',
       track: { title: 'Jealous (Extended Mix)', artist: 'Mochakk', position_s: 26, duration_s: 345, playing: true } }))
     ws.send(JSON.stringify({ type: 'spectrum', bars: [.6,.6,.2,.2,.2,.2,.4,.4,.4,.4], normalised_bars: Array(10).fill(.33) }))

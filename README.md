@@ -76,7 +76,7 @@ know which player supplied it.
 
 | Player / source | Status | Ingress | Uses canonical analysis | Notes |
 |---|---|---|---|---|
-| LMS / Squeezelite | IMPLEMENTED | Stereo shared memory from patched Squeezelite SHM v1 | Yes, with `bars_source=pcm_pipeline` | Also supports a separate external CAVA/FIFO compatibility route. |
+| LMS / Squeezelite | IMPLEMENTED | Stereo shared memory from patched Squeezelite SHM v1 | Yes | Shared canonical PCM analysis. |
 | AirPlay | IMPLEMENTED | shairport-sync → S16_LE stereo, 44.1 kHz named pipe → `AirPlayPipeStereoSource` | Yes, always | Same canonical pipeline factory and downstream Effects as LMS PCM. |
 | Sonos (dedicated integration) | NOT PRESENT | — | — | Potential future adapter. A Sonos player exposed through a third-party LMS plugin can be followed through the LMS integration; this is not a native Sonos ingress. |
 | Roon | NOT PRESENT | — | — | Potential future adapter; no production Roon player type or ingress. |
@@ -160,31 +160,28 @@ mechanism is required. Source-specific behavior must remain at ingress rather
 than leaking into Effects. A deliberate derived-bars compatibility route remains
 separate from this canonical contract.
 
-## Spectrum engines and legacy CAVA
+## Spectrum engines
 
 CAVA has two distinct integration paths:
 
 ```text
 Canonical: VirtualPlayer / ingress → canonical PCM → SpectrumProcessor
                                                    → SpectrumEngine → CAVA Core
-Legacy:    LMS → squeezelite → external CAVA process → FIFO derived bars
-                                                   → legacy analysis → AudioFeatures
 ```
 
 | Route | Selection | Analysis |
 |---|---|---|
-| LMS canonical PCM | `bars_source=pcm_pipeline`, `spectrum_backend=v2` or `cavacore` | Shared canonical pipeline: Spectrum + Beat; requires patched SHM v1 producer |
-| AirPlay canonical PCM | `spectrum_backend=v2` or `cavacore`; set `bars_source=pcm_pipeline` | Same shared canonical pipeline: Spectrum + Beat |
-| LMS external bars | `bars_source=cava`, backend default `v2` | External CAVA/FIFO; the backend field does not select embedded processing |
+| LMS canonical PCM | `spectrum_backend=v2` or `cavacore` | Shared canonical pipeline: Spectrum + Beat; requires patched SHM v1 producer |
+| AirPlay canonical PCM | `spectrum_backend=v2` or `cavacore` | Same shared canonical pipeline: Spectrum + Beat |
 
 V2 uses the shared STFT. Embedded CAVA Core keeps upstream native DSP and its own
-FFTs; LampaStream schedules 480-frame executions at 48 kHz (100 Hz). External CAVA/FIFO
-is outside the canonical AnalysisProcessor/SpectrumEngine path and registry.
-**LMS does not require external CAVA when using canonical PCM.**
+FFTs; LampaStream schedules 480-frame executions at 48 kHz (100 Hz).
+LampaStream analysis no longer launches an external CAVA process. The external
+CAVA binary remains available for independent stock consumers of squeezelite SHM;
+its packaging and the producer ABI are unchanged.
 
-`bars_source=cava` with `spectrum_backend=cavacore` is rejected. An explicit
-embedded-engine request either activates that engine or fails; it never silently
-selects V2 or FIFO. See [analyzers](docs/analyzers.md) and the
+An explicit embedded-engine request either activates that engine or fails; it never
+silently selects V2. See [analyzers](docs/analyzers.md) and the
 [frozen architecture](docs/ANALYSIS_ARCHITECTURE.md).
 
 ## Effects

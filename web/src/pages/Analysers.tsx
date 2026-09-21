@@ -5,10 +5,7 @@ import { SliderField } from '@/components/SliderField'
 import { cn } from '@/lib/utils'
 import {
   ONSET_METHODS,
-  BARS_SOURCE_OPTIONS,
   SPECTRUM_BACKEND_OPTIONS,
-  type VirtualPlayer,
-  getVirtualPlayers,
   type Analyser,
   type Coupling,
   getAnalysers,
@@ -22,7 +19,6 @@ import {
 // ── Analyser defaults ─────────────────────────────────────────────────────────
 
 const ANALYSER_DEFAULTS = {
-  bars_source: 'cava' as const,
   spectrum_backend: 'v2' as const,
   onset_method: 'combined' as const,
   bars: 30,
@@ -54,7 +50,6 @@ export function percentToHz(pct: number): number {
 
 interface Draft {
   name: string
-  bars_source: string
   spectrum_backend: string
   onset_method: string
   bars: string
@@ -72,7 +67,6 @@ function defaultDraft(a?: Analyser | null): Draft {
   return {
     band_normalise: a?.band_normalise ?? ANALYSER_DEFAULTS.band_normalise,
     name: a?.name ?? '',
-    bars_source: a?.bars_source ?? ANALYSER_DEFAULTS.bars_source,
     spectrum_backend: a?.spectrum_backend ?? ANALYSER_DEFAULTS.spectrum_backend,
     onset_method: a?.onset_method ?? ANALYSER_DEFAULTS.onset_method,
     bars: String(a?.bars ?? ANALYSER_DEFAULTS.bars),
@@ -312,7 +306,7 @@ function AnalyserListItem({ analyser, isActive, isSelected, onSelect }: {
   onSelect: () => void
 }) {
   const methodLabel = ONSET_METHODS.find(m => m.value === analyser.onset_method)?.label ?? analyser.onset_method
-  const sourceLabel = analyser.bars_source === 'pcm_pipeline' ? 'PCM' : 'cava'
+  const sourceLabel = 'PCM'
 
   return (
     <button
@@ -341,14 +335,13 @@ function AnalyserListItem({ analyser, isActive, isSelected, onSelect }: {
 interface WorkspaceProps {
   analyser: Analyser | null
   couplings: Coupling[]
-  players: VirtualPlayer[]
   onSaved: (a: Analyser) => void
   onDeleted: (id: string) => void
   onCloned: (id: string) => void
   onCancelCreate: () => void
 }
 
-function AnalyserWorkspace({ analyser, couplings, players, onSaved, onDeleted, onCloned, onCancelCreate }: WorkspaceProps) {
+function AnalyserWorkspace({ analyser, couplings, onSaved, onDeleted, onCloned, onCancelCreate }: WorkspaceProps) {
   const isCreating = analyser === null
 
   const [draft, setDraft] = useState<Draft>(() => defaultDraft(analyser))
@@ -358,22 +351,8 @@ function AnalyserWorkspace({ analyser, couplings, players, onSaved, onDeleted, o
 
   const usedByCount = analyser ? couplings.filter(c => c.analyser_id === analyser.id).length : 0
 
-  const usedByAirPlay = analyser !== null && couplings.some(c =>
-    c.analyser_id === analyser.id && players.some(p => p.id === c.player_id && p.type === 'AirPlay'),
-  )
-  const isPcm = draft.bars_source === 'pcm_pipeline'
-
-  function selectBarsSource(bars_source: string) {
-    setDraft(d => ({
-      ...d,
-      bars_source,
-      spectrum_backend: bars_source === 'cava' ? ANALYSER_DEFAULTS.spectrum_backend : d.spectrum_backend,
-    }))
-  }
-
   // ── isAtDefault checks ────────────────────────────────────────────────────
 
-  const isDefaultBarsSource = draft.bars_source === ANALYSER_DEFAULTS.bars_source
   const isDefaultOnsetMethod = draft.onset_method === ANALYSER_DEFAULTS.onset_method
   const isDefaultFreqRange =
     parseInt(draft.lower_cutoff_freq, 10) === ANALYSER_DEFAULTS.lower_cutoff_freq &&
@@ -390,9 +369,6 @@ function AnalyserWorkspace({ analyser, couplings, players, onSaved, onDeleted, o
 
   // ── Reset actions — operate on local draft only ───────────────────────────
 
-  function resetBarsSource() {
-    selectBarsSource(ANALYSER_DEFAULTS.bars_source)
-  }
   function resetOnsetMethod() {
     setDraft(d => ({ ...d, onset_method: ANALYSER_DEFAULTS.onset_method }))
   }
@@ -429,7 +405,6 @@ function AnalyserWorkspace({ analyser, couplings, players, onSaved, onDeleted, o
     try {
       const body = {
         name: draft.name.trim() || 'Unnamed',
-        bars_source: draft.bars_source,
         spectrum_backend: draft.spectrum_backend,
         onset_method: draft.onset_method,
         bars: parseInt(draft.bars, 10) || ANALYSER_DEFAULTS.bars,
@@ -538,12 +513,6 @@ function AnalyserWorkspace({ analyser, couplings, players, onSaved, onDeleted, o
             Used by {usedByCount} coupling{usedByCount === 1 ? '' : 's'}
           </p>
         )}
-        {draft.bars_source === 'cava' && usedByAirPlay && (
-          <p role="status" className="text-xs text-amber-500 mt-1.5">
-            ⚠ Also used by an AirPlay coupling — the Cava audio source has no effect there.
-            AirPlay uses canonical PCM analysis, including optional HPSS separation.
-          </p>
-        )}
       </div>
 
       {/* Two-column configuration workspace */}
@@ -554,52 +523,29 @@ function AnalyserWorkspace({ analyser, couplings, players, onSaved, onDeleted, o
           <div className="px-5 py-5 space-y-5">
             <ColumnHeading title="Audio / Spectrum" />
 
-            {/* Audio Source — side-by-side cards */}
-            <div data-testid="section-audio-source">
+            <div data-testid="section-spectrum-engine">
               <ConfigSection
-                title="Audio Source"
-                onReset={resetBarsSource}
-                isAtDefault={isDefaultBarsSource}
-                resetTestId="reset-audio-source"
+                title="Spectrum engine"
+                onReset={() => setDraft(d => ({ ...d, spectrum_backend: 'v2', band_normalise: false }))}
+                isAtDefault={draft.spectrum_backend === 'v2' && !draft.band_normalise}
+                resetTestId="reset-spectrum"
               >
-                <div className="grid grid-cols-2 gap-1.5">
-                  {BARS_SOURCE_OPTIONS.map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      data-testid={`opt-bars-source-${opt.value}`}
-                      onClick={() => selectBarsSource(opt.value)}
-                      className={cn(
-                        'text-left rounded border p-2.5 text-sm transition-colors',
-                        draft.bars_source === opt.value
-                          ? 'border-primary bg-primary/10'
-                          : 'border-border hover:border-muted-foreground/60',
-                      )}
-                    >
-                      <div className="font-medium leading-tight">{opt.label}</div>
-                      <div className="text-xs text-muted-foreground leading-snug mt-0.5">{opt.description}</div>
-                    </button>
-                  ))}
-                </div>
                 <div className="space-y-1">
-                  <label className={cn('flex items-center gap-2 text-xs', !isPcm && 'text-muted-foreground opacity-50')}>
-                    <input type="checkbox" checked={isPcm ? draft.band_normalise : true}
-                      disabled={!isPcm} onChange={e => setDraft(d => ({ ...d, band_normalise: e.target.checked }))} />
+                  <label className="flex items-center gap-2 text-xs">
+                    <input type="checkbox" checked={draft.band_normalise}
+                      onChange={e => setDraft(d => ({ ...d, band_normalise: e.target.checked }))} />
                     Normalise bands
                   </label>
                   <p className="text-xs text-muted-foreground">
-                    {isPcm ? 'Compare each colour band with its own rolling average. Raw energy values stay unchanged.'
-                      : 'Always active on the external CAVA/FIFO source.'}
+                    Compare each colour band with its own rolling average. Raw energy values stay unchanged.
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <p className="text-xs font-medium">Spectrum engine</p>
                   <div className="grid grid-cols-2 gap-1.5">
                     {SPECTRUM_BACKEND_OPTIONS.map(opt => (
                       <button
                         key={opt.value}
                         type="button"
-                        disabled={!isPcm}
                         aria-pressed={draft.spectrum_backend === opt.value}
                         data-testid={`opt-spectrum-backend-${opt.value}`}
                         onClick={() => setDraft(d => ({ ...d, spectrum_backend: opt.value }))}
@@ -615,11 +561,6 @@ function AnalyserWorkspace({ analyser, couplings, players, onSaved, onDeleted, o
                       </button>
                     ))}
                   </div>
-                  {!isPcm && (
-                    <p className="text-xs text-muted-foreground">
-                      Not applicable — external CAVA/FIFO has no engine choice. Select PCM Pipeline to choose an engine.
-                    </p>
-                  )}
                 </div>
               </ConfigSection>
             </div>
@@ -818,7 +759,7 @@ function AnalyserWorkspace({ analyser, couplings, players, onSaved, onDeleted, o
                     </label>
                     <p className="text-xs text-muted-foreground mt-0.5">
                       Splits audio into rhythm and melody layers on either PCM spectrum backend.
-                      External CAVA requires its optional PCM tap. Adds processing work when enabled.
+                      Adds processing work when enabled.
                     </p>
                   </div>
                 </div>
@@ -936,7 +877,6 @@ function AnalyserWorkspace({ analyser, couplings, players, onSaved, onDeleted, o
 export function Analysers({ activeCouplingId = null }: { activeCouplingId?: string | null }) {
   const [analysers, setAnalysers] = useState<Analyser[]>([])
   const [couplings, setCouplings] = useState<Coupling[]>([])
-  const [players, setPlayers] = useState<VirtualPlayer[]>([])
   const activeCoupling = couplings.find(c => c.id === activeCouplingId)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -946,10 +886,9 @@ export function Analysers({ activeCouplingId = null }: { activeCouplingId?: stri
 
   async function loadAll() {
     try {
-      const [as, cs, ps] = await Promise.all([getAnalysers(), getCouplings(), getVirtualPlayers()])
+      const [as, cs] = await Promise.all([getAnalysers(), getCouplings()])
       setAnalysers(as)
       setCouplings(cs)
-      setPlayers(ps)
       setError(null)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load')
@@ -1047,7 +986,6 @@ export function Analysers({ activeCouplingId = null }: { activeCouplingId?: stri
               key={workspaceKey}
               analyser={selectedAnalyser}
               couplings={couplings}
-              players={players}
               onSaved={handleSaved}
               onDeleted={handleDelete}
               onCloned={handleClone}

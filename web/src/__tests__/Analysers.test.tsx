@@ -45,7 +45,7 @@ const BASE = {
   lower_cutoff_freq: 50,
   higher_cutoff_freq: 12000,
   use_hpss_separation: false,
-  bars_source: 'cava',
+  bars_source: 'pcm_pipeline',
   spectrum_backend: 'v2',
 }
 
@@ -83,7 +83,7 @@ describe('Standard mode defaults', () => {
 
   it('all standard sections render', async () => {
     await renderAndSelect()
-    expect(screen.getByTestId('section-audio-source')).toBeDefined()
+    expect(screen.getByTestId('section-spectrum-engine')).toBeDefined()
     expect(screen.getByTestId('section-beat-detection')).toBeDefined()
     expect(screen.getByTestId('section-freq-range')).toBeDefined()
     expect(screen.getByTestId('section-spectrum')).toBeDefined()
@@ -493,7 +493,7 @@ describe('Analyser list item', () => {
     const texts = within(item).getAllByText(/Multiband/)
     expect(texts.length).toBeGreaterThanOrEqual(1)
     expect(within(item).getByText(/30 bars/)).toBeDefined()
-    expect(within(item).getByText(/cava/)).toBeDefined()
+    expect(within(item).getByText(/PCM/)).toBeDefined()
   })
 
   it('shows PCM label for pcm_pipeline source', async () => {
@@ -512,28 +512,13 @@ describe('Default / Reset behavior', () => {
 
   // ── Audio Source ───────────────────────────────────────────────────────────
 
-  it('reset-audio-source is disabled when bars_source is already cava (default)', async () => {
-    await renderAndSelect({ ...BASE, bars_source: 'cava' })
-    const resetBtn = screen.getByTestId('reset-audio-source')
-    expect(resetBtn.getAttribute('aria-disabled')).toBe('true')
+  it('resets the spectrum engine without exposing a source selector', async () => {
+    const user = await renderAndSelect({ ...BASE, spectrum_backend: 'cavacore' })
+    expect(screen.queryByTestId('opt-bars-source-cava')).not.toBeInTheDocument()
+    await user.click(screen.getByTestId('reset-spectrum'))
+    expect(screen.getByTestId('opt-spectrum-backend-v2')).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByTestId('reset-spectrum')).toHaveAttribute('aria-disabled', 'true')
   })
-
-  it('reset-audio-source is active after switching to PCM Pipeline', async () => {
-    const user = await renderAndSelect({ ...BASE, bars_source: 'cava' })
-    await user.click(screen.getByTestId('opt-bars-source-pcm_pipeline'))
-    const resetBtn = screen.getByTestId('reset-audio-source')
-    expect(resetBtn.getAttribute('aria-disabled')).toBe('false')
-  })
-
-  it('PCM Pipeline → Reset → Cava', async () => {
-    const user = await renderAndSelect({ ...BASE, bars_source: 'pcm_pipeline' })
-    await user.click(screen.getByTestId('reset-audio-source'))
-    // After reset, cava option card should be selected
-    const cavaCard = screen.getByTestId('opt-bars-source-cava')
-    expect(cavaCard.className).toMatch(/border-primary/)
-  })
-
-  // ── Beat Detection ─────────────────────────────────────────────────────────
 
   it('reset-onset-method is disabled when onset_method is already combined (default)', async () => {
     await renderAndSelect({ ...BASE, onset_method: 'combined' })
@@ -700,7 +685,7 @@ describe('Default / Reset behavior', () => {
 
   it('resetting audio source does not modify expert fields', async () => {
     const user = await renderAndSelect({ ...BASE, bars_source: 'pcm_pipeline', onset_alpha: 0.42 })
-    await user.click(screen.getByTestId('reset-audio-source'))
+    await user.click(screen.getByTestId('reset-spectrum'))
     // Go to expert mode to verify onset_alpha was untouched
     await user.click(screen.getByTestId('mode-expert-btn'))
     const alphaInput = screen.getByTestId('field-onset-alpha') as HTMLInputElement
@@ -898,12 +883,11 @@ describe('Architecture-aware controls', () => {
     const user = userEvent.setup()
     render(<Analysers />)
     await user.click(screen.getByText('New analyser'))
-    expect(screen.getByTestId('opt-spectrum-backend-cavacore')).toBeDisabled()
-    await user.click(screen.getByTestId('opt-bars-source-pcm_pipeline'))
+    expect(screen.getByTestId('opt-spectrum-backend-cavacore')).toBeEnabled()
     await user.click(screen.getByTestId('opt-spectrum-backend-cavacore'))
     await user.click(screen.getByTestId('analyser-save-btn'))
     expect(mapi.createAnalyser).toHaveBeenCalledWith(expect.objectContaining({
-      bars_source: 'pcm_pipeline', spectrum_backend: 'cavacore',
+      spectrum_backend: 'cavacore',
     }))
   })
 
@@ -918,18 +902,7 @@ describe('Architecture-aware controls', () => {
     expect(mapi.updateAnalyser).toHaveBeenLastCalledWith('a1', expect.objectContaining({ spectrum_backend: 'v2' }))
   })
 
-  it.each(['opt-bars-source-cava', 'reset-audio-source'])('prevents the invalid FIFO/Core combination via %s', async control => {
-    const user = await renderAndSelect({ ...BASE, bars_source: 'pcm_pipeline', spectrum_backend: 'cavacore' })
-    await user.click(screen.getByTestId(control))
-    expect(screen.getByTestId('opt-spectrum-backend-cavacore')).toBeDisabled()
-    expect(screen.getByTestId('opt-spectrum-backend-v2')).toHaveAttribute('aria-pressed', 'true')
-    expect(screen.getByText(/external CAVA\/FIFO has no engine choice/)).toBeInTheDocument()
-    await user.click(screen.getByTestId('opt-spectrum-backend-cavacore'))
-    await user.click(screen.getByTestId('analyser-save-btn'))
-    expect(mapi.updateAnalyser).toHaveBeenCalledWith('a1', expect.objectContaining({ bars_source: 'cava', spectrum_backend: 'v2' }))
-  })
-
-  it.each(['v2', 'cavacore'])('enables and saves HPSS on canonical %s and FIFO', async spectrum_backend => {
+  it.each(['v2', 'cavacore'])('enables and saves HPSS on canonical %s', async spectrum_backend => {
     const user = await renderAndSelect({ ...BASE, bars_source: 'pcm_pipeline', spectrum_backend, use_hpss_separation: false })
     const checkbox = screen.getByTestId('field-use-hpss')
     expect(checkbox).toBeEnabled()
@@ -940,13 +913,9 @@ describe('Architecture-aware controls', () => {
     expect(mapi.updateAnalyser).toHaveBeenCalledWith('a1', expect.objectContaining({ use_hpss_separation: true, spectrum_backend }))
     await user.click(screen.getByTestId('reset-hpss'))
     expect(checkbox).not.toBeChecked()
-    await user.click(screen.getByTestId('opt-bars-source-cava'))
-    expect(checkbox).toBeEnabled()
-    await user.click(checkbox)
-    expect(checkbox).toBeChecked()
   })
 
-  it.each(['AirPlay', 'LMS'])('warns only for an AirPlay coupling referencing this analyser (%s)', async type => {
+  it.each(['AirPlay', 'LMS'])('uses canonical analysis without a source warning for %s', async type => {
     mapi.getAnalysers.mockResolvedValue([BASE])
     mapi.getVirtualPlayers.mockResolvedValue([{ id: 'p1', type }, { id: 'p2', type: 'AirPlay' }])
     mapi.getCouplings.mockResolvedValue([
@@ -957,15 +926,11 @@ describe('Architecture-aware controls', () => {
     render(<Analysers />)
     await user.click(await screen.findByTestId('analyser-item-a1'))
     expect(screen.getByText('Used by 1 coupling')).toBeInTheDocument()
-    expect(screen.queryByText(/Also used by an AirPlay coupling/) !== null).toBe(type === 'AirPlay')
-    await user.click(screen.getByTestId('opt-bars-source-pcm_pipeline'))
     expect(screen.queryByText(/Also used by an AirPlay coupling/)).toBeNull()
-    await user.click(screen.getByTestId('reset-audio-source'))
-    expect(screen.queryByText(/Also used by an AirPlay coupling/) !== null).toBe(type === 'AirPlay')
   })
 })
 
-it('round-trips canonical band normalisation and shows FIFO as always active', async () => {
+it('round-trips canonical band normalisation', async () => {
   mapi.updateAnalyser.mockResolvedValue(BASE)
   const user = await renderAndSelect({ ...BASE, bars_source: 'pcm_pipeline' })
   const toggle = screen.getByLabelText('Normalise bands')
@@ -973,8 +938,6 @@ it('round-trips canonical band normalisation and shows FIFO as always active', a
   await user.click(toggle)
   await user.click(screen.getByTestId('analyser-save-btn'))
   expect(mapi.updateAnalyser).toHaveBeenLastCalledWith('a1', expect.objectContaining({ band_normalise: true }))
-  await user.click(screen.getByTestId('opt-bars-source-cava'))
-  expect(toggle).toBeDisabled()
+  expect(toggle).toBeEnabled()
   expect(toggle).toBeChecked()
-  expect(screen.getByText('Always active on the external CAVA/FIFO source.')).toBeInTheDocument()
 })

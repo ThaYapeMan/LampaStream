@@ -129,6 +129,8 @@ def _migrate_flat_residue(data: dict) -> None:
                 values["high_energy_effect_id"] = candidate["effects"][0]["id"]
             if collection != "virtual_players":
                 values["name"] = name
+            if collection == "analysers" and values["bars_source"] == "cava":
+                values["bars_source"] = "pcm_pipeline"
             entity = COLLECTIONS[collection](id=identity, **values)
             candidate[collection] = [entity.to_dict()]
             if collection != "effects":
@@ -193,14 +195,31 @@ def _rename_huesync_display_names(data: dict) -> bool:
     return changed
 
 
+def _migrate_bars_source(data: dict) -> None:
+    """Retire external CAVA without changing other analyser settings.
+
+    Missing backends use the portable V2 engine. Explicit backend choices are
+    retained and validated with the rest of the row before any file is written.
+    """
+    rows = data.get("analysers", [])
+    if not isinstance(rows, list) or any(not isinstance(row, dict) for row in rows):
+        raise ValueError("Malformed analysers")
+    for row in rows:
+        if row.get("bars_source") == "cava":
+            row["bars_source"] = "pcm_pipeline"
+            row.setdefault("spectrum_backend", "v2")
+
+
 def convert(original: dict) -> dict:
     if not isinstance(original, dict):
         raise ValueError("Configuration must be a JSON object")
     if "schema_version" in original and type(original["schema_version"]) is not int:
         raise ValueError("Schema version must be an integer")
     if original.get("schema_version") == SCHEMA_VERSION:
-        validate_current(original, references=True)
-        return copy.deepcopy(original)
+        data = copy.deepcopy(original)
+        _migrate_bars_source(data)
+        validate_current(data, references=True)
+        return data
     if original.get("schema_version", 0) != 0:
         raise ValueError("Unsupported schema version")
     data = copy.deepcopy(original)
@@ -278,6 +297,7 @@ def convert(original: dict) -> dict:
         for key in historical:
             effect.pop(key)
     data["schema_version"] = SCHEMA_VERSION
+    _migrate_bars_source(data)
     _migrate_flat_residue(data)
     validate_current(data, references=True)
     return data

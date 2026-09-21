@@ -190,7 +190,7 @@ def test_manager_selects_metadata_target_for_each_lms_mode(tmp_path):
             player = VirtualPlayer(lms_host='host', follow_mode=mode, follow_player_mac=follow)
             session = ActiveSession(Profile(player_mac='02:00:00:00:00:01'))
             with patch.object(manager, '_start_squeezelite'), \
-                 patch.object(manager, '_activate_lms_cava', new_callable=AsyncMock), \
+                 patch.object(manager, '_activate_lms_pcm', new_callable=AsyncMock), \
                  patch.object(LmsTrackPositionSource, 'open'), \
                  patch.object(LmsSyncGroupObserver, 'start',
                               side_effect=lambda: asyncio.create_task(asyncio.sleep(100))):
@@ -225,7 +225,7 @@ def test_lms_activation_seeds_current_track_without_newsong(tmp_path):
             session.poller_task = asyncio.create_task(manager._poll_sync_master(session))
 
         with patch.object(manager, '_start_squeezelite'), \
-             patch.object(manager, '_activate_lms_cava', side_effect=activate_audio), \
+             patch.object(manager, '_activate_lms_pcm', side_effect=activate_audio), \
              patch.object(manager, '_apply_probe_for_master', new_callable=AsyncMock), \
              patch.object(LmsTrackPositionSource, 'open'), \
              patch('lampastream.player_manager.query_lms_status', return_value=current) as query:
@@ -306,7 +306,7 @@ def test_sync_group_target_query_seeds_track_on_activation(tmp_path):
         current = LmsPlayerStatus(title='Playing in group', artist='Artist', time=12,
                                   duration=90, mode='play')
         with patch.object(manager, '_start_squeezelite'), \
-             patch.object(manager, '_activate_lms_cava', new_callable=AsyncMock), \
+             patch.object(manager, '_activate_lms_pcm', new_callable=AsyncMock), \
              patch.object(manager, '_apply_probe_for_master', new_callable=AsyncMock), \
              patch.object(LmsTrackPositionSource, 'open'), \
              patch.object(LmsSyncGroupObserver, 'start',

@@ -200,7 +200,7 @@ class AnalyserCreateBody(BaseModel):
     higher_cutoff_freq: int = 12000
     use_hpss_separation: bool = False
     band_normalise: bool = False
-    bars_source: str = "cava"
+    bars_source: str = "pcm_pipeline"
     spectrum_backend: str = "v2"
 
 
@@ -307,7 +307,7 @@ class CouplingPatchBody(BaseModel):
 
     Priority categories (high to low):
       FK/player fields → deactivate
-      cava fields      → restart_cava
+      spectrum fields  → replace_pcm_analyser
       pcm fields       → update_onset_pipeline
       render fields    → update_render
     """
@@ -327,7 +327,7 @@ class CouplingPatchBody(BaseModel):
     lms_port: int | None = None
     player_name: str | None = None
     alsa_device: str | None = None
-    # Analyser cava category (restart_cava)
+    # Analyser spectrum category (replace_pcm_analyser)
     bars: int | None = None
     lower_cutoff_freq: int | None = None
     higher_cutoff_freq: int | None = None
@@ -356,10 +356,10 @@ class CouplingPatchBody(BaseModel):
 # Field categories for coupling PATCH routing
 # ---------------------------------------------------------------------------
 # These parallel the Profile-level _PLAYER_FIELDS etc. but map to sub-entities.
-# Priority: deactivate > cava > pcm > render.
+# Priority: deactivate > spectrum > pcm > render.
 
 _C_DEACTIVATE_FIELDS: frozenset[str] = frozenset({
-    # Changing these requires a full squeezelite + cava + DTLS restart because
+    # Changing these requires a full squeezelite + analysis + DTLS restart because
     # a new process (player_id) or a new Zone cannot be hot-swapped into a
     # running session.
     "player_id", "zone_id",
@@ -369,10 +369,10 @@ _C_DEACTIVATE_FIELDS: frozenset[str] = frozenset({
 # FK fields that do NOT require a full restart — handled via lighter live-update
 # paths in _apply_coupling_action().
 _C_LIVE_FK_FIELDS: frozenset[str] = frozenset({
-    "analyser_id",        # → cava restart + PCM pipeline rebuild
+    "analyser_id",        # → canonical PCM pipeline rebuild
     "energy_profile_id",  # → update_render only
 })
-_C_CAVA_FIELDS: frozenset[str] = frozenset({
+_C_SPECTRUM_FIELDS: frozenset[str] = frozenset({
     "bars", "lower_cutoff_freq", "higher_cutoff_freq",
 })
 _C_PCM_FIELDS: frozenset[str] = frozenset({
@@ -456,19 +456,7 @@ async def _apply_coupling_action(
     Called after entity saves so the Profile reflects the updated values.
     Uses _build_engine_profile from player_manager (single source of truth).
 
-    Routing depends on ``profile.bars_source``:
-      * pcm_pipeline sessions:  spectrum / band changes rebuild the running
-                                CanonicalAnalysisPipeline via
-                                ``replace_pcm_analyser`` — there is no cava
-                                process to restart.
-      * cava sessions:          spectrum / band changes are handled by
-                                ``restart_cava`` (external CAVA / FIFO path).
-
-    Cross-mode analyser change (canonical ↔ FIFO):
-      A swapped or edited Analyser with a different ``bars_source`` than
-      the currently active session cannot be hot-swapped
-      — SyncEngine initialisation differs between the two paths.  Such a
-      change triggers a full deactivate + reactivate cycle.
+    Spectrum changes rebuild the canonical PCM analyser.
     """
     profile = _build_engine_profile(coupling, storage)
     if not profile:
@@ -479,31 +467,13 @@ async def _apply_coupling_action(
         await manager.deactivate()
         return
 
-    # Cross-mode analyser edit or swap: the currently active session runs on
-    # bars_source X, and the updated analyser has bars_source Y ≠ X.  Neither
-    # replace_pcm_analyser (needs an existing pcm_pipeline session) nor
-    # restart_cava (needs a running cava/FIFO) can bridge that boundary.
-    # A full deactivate + reactivate is required.
-    old_bars_source = manager.active_bars_source
-    if old_bars_source is not None and old_bars_source != profile.bars_source:
-        await manager.deactivate()
-        await manager.activate_coupling(coupling)
-        return
-
-    # A new SpectrumEngine (spectrum_backend swap) or any change to the bar
-    # geometry (bars / cutoffs) or the Analyser identity (analyser_id) needs
-    # the analyser to be rebuilt.  Route via the appropriate path for the
-    # active session's bars_source.
     spectrum_rebuild_fields = {
         "spectrum_backend", "bars", "lower_cutoff_freq", "higher_cutoff_freq",
     }
     needs_spectrum_rebuild = bool(changed & (spectrum_rebuild_fields | {"analyser_id"}))
 
     if needs_spectrum_rebuild:
-        if profile.bars_source == "pcm_pipeline":
-            manager.replace_pcm_analyser(profile)
-        else:
-            await manager.restart_cava()
+        manager.replace_pcm_analyser(profile)
 
     if changed & (_C_PCM_FIELDS | {"analyser_id"}):
         manager.update_onset_pipeline(profile)
@@ -1252,11 +1222,10 @@ async def deactivate_coupling(request: Request):
 class RestartCouplingCavaBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    """Optionally update frequency cutoffs and/or band boundaries while restarting cava.
+    """Update cutoffs and/or band boundaries while rebuilding canonical analysis.
 
     Saving these avoids going through PATCH /couplings/{id}, which could trigger
-    heavier session actions. The endpoint dispatches to the active owner:
-    canonical analyser replacement or external CAVA process restart.
+    heavier session actions. The endpoint replaces the active canonical analyser.
     """
 
     lower_cutoff_freq: int | None = None
@@ -1289,7 +1258,7 @@ async def control_coupling_transport(coupling_id: str, body: TransportBody, requ
 async def restart_coupling_cava(
     coupling_id: str, request: Request, body: RestartCouplingCavaBody
 ):
-    """Restart cava for the active coupling, optionally persisting new cutoff values."""
+    """Rebuild analysis for the active coupling, optionally persisting new cutoff values."""
     manager = _manager(request)
     storage = _storage(request)
 
@@ -1364,28 +1333,16 @@ async def restart_coupling_cava(
     if proposed_effect is not None:
         storage.save_effect(proposed_effect)
 
-    # Route to the correct rebuild path for the active session.  A
-    # canonical/pcm_pipeline session has no external cava process to
-    # restart — the equivalent operation is replace_pcm_analyser, which
-    # rebuilds the running CanonicalAnalysisPipeline with the persisted
-    # analyser configuration.  Only sessions whose bars_source is "cava"
-    # (external CAVA/FIFO) actually restart the cava process.
+    # Keep the historical endpoint URL compatible; rebuild canonical analysis.
     try:
-        if manager.active_bars_source == "pcm_pipeline":
-            profile = _build_engine_profile(coupling, storage)
-            if profile is None:
-                # Rollback storage before signalling the caller.
-                if analyser_snapshot is not None:
-                    storage.save_analyser(analyser_snapshot)
-                if effect_snapshot is not None:
-                    storage.save_effect(effect_snapshot)
-                raise HTTPException(
-                    status_code=422,
-                    detail="Coupling has broken FK references",
-                )
-            manager.replace_pcm_analyser(profile)
-        else:
-            await manager.restart_cava()
+        profile = _build_engine_profile(coupling, storage)
+        if profile is None:
+            if analyser_snapshot is not None:
+                storage.save_analyser(analyser_snapshot)
+            if effect_snapshot is not None:
+                storage.save_effect(effect_snapshot)
+            raise HTTPException(status_code=422, detail="Coupling has broken FK references")
+        manager.replace_pcm_analyser(profile)
     except HTTPException:
         raise
     except Exception as exc:
@@ -1492,7 +1449,7 @@ async def patch_coupling(coupling_id: str, request: Request, body: CouplingPatch
         changed = set(updates.keys())
         actionable = (
             _C_DEACTIVATE_FIELDS | _C_LIVE_FK_FIELDS
-            | _C_CAVA_FIELDS | _C_PCM_FIELDS | _C_RENDER_FIELDS
+            | _C_SPECTRUM_FIELDS | _C_PCM_FIELDS | _C_RENDER_FIELDS
         )
         if changed & actionable:
             await _apply_coupling_action(coupling, storage, manager, changed)

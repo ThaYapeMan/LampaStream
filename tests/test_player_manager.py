@@ -782,13 +782,13 @@ def test_cavacore_unavailable_raises_not_silently_falls_back() -> None:
 
 
 # ---------------------------------------------------------------------------
-# LMS activation routing: bars_source determines cava vs PCM path
+# LMS activation always uses canonical PCM
 # ---------------------------------------------------------------------------
 
 
 def _make_lms_storage(
     tmp_path: Path,
-    bars_source: str = "cava",
+    bars_source: str = "pcm_pipeline",
     spectrum_backend: str = "v2",
 ) -> tuple["Storage", "Coupling"]:
     """Storage with an LMS VirtualPlayer, Analyser with given bars_source/spectrum_backend."""
@@ -857,7 +857,6 @@ def test_lms_pcm_pipeline_path_when_bars_source_pcm_pipeline_v2(tmp_path: Path) 
         patch(f"{_pm}.get_channel_infos", new=AsyncMock(return_value=[])),
         patch(f"{_pm}.HueDriver") as mock_driver_cls,
         patch.object(manager, "_activate_lms_pcm", new=AsyncMock()) as mock_pcm,
-        patch.object(manager, "_activate_lms_cava", new=AsyncMock()) as mock_cava,
         patch.object(manager, "_start_squeezelite", new=MagicMock()),
         patch.object(manager, "_wait_for_shm", new=MagicMock()),
     ):
@@ -868,46 +867,18 @@ def test_lms_pcm_pipeline_path_when_bars_source_pcm_pipeline_v2(tmp_path: Path) 
         asyncio.run(manager.activate_coupling(coupling))
 
     mock_pcm.assert_called_once()
-    mock_cava.assert_not_called()
 
 
-def test_lms_cava_path_when_bars_source_cava(tmp_path: Path) -> None:
-    """bars_source='cava' (default) → _activate_lms_cava() called."""
-    storage, coupling = _make_lms_storage(tmp_path, bars_source="cava", spectrum_backend="v2")
-    manager = PlayerManager(storage)
-
-    fake_area = MagicMock()
-    fake_area.id = "ae-lms"
-    fake_area.name = "Living Room AE"
-
-    _pm = "lampastream.player_manager"
-    with (
-        patch(f"{_pm}.list_entertainment_areas", new=AsyncMock(return_value=[fake_area])),
-        patch(f"{_pm}.get_channel_infos", new=AsyncMock(return_value=[])),
-        patch(f"{_pm}.HueDriver") as mock_driver_cls,
-        patch.object(manager, "_activate_lms_pcm", new=AsyncMock()) as mock_pcm,
-        patch.object(manager, "_activate_lms_cava", new=AsyncMock()) as mock_cava,
-        patch.object(manager, "_start_squeezelite", new=MagicMock()),
-        patch.object(manager, "_wait_for_shm", new=MagicMock()),
-    ):
-        mock_driver = MagicMock()
-        mock_driver.start = AsyncMock()
-        mock_driver_cls.return_value = mock_driver
-
-        asyncio.run(manager.activate_coupling(coupling))
-
-    mock_cava.assert_called_once()
-    mock_pcm.assert_not_called()
 
 
 def test_installed_producer_matches_ingress_abi(tmp_path):
-    """External CAVA and canonical PCM select the same installed fork producer."""
+    """Canonical PCM uses the unchanged installed fork producer."""
     from lampastream.models import Profile
     from lampastream.player_manager import ActiveSession, PlayerManager
     from lampastream.storage import Storage
 
     manager = PlayerManager(Storage(tmp_path / 'config.json'))
-    cases = [('cava', 'squeezelite'), ('pcm_pipeline', 'squeezelite')]
+    cases = [('pcm_pipeline', 'squeezelite')]
     for mode, expected in cases:
         profile = Profile(player_mac='aa:bb:cc:dd:ee:ff', bars_source=mode)
         session = ActiveSession(profile)
@@ -922,7 +893,7 @@ def test_installed_producer_matches_ingress_abi(tmp_path):
                 manager._start_squeezelite(session, profile)
 
 
-@pytest.mark.parametrize("bars_source", ["cava", "pcm_pipeline"])
+@pytest.mark.parametrize("bars_source", ["pcm_pipeline"])
 def test_sync_group_activation_never_schedules_manual_unsync(tmp_path, bars_source):
     from lampastream.lms_follower import LmsSyncGroupObserver
 
@@ -941,7 +912,6 @@ def test_sync_group_activation_never_schedules_manual_unsync(tmp_path, bars_sour
 
         with patch.object(manager, "_start_squeezelite"), \
              patch.object(manager, "_activate_lms_pcm", new=AsyncMock()), \
-             patch.object(manager, "_activate_lms_cava", new=AsyncMock()), \
              patch.object(LmsSyncGroupObserver, "_run", idle), \
              patch.object(manager, "_delayed_unsync_and_follow", new=AsyncMock()) as unsync, \
              patch.object(manager, "_apply_probe_for_master", new=AsyncMock()) as probe, \

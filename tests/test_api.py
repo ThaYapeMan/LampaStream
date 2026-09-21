@@ -40,7 +40,7 @@ def _make_mock_manager() -> MagicMock:
     manager.latency_warning = None
     type(manager).applied_delay_ms = PropertyMock(return_value=0)
     type(manager).bridge_connected = PropertyMock(return_value=False)
-    type(manager).process_status = PropertyMock(return_value={"squeezelite": False, "cava": False})
+    type(manager).process_status = PropertyMock(return_value={"squeezelite": False})
     # WebSocket frame properties
     type(manager).last_colours = PropertyMock(return_value=[])
     type(manager).last_bars = PropertyMock(return_value=[])
@@ -73,15 +73,10 @@ def _make_mock_manager() -> MagicMock:
     type(manager).follow_target_name = PropertyMock(return_value=None)
     type(manager).active_player_type = PropertyMock(return_value=None)
     type(manager).airplay_receiving = PropertyMock(return_value=None)
-    # active_bars_source drives cross-mode analyser_id routing in
-    # _apply_coupling_action.  Default to "cava" so tests that do not
-    # explicitly set it still see the legacy FIFO restart path.
-    type(manager).active_bars_source = PropertyMock(return_value="cava")
     # Async methods
     manager.activate_coupling = AsyncMock()
     manager.deactivate = AsyncMock()
     manager.close = AsyncMock()
-    manager.restart_cava = AsyncMock()
     manager.refresh_probe = AsyncMock()
     # Sync live-update methods
     manager.update_onset_pipeline = MagicMock()
@@ -153,7 +148,7 @@ def test_get_status_returns_correct_shape(client: TestClient):
     assert "latency_warning" in body
     assert "processes" in body
     assert "squeezelite" in body["processes"]
-    assert "cava" in body["processes"]
+    assert "cava" not in body["processes"]
     assert "bridge_connected" in body
 
 
@@ -523,7 +518,6 @@ def test_create_and_get_effect(client: TestClient):
     assert resp2.json()["name"] == "Vivid"
 
 
-
 def _make_full_coupling(storage: Storage) -> Coupling:
     """Create and persist all entities required for a Coupling, return the Coupling."""
     player = VirtualPlayer(lms_host="10.0.0.1", player_mac="aa:bb:cc:dd:ee:ff")
@@ -625,13 +619,13 @@ def test_deactivate_coupling_endpoint(client: TestClient):
     assert client._storage.get_active_coupling_id() is None
 
 
-def test_patch_coupling_cava_field_triggers_restart_cava(client: TestClient):
+def test_patch_coupling_spectrum_field_rebuilds_analysis(client: TestClient):
     coupling = _make_full_coupling(client._storage)
     client._storage.set_active_coupling_id(coupling.id)
 
     resp = client.patch(f"/api/couplings/{coupling.id}", json={"bars": 40})
     assert resp.status_code == 200
-    client._manager.restart_cava.assert_awaited_once()
+    client._manager.replace_pcm_analyser.assert_called_once()
     client._manager.deactivate.assert_not_awaited()
 
 
@@ -644,8 +638,8 @@ def test_patch_coupling_deactivate_field_deactivates(client: TestClient):
     client._manager.deactivate.assert_awaited_once()
 
 
-def test_patch_coupling_analyser_id_restarts_cava_not_deactivate(client: TestClient):
-    """Swapping analyser_id on an active coupling must restart cava and
+def test_patch_coupling_analyser_id_rebuilds_analysis(client: TestClient):
+    """Swapping analyser_id on an active coupling must rebuild canonical analysis and
     rebuild the onset pipeline, but must NOT call deactivate()."""
     coupling = _make_full_coupling(client._storage)
     client._storage.set_active_coupling_id(coupling.id)
@@ -659,7 +653,7 @@ def test_patch_coupling_analyser_id_restarts_cava_not_deactivate(client: TestCli
     )
     assert resp.status_code == 200
     client._manager.deactivate.assert_not_awaited()
-    client._manager.restart_cava.assert_awaited_once()
+    client._manager.replace_pcm_analyser.assert_called_once()
     client._manager.update_onset_pipeline.assert_called_once()
     client._manager.update_render.assert_called_once()
 
@@ -668,7 +662,7 @@ def test_patch_coupling_analyser_id_restarts_cava_not_deactivate(client: TestCli
 
 
 def test_patch_coupling_energy_profile_id_update_render_only(client: TestClient):
-    """Swapping energy_profile_id must call update_render only — no cava restart,
+    """Swapping energy_profile_id must call update_render only — no analyser rebuild,
     no deactivate."""
     coupling = _make_full_coupling(client._storage)
     client._storage.set_active_coupling_id(coupling.id)
@@ -684,8 +678,8 @@ def test_patch_coupling_energy_profile_id_update_render_only(client: TestClient)
     )
     assert resp.status_code == 200
     client._manager.deactivate.assert_not_awaited()
-    client._manager.restart_cava.assert_not_awaited()
     client._manager.update_render.assert_called_once()
+    client._manager.replace_pcm_analyser.assert_not_called()
 
     saved = client._storage.get_coupling(coupling.id)
     assert saved is not None and saved.energy_profile_id == new_cf.id
@@ -693,14 +687,14 @@ def test_patch_coupling_energy_profile_id_update_render_only(client: TestClient)
 
 def test_ac_swap_session_remains_active(client: TestClient):
     """After swapping analyser_id on an active coupling the session is
-    not deactivated, restart_cava + update_onset_pipeline are called once
+    not deactivated, replace_pcm_analyser + update_onset_pipeline are called once
     (the live-update path), and the profile saved to storage is rebuilt from
     the NEW Analyser's settings.
 
     This is the canonical regression guard for the 'frozen lights' bug fixed
     in the 2026-09-06 routing refactor: analyser_id was in
     _C_DEACTIVATE_FIELDS (wrong) instead of _C_LIVE_FK_FIELDS, and
-    restart_cava() used stale session.coupling (wrong).
+    the old restart path used stale session.coupling (wrong).
     """
     # AC1: default bars=30, onset_delta=0.1
     coupling = _make_full_coupling(client._storage)
@@ -721,9 +715,9 @@ def test_ac_swap_session_remains_active(client: TestClient):
     assert client._storage.get_active_coupling_id() == coupling.id
     client._manager.deactivate.assert_not_awaited()
 
-    # Live-update path: cava restarted (picks up new bars) and onset pipeline
+    # Live-update path: analysis rebuilt (picks up new bars) and onset pipeline
     # rebuilt (picks up new onset_delta).
-    client._manager.restart_cava.assert_awaited_once()
+    client._manager.replace_pcm_analyser.assert_called_once()
     client._manager.update_onset_pipeline.assert_called_once()
 
     # Coupling in storage now points to AC2.
@@ -739,67 +733,6 @@ def test_ac_swap_session_remains_active(client: TestClient):
     assert saved_ac2.onset_delta == 0.5  # AC2, not AC1's default 0.1
 
 
-def test_analyser_id_canonical_to_fifo_deactivates_and_reactivates(
-    client: TestClient,
-):
-    """Changing analyser_id from a pcm_pipeline Analyser to a cava Analyser
-    crosses a mode boundary that cannot be hot-swapped.  Router must call
-    deactivate() then activate_coupling() (item 19).
-    """
-    # Old analyser: pcm_pipeline; new analyser: cava.
-    coupling = _make_full_coupling(client._storage)
-    old_ac = client._storage.get_analyser(coupling.analyser_id)
-    old_ac.bars_source = "pcm_pipeline"
-    old_ac.spectrum_backend = "v2"
-    client._storage.save_analyser(old_ac)
-
-    client._storage.set_active_coupling_id(coupling.id)
-    # Simulate an active pcm_pipeline session.
-    type(client._manager).active_bars_source = PropertyMock(
-        return_value="pcm_pipeline"
-    )
-
-    new_ac = Analyser(name="Cava AC", bars_source="cava", spectrum_backend="v2")
-    client._storage.save_analyser(new_ac)
-
-    resp = client.patch(
-        f"/api/couplings/{coupling.id}",
-        json={"analyser_id": new_ac.id},
-    )
-    assert resp.status_code == 200
-    # Cross-mode swap: full deactivate + reactivate.
-    client._manager.deactivate.assert_awaited_once()
-    client._manager.activate_coupling.assert_awaited_once()
-    # Hot-swap paths must NOT have been used.
-    client._manager.restart_cava.assert_not_awaited()
-
-
-def test_analyser_id_fifo_to_canonical_deactivates_and_reactivates(
-    client: TestClient,
-):
-    """Changing analyser_id from a cava Analyser to a pcm_pipeline Analyser
-    also crosses the mode boundary and requires a full reactivate (item 19).
-    """
-    coupling = _make_full_coupling(client._storage)
-    # Old analyser is the default cava one from _make_full_coupling.
-    client._storage.set_active_coupling_id(coupling.id)
-    type(client._manager).active_bars_source = PropertyMock(return_value="cava")
-
-    new_ac = Analyser(
-        name="PCM AC", bars_source="pcm_pipeline", spectrum_backend="v2",
-    )
-    client._storage.save_analyser(new_ac)
-
-    resp = client.patch(
-        f"/api/couplings/{coupling.id}",
-        json={"analyser_id": new_ac.id},
-    )
-    assert resp.status_code == 200
-    client._manager.deactivate.assert_awaited_once()
-    client._manager.activate_coupling.assert_awaited_once()
-    client._manager.restart_cava.assert_not_awaited()
-
-
 def test_analyser_id_same_mode_canonical_uses_replace_pcm_analyser(
     client: TestClient,
 ):
@@ -813,9 +746,6 @@ def test_analyser_id_same_mode_canonical_uses_replace_pcm_analyser(
     client._storage.save_analyser(old_ac)
 
     client._storage.set_active_coupling_id(coupling.id)
-    type(client._manager).active_bars_source = PropertyMock(
-        return_value="pcm_pipeline"
-    )
 
     new_ac = Analyser(
         name="PCM AC 2", bars_source="pcm_pipeline", spectrum_backend="v2",
@@ -829,7 +759,6 @@ def test_analyser_id_same_mode_canonical_uses_replace_pcm_analyser(
     assert resp.status_code == 200
     client._manager.deactivate.assert_not_awaited()
     client._manager.activate_coupling.assert_not_awaited()
-    client._manager.restart_cava.assert_not_awaited()
     client._manager.replace_pcm_analyser.assert_called_once()
 
 
@@ -847,29 +776,10 @@ def test_restart_cava_endpoint_on_canonical_session_routes_to_pcm_path(
     client._storage.save_analyser(ac)
 
     client._storage.set_active_coupling_id(coupling.id)
-    type(client._manager).active_bars_source = PropertyMock(
-        return_value="pcm_pipeline"
-    )
 
     resp = client.post(f"/api/couplings/{coupling.id}/restart-cava", json={})
     assert resp.status_code == 200
-    client._manager.restart_cava.assert_not_awaited()
     client._manager.replace_pcm_analyser.assert_called_once()
-
-
-def test_restart_cava_endpoint_on_cava_session_routes_to_cava_restart(
-    client: TestClient,
-):
-    """POST /api/couplings/{id}/restart-cava on a cava/FIFO session keeps
-    the legacy behaviour: manager.restart_cava is called (item 18)."""
-    coupling = _make_full_coupling(client._storage)
-    client._storage.set_active_coupling_id(coupling.id)
-    type(client._manager).active_bars_source = PropertyMock(return_value="cava")
-
-    resp = client.post(f"/api/couplings/{coupling.id}/restart-cava", json={})
-    assert resp.status_code == 200
-    client._manager.restart_cava.assert_awaited_once()
-    client._manager.replace_pcm_analyser.assert_not_called()
 
 
 def test_restart_cava_rollback_on_pcm_runtime_failure(client: TestClient):
@@ -887,9 +797,6 @@ def test_restart_cava_rollback_on_pcm_runtime_failure(client: TestClient):
     original_higher = ac.higher_cutoff_freq
 
     client._storage.set_active_coupling_id(coupling.id)
-    type(client._manager).active_bars_source = PropertyMock(
-        return_value="pcm_pipeline"
-    )
     client._manager.replace_pcm_analyser = MagicMock(
         side_effect=RuntimeError("engine unavailable")
     )
@@ -911,34 +818,6 @@ def test_restart_cava_rollback_on_pcm_runtime_failure(client: TestClient):
     )
 
 
-def test_restart_cava_rollback_on_fifo_runtime_failure(client: TestClient):
-    """BLOCKER 4: same rollback contract on the legacy FIFO / cava path."""
-    coupling = _make_full_coupling(client._storage)
-    ac = client._storage.get_analyser(coupling.analyser_id)
-    ac.bars_source = "cava"
-    ac.lower_cutoff_freq = 50
-    ac.higher_cutoff_freq = 10000
-    client._storage.save_analyser(ac)
-    original_lower = ac.lower_cutoff_freq
-    original_higher = ac.higher_cutoff_freq
-
-    client._storage.set_active_coupling_id(coupling.id)
-    type(client._manager).active_bars_source = PropertyMock(return_value="cava")
-    client._manager.restart_cava = AsyncMock(
-        side_effect=RuntimeError("cava spawn failed")
-    )
-
-    resp = client.post(
-        f"/api/couplings/{coupling.id}/restart-cava",
-        json={"lower_cutoff_freq": 200, "higher_cutoff_freq": 15000},
-    )
-    assert resp.status_code == 409, resp.text
-
-    ac_after = client._storage.get_analyser(coupling.analyser_id)
-    assert ac_after.lower_cutoff_freq == original_lower
-    assert ac_after.higher_cutoff_freq == original_higher
-
-
 def test_restart_cava_effect_rollback_on_pcm_runtime_failure(client: TestClient):
     """BLOCKER 4: effect (bass_hz/mid_hz) changes must also roll back."""
     coupling = _make_full_coupling(client._storage)
@@ -956,9 +835,6 @@ def test_restart_cava_effect_rollback_on_pcm_runtime_failure(client: TestClient)
     original_mid = effect.mid_hz
 
     client._storage.set_active_coupling_id(coupling.id)
-    type(client._manager).active_bars_source = PropertyMock(
-        return_value="pcm_pipeline"
-    )
     client._manager.replace_pcm_analyser = MagicMock(
         side_effect=RuntimeError("engine restart failed")
     )
@@ -976,44 +852,6 @@ def test_restart_cava_effect_rollback_on_pcm_runtime_failure(client: TestClient)
     assert effect_after.mid_hz == original_mid
 
 
-@pytest.mark.parametrize("old_mode,new_mode", [
-    ("cava", "pcm_pipeline"), ("pcm_pipeline", "cava"),
-])
-def test_active_analyser_bars_source_change_reactivates(client: TestClient, old_mode, new_mode):
-    """In-place mode edits must perform the same full restart as analyser swaps."""
-    coupling = _make_full_coupling(client._storage)
-    ac_id = client._storage.get_coupling(coupling.id).analyser_id
-    analyser = client._storage.get_analyser(ac_id)
-    analyser.bars_source = old_mode
-    client._storage.save_analyser(analyser)
-    client._storage.set_active_coupling_id(coupling.id)
-    state = {"mode": old_mode, "active": coupling.id}
-    type(client._manager).active_bars_source = PropertyMock(side_effect=lambda: state["mode"])
-
-    async def deactivate():
-        state.update(mode=None, active=None)
-
-    async def activate(selected):
-        assert state["active"] is None
-        state.update(mode=client._storage.get_analyser(selected.analyser_id).bars_source,
-                     active=selected.id)
-
-    client._manager.deactivate.side_effect = deactivate
-    client._manager.activate_coupling.side_effect = activate
-
-    resp = client.patch(f"/api/analysers/{ac_id}", json={"bars_source": new_mode})
-    assert resp.status_code == 200
-
-    # Must have been deactivated.
-    client._manager.deactivate.assert_awaited_once()
-    client._manager.activate_coupling.assert_awaited_once_with(coupling)
-    assert state == {"mode": new_mode, "active": coupling.id}
-
-    # Live-update paths must NOT have been called.
-    client._manager.restart_cava.assert_not_awaited()
-    client._manager.update_onset_pipeline.assert_not_called()
-
-
 def test_bars_source_roundtrip(client: TestClient):
     """bars_source is stored and returned by GET /api/analysers/{id}."""
     resp = client.post("/api/analysers", json={"name": "PCM Test", "bars_source": "pcm_pipeline"})
@@ -1024,10 +862,10 @@ def test_bars_source_roundtrip(client: TestClient):
     assert resp.status_code == 200
     assert resp.json()["bars_source"] == "pcm_pipeline"
 
-    # Default is "cava"
+    # Default is canonical PCM
     resp2 = client.post("/api/analysers", json={"name": "Cava Test"})
     assert resp2.status_code == 201
-    assert resp2.json()["bars_source"] == "cava"
+    assert resp2.json()["bars_source"] == "pcm_pipeline"
 
 
 # ---------------------------------------------------------------------------
@@ -1520,27 +1358,30 @@ def test_create_analyser_invalid_backend_rejected(client: TestClient):
     assert resp.status_code == 422
 
 
-def test_create_analyser_cava_fifo_with_cavacore_rejected(client: TestClient):
-    """POST /api/analysers with bars_source='cava' + spectrum_backend='cavacore' → error."""
+@pytest.mark.parametrize("backend", ["v2", "cavacore"])
+def test_create_analyser_external_cava_rejected(client: TestClient, backend):
+    """The retired source is rejected with either spectrum backend."""
     resp = client.post("/api/analysers", json={
-        "name": "Bad Combo AC",
+        "name": "Retired source",
         "bars_source": "cava",
-        "spectrum_backend": "cavacore",
+        "spectrum_backend": backend,
     })
-    assert resp.status_code in (400, 422)
+    assert resp.status_code == 422
 
 
-def test_patch_analyser_cava_fifo_with_cavacore_rejected(client: TestClient):
-    """PATCH with bars_source='cava' + spectrum_backend='cavacore' → 422."""
+@pytest.mark.parametrize("backend", ["v2", "cavacore"])
+def test_patch_analyser_external_cava_rejected(client: TestClient, backend):
+    """Reject the old route without changing persisted settings."""
     create_resp = client.post("/api/analysers", json={
         "name": "Combo Patch AC",
         "bars_source": "pcm_pipeline",
-        "spectrum_backend": "cavacore",
+        "spectrum_backend": backend,
     })
     ac_id = create_resp.json()["id"]
 
     patch_resp = client.patch(f"/api/analysers/{ac_id}", json={"bars_source": "cava"})
     assert patch_resp.status_code == 422
+    assert client.get(f"/api/analysers/{ac_id}").json() == create_resp.json()
 
 
 def test_virtual_player_follow_mode_roundtrip_and_default(client):
@@ -1622,12 +1463,6 @@ def test_ws_loudness_is_valid_json(client, values, expected):
     assert frame["type"] == "frame"
     assert frame["loudness_momentary_lufs"] == expected[0]
     assert frame["loudness_short_term_lufs"] == expected[1]
-
-
-@pytest.mark.parametrize("bars_source", [None, "cava", "pcm_pipeline"])
-def test_ws_preview_reports_active_bars_source(client, bars_source):
-    type(client._manager).active_bars_source = PropertyMock(return_value=bars_source)
-    assert _read_ws_status(client)["active_bars_source"] == bars_source
 
 
 @pytest.fixture()
@@ -1747,14 +1582,12 @@ def test_active_band_normalise_patch_is_live_and_round_trips(client):
     analyser.bars_source = "pcm_pipeline"
     client._storage.save_analyser(analyser)
     client._storage.set_active_coupling_id(coupling.id)
-    type(client._manager).active_bars_source = PropertyMock(return_value="pcm_pipeline")
     response = client.patch(f"/api/analysers/{analyser.id}", json={"band_normalise": True})
     assert response.status_code == 200
     assert response.json()["band_normalise"] is True
     assert client._storage.get_analyser(analyser.id).band_normalise is True
     assert client._manager.update_render.call_args.args[0].band_normalise is True
     client._manager.deactivate.assert_not_awaited()
-    client._manager.restart_cava.assert_not_awaited()
     client._manager.replace_pcm_analyser.assert_not_called()
 
 

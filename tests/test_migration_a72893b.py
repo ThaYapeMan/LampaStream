@@ -29,6 +29,17 @@ def historical():
     return json.loads(FIXTURE.read_text())
 
 
+def expected_current_rows(data, key):
+    # This retirement intentionally changes only the old internal analysis source.
+    rows = copy.deepcopy(data[key])
+    if key == 'analysers':
+        for row in rows:
+            if row.get('bars_source') == 'cava':
+                row['bars_source'] = 'pcm_pipeline'
+                row.setdefault('spectrum_backend', 'v2')
+    return rows
+
+
 def test_exact_a72893b_upgrade_preserves_every_current_field():
     old = historical()
     counts = dict(analysers=5, bridges=1, controllers=1, couplings=7,
@@ -44,7 +55,7 @@ def test_exact_a72893b_upgrade_preserves_every_current_field():
     assert current['schema_version'] == SCHEMA_VERSION
     for key in ('controllers', 'virtual_players', 'zones', 'analysers',
                 'couplings', 'player_latencies', 'active_coupling_id'):
-        assert current[key] == old[key]
+        assert current[key] == expected_current_rows(old, key)
     assert current['effects'] == old['scenes']
     assert current['energy_profiles'] == old['crossfaders']
     validate_current(current, references=True)
@@ -58,7 +69,7 @@ def test_unique_bridge_and_profile_are_converted_not_discarded():
     old['profiles'][0].update(id='unique-profile', bridge_id='unique-bridge', name='Unique')
     result = convert(old)
     for key in ('controllers', 'virtual_players', 'zones', 'analysers', 'couplings'):
-        assert all(row in result[key] for row in old[key])
+        assert all(row in result[key] for row in expected_current_rows(old, key))
     bridge = next(r for r in result['controllers'] if r['id'] == 'unique-bridge')
     assert bridge == dict(old['bridges'][0], type='hue')
     coupling = next(r for r in result['couplings'] if r['id'] == 'unique-profile')
@@ -76,7 +87,8 @@ def test_unique_bridge_and_profile_are_converted_not_discarded():
                 assert effect[field] == profile[field]
                 used.add(field)
         for field in profile.keys() & entity.keys() - {'id', 'name'}:
-            assert entity[field] == profile[field]
+            assert entity[field] == ('pcm_pipeline' if field == 'bars_source'
+                                     and profile[field] == 'cava' else profile[field])
             used.add(field)
         if collection == 'zones':
             assert entity['controller_id'] == profile['bridge_id']
@@ -254,7 +266,7 @@ def test_retained_profile_does_not_override_current_coupling_metadata(tmp_path, 
     result = json.loads(path.read_bytes())
     for key in ('controllers', 'virtual_players', 'zones', 'analysers',
                 'couplings', 'player_latencies', 'active_coupling_id'):
-        assert result[key] == data[key]
+        assert result[key] == expected_current_rows(data, key)
     assert result['effects'] == data['scenes']
     assert result['energy_profiles'] == data['crossfaders']
     assert set(result) == set(empty_config())
@@ -308,7 +320,7 @@ def test_independently_mutated_entity_wins_over_snapshot(collection, field, valu
     result = convert(data)
     for key in ('controllers', 'virtual_players', 'zones', 'analysers',
                 'couplings', 'player_latencies', 'active_coupling_id'):
-        assert result[key] == expected[key]
+        assert result[key] == expected_current_rows(expected, key)
     assert result['effects'] == expected['scenes']
     assert result['energy_profiles'] == expected['crossfaders']
     validate_current(result, references=True)

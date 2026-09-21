@@ -25,7 +25,7 @@ neither requires manual JSON edits.
 | CAVA Core | GCC, libfftw3-dev | Packaged native library plus FFTW runtime pulled by apt |
 | Squeezelite | GCC/make/patch, ALSA and codec headers | Pinned patched binary at /usr/local/bin/squeezelite; VISEXPORT mandatory |
 | Squeezelite default codecs | FLAC, Vorbis/Ogg, MAD, MPG123, FAAD development packages | Matching shared libraries: PCM/FLAC/Vorbis/MP3/AAC; no optional Opus/FFmpeg/ALAC/resampler flags |
-| External CAVA/FIFO | Debian CAVA + same pinned Squeezelite source | `cava` plus the shared `squeezelite` producer; separate derived-bars route |
+| External stock consumers | Debian CAVA + same pinned Squeezelite source | Retained for independent consumers; not used by LampaStream analysis |
 | AirPlay 2 | Autotools, FFmpeg, crypto/plist/Avahi/soxr/systemd development packages | Pinned shairport-sync + nqptp source builds, Avahi, capabilities, managed FIFO |
 | Frontend | Private Node 22.22.2 archive, pinned SHA256; npm ci | Compiled assets in wheel; Node is not a runtime requirement |
 | Services | systemd, polkit | lampastream user/audio group, repository unit, narrow receiver-restart authorization |
@@ -155,3 +155,15 @@ AirPlay builds include Shairport's metadata support. The installer provisions
 upgrade with an existing receiver configuration. Activation writes the managed
 metadata settings, including ten-second progress corrections. `--check` verifies
 the compiled metadata capability and the metadata FIFO without consuming it.
+
+### Internal CAVA route retirement
+
+The installer's existing stopped-service migration also rewrites persisted
+Analyser `bars_source=cava` to `pcm_pipeline`. Missing spectrum backends become
+`v2` (no native-library requirement); explicit backend choices and all other
+fields, including HPSS, remain unchanged. Validation, exact-byte backups and
+atomic replacement follow the same migration procedure above. Re-running against
+current data is a no-op. Startup does not perform migration.
+
+The external `cava` package is retained for independent stock SHM consumers;
+LampaStream itself only uses canonical PCM analysis.

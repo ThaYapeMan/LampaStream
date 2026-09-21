@@ -197,7 +197,7 @@ class Profile:
     # Higher values = longer suppression after a loud onset.  Range 0–1.
     onset_alpha: float = 0.9
     # onset_method: which ODF is used for onset detection.
-    #   "combined"  — full-spectrum spectral flux on cava bars (default, 30 Hz)
+    #   "combined"  — full-spectrum spectral flux on shared STFT (100 Hz)
     #   "multiband" — per-band flux on 100 Hz STFT data; fills onset_bass/mid/treble
     #   "superflux" — Böck & Widmer (2013) SuperFlux on 100 Hz STFT data
     onset_method: str = "combined"
@@ -209,7 +209,7 @@ class Profile:
     # CPU cost ~1 ms/frame at 100 Hz on a Proxmox LXC (2 vCPU) — opt-in only.
     use_hpss_separation: bool = False
     band_normalise: bool = False
-    bars_source: str = "cava"
+    bars_source: str = "pcm_pipeline"
     # Spectrum backend for the PCM pipeline path (AirPlay / native PCM).
     # "v2"      — LampaStream V2SpectrumEngine (Hamming STFT, np.max aggregation)
     # "cavacore" — upstream cavacore via ctypes (Hann, dual FFT, bandwidth-normalised mean)
@@ -245,15 +245,6 @@ class Profile:
             raise ValueError(
                 f"Invalid spectrum_backend {self.spectrum_backend!r}; "
                 f"must be one of {sorted(_VALID_ENGINE_IDS)}"
-            )
-        # bars_source="cava" means external CAVA FIFO — spectrum_backend has no
-        # meaning there.  "cavacore" specifically refers to the embedded Spectrum
-        # engine over canonical PCM, so this combination is an explicit error.
-        if self.bars_source == "cava" and self.spectrum_backend == "cavacore":
-            raise ValueError(
-                "bars_source='cava' (external CAVA FIFO) is incompatible with "
-                "spectrum_backend='cavacore' (embedded cavacore Spectrum engine). "
-                "Set bars_source='pcm_pipeline' to use the embedded cavacore backend."
             )
 
     def to_dict(self) -> dict:
@@ -425,14 +416,12 @@ class Analyser:
     bars: int = 30
     lower_cutoff_freq: int = 50
     higher_cutoff_freq: int = 12000
-    # HPSS: harmonic/percussive separation on canonical PCM or the legacy PCM tap.
+    # HPSS: harmonic/percussive separation on canonical PCM.
     # CPU cost ~1 ms/frame at 100 Hz on a 2-vCPU LXC — disabled by default.
     use_hpss_separation: bool = False
     band_normalise: bool = False
-    # "cava": existing cava/FIFO path (default for LMS players).
-    # "pcm_pipeline": canonical stereo SHM v1 → shared analysis/selected engine.
-    #   Same analysis pipeline as AirPlay; no external CAVA FIFO.
-    bars_source: str = "cava"
+    # Persisted schema compatibility only; analysis always uses canonical PCM.
+    bars_source: str = "pcm_pipeline"
     # Spectrum engine for every canonical PCM ingress (AirPlay and LMS PCM).
     # "v2"      — V2SpectrumEngine: LampaStream Hamming STFT, np.max, peak EMA AGC
     # "cavacore" — upstream cavacore: Hann dual-FFT, bandwidth-normalised mean, autosens
@@ -448,12 +437,6 @@ class Analyser:
             raise ValueError(
                 f"Invalid spectrum_backend {self.spectrum_backend!r}; "
                 f"must be one of {sorted(_VALID_ENGINE_IDS)}"
-            )
-        if self.bars_source == "cava" and self.spectrum_backend == "cavacore":
-            raise ValueError(
-                "bars_source='cava' (external CAVA FIFO) is incompatible with "
-                "spectrum_backend='cavacore' (embedded cavacore Spectrum engine). "
-                "Set bars_source='pcm_pipeline' to use the embedded cavacore backend."
             )
 
     def to_dict(self) -> dict:

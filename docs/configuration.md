@@ -17,14 +17,14 @@ it does not restore a previous process merely because a stored ID was active.
 - Coupling: links the player, zone, Analyser and EnergyProfile.
 
 Profile is an internal propagated runtime configuration, not a second authoritative
-backend selector. Runtime builders copy Analyser settings, including bars_source and
-spectrum_backend. Unknown IDs and incompatible combinations raise explicit errors.
+backend selector. Runtime builders copy Analyser settings, including
+spectrum_backend. Unknown engine IDs raise explicit errors.
 
 ## Analysis defaults
 
 | Field | Default | Meaning |
 |---|---|---|
-| `bars_source` | `cava` | LMS external FIFO; `pcm_pipeline` selects canonical LMS |
+| `bars_source` | `pcm_pipeline` | Schema compatibility field; only canonical PCM is valid |
 | `spectrum_backend` | `v2` | Canonical Spectrum engine; currently `v2` / `cavacore` |
 | `bars` | 30 | Spectrum bar count |
 | `lower_cutoff_freq` | 50 | Hz |
@@ -34,11 +34,13 @@ spectrum_backend. Unknown IDs and incompatible combinations raise explicit error
 | `onset_alpha` | 0.9 | Adaptive suppression decay |
 | `superflux_mu` | 3 | Superflux setting |
 | `superflux_lag` | 2 | Superflux lag |
-| `use_hpss_separation` | false | Optional HPSS on canonical PCM (both engines) or the legacy PCM tap |
+| `use_hpss_separation` | false | Optional HPSS on canonical PCM (both engines) |
 
-For embedded CAVA, set **both** `bars_source=pcm_pipeline` and
-`spectrum_backend=cavacore`. The external FIFO combination is rejected. AirPlay
-always uses canonical analysis; choose pcm_pipeline explicitly for clarity.
+For embedded CAVA, set `spectrum_backend=cavacore`. Both LMS and AirPlay use
+canonical PCM. The installer runs the existing offline migration before starting
+the new runtime: legacy `bars_source=cava` rows become `pcm_pipeline`, with `v2`
+when no backend was explicitly stored. Explicit backend choices, HPSS and all
+other settings are preserved. Direct config loading rejects unmigrated CAVA rows.
 
 Allowed engine IDs derive from the static registry. Saving/deserializing a valid
 engine ID does not load native code. Activation may still fail if unavailable.

@@ -45,7 +45,6 @@ Now Playing displays momentary LUFS beside Energy blend. This is observation onl
 `SustainedEnergyTracker` and `LayerMixer` retain their existing blend behavior.
 CAVA can have newer Spectrum intervals than shared-hop loudness; preview reads the
 latest loudness PublicationRecord separately without rewinding the Effects snapshot.
-The legacy external CAVA/FIFO route does not run this canonical processor.
 
 ## Extension status
 
@@ -53,14 +52,7 @@ ChromaAnalyzer remains a protocol extension point without a shipped algorithm.
 Processor families coexist; Loudness does not replace Spectrum, Beat or sustained
 energy. No additional analysis architecture or dependency is introduced.
 
-## Legacy external CAVA
-
-`bars_source=cava` selects the LMS external process/FIFO route. It can have its legacy
-PCM/onset/HPSS tap. HPSS also runs on canonical PCM with either V2 or CAVA Core;
-canonical loudness metering remains independent of the optional legacy tap. External FIFO is outside ENGINES and incompatible with an
-embedded `cavacore` request.
-
-### Optional HPSS on both routes
+## Optional HPSS on canonical PCM
 
 `use_hpss_separation` enables the existing `PcmHpss` algorithm on canonical PCM
 for both LMS and AirPlay, independently of `spectrum_backend`. The optional
@@ -81,15 +73,14 @@ EOS, resets on invalidation/new epochs, and starts fresh when enabled live. The
 last valid contribution remains available at clean EOS. Disabling restores zero
 HPSS fractions and the Effects fallback. Enabling adds FFT/median-filter work;
 target-device CPU budget and musical A/B checks remain deployment validation.
-The external FIFO route still requires its optional readable PCM side-tap.
 
 ### Optional canonical colour normalisation
 
 `band_normalise` defaults to false. Enable it to compare each canonical Spectrum
-bar with its own rolling average, using the same BandNormaliser as external FIFO.
+bar with its own rolling average, using BandNormaliser.
 It applies after either V2 (including pink compensation) or CAVA Core. The existing
 Effect `exertion_clip` remains the single clip control; steady bands at clip 3
-produce about 0.33 before sensitivity. FIFO always normalises, regardless of this flag.
+produce about 0.33 before sensitivity.
 
 Switching live does not restart the session. The next fresh spectrum seeds the
 EMA; carried historical bars are not processed again. Preview and Effects receive

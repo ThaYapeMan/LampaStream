@@ -816,7 +816,7 @@ ENGINES: dict[str, EngineSpec] = {
 # Single source of truth for valid engine IDs.  models.py and api.py import
 # these rather than maintaining their own copies.
 VALID_ENGINE_IDS: frozenset[str] = frozenset(ENGINES.keys())
-VALID_BARS_SOURCES: frozenset[str] = frozenset({"pcm_pipeline", "cava"})
+VALID_BARS_SOURCES: frozenset[str] = frozenset({"pcm_pipeline"})
 
 
 def make_spectrum_engine(

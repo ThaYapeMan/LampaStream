@@ -13,9 +13,9 @@ vi.mock('../lib/api', async importOriginal => ({
 
 const status = {
   active_coupling_id: 'c', active_zone_id: 'z', active_energy_profile_id: 'e',
-  active_bars_source: 'pcm_pipeline', active_player_type: null,
+  active_player_type: null,
   sync_master_name: 'Living room', sync_master: 'aa:bb:cc:dd:ee:ff', applied_delay_ms: 1100,
-  processes: { squeezelite: true, cava: false }, bridge_connected: true,
+  processes: { squeezelite: true }, bridge_connected: true,
   effect_type: 'spectrum_rgb', onset_method: 'combined',
 } as SocketStatus
 const props = { colour: { r: 1, g: 0, b: 0 }, channel_colours: [], onset: false, bars: [] }
@@ -27,17 +27,17 @@ beforeEach(() => {
   vi.mocked(getVirtualPlayers).mockResolvedValue([{ id: 'p', type: 'LMS' }] as never)
 })
 
-it('resolves the six technical status rows in order, preserving the preview layout', async () => {
+it('resolves the five technical status rows in order, preserving the preview layout', async () => {
   render(<NowPlaying {...props} status={status} />)
   const dl = screen.getByLabelText('Session status')
-  await within(dl).findByText('PCM Pipeline')
+  await within(dl).findByText('CAVA Core')
   expect(within(dl).getByText('CAVA Core')).toBeInTheDocument()
   expect(within(dl).getByText('Combined')).toBeInTheDocument()
   expect(within(dl).queryByText('Analyser')).not.toBeInTheDocument()
   expect(within(dl).queryByText('Energy Profile')).not.toBeInTheDocument()
   expect(within(dl).queryByText('Canonical analyser')).not.toBeInTheDocument()
   expect([...dl.querySelectorAll('dt')].map(el => el.textContent)).toEqual([
-    'Audio source', 'Spectrum engine', 'Beat detection', 'Effect', 'Sync master', 'Delay',
+    'Spectrum engine', 'Beat detection', 'Effect', 'Sync master', 'Delay',
   ])
   expect(within(dl).getByText('Living room')).toBeInTheDocument()
   expect(within(dl).getByText('aa:bb:cc:dd:ee:ff')).toBeInTheDocument()
@@ -61,18 +61,16 @@ it('shows muted placeholders while the analyser is unavailable', async () => {
   render(<NowPlaying {...props} status={status} />)
   await screen.findByText('squeezelite')
   const names = screen.getByLabelText('Session status').querySelectorAll('dd')
-  for (const index of [0, 1, 2]) {
+  for (const index of [0, 1]) {
     expect(names[index]).toHaveTextContent('—')
     expect(names[index].firstElementChild).toHaveClass('text-muted-foreground')
   }
 })
 
-it('only shows cava on the LMS FIFO path, and never squeezelite on AirPlay', async () => {
+it('shows squeezelite only for LMS and never an external CAVA process', async () => {
   const view = render(<NowPlaying {...props} status={status} />)
   await screen.findByText('squeezelite') // resolves player type from the entity list
   expect(screen.queryByText('cava', { exact: true })).not.toBeInTheDocument()
-  view.rerender(<NowPlaying {...props} status={{ ...status, active_bars_source: 'cava' }} />)
-  expect(screen.getByText('cava', { exact: true })).toBeInTheDocument()
   view.rerender(<NowPlaying {...props} status={{ ...status, active_player_type: 'AirPlay' }} />)
   expect(screen.queryByText('squeezelite')).not.toBeInTheDocument()
   expect(screen.queryByText('cava', { exact: true })).not.toBeInTheDocument()
@@ -81,31 +79,29 @@ it('only shows cava on the LMS FIFO path, and never squeezelite on AirPlay', asy
 
 it('resolves an AirPlay player from configuration when the websocket omits its type', async () => {
   vi.mocked(getVirtualPlayers).mockResolvedValue([{ id: 'p', type: 'AirPlay' }] as never)
-  render(<NowPlaying {...props} status={{ ...status, active_bars_source: 'cava' }} />)
+  render(<NowPlaying {...props} status={status} />)
   await screen.findByText('AirPlay', { exact: true })
   expect(screen.queryByText('squeezelite')).not.toBeInTheDocument()
   expect(screen.queryByText('cava', { exact: true })).not.toBeInTheDocument()
 })
 
-it('keeps follower and latency warnings visible outside the six status rows', async () => {
+it('keeps follower and latency warnings visible outside the five status rows', async () => {
   render(<NowPlaying {...props} status={{ ...status, follower_warning: 'Not synced', latency_warning: 'No latency data' }} />)
   await waitFor(() => expect(screen.getByText('Not synced')).toBeInTheDocument())
   expect(screen.getByText('No latency data')).toBeInTheDocument()
-  expect(screen.getByLabelText('Session status').querySelectorAll('dt')).toHaveLength(6)
+  expect(screen.getByLabelText('Session status').querySelectorAll('dt')).toHaveLength(5)
 })
 
 
-it('shows the external cava engine and takes beat detection from the analyser, not status', async () => {
+it('takes spectrum and beat detection from the analyser', async () => {
   vi.mocked(getAnalysers).mockResolvedValue([{
-    id: 'a', name: 'Custom label', bars_source: 'cava', spectrum_backend: 'v2', onset_method: 'superflux',
+    id: 'a', name: 'Custom label', spectrum_backend: 'v2', onset_method: 'superflux',
   }] as never)
   render(<NowPlaying {...props} status={status} />)
   const dl = screen.getByLabelText('Session status')
-  await within(dl).findByText('cava (external)')
-  expect(within(dl).getByText('Cava')).toBeInTheDocument()
+  await within(dl).findByText('V2')
   expect(within(dl).getByText('SuperFlux')).toBeInTheDocument()
   expect(within(dl).queryByText('Combined')).not.toBeInTheDocument()
-  expect(within(dl).queryByText('V2')).not.toBeInTheDocument()
 })
 
 
@@ -124,7 +120,7 @@ it('only exposes transport for LMS with a live follow target; AirPlay sync is n/
   const dl = screen.getByLabelText('Session status')
   expect(within(dl).getByText('n/a')).toHaveClass('text-muted-foreground')
   expect(within(dl).getByText('1100 ms')).toBeInTheDocument()
-  await within(dl).findByText('PCM Pipeline')
+  await within(dl).findByText('CAVA Core')
 })
 
 
@@ -141,5 +137,5 @@ it('shows raw spectrum, tick comparison, readouts and description from one pair'
   view.rerender(<NowPlaying {...props} bars={bars} status={status} />)
   expect(screen.queryByTestId('spectrum-legend')).not.toBeInTheDocument()
   expect(screen.queryByTestId('spectrum-tick')).not.toBeInTheDocument()
-  await screen.findByText('PCM Pipeline')
+  await screen.findByText('CAVA Core')
 })

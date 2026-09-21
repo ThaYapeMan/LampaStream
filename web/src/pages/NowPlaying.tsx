@@ -14,7 +14,6 @@ import {
   type Analyser,
   type EnergyProfile,
   getEnergyProfiles,
-  BARS_SOURCE_OPTIONS,
   SPECTRUM_BACKEND_OPTIONS,
   ONSET_METHODS,
   type VirtualPlayer,
@@ -70,12 +69,8 @@ function StatusGrid({ status, analyser, playerType }: {
   const unknown = <span className="text-muted-foreground">—</span>
   return (
     <dl aria-label="Session status" className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm items-start [&_dd]:min-w-0 [&_dd]:break-words">
-      <StatusRow label="Audio source">
-        {BARS_SOURCE_OPTIONS.find(option => option.value === analyser?.bars_source)?.label ?? unknown}
-      </StatusRow>
       <StatusRow label="Spectrum engine">
-        {analyser?.bars_source === 'cava' ? 'cava (external)'
-          : SPECTRUM_BACKEND_OPTIONS.find(option => option.value === analyser?.spectrum_backend)?.label ?? unknown}
+        {SPECTRUM_BACKEND_OPTIONS.find(option => option.value === analyser?.spectrum_backend)?.label ?? unknown}
       </StatusRow>
       <StatusRow label="Beat detection">
         {ONSET_METHODS.find(option => option.value === analyser?.onset_method)?.label ?? unknown}
@@ -113,9 +108,6 @@ function SessionDiagnostics({ status, playerType }: {
           </StatusRow>
           {playerType === 'LMS' && <>
             <StatusRow label="squeezelite"><ProcessBadge running={status.processes.squeezelite} /></StatusRow>
-            {status.active_bars_source === 'cava' && (
-              <StatusRow label="cava"><ProcessBadge running={status.processes.cava} /></StatusRow>
-            )}
           </>}
           {playerType === 'AirPlay' && (
             <StatusRow label="AirPlay">
@@ -227,7 +219,7 @@ function CouplingSelector({
         </div>
 
         <p className="text-xs text-muted-foreground italic leading-snug">
-          Switching couplings restarts the full session (squeezelite, cava,
+          Switching couplings restarts the full session (squeezelite, analysis,
           DTLS) and resets the BandNormaliser EMA. For a live A/B comparison,
           swap the active coupling's Analyser or Energy Profile instead —
           those update without a session restart.
@@ -578,7 +570,7 @@ export function NowPlaying({ expertMode = false, colour, channel_colours, onset,
                     </span>
                   )}
                   <span className="text-xs text-muted-foreground italic ml-auto">
-                    cava restarts briefly
+                    analysis restarts briefly
                   </span>
                 </div>
               </div>
@@ -653,7 +645,7 @@ export function NowPlaying({ expertMode = false, colour, channel_colours, onset,
                 </span>
               )}
               <span className="text-xs text-muted-foreground italic ml-auto">
-                cava restarts briefly
+                analysis restarts briefly
               </span>
             </div>
           </CardContent>

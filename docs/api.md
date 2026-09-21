@@ -81,7 +81,7 @@ unbound references can also be empty strings.
 | `sync_master_name` | string or null | Detected sync-master display name |
 | `applied_delay_ms` | integer | Current latency-probe delay in milliseconds; 0 without a session |
 | `latency_warning` | string or null | Latency warning text, when present |
-| `processes` | object | Exactly `squeezelite` and `cava` booleans indicating external process liveness; both false for AirPlay or no session. Embedded CAVA Core is not this `cava` process |
+| `processes` | object | `squeezelite` indicates external player process liveness; false for AirPlay or no session |
 | `bridge_connected` | boolean | Whether the session has a Hue output driver; not an independent network-health probe |
 | `effect_type` | string or null | Selected runtime visual algorithm ID |
 | `follower_warning` | string or null | LMS follower warning, when present |
@@ -109,8 +109,9 @@ for Zone selection. Pairing is still application configuration, not an installer
 
 ## Analysis configuration
 
-Analyser create/PATCH supports spectrum_backend and bars_source. Model/API validation
-uses the engine registry and rejects unsupported values and FIFO+embedded-CAVA conflicts.
+Analyser create/PATCH supports spectrum_backend. The compatibility field bars_source
+accepts only pcm_pipeline. Model/API validation
+uses the engine registry and rejects unsupported values.
 Passive validation does not require native availability. Activation does.
 
 An active Analyser PATCH routes analysis-owned fields to the current owner. Canonical
@@ -118,11 +119,9 @@ Spectrum settings create a candidate pipeline; Beat settings target the active
 BeatDetector. Failed runtime replacement restores stored/session configuration through
 the existing rollback path and returns an explicit error (typically HTTP 409).
 
-The historically named `restart-cava` coupling endpoint is owner-aware: it replaces
-canonical analysis for PCM mode and restarts external CAVA for FIFO mode. Failed changes
-roll back the persisted Analyser/effect/coupling snapshots. FIFO startup failure attempts
-to restore the old process configuration; if recovery also fails, cava is explicitly
-absent rather than represented by the terminated process.
+The historically named `restart-cava` coupling endpoint replaces canonical analysis.
+Failed changes roll back persisted Analyser/effect/coupling snapshots. The URL
+remains available for client compatibility; no external CAVA process is launched.
 
 ## Stop and retirement
 

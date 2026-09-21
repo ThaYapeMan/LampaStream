@@ -42,8 +42,8 @@ const mapi = api as {
   listLmsPlayers: ReturnType<typeof vi.fn>
 }
 
-const BASE_STATUS = { active_coupling_id: null, active_coupling_name: null, active_player_type: null, sync_master: null, sync_master_name: null, applied_delay_ms: 0, latency_warning: null, processes: { squeezelite: false, cava: false }, bridge_connected: false, airplay_receiving: null, version: '0.1' }
-const BASE_ANALYSER = { id: 'a1', name: 'Multiband', onset_method: 'multiband', onset_delta: 0.1, onset_alpha: 0.1, superflux_mu: 1, superflux_lag: 2, bars: 30, lower_cutoff_freq: 20, higher_cutoff_freq: 20000, use_hpss_separation: false, bars_source: 'cava' }
+const BASE_STATUS = { active_coupling_id: null, active_coupling_name: null, active_player_type: null, sync_master: null, sync_master_name: null, applied_delay_ms: 0, latency_warning: null, processes: { squeezelite: false }, bridge_connected: false, airplay_receiving: null, version: '0.1' }
+const BASE_ANALYSER = { id: 'a1', name: 'Multiband', onset_method: 'multiband', onset_delta: 0.1, onset_alpha: 0.1, superflux_mu: 1, superflux_lag: 2, bars: 30, lower_cutoff_freq: 20, higher_cutoff_freq: 20000, use_hpss_separation: false, bars_source: 'pcm_pipeline' }
 const BASE_CONTROLLER = { id: 'c1', name: 'Living Room Bridge', type: 'hue', host: '192.168.1.50', app_key_configured: true, client_key_configured: true }
 const BASE_ZONE = { id: 'z1', name: 'Zitkamer AE', controller_id: 'c1', entertainment_area_id: 'ea1', entertainment_area_name: 'Zitkamer AE', light_count: 2 }
 

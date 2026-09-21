@@ -1,6 +1,6 @@
 // Canonical list of onset detection methods accepted by the backend.
 // sync_engine.py switches on these exact string values; any value not in this
-// list silently falls through to cava-based onset (combined behaviour).
+// list must match backend validation for the shared PCM beat detector.
 // Virtual-player source types.  Keep in sync with VIRTUAL_PLAYER_TYPES in models.py.
 export const PLAYER_TYPES = [
   { value: 'LMS',     label: 'LMS (squeezelite)' },
@@ -17,14 +17,9 @@ export const ONSET_METHODS = [
 
 export type OnsetMethod = typeof ONSET_METHODS[number]['value']
 
-export const BARS_SOURCE_OPTIONS = [
-  { value: 'cava',         label: 'Cava',         description: 'Default — spectrum via the cava FIFO analyser. Proven, low-CPU, works with all LMS players.' },
-  { value: 'pcm_pipeline', label: 'PCM Pipeline',  description: 'Direct read from the squeezelite shared-memory PCM tap — same pipeline as AirPlay. No cava process; lower latency.' },
-] as const
-
 export const SPECTRUM_BACKEND_OPTIONS = [
   { value: 'v2', label: 'V2', description: 'Shared 2048/Hamming STFT; logarithmic bands, peak EMA normalization and per-bar falloff.' },
-  { value: 'cavacore', label: 'CAVA Core', description: 'Canonical stereo PCM; native 4096/8192 Hann FFTs and CAVA conditioning at 100 Hz. Requires CAVA + FFTW.' },
+  { value: 'cavacore', label: 'CAVA Core', description: 'Canonical stereo PCM; native 4096/8192 Hann FFTs and CAVA conditioning at 100 Hz. Requires the embedded cavacore library and FFTW.' },
 ] as const
 
 // Canonical list of colour modes — kept as deprecated alias.
@@ -77,7 +72,7 @@ export interface ApiStatus {
   sync_master_name: string | null
   applied_delay_ms: number
   latency_warning: string | null
-  processes: { squeezelite: boolean; cava: boolean }
+  processes: { squeezelite: boolean }
   bridge_connected: boolean
   airplay_receiving: boolean | null
 }
@@ -196,7 +191,6 @@ export interface Analyser {
   higher_cutoff_freq: number
   use_hpss_separation: boolean
   band_normalise?: boolean
-  bars_source: string
   spectrum_backend: string
 }
 

@@ -1454,8 +1454,12 @@ Native sample-derived timing was introduced in Phase 3. Phase 8 is:
 
 ### Phase 9 — CAVA retention decision
 
-When native PCM path is complete and validated on all active source paths, assess CAVA:
-unique capability? maintenance cost? Decision: retain, adapt, or deprecate.
+Decision: **deprecated and removed** for LampaStream's internal external-CAVA/FIFO
+analysis route. Canonical PCM provides onset and HPSS parity (validated in
+`d1f5e6d`); the hardware CPU comparison was settled by the user before this work.
+See the “remove legacy bars_source=cava” task and [migration details](configuration.md).
+Embedded cavacore remains supported. Squeezelite's named SHM ABI and independent
+external stock consumers are unchanged.
 
 ---
 

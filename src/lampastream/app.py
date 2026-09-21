@@ -42,7 +42,7 @@ app.include_router(api_router)
 @app.on_event("startup")
 async def on_startup() -> None:
     # A previously "active" coupling from before a restart has no real
-    # squeezelite/cava process behind it anymore — clear the stale state
+    # squeezelite process behind it anymore — clear the stale state
     # rather than pretending it's still running.
     app.state.configuration_mutation_lock = asyncio.Lock()
     lease = configuration_lease(app.state.storage.path)
@@ -132,7 +132,6 @@ async def ws_preview(websocket: WebSocket):
                 "active_coupling_name": player_manager.active_coupling_name,
                 "active_zone_id": player_manager.active_zone_id,
                 "active_energy_profile_id": player_manager.active_energy_profile_id,
-                "active_bars_source": player_manager.active_bars_source,
                 "active_player_type": player_manager.active_player_type,
                 "follow_target_mac": player_manager.follow_target_mac,
                 "follow_target_name": player_manager.follow_target_name,

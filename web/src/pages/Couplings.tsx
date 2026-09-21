@@ -450,7 +450,7 @@ function CouplingWorkspace({
 
   // Analyser context
   const analyserContext = analyser
-    ? `${analyser.bars} bars · ${analyser.onset_method} · ${analyser.bars_source === 'pcm_pipeline' ? 'PCM' : 'cava'}`
+    ? `${analyser.bars} bars · ${analyser.onset_method} · PCM`
     : undefined
 
   // Zone controller type (resolved from controllers list, not hardcoded)

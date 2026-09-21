@@ -1,6 +1,5 @@
-"""Process lifecycle: squeezelite (virtual LMS player) + cava (spectrum
-analysis) + a HueDriver Entertainment session, all tied to whichever Profile
-is currently active.
+"""Process lifecycle: squeezelite, canonical PCM analysis and Hue Entertainment,
+all tied to the currently active Profile.
 
 Only one profile can be active at a time (a Hue Bridge only supports a
 single Entertainment stream), which this class enforces directly rather
@@ -11,7 +10,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import os
 import re
 import shutil
 import subprocess
@@ -29,7 +27,6 @@ from .models import BridgeConfig, Controller, Coupling, Profile, VirtualPlayerTy
 from .pcm_source import (
     AirPlayPipeStereoSource,
     PcmSource,
-    SqueezeliteShmSource,
     SqueezeliteShmStereoSource,
 )
 from .spectrum_engine import make_spectrum_engine as _make_spectrum_engine
@@ -93,7 +90,7 @@ def _build_engine_profile(coupling: Coupling, storage: Storage) -> Profile | Non
     """Build a Profile from a Coupling's linked entities.
 
     Returns None if any referenced entity is missing (broken FK).  Used
-    internally so that SyncEngine and cava keep receiving a Profile while the
+    internally so that SyncEngine keeps receiving a Profile while the
     rest of the stack works with Coupling + entities.
     """
     player = storage.get_virtual_player(coupling.player_id)
@@ -242,10 +239,6 @@ class ActiveSession:
         self.coupling = coupling
         self.player_type = player_type
         self.squeezelite: subprocess.Popen | None = None
-        self.cava: subprocess.Popen | None = None
-        self.fifo_path: Path = _RUN_DIR / f"{profile.id}.fifo"
-        self.cava_conf_path: Path = _RUN_DIR / f"{profile.id}.conf"
-        self.cava_log_path: Path = _RUN_DIR / f"{profile.id}.cava.log"
         self.sync_engine: SyncEngine | None = None
         self.hue_driver: HueDriver | None = None
         self.task: asyncio.Task | None = None
@@ -408,14 +401,12 @@ class PlayerManager:
     @property
     def process_status(self) -> dict[str, bool]:
         if not self._active:
-            return {"squeezelite": False, "cava": False}
+            return {"squeezelite": False}
         if self._active.player_type == VirtualPlayerType.AIRPLAY:
-            return {"squeezelite": False, "cava": False}
+            return {"squeezelite": False}
         sl = self._active.squeezelite
-        cava = self._active.cava
         return {
             "squeezelite": bool(sl and sl.poll() is None),
-            "cava": bool(cava and cava.poll() is None),
         }
 
     @property
@@ -528,16 +519,6 @@ class PlayerManager:
         return self._active.profile.onset_method if self._active else None
 
     @property
-    def active_bars_source(self) -> str | None:
-        """The bars_source currently in effect on the active session, or None.
-
-        Used by the coupling PATCH router to decide whether an ``analyser_id``
-        swap crosses a mode boundary (canonical ↔ FIFO) and therefore needs a
-        full deactivate/reactivate rather than a live pipeline swap.
-        """
-        return self._active.profile.bars_source if self._active else None
-
-    @property
     def active_sensitivity(self) -> float | None:
         return self._active.profile.sensitivity if self._active else None
 
@@ -545,7 +526,7 @@ class PlayerManager:
         """Activate a Coupling, resolving all linked entities natively.
 
         Controller is used directly for Hue calls instead of the old BridgeConfig
-        lookup.  A Profile is built internally so that SyncEngine and cava keep
+        lookup.  A Profile is built internally so that SyncEngine keeps
         receiving a Profile while the rest of the stack works with entities.
         """
         await self.deactivate()
@@ -677,13 +658,10 @@ class PlayerManager:
         output_config: HueOutputConfig,
         channels: list[ChannelInfo],
     ) -> None:
-        """LMS path: squeezelite + (external CAVA or canonical analysis) + Hue."""
+        """LMS path: squeezelite + canonical PCM analysis + Hue."""
         self._start_squeezelite(session, profile)
 
-        if profile.bars_source == "pcm_pipeline":
-            await self._activate_lms_pcm(session, profile, mellow_profile, output_config, channels)
-        else:
-            await self._activate_lms_cava(session, profile, mellow_profile, output_config, channels)
+        await self._activate_lms_pcm(session, profile, mellow_profile, output_config, channels)
 
         # Adapter selection is ingress/session responsibility. Downstream sees only
         # TrackPositionSource. Resolve the follower's actual selected MAC dynamically.
@@ -740,56 +718,6 @@ class PlayerManager:
             name="lms-unsync",
         )
         session.unsync_task.add_done_callback(_log_task_failure)
-
-    async def _activate_lms_cava(
-        self,
-        session: ActiveSession,
-        profile: Profile,
-        mellow_profile: Profile | None,
-        output_config: HueOutputConfig,
-        channels: list[ChannelInfo],
-    ) -> None:
-        """LMS cava sub-path: squeezelite + cava/FIFO + optional SHM PCM tap.
-
-        bars_source='cava': spectrum bars come from the external CAVA process via FIFO.
-        spectrum_backend is only meaningful when bars_source='pcm_pipeline'.
-        The invalid combination bars_source='cava' + spectrum_backend='cavacore' is
-        rejected at the model layer before this path is reached.
-        """
-        engine = SyncEngine(
-            str(session.fifo_path), profile, probe=session.probe,
-            mellow_profile=mellow_profile,
-        )
-        session.sync_engine = engine
-
-        self._create_fifo(session)
-        engine.start()
-        self._start_cava(session, profile)
-
-        shm_source = SqueezeliteShmSource()
-        try:
-            shm_source.open(profile.player_mac)
-            session.shm_source = shm_source
-            engine.attach_shm_source(shm_source)
-            log.debug(
-                "PCM tap SHM source opened for coupling %s",
-                session.coupling and session.coupling.name,
-            )
-        except Exception as exc:
-            log.warning(
-                "Could not open squeezelite SHM for PCM onset tap "
-                "(cava-based onset still active): %s",
-                exc,
-            )
-
-        hue_driver = HueDriver(output_config, channels)
-        await hue_driver.start()
-        session.hue_driver = hue_driver
-
-        session.task = asyncio.create_task(engine.run(hue_driver))
-        session.task.add_done_callback(_log_task_failure)
-        session.poller_task = asyncio.create_task(self._poll_sync_master(session))
-        session.poller_task.add_done_callback(_log_task_failure)
 
     async def _activate_lms_pcm(
         self,
@@ -952,16 +880,13 @@ class PlayerManager:
             except Exception:  # noqa: BLE001 - best-effort teardown
                 log.exception("Error stopping Hue Entertainment session")
 
-        for proc in (session.cava, session.squeezelite):
+        for proc in (session.squeezelite,):
             if proc and proc.poll() is None:
                 proc.terminate()
                 try:
                     proc.wait(timeout=3)
                 except subprocess.TimeoutExpired:
                     proc.kill()
-
-        for p in (session.fifo_path, session.cava_conf_path):
-            p.unlink(missing_ok=True)
 
         # squeezelite creates /dev/shm/squeezelite-<mac> and never removes it.
         # Without this, every activate/deactivate cycle leaves an orphaned
@@ -988,96 +913,6 @@ class PlayerManager:
                 log.info("Removed orphaned squeezelite shm segment %s", seg.name)
             except OSError as exc:
                 log.warning("Could not remove %s: %s", seg.name, exc)
-
-    async def restart_cava(self) -> None:
-        """Restart cava within the active session without touching squeezelite or Hue.
-
-        Re-reads the profile from storage so that frequency-cutoff changes
-        saved via PATCH /api/profiles/{id} take effect.  Squeezelite keeps
-        running and the Hue Entertainment session stays open throughout.
-
-        Transactional contract (BLOCKER 4): a failed ``_start_cava`` MUST
-        NOT leave the runtime with a mutated ``session.profile`` and no
-        cava process.  On failure we restore ``session.profile`` /
-        ``session.coupling`` / the sync engine's profile to the pre-call
-        snapshot and attempt to relaunch cava with the old profile; if
-        that relaunch also fails, ``session.cava`` is left ``None`` as an
-        explicit inactive-cava state (the caller then rolls back persisted
-        storage so the three views — storage, session, runtime — agree).
-        """
-        if self._active is None:
-            raise RuntimeError("No active session")
-        session = self._active
-
-        if not session.coupling:
-            raise RuntimeError("No active coupling — cannot restart cava")
-
-        # Reload coupling from storage so any FK changes (e.g. analyser_id
-        # swapped via PATCH) are reflected when rebuilding the profile.
-        fresh = self.storage.get_coupling(session.coupling.id)
-        if fresh is None:
-            raise RuntimeError("Active coupling has been deleted from storage")
-        profile = _build_engine_profile(fresh, self.storage)
-        if profile is None:
-            raise RuntimeError("Active coupling has broken FK references")
-
-        # Snapshot the pre-call runtime state.  These references stay live
-        # until we either commit the new profile (success path) or roll
-        # back (failure path).
-        old_profile = session.profile
-        old_coupling = session.coupling
-
-        # Tear down the old cava process now — we need the FIFO free
-        # before starting a new writer.  session.cava is set to None
-        # immediately so a partial failure below never leaves us pointing
-        # at a terminated process.
-        if session.cava and session.cava.poll() is None:
-            session.cava.terminate()
-            try:
-                session.cava.wait(timeout=3)
-            except subprocess.TimeoutExpired:
-                session.cava.kill()
-        session.cava = None
-
-        # Tentatively commit the new profile.
-        session.coupling = fresh
-        session.profile = profile
-        if session.sync_engine is not None:
-            session.sync_engine.update_profile(profile)
-
-        try:
-            self._start_cava(session, profile)
-        except Exception:
-            log.exception(
-                "restart_cava: _start_cava(new profile=%s) failed — rolling back",
-                profile.name,
-            )
-            # BLOCKER 4: restore the pre-call snapshot so session/runtime
-            # match what the caller is about to roll storage back to.
-            session.coupling = old_coupling
-            session.profile = old_profile
-            if session.sync_engine is not None:
-                try:
-                    session.sync_engine.update_profile(old_profile)
-                except Exception:  # noqa: BLE001 — best-effort rollback
-                    log.exception("restart_cava: rollback update_profile raised")
-            # Best-effort restore of a usable cava process.  If this also
-            # fails, session.cava stays None — an EXPLICIT inactive-cava
-            # state (session.cava is None; downstream visibility via
-            # normal cava.poll() checks).  The caller (api.py) rolls
-            # persisted storage back so all three views agree.
-            try:
-                self._start_cava(session, old_profile)
-            except Exception:  # noqa: BLE001 — best-effort restore
-                log.exception(
-                    "restart_cava: rollback _start_cava(old profile) failed — "
-                    "session has no cava process, runtime is in explicit "
-                    "inactive-cava state"
-                )
-                session.cava = None
-            raise
-
-        log.info("cava restarted for profile %s", profile.name)
 
     def update_onset_pipeline(self, profile: Profile) -> None:
         """Switch PCM onset method live on the active session."""
@@ -1117,11 +952,7 @@ class PlayerManager:
             )
         source = self._active.shm_source
         if source is None:
-            log.warning(
-                "replace_pcm_analyser: active session has no shm_source "
-                "(bars_source='cava'?); ignoring spectrum_backend swap"
-            )
-            return
+            raise RuntimeError("Active session has no canonical PCM source")
 
         old_profile = self._active.profile
 
@@ -1460,23 +1291,11 @@ class PlayerManager:
             cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
         )
 
-    def _create_fifo(self, session: ActiveSession) -> None:
-        """Create the FIFO cava will write to and the reader will read from.
-
-        Split out from _start_cava so the reader can attach to the FIFO
-        before cava starts writing - see the ordering note in activate().
-        """
-        if session.fifo_path.exists():
-            session.fifo_path.unlink()
-        os.mkfifo(session.fifo_path)
-
     def _wait_for_shm(self, mac: str, timeout: float = 10.0, interval: float = 0.1) -> None:
         """Wait until squeezelite's shared-memory segment appears in /dev/shm.
 
         squeezelite creates /dev/shm/squeezelite-<mac> a moment after it
-        starts.  Starting cava before the segment exists causes it to bail out
-        immediately with "Could not open source", which on a brand-new profile
-        looked like cava just silently died.
+        starts. Wait before opening the canonical PCM reader.
         """
         path = Path(f"/dev/shm/squeezelite-{mac}")
         deadline = time.monotonic() + timeout
@@ -1487,39 +1306,3 @@ class PlayerManager:
                 )
             time.sleep(interval)
         log.debug("squeezelite SHM segment ready: %s", path)
-
-    def _start_cava(self, session: ActiveSession, profile: Profile) -> None:
-        binary = shutil.which("cava")
-        if not binary:
-            raise RuntimeError("cava binary not found on PATH")
-
-        mac = profile.player_mac
-        self._wait_for_shm(mac)
-        conf = f"""[general]
-bars = {profile.bars}
-lower_cutoff_freq = {profile.lower_cutoff_freq}
-higher_cutoff_freq = {profile.higher_cutoff_freq}
-
-[input]
-method = shmem
-source = /squeezelite-{mac}
-
-[output]
-method = raw
-raw_target = {session.fifo_path}
-data_format = binary
-bit_format = 8bit
-channels = mono
-"""
-        session.cava_conf_path.write_text(conf)
-        # Keep cava's stderr instead of discarding it. Debugging why cava
-        # kept dying was needlessly hard because its output went to
-        # DEVNULL - the process just showed up as <defunct> with no clue
-        # why. Its log is small and only written on errors.
-        session.cava_log_path.write_text("")
-        cava_log = session.cava_log_path.open("ab")
-        session.cava = subprocess.Popen(
-            [binary, "-p", str(session.cava_conf_path)],
-            stdout=subprocess.DEVNULL,
-            stderr=cava_log,
-        )
