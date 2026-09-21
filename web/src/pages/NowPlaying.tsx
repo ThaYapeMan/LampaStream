@@ -242,6 +242,7 @@ function CouplingSelector({
 }
 
 type Props = Pick<PreviewState, 'colour' | 'channel_colours' | 'onset' | 'bars' | 'status'> & {
+  expertMode?: boolean
   onOpenEnergyProfile?: (id: string) => void
   last_energy_input?: number
   normalised_bars?: number[]
@@ -253,7 +254,7 @@ type Props = Pick<PreviewState, 'colour' | 'channel_colours' | 'onset' | 'bars' 
   connected?: boolean
 }
 
-export function NowPlaying({ colour, channel_colours, onset, onset_bass = false, onset_mid = false, onset_treble = false, mix = 0, loudness_momentary_lufs = null, bars, normalised_bars, status, connected = true, onOpenEnergyProfile, last_energy_input = 0 }: Props) {
+export function NowPlaying({ expertMode = false, colour, channel_colours, onset, onset_bass = false, onset_mid = false, onset_treble = false, mix = 0, loudness_momentary_lufs = null, bars, normalised_bars, status, connected = true, onOpenEnergyProfile, last_energy_input = 0 }: Props) {
   const couplingId = status?.active_coupling_id ?? null
   const zoneId = status?.active_zone_id ?? null
 
@@ -480,7 +481,7 @@ export function NowPlaying({ colour, channel_colours, onset, onset_bass = false,
               <span className="text-[10px] text-muted-foreground">High energy</span>
             </div>
           </div>
-          <LiveEnergySource key={activeEnergyProfile?.id ?? 'none'} profile={activeEnergyProfile} active={!!couplingId}
+          <LiveEnergySource expertMode={expertMode} key={activeEnergyProfile?.id ?? 'none'} profile={activeEnergyProfile} active={!!couplingId}
             onOpen={onOpenEnergyProfile} onUpdated={updated => setEnergyProfiles(items => items.map(item => item.id === updated.id ? updated : item))} />
           <SessionDiagnostics status={status} playerType={playerType} />
         </CardContent>

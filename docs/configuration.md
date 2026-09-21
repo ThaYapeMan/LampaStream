@@ -279,8 +279,13 @@ still requires target-LXC verification.
 
 ### Energy Profile source selection
 
-`energy_source` defaults to `sustained`, preserving the existing input and blend
-response. With a PCM tap this uses SustainedEnergyTracker; **canonical sessions
+`energy_source` defaults to `sustained` in the API and stored-profile model, preserving
+existing profiles. Newly created profiles in the UI use `peak_envelope` with Auto.
+The Standard editor hides energy-source settings entirely; select Expert in the
+header or profile editor to configure them. This browser preference persists across
+Energy Profiles and Now Playing through local storage (or for the current session
+when storage is blocked). Existing profiles retain their selected input and blend
+response. The `sustained` source with a PCM tap uses SustainedEnergyTracker; **canonical sessions
 currently publish `sustained_energy=None` and therefore use raw `full`**. A low
 canonical blend on steady music is not evidence that the dual-timescale tracker
 decayed: that tracker is not its input. Optional colour band normalisation does
@@ -305,3 +310,39 @@ alongside it in loudness modes. Save changes to compare their live effect.
 
 These behaviours are code/test-verified; musical A/B judgement remains a live
 deployment check.
+
+
+### Peak envelope (`peak_envelope`)
+
+Peak envelope uses unweighted, phase-safe stereo RMS (`AudioFeatures.level`),
+not momentary LUFS or normalised spectrum bars. It follows rising RMS quickly
+and falling RMS slowly, then divides the current RMS by that envelope and clamps
+the result to 0..1. The RMS window is 2048 canonical samples (about 42.7 ms at
+48 kHz), published on the existing shared-hop clock by the loudness processor.
+Missing or non-finite RMS produces zero without updating the envelope; measured
+silence produces zero and allows the envelope to release. External CAVA/FIFO has
+no canonical PCM RMS, so this mode receives zero there; select a PCM analyser.
+
+This option addresses the reported lack of useful energy variation on heavily
+mastered tracks when using [LUFS-based source selection](#energy-profile-source-selection).
+It preserves short-term amplitude dips independently of the LUFS window. It does
+not promise variation from a perfectly constant input: an envelope initialized at
+that input gives a ratio of 1.0. Rising transients can also reach the clamp while
+the finite attack catches up. The current `loudness_adaptive` implementation has
+a six-LU minimum span and converges near 0.5 on a strictly constant LUFS input;
+this change leaves that implementation intact.
+
+In Expert mode, **Auto** uses preset attack/release time constants of **0.05 s**
+and **2.0 s**, regardless of stored manual values. The envelope self-calibrates
+its amplitude reference; Auto does not dynamically tune the time constants.
+Switching to **Manual** reveals **Attack (s)** and **Release (s)**. Attack controls
+how quickly the reference rises after a louder input. Release controls how slowly
+it decays after a quieter input. Both must be finite and positive, and Attack
+must be strictly shorter than Release. Switching back to Auto keeps the stored
+manual values but stops using them. Source/settings changes reset the mixer and
+envelope. Blend thresholds and Response still apply after source selection.
+
+Reference systems checked for this design: [LedFx's melbank filtering](https://docs.ledfx.app/en/latest/developer/melbanks.html)
+uses attack/decay filtering for reactive signals; [Logic Pro's Compressor controls](https://support.apple.com/en-nz/guide/logicpro/lgcef1bec9f3/10.7/mac/11.0)
+retain Attack and Release terminology. LampaStream uses the same DSP terms in
+Expert mode while keeping source configuration out of Standard mode.

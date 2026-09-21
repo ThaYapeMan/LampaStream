@@ -110,6 +110,7 @@ class ProcessorUpdate:
     onset_bass_strength: float | None = None
     onset_mid_strength: float | None = None
     onset_treble_strength: float | None = None
+    level: float | None = None
     # None during warmup/not produced; -inf is the explicit silence sentinel.
     loudness_momentary_lufs: float | None = None
     loudness_short_term_lufs: float | None = None

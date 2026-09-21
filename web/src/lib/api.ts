@@ -226,6 +226,9 @@ export interface EnergyProfile {
   lufs_floor?: number
   lufs_ceiling?: number
   adaptation_tau_s?: number
+  peak_envelope_auto?: boolean
+  peak_attack_s?: number
+  peak_release_s?: number
 }
 
 export interface Coupling {
@@ -320,4 +323,5 @@ export const ENERGY_SOURCE_OPTIONS = [
   { value: 'sustained', label: 'Sustained', description: 'Existing sustained energy, or full-band fallback when unavailable.' },
   { value: 'loudness_fixed', label: 'Fixed loudness', description: 'Absolute LUFS inside a fixed window; steady loud music stays high.' },
   { value: 'loudness_adaptive', label: 'Adaptive loudness', description: 'Slow programme-relative window; steady material becomes ordinary.' },
+  { value: 'peak_envelope', label: 'Peak envelope', description: 'Self-calibrating RMS peak tracking; follows level variation on heavily mastered tracks.' },
 ] as const

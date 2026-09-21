@@ -102,3 +102,110 @@ def test_sync_engine_uses_freshest_loudness_without_mutating_spectrum_publicatio
     assert engine.last_energy_input == pytest.approx(19/22)
     assert record.features.loudness_momentary_lufs is None
     assert record.features.full == .2
+
+
+def peak_features(level, lufs=None):
+    result = features(lufs=lufs)
+    result.level = level
+    return result
+
+
+def test_peak_normalisation_attack_release_and_clamping():
+    selector = EnergyInput(Profile(energy_source="peak_envelope"))
+    assert selector.select(peak_features(.5), 0) == 1
+    assert selector.select(peak_features(1), .01) == 1
+    raised = .5 + (1 - math.exp(-.01 / .05)) * .5
+    assert selector._peak_envelope == pytest.approx(raised)
+    assert .5 < raised < 1  # A single transient is not adopted instantly.
+    result = selector.select(peak_features(.5), .02)
+    released = raised + (1 - math.exp(-.01 / 2)) * (.5 - raised)
+    assert selector._peak_envelope == pytest.approx(released)
+    assert raised - released < raised - .5
+    assert result == pytest.approx(.5 / released)
+    assert selector.select(peak_features(0), .03) == 0
+    before = selector._peak_envelope
+    selector.select(peak_features(.1), .02)  # Backward time cannot advance the filter.
+    assert selector._peak_envelope == before
+
+
+@pytest.mark.parametrize("level", [None, math.nan, math.inf, -math.inf])
+def test_peak_missing_level_does_not_train_or_use_lufs(level):
+    selector = EnergyInput(Profile(energy_source="peak_envelope"))
+    assert selector.select(peak_features(level, lufs=-1), 0) == 0
+    assert selector._peak_envelope is None
+    selector.select(peak_features(.8), 1)
+    assert selector.select(peak_features(level, lufs=-1), 100) == 0
+    assert selector._peak_envelope == .8
+    selector.select(peak_features(.4), 100.01)
+    assert selector._peak_envelope == pytest.approx(.8 + (1 - math.exp(-.01 / 2)) * -.4)
+
+
+def test_peak_auto_ignores_manual_values_and_manual_honours_them():
+    auto = EnergyInput(Profile(energy_source="peak_envelope", peak_attack_s=10, peak_release_s=-1))
+    manual = EnergyInput(Profile(energy_source="peak_envelope", peak_envelope_auto=False,
+                                 peak_attack_s=.2, peak_release_s=4))
+    assert (auto.peak_attack_s, auto.peak_release_s) == (.05, 2)
+    assert (manual.peak_attack_s, manual.peak_release_s) == (.2, 4)
+    for selector in (auto, manual):
+        selector.select(peak_features(.5), 0)
+        selector.select(peak_features(1), .01)
+    assert auto._peak_envelope > manual._peak_envelope
+
+
+@pytest.mark.parametrize("attack,release", [(0, 2), (-1, 2), (.05, 0), (.05, -2),
+                                           (2, 2), (3, 2), (math.nan, 2), (.05, math.inf)])
+@pytest.mark.parametrize("model", [Profile, EnergyProfile])
+def test_manual_peak_validation(model, attack, release):
+    with pytest.raises(ValueError):
+        model(energy_source="peak_envelope", peak_envelope_auto=False,
+              peak_attack_s=attack, peak_release_s=release)
+
+
+def test_peak_near_constant_mastered_level_retains_variation():
+    selector = EnergyInput(Profile(energy_source="peak_envelope"))
+    # Small RMS modulation survives even when momentary LUFS is completely flat.
+    results = [selector.select(peak_features(.8 + .04 * math.sin(i * .1), lufs=-5), i * .01)
+               for i in range(12000)]
+    settled = results[-1000:]
+    assert max(settled) - min(settled) > .07
+    assert sum(settled) / len(settled) < .97
+    assert all(0 <= result <= 1 for result in results)
+
+
+def test_peak_exact_constant_limit_and_silence_are_explicit():
+    selector = EnergyInput(Profile(energy_source="peak_envelope"))
+    assert selector.select(peak_features(0), 0) == 0
+    selector = EnergyInput(Profile(energy_source="peak_envelope"))
+    for i in range(1000):
+        assert selector.select(peak_features(.8), i * .01) == 1
+
+
+def test_peak_profile_roundtrip_and_legacy_defaults():
+    profile = EnergyProfile(energy_source="peak_envelope", peak_envelope_auto=False,
+                            peak_attack_s=.1, peak_release_s=3)
+    assert EnergyProfile.from_dict(profile.to_dict()) == profile
+    legacy = EnergyProfile.from_dict({"name": "Existing"})
+    assert legacy.energy_source == Profile().energy_source == "sustained"
+    assert (legacy.peak_envelope_auto, legacy.peak_attack_s, legacy.peak_release_s) == (
+        True, .05, 2)
+
+
+def test_sync_engine_copies_latest_rms_into_peak_input(monkeypatch):
+    from test_band_normalise import pipeline, publish
+    cap = pipeline()
+    record = publish(cap, [.2]*10, 960)
+    cap._publish_by_interval(
+        epoch_id="test", spectrum_updates=[], other_updates=[ProcessorUpdate(
+            "loudness_analyzer", 0, 480, level=.6,
+        )], clamp_end=None,
+    )
+    engine = SyncEngine(None, Profile(energy_source="peak_envelope"), analyser=cap)
+
+    async def stop_after_tick(_):
+        raise asyncio.CancelledError
+
+    monkeypatch.setattr("lampastream.sync_engine.asyncio.sleep", stop_after_tick)
+    with pytest.raises(asyncio.CancelledError):
+        asyncio.run(engine.run(MagicMock()))
+    assert engine.last_energy_input == 1
+    assert record.features.level is None  # Rendering must not rewrite publications.

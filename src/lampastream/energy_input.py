@@ -8,7 +8,7 @@ from .types import AudioFeatures
 
 
 class EnergyInput:
-    """Absolute fixed LUFS window or slowly adapting programme window.
+    """Sustained energy, LUFS windows, or a linear RMS peak envelope.
 
     Adaptive mode starts at [-30, -8] LUFS, expands with a 1 s time constant
     and contracts with the configured time constant. A six-LU minimum span
@@ -22,6 +22,9 @@ class EnergyInput:
         self.floor = profile.lufs_floor
         self.ceiling = profile.lufs_ceiling
         self.tau = profile.adaptation_tau_s
+        self.peak_attack_s = 0.05 if profile.peak_envelope_auto else profile.peak_attack_s
+        self.peak_release_s = 2.0 if profile.peak_envelope_auto else profile.peak_release_s
+        self._peak_envelope: float | None = None
         self.adaptive_floor = -30.0
         self.adaptive_ceiling = -8.0
         self._last_t: float | None = None
@@ -33,6 +36,18 @@ class EnergyInput:
                     else features.full)
         dt = max(0.0, t - self._last_t) if self._last_t is not None else 0.0
         self._last_t = t
+        if self.mode == "peak_envelope":
+            level = features.level
+            if level is None or not math.isfinite(level):
+                return 0.0
+            if self._peak_envelope is None:
+                self._peak_envelope = level
+            else:
+                k = (self.peak_attack_s if level > self._peak_envelope
+                     else self.peak_release_s)
+                self._peak_envelope += (1 - math.exp(-dt / max(k, 1e-6))) * (
+                    level - self._peak_envelope)
+            return max(0.0, min(1.0, level / max(self._peak_envelope, 1e-6)))
         value = features.loudness_momentary_lufs
         if value is None or not math.isfinite(value):
             return 0.0

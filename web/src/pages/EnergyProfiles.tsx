@@ -42,7 +42,8 @@ const ENERGY_PROFILE_DEFAULTS = {
   blend_start:    0.3,
   blend_end:      0.7,
   blend_response: 0.1,
-  energy_source: 'sustained', lufs_floor: -30, lufs_ceiling: -8, adaptation_tau_s: 60,
+  energy_source: 'peak_envelope', peak_envelope_auto: true, peak_attack_s: 0.05, peak_release_s: 2.0,
+  lufs_floor: -30, lufs_ceiling: -8, adaptation_tau_s: 60,
 } as const
 
 // ── Form state ────────────────────────────────────────────────────────────────
@@ -58,15 +59,21 @@ interface FormState {
   lufs_floor: string
   lufs_ceiling: string
   adaptation_tau_s: string
+  peak_envelope_auto: string
+  peak_attack_s: string
+  peak_release_s: string
 }
 
 function defaultForm(ep?: EnergyProfile): FormState {
   return {
     name: ep?.name ?? '',
-    energy_source: ep?.energy_source ?? ENERGY_PROFILE_DEFAULTS.energy_source,
+    energy_source: ep ? ep.energy_source ?? 'sustained' : ENERGY_PROFILE_DEFAULTS.energy_source,
     lufs_floor: String(ep?.lufs_floor ?? ENERGY_PROFILE_DEFAULTS.lufs_floor),
     lufs_ceiling: String(ep?.lufs_ceiling ?? ENERGY_PROFILE_DEFAULTS.lufs_ceiling),
     adaptation_tau_s: String(ep?.adaptation_tau_s ?? ENERGY_PROFILE_DEFAULTS.adaptation_tau_s),
+    peak_envelope_auto: String(ep?.peak_envelope_auto ?? true),
+    peak_attack_s: String(ep?.peak_attack_s ?? 0.05),
+    peak_release_s: String(ep?.peak_release_s ?? 2.0),
     high_energy_effect_id: ep?.high_energy_effect_id ?? '',
     low_energy_effect_id:  ep?.low_energy_effect_id  ?? '',
     blend_start:    String(ep?.blend_start    ?? ENERGY_PROFILE_DEFAULTS.blend_start),
@@ -308,7 +315,10 @@ function ModeToggle({ expertMode, onToggle }: { expertMode: boolean; onToggle: (
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export function EnergyProfiles({ activeCouplingId = null, initialProfileId }: { activeCouplingId?: string | null; initialProfileId?: string | null }) {
+export function EnergyProfiles({ activeCouplingId = null, initialProfileId, expertMode: sharedExpertMode, onExpertModeChange }: {
+  activeCouplingId?: string | null; initialProfileId?: string | null
+  expertMode?: boolean; onExpertModeChange?: (value: boolean) => void
+}) {
   const openedInitialProfile = useRef(false)
   const [couplings, setCouplings] = useState<Coupling[]>([])
   const activeCoupling = couplings.find(c => c.id === activeCouplingId)
@@ -322,7 +332,9 @@ export function EnergyProfiles({ activeCouplingId = null, initialProfileId }: { 
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [simulatedEnergy, setSimulatedEnergy] = useState(0.5)
-  const [expertMode, setExpertMode] = useState(false)
+  const [localExpertMode, setLocalExpertMode] = useState(false)
+  const expertMode = sharedExpertMode ?? localExpertMode
+  const setExpertMode = onExpertModeChange ?? setLocalExpertMode
 
   const preview = usePreviewSocket()
 
@@ -390,7 +402,6 @@ export function EnergyProfiles({ activeCouplingId = null, initialProfileId }: { 
     setForm(defaultForm())
     setSaveError(null)
     setSimulatedEnergy(0.5)
-    setExpertMode(false)
   }
 
   function openEdit(ep: EnergyProfile) {
@@ -398,7 +409,6 @@ export function EnergyProfiles({ activeCouplingId = null, initialProfileId }: { 
     setForm(defaultForm(ep))
     setSaveError(null)
     setSimulatedEnergy(0.5)
-    setExpertMode(false)
   }
 
   function closeEditor() {
@@ -410,7 +420,9 @@ export function EnergyProfiles({ activeCouplingId = null, initialProfileId }: { 
     setSaving(true)
     setSaveError(null)
     try {
-      const validation = validateEnergySettings(form.lufs_floor, form.lufs_ceiling, form.adaptation_tau_s)
+      const validation = validateEnergySettings({ source: form.energy_source, floor: form.lufs_floor,
+        ceiling: form.lufs_ceiling, tau: form.adaptation_tau_s,
+        peakAuto: form.peak_envelope_auto === 'true', attack: form.peak_attack_s, release: form.peak_release_s })
       if (validation) throw new Error(validation)
       const body = {
         name: form.name,
@@ -418,6 +430,9 @@ export function EnergyProfiles({ activeCouplingId = null, initialProfileId }: { 
         lufs_floor: parseFloat(form.lufs_floor),
         lufs_ceiling: parseFloat(form.lufs_ceiling),
         adaptation_tau_s: parseFloat(form.adaptation_tau_s),
+        peak_envelope_auto: form.peak_envelope_auto === 'true',
+        peak_attack_s: parseFloat(form.peak_attack_s),
+        peak_release_s: parseFloat(form.peak_release_s),
         high_energy_effect_id: form.high_energy_effect_id,
         low_energy_effect_id:  form.low_energy_effect_id,
         blend_start:    parseFloat(form.blend_start),
@@ -613,9 +628,6 @@ export function EnergyProfiles({ activeCouplingId = null, initialProfileId }: { 
               )}
             </SectionWithReset>
 
-            <EnergySourceControls source={form.energy_source} floor={form.lufs_floor}
-              ceiling={form.lufs_ceiling} tau={form.adaptation_tau_s} onChange={set} />
-
             {/* ── Current blend ── */}
             <section>
               <SectionLabel className="mb-3">Current blend</SectionLabel>
@@ -729,6 +741,10 @@ export function EnergyProfiles({ activeCouplingId = null, initialProfileId }: { 
 
               {expertMode && (
                 <>
+                  <EnergySourceControls source={form.energy_source} floor={form.lufs_floor}
+                    ceiling={form.lufs_ceiling} tau={form.adaptation_tau_s}
+                    peakAuto={form.peak_envelope_auto === 'true'} attack={form.peak_attack_s}
+                    release={form.peak_release_s} onChange={set} />
                   <Separator />
                   <div className="space-y-3">
                     <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">

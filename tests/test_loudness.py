@@ -83,6 +83,7 @@ def test_loudness_chunk_independent_with_real_shared_stft_clock():
             (u.sample_start, u.sample_end) for u in reference
         ]
         for a, b in zip(actual, reference, strict=True):
+            assert a.level == pytest.approx(b.level)
             assert a.loudness_momentary_lufs == pytest.approx(b.loudness_momentary_lufs)
 
 
@@ -115,6 +116,7 @@ def test_loudness_publication_preview_eos_and_epoch_reset():
         assert engine.last_loudness[0] == -18.4
         cap.feed(_make_frame(n=480, epoch_id='new'))
         assert engine.last_loudness == (None, None)
+        assert cap.latest_level() is None
     finally:
         engine.stop()
 
@@ -138,3 +140,17 @@ def test_loudness_real_cava_scheduler_preview_and_silence():
         assert engine.last_loudness[0] == SILENCE_LUFS
     finally:
         engine.stop()
+
+
+def test_raw_level_is_unweighted_phase_safe_and_resets():
+    pcm = _signal(4096)
+    pcm[:, 1] *= -1
+    proc = KWeightedLoudnessAnalyzer()
+    updates = proc.feed(_shared(pcm))
+    for update in updates:
+        window = pcm[update.sample_start:update.sample_start + 2048]
+        assert update.level == pytest.approx(np.sqrt(np.mean(window.astype(float) ** 2)))
+        assert update.level > 0
+        assert update.loudness_momentary_lufs is None
+    proc.reset()
+    assert proc.feed(_shared(np.zeros((2048, 2), np.float32)))[0].level == 0

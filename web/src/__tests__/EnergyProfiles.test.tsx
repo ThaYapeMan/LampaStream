@@ -487,6 +487,7 @@ describe('Missing/edge data', () => {
 
 it('selects energy sources, exposes only relevant settings and saves the current mode', async () => {
   const user = await renderAndOpen()
+  await user.click(screen.getByTestId('mode-expert-btn'))
   expect(screen.queryByLabelText('Floor (LUFS)')).not.toBeInTheDocument()
   expect(screen.queryByLabelText('Adaptation time (seconds)')).not.toBeInTheDocument()
   await user.click(screen.getByRole('button', { name: /Fixed loudness/ }))
@@ -513,4 +514,41 @@ it('shows the generalised live input and raw LUFS rather than full-band energy',
   await user.click(await screen.findByRole('button', { name: /Edit/i }))
   expect(screen.getByText(/● live 86%/)).toBeInTheDocument()
   expect(screen.getByText(/−?\-11.0 LUFS/)).toBeInTheDocument()
+})
+
+
+it('creates peak Auto profiles without exposing source settings in Standard mode', async () => {
+  const user = await renderAndNew()
+  await user.type(screen.getByTestId('editor-name-input'), 'Peak profile')
+  await user.click(screen.getAllByRole('button', {name:/^Change/})[1])
+  await user.click(screen.getByRole('button', {name:/Test Effect/}))
+  expect(screen.queryByLabelText('Energy source settings')).not.toBeInTheDocument()
+  expect(screen.queryByTestId('field-peak-attack')).not.toBeInTheDocument()
+  await user.click(screen.getByRole('button', {name:/^Save$/}))
+  expect(mapi.createEnergyProfile).toHaveBeenCalledWith(expect.objectContaining({
+    energy_source:'peak_envelope', peak_envelope_auto:true, peak_attack_s:.05, peak_release_s:2,
+  }))
+})
+
+it('shows peak controls only in Expert and preserves Manual values through Standard saves', async () => {
+  const user = await renderAndOpen()
+  expect(screen.queryByLabelText('Energy source settings')).not.toBeInTheDocument()
+  await user.click(screen.getByTestId('mode-expert-btn'))
+  expect(screen.getByRole('button', {name:/^Sustained/})).toHaveAttribute('aria-pressed', 'true')
+  await user.click(screen.getByRole('button', {name:/^Peak envelope/}))
+  expect(screen.queryByTestId('field-peak-attack')).not.toBeInTheDocument()
+  await user.click(screen.getByRole('button', {name:'Manual', exact:true}))
+  const attack = screen.getByLabelText('Attack (s)')
+  await user.clear(attack); await user.type(attack, '3')
+  await user.click(screen.getByRole('button', {name:/^Save$/}))
+  expect(screen.getAllByRole('alert')[0]).toHaveTextContent('peak_attack_s must be below peak_release_s')
+  await user.clear(attack); await user.type(attack, '0.1')
+  await user.click(screen.getByTestId('mode-standard-btn'))
+  expect(screen.queryByLabelText('Energy source settings')).not.toBeInTheDocument()
+  expect(screen.queryByTestId('field-peak-attack')).not.toBeInTheDocument()
+  expect(screen.queryByTestId('field-peak-release')).not.toBeInTheDocument()
+  await user.click(screen.getByRole('button', {name:/^Save$/}))
+  expect(mapi.updateEnergyProfile).toHaveBeenCalledWith('ep1', expect.objectContaining({
+    energy_source:'peak_envelope', peak_envelope_auto:false, peak_attack_s:.1, peak_release_s:2,
+  }))
 })

@@ -38,6 +38,15 @@ function ConnectionBadge({ connected, attempt }: { connected: boolean; attempt: 
 }
 
 export default function App() {
+  const [expertMode, setExpertMode] = useState(() => {
+    try { return localStorage.getItem('lampastream.expertMode') === 'true' }
+    catch { return false }
+  })
+  function changeExpertMode(value: boolean) {
+    setExpertMode(value)
+    try { localStorage.setItem('lampastream.expertMode', String(value)) }
+    catch { /* The preference still works for this session when storage is unavailable. */ }
+  }
   const [energyProfileId, setEnergyProfileId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<Tab>('now-playing')
   const { colour, channel_colours, onset, onset_bass, onset_mid, onset_treble, mix, last_energy_input, loudness_momentary_lufs, bars, normalised_bars, status, connected, reconnectAttempt } = usePreviewSocket()
@@ -51,6 +60,12 @@ export default function App() {
             {status?.version && (
               <span className="text-xs text-muted-foreground font-mono">{status.version}</span>
             )}
+            <select aria-label="Editor mode" value={expertMode ? 'expert' : 'standard'}
+              onChange={event => changeExpertMode(event.target.value === 'expert')}
+              className="rounded border border-input bg-background px-2 py-1 text-xs">
+              <option value="standard">Standard</option>
+              <option value="expert">Expert</option>
+            </select>
             <ConnectionBadge connected={connected} attempt={reconnectAttempt} />
           </div>
         </div>
@@ -77,7 +92,7 @@ export default function App() {
         <main className="flex-1 overflow-hidden flex flex-col">
           {/* Effects, Energy Profiles, Couplings, and Analysers manage their own full-page layout */}
           {activeTab === 'energy-profiles' ? (
-            <EnergyProfiles initialProfileId={energyProfileId} activeCouplingId={status?.active_coupling_id ?? null} />
+            <EnergyProfiles expertMode={expertMode} onExpertModeChange={changeExpertMode} initialProfileId={energyProfileId} activeCouplingId={status?.active_coupling_id ?? null} />
           ) : activeTab === 'effects' ? (
             <Effects activeCouplingId={status?.active_coupling_id ?? null} />
           ) : activeTab === 'couplings' ? (
@@ -92,7 +107,7 @@ export default function App() {
             <div className="flex-1 overflow-y-auto">
               <div className={cn('mx-auto px-6 py-6', activeTab === 'now-playing' ? 'max-w-5xl' : 'max-w-3xl')}>
                 {activeTab === 'now-playing' && (
-                  <NowPlaying last_energy_input={last_energy_input} onOpenEnergyProfile={id => { setEnergyProfileId(id); setActiveTab('energy-profiles') }} colour={colour} channel_colours={channel_colours} onset={onset} onset_bass={onset_bass} onset_mid={onset_mid} onset_treble={onset_treble} mix={mix} loudness_momentary_lufs={loudness_momentary_lufs} bars={bars} normalised_bars={normalised_bars} status={status} connected={connected} />
+                  <NowPlaying expertMode={expertMode} last_energy_input={last_energy_input} onOpenEnergyProfile={id => { setEnergyProfileId(id); setActiveTab('energy-profiles') }} colour={colour} channel_colours={channel_colours} onset={onset} onset_bass={onset_bass} onset_mid={onset_mid} onset_treble={onset_treble} mix={mix} loudness_momentary_lufs={loudness_momentary_lufs} bars={bars} normalised_bars={normalised_bars} status={status} connected={connected} />
                 )}
                 {activeTab === 'backup' && <Backup />}
                 {activeTab === 'players' && <Players activeCouplingId={status?.active_coupling_id ?? null} />}

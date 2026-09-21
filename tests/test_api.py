@@ -1809,3 +1809,30 @@ def test_ws_spectrum_exposes_atomic_preview_pair(client, normalised):
     else:
         assert message["normalised_bars"] == normalised
         assert len(message["bars"]) == len(message["normalised_bars"])
+
+
+def test_peak_energy_api_defaults_validation_and_live_propagation(client):
+    effect = client.post("/api/effects", json={"name": "Peak effect"}).json()
+    created = client.post("/api/energy-profiles", json={
+        "name": "Legacy default", "high_energy_effect_id": effect["id"],
+    })
+    assert created.status_code == 201
+    assert created.json()["energy_source"] == "sustained"
+    assert created.json()["peak_envelope_auto"] is True
+    coupling = _make_full_coupling(client._storage)
+    client._storage.set_active_coupling_id(coupling.id)
+    endpoint = f"/api/energy-profiles/{coupling.energy_profile_id}"
+    body = {"energy_source": "peak_envelope", "peak_envelope_auto": False,
+            "peak_attack_s": .1, "peak_release_s": 3}
+    response = client.patch(endpoint, json=body)
+    assert response.status_code == 200
+    for key, value in body.items():
+        assert response.json()[key] == value
+        assert getattr(client._manager.update_render.call_args.args[0], key) == value
+    original = client._storage.get_energy_profile(coupling.energy_profile_id).to_dict()
+    for invalid in ({"peak_attack_s": 3}, {"peak_release_s": 0}, {"peak_attack_s": -1}):
+        assert client.patch(endpoint, json=invalid).status_code == 400
+        assert client._storage.get_energy_profile(coupling.energy_profile_id).to_dict() == original
+    assert client.patch(endpoint, json={"peak_envelope_auto": True}).status_code == 200
+    assert client._manager.update_render.call_args.args[0].peak_envelope_auto is True
+    client._manager.deactivate.assert_not_awaited()

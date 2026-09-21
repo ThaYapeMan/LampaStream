@@ -20,11 +20,14 @@ from .spectrum_engine import VALID_ENGINE_IDS as _VALID_ENGINE_IDS
 ONSET_METHODS: frozenset[str] = frozenset({"combined", "multiband", "superflux"})
 
 ENERGY_SOURCES: frozenset[str] = frozenset({
-    "sustained", "loudness_fixed", "loudness_adaptive",
+    "sustained", "loudness_fixed", "loudness_adaptive", "peak_envelope",
 })
 
 
-def _validate_energy_source(source: str, floor: float, ceiling: float, tau: float) -> None:
+def _validate_energy_source(
+    source: str, floor: float, ceiling: float, tau: float,
+    peak_envelope_auto: bool = True, peak_attack_s: float = 0.05, peak_release_s: float = 2.0,
+) -> None:
     if source not in ENERGY_SOURCES:
         raise ValueError("Invalid energy_source")
     if not all(math.isfinite(v) for v in (floor, ceiling, tau)):
@@ -33,6 +36,13 @@ def _validate_energy_source(source: str, floor: float, ceiling: float, tau: floa
         raise ValueError("lufs_floor must be below lufs_ceiling")
     if tau <= 0:
         raise ValueError("adaptation_tau_s must be positive")
+    if not peak_envelope_auto:
+        if not all(math.isfinite(v) for v in (peak_attack_s, peak_release_s)):
+            raise ValueError("Energy source settings must be finite")
+        if peak_attack_s <= 0 or peak_release_s <= 0:
+            raise ValueError("peak_attack_s and peak_release_s must be positive")
+        if peak_attack_s >= peak_release_s:
+            raise ValueError("peak_attack_s must be below peak_release_s")
 
 
 # Virtual-player source type.  Keep in sync with PLAYER_TYPES in web/src/lib/api.ts.
@@ -159,6 +169,9 @@ class Profile:
     lufs_floor: float = -30.0
     lufs_ceiling: float = -8.0
     adaptation_tau_s: float = 60.0
+    peak_envelope_auto: bool = True
+    peak_attack_s: float = 0.05
+    peak_release_s: float = 2.0
     blend_response: float = 0.1
     sensitivity: float = 1.0  # multiplier applied to bar values before mapping
     brightness_floor: float = 0.15  # minimum brightness so lights never go fully dark
@@ -220,7 +233,8 @@ class Profile:
 
     def __post_init__(self) -> None:
         _validate_energy_source(
-            self.energy_source, self.lufs_floor, self.lufs_ceiling, self.adaptation_tau_s)
+            self.energy_source, self.lufs_floor, self.lufs_ceiling, self.adaptation_tau_s,
+            self.peak_envelope_auto, self.peak_attack_s, self.peak_release_s)
 
         if self.bars_source not in _VALID_BARS_SOURCES:
             raise ValueError(
@@ -530,11 +544,15 @@ class EnergyProfile:
     lufs_floor: float = -30.0
     lufs_ceiling: float = -8.0
     adaptation_tau_s: float = 60.0
+    peak_envelope_auto: bool = True
+    peak_attack_s: float = 0.05
+    peak_release_s: float = 2.0
     blend_response: float = 0.1  # EMA alpha for mix smoothing
 
     def __post_init__(self) -> None:
         _validate_energy_source(
-            self.energy_source, self.lufs_floor, self.lufs_ceiling, self.adaptation_tau_s)
+            self.energy_source, self.lufs_floor, self.lufs_ceiling, self.adaptation_tau_s,
+            self.peak_envelope_auto, self.peak_attack_s, self.peak_release_s)
 
     def to_dict(self) -> dict:
         return {
@@ -549,6 +567,9 @@ class EnergyProfile:
             "lufs_floor": self.lufs_floor,
             "lufs_ceiling": self.lufs_ceiling,
             "adaptation_tau_s": self.adaptation_tau_s,
+            "peak_envelope_auto": self.peak_envelope_auto,
+            "peak_attack_s": self.peak_attack_s,
+            "peak_release_s": self.peak_release_s,
         }
 
     @classmethod

@@ -1,7 +1,6 @@
 import { test, expect } from '@playwright/test'
 import { setupPreview, geometry } from './preview-fixture'
-import { readFileSync } from 'node:fs'
-const baseline = JSON.parse(readFileSync('tests/e2e/fixtures/spectrum-baseline.json', 'utf8')) as Record<string, {x:number; y:number; width:number; height:number}>
+type Boxes = Record<string, {x:number; y:number; width:number; height:number}>
 
 test('live energy source patching and unchanged preview geometry', async ({ page }, info) => {
   const socket = await setupPreview(page)
@@ -15,16 +14,19 @@ test('live energy source patching and unchanged preview geometry', async ({ page
   })
   await expect(page.getByTestId('live-energy-source').getByText('Spectrum RGB', {exact:true})).toBeVisible()
   const controls = page.getByTestId('live-energy-source')
+  await expect(controls.getByRole('radiogroup')).toHaveCount(0)
+  const baseline = await geometry(page) as Boxes
+  const standardHeight = (await controls.boundingBox())!.height
+  await page.getByLabel('Editor mode').selectOption('expert')
   const radios = page.getByRole('radiogroup', {name:'Energy source'}).getByRole('radio')
   const groupBox = (await page.getByRole('radiogroup', {name:'Energy source'}).boundingBox())!
-  expect(groupBox.width).toBeLessThan(420)
+  expect(groupBox.width).toBeLessThan(550)
   expect(groupBox.height).toBeLessThanOrEqual(28)
-  const widths = await Promise.all([0,1,2].map(async i => (await radios.nth(i).boundingBox())!.width))
+  const widths = await Promise.all([0,1,2,3].map(async i => (await radios.nth(i).boundingBox())!.width))
   expect(Math.max(...widths)-Math.min(...widths)).toBeLessThanOrEqual(.02)
-  const boxes = await geometry(page) as typeof baseline
+  const boxes = await geometry(page) as Boxes
   for (const key of ['track-block', 'colour-preview-size', 'floorplan-preview-size', 'status'] as const) expect(boxes[key]).toEqual(baseline[key])
-  // The added control adds height below the blend. The later spectrum card
-  // necessarily moves down by exactly that inserted height; its own size is fixed.
+  // Expert controls only move the later spectrum card by their added height.
   const controlBox = (await controls.boundingBox())!
   expect(controlBox.height).toBeLessThan(105)
   const spectrumY = [boxes['spectrum-panel'].y]
@@ -32,7 +34,7 @@ test('live energy source patching and unchanged preview geometry', async ({ page
   expect(boxes['spectrum-panel'].x).toBe(baseline['spectrum-panel'].x)
   expect(boxes['spectrum-panel'].width).toBe(baseline['spectrum-panel'].width)
   expect(boxes['spectrum-panel'].height).toBe(baseline['spectrum-panel'].height)
-  expect(boxes['spectrum-panel'].y - baseline['spectrum-panel'].y).toBe(controlBox.height + 12)
+  expect(boxes['spectrum-panel'].y - baseline['spectrum-panel'].y).toBe(controlBox.height - standardHeight)
   const blend = (await page.getByTestId('energy-blend').boundingBox())!
   const session = (await page.getByTestId('session-diagnostics').boundingBox())!
   expect(controlBox.y).toBeGreaterThanOrEqual(blend.y+blend.height)
@@ -74,19 +76,30 @@ test('live energy source patching and unchanged preview geometry', async ({ page
   spectrumY.push((await page.getByTestId('spectrum-panel').boundingBox())!.y)
   expect(new Set(spectrumY).size).toBe(1)
   await expect(controls.getByText('No parameters for this source')).toBeVisible()
-  const after = await geometry(page) as typeof baseline
+  const after = await geometry(page) as Boxes
   for (const key of ['track-block','colour-preview-size','floorplan-preview-size','status'] as const) expect(after[key]).toEqual(boxes[key])
   console.log('ENERGY_MEASUREMENTS',JSON.stringify({groupBox, widths, spectrumY, boxes, controlBox, blend, session, patches}))
   await page.getByRole('radio', {name:'Sustained'}).focus()
   await page.keyboard.press('ArrowRight')
   await expect(page.getByRole('radio', {name:'Fixed loudness'})).toHaveAttribute('aria-checked', 'true')
   await expect(page.getByRole('radio', {name:'Fixed loudness'})).toBeFocused()
+  await page.getByRole('radio', {name:'Peak envelope'}).click()
+  await expect(controls.getByRole('button', {name:'Auto', exact:true})).toHaveAttribute('aria-pressed', 'true')
+  await expect(controls.getByRole('spinbutton')).toHaveCount(0)
+  await controls.getByRole('button', {name:'Manual', exact:true}).click()
+  await expect(controls.getByRole('spinbutton', {name:'Attack (s)', exact:true})).toBeVisible()
+  await expect(controls.getByRole('spinbutton', {name:'Release (s)', exact:true})).toBeVisible()
+  await page.getByLabel('Editor mode').selectOption('standard')
+  await expect(controls.getByRole('radiogroup')).toHaveCount(0)
+  await expect(controls.getByRole('spinbutton')).toHaveCount(0)
+  await page.getByLabel('Editor mode').selectOption('expert')
   await page.getByText('Open profile', {exact:true}).click()
   await expect(page.getByLabel('Energy source settings')).toBeVisible()
 })
 
 test('inactive energy control reserves the same compact rows', async ({page}, info) => {
   const socket = await setupPreview(page)
+  await page.getByLabel('Editor mode').selectOption('expert')
   const block = page.getByTestId('live-energy-source')
   const before = (await block.boundingBox())!
   const spectrumY = (await page.getByTestId('spectrum-panel').boundingBox())!.y

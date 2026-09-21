@@ -258,10 +258,15 @@ class EnergyProfileCreateBody(BaseModel):
     low_energy_effect_id: str = ""
     blend_start: float = 0.3
     blend_end: float = 0.7
-    energy_source: Literal["sustained", "loudness_fixed", "loudness_adaptive"] = "sustained"
+    energy_source: Literal[
+        "sustained", "loudness_fixed", "loudness_adaptive", "peak_envelope"
+    ] = "sustained"
     lufs_floor: float = -30.0
     lufs_ceiling: float = -8.0
     adaptation_tau_s: float = 60.0
+    peak_envelope_auto: bool = True
+    peak_attack_s: float = 0.05
+    peak_release_s: float = 2.0
     blend_response: float = 0.1
 
 
@@ -272,10 +277,15 @@ class EnergyProfilePatchBody(BaseModel):
     low_energy_effect_id: str | None = None
     blend_start: float | None = None
     blend_end: float | None = None
-    energy_source: Literal["sustained", "loudness_fixed", "loudness_adaptive"] | None = None
+    energy_source: Literal[
+        "sustained", "loudness_fixed", "loudness_adaptive", "peak_envelope"
+    ] | None = None
     lufs_floor: float | None = None
     lufs_ceiling: float | None = None
     adaptation_tau_s: float | None = None
+    peak_envelope_auto: bool | None = None
+    peak_attack_s: float | None = None
+    peak_release_s: float | None = None
     blend_response: float | None = None
 
 
@@ -375,6 +385,7 @@ _C_RENDER_FIELDS: frozenset[str] = frozenset({
     "high_energy_effect_id", "low_energy_effect_id",
     "blend_start", "blend_end", "blend_response",
     "energy_source", "lufs_floor", "lufs_ceiling", "adaptation_tau_s",
+    "peak_envelope_auto", "peak_attack_s", "peak_release_s",
 })
 
 # Which sub-entity owns each inline field in CouplingPatchBody

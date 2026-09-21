@@ -215,33 +215,48 @@ export function EnergyBlendEditor({
 
 
 export type EnergySetting = 'energy_source' | 'lufs_floor' | 'lufs_ceiling' | 'adaptation_tau_s'
+  | 'peak_envelope_auto' | 'peak_attack_s' | 'peak_release_s'
 
-export function validateEnergySettings(floor: string, ceiling: string, tau: string): string | null {
+type EnergySettings = {
+  source: string; floor: string; ceiling: string; tau: string
+  peakAuto: boolean; attack: string; release: string
+}
+
+export function validateEnergySettings({ source, floor, ceiling, tau, peakAuto, attack, release }: EnergySettings): string | null {
   if ([floor, ceiling, tau].some(v => !v.trim() || !Number.isFinite(Number(v)))) return 'Energy source settings must be finite'
   if (Number(floor) >= Number(ceiling)) return 'lufs_floor must be below lufs_ceiling'
   if (Number(tau) <= 0) return 'adaptation_tau_s must be positive'
+  if (source === 'peak_envelope' && !peakAuto) {
+    if ([attack, release].some(v => !v.trim() || !Number.isFinite(Number(v)))) return 'Energy source settings must be finite'
+    if (Number(attack) <= 0 || Number(release) <= 0) return 'peak_attack_s and peak_release_s must be positive'
+    if (Number(attack) >= Number(release)) return 'peak_attack_s must be below peak_release_s'
+  }
   return null
 }
 
 // Shared labels, fields and validation; the profile workspace retains its cards.
-export function EnergySourceControls({ source, floor, ceiling, tau, onChange, compact = false, disabled = false, pending = false, onCommit, onStep, header }: {
+export function EnergySourceControls({ source, floor, ceiling, tau, peakAuto = true, attack = '0.05', release = '2', onChange, compact = false, disabled = false, pending = false, onCommit, onStep, header }: {
   source: string; floor: string; ceiling: string; tau: string
+  peakAuto?: boolean; attack?: string; release?: string
   onChange: (field: EnergySetting, value: string) => void
   compact?: boolean; disabled?: boolean; pending?: boolean; onCommit?: () => void
   onStep?: (field: EnergySetting, value: string) => void; header?: ReactNode
 }) {
-  const error = validateEnergySettings(floor, ceiling, tau)
+  const error = validateEnergySettings({ source, floor, ceiling, tau, peakAuto, attack, release })
   const fields = source === 'loudness_fixed'
     ? [{ field: 'lufs_floor' as const, label: 'Floor', unit: 'LUFS', value: floor },
        { field: 'lufs_ceiling' as const, label: 'Ceiling', unit: 'LUFS', value: ceiling }]
     : source === 'loudness_adaptive'
-      ? [{ field: 'adaptation_tau_s' as const, label: 'Adaptation', unit: 's', value: tau }] : []
+      ? [{ field: 'adaptation_tau_s' as const, label: 'Adaptation', unit: 's', value: tau }]
+      : source === 'peak_envelope' && !peakAuto
+        ? [{ field: 'peak_attack_s' as const, label: 'Attack (s)', unit: '', value: attack },
+           { field: 'peak_release_s' as const, label: 'Release (s)', unit: '', value: release }] : []
   return <section className={compact ? 'space-y-2' : 'space-y-3'} aria-label="Energy source settings">
     {!compact && <Label>Energy source</Label>}
     <div className={compact ? 'flex flex-wrap items-center justify-between gap-2' : undefined}>
     {compact && header}
     <div role={compact ? 'radiogroup' : undefined} aria-label={compact ? 'Energy source' : undefined}
-      className={compact ? 'inline-grid w-max grid-cols-3 rounded-md border-[0.5px] border-border bg-background/40 p-0.5' : 'grid grid-cols-1 gap-1.5 sm:grid-cols-3'}>
+      className={compact ? 'inline-grid w-max grid-cols-4 rounded-md border-[0.5px] border-border bg-background/40 p-0.5' : 'grid grid-cols-1 gap-1.5'}>
       {ENERGY_SOURCE_OPTIONS.map((opt, index) => <button key={opt.value} type="button"
         role={compact ? 'radio' : undefined} aria-checked={compact ? source === opt.value : undefined}
         tabIndex={compact ? (source === opt.value ? 0 : -1) : undefined}
@@ -250,8 +265,9 @@ export function EnergySourceControls({ source, floor, ceiling, tau, onChange, co
         onKeyDown={event => {
           if (pending || !compact || !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)) return
           event.preventDefault()
-          const next = event.key === 'Home' ? 0 : event.key === 'End' ? 2
-            : (index + (['ArrowLeft', 'ArrowUp'].includes(event.key) ? 2 : 1)) % 3
+          const count = ENERGY_SOURCE_OPTIONS.length
+          const next = event.key === 'Home' ? 0 : event.key === 'End' ? count - 1
+            : (index + (['ArrowLeft', 'ArrowUp'].includes(event.key) ? count - 1 : 1)) % count
           ;(event.currentTarget.parentElement!.children[next] as HTMLButtonElement).focus()
           onChange('energy_source', ENERGY_SOURCE_OPTIONS[next].value)
         }}
@@ -263,17 +279,31 @@ export function EnergySourceControls({ source, floor, ceiling, tau, onChange, co
       </button>)}
     </div>
     </div>
+    {source === 'peak_envelope' && <div className="flex flex-wrap items-center gap-2">
+      <div role="group" aria-label="Peak envelope mode" className="inline-flex rounded border border-input p-0.5">
+        {[true, false].map(auto => <button key={String(auto)} type="button"
+          aria-pressed={peakAuto === auto} disabled={disabled || pending}
+          onClick={() => onChange('peak_envelope_auto', String(auto))}
+          className={`rounded px-2 py-0.5 text-xs ${peakAuto === auto ? 'bg-secondary text-foreground' : 'text-muted-foreground'}`}>
+          {auto ? 'Auto' : 'Manual'}
+        </button>)}
+      </div>
+      {peakAuto && <span className="text-xs text-muted-foreground">Self-calibrating with preset attack and release.</span>}
+    </div>}
     {(compact || fields.length > 0) && <div data-testid={compact ? 'energy-parameters' : undefined}
       className={compact ? 'flex h-7 items-center gap-5' : fields.length === 1 ? 'block' : 'grid grid-cols-2 gap-3'}>
       {compact && (disabled || fields.length === 0) ? <span className="text-xs text-muted-foreground">
-        {disabled ? 'No active coupling' : 'No parameters for this source'}
+        {disabled ? 'No active coupling' : source === 'peak_envelope' ? 'Auto: 0.05 s attack · 2 s release' : 'No parameters for this source'}
       </span> : fields.map(({field, label, unit, value}) => compact ? <CompactEnergyNumber key={field}
-        label={label} unit={unit} value={value} step={field === 'adaptation_tau_s' ? 5 : 1}
+        testId={field === 'peak_attack_s' ? 'field-peak-attack' : field === 'peak_release_s' ? 'field-peak-release' : undefined}
+        label={label} unit={unit} value={value} step={field === 'adaptation_tau_s' ? 5 : field === 'peak_attack_s' ? 0.01 : field === 'peak_release_s' ? 0.1 : 1}
         disabled={disabled || pending} invalid={!!error} onChange={v => onChange(field, v)}
         onCommit={onCommit} onStep={v => onStep?.(field, v)} /> : <label key={field} className="space-y-1 text-xs">
-        {field === 'adaptation_tau_s' ? 'Adaptation time (seconds)' : `${label} (LUFS)`}
+        {field === 'adaptation_tau_s' ? 'Adaptation time (seconds)' : unit ? `${label} (${unit})` : label}
         <span className="block">
-          <Input type="number" step="0.1" min={field === 'adaptation_tau_s' ? '0.1' : undefined}
+          <Input type="number" step={field === 'peak_attack_s' ? '0.01' : '0.1'}
+            data-testid={field === 'peak_attack_s' ? 'field-peak-attack' : field === 'peak_release_s' ? 'field-peak-release' : undefined}
+            min={unit === 's' || field.startsWith('peak_') ? '0.001' : undefined}
             disabled={disabled || pending} value={value} aria-invalid={!!error} className="tabular-nums"
             onChange={e => onChange(field, e.target.value)} onBlur={onCommit}
             onKeyDown={e => { if (e.key === 'Enter' && onCommit) { e.preventDefault(); e.currentTarget.blur() } }} />
@@ -286,18 +316,18 @@ export function EnergySourceControls({ source, floor, ceiling, tau, onChange, co
 
 // The text field and attached arrow pair share a single border. Keyboard edits
 // commit on blur/Enter; pointer steps use the parent's short PATCH debounce.
-function CompactEnergyNumber({ label, unit, value, step, disabled, invalid, onChange, onCommit, onStep }: {
-  label: string; unit: string; value: string; step: number; disabled: boolean; invalid: boolean
+function CompactEnergyNumber({ testId, label, unit, value, step, disabled, invalid, onChange, onCommit, onStep }: {
+  testId?: string; label: string; unit: string; value: string; step: number; disabled: boolean; invalid: boolean
   onChange: (value: string) => void; onCommit?: () => void; onStep: (value: string) => void
 }) {
   const id = useId()
   function stepped(direction: number, multiplier = 1) {
-    return String((Number.isFinite(Number(value)) ? Number(value) : 0) + direction * step * multiplier)
+    return String(Number(((Number.isFinite(Number(value)) ? Number(value) : 0) + direction * step * multiplier).toFixed(6)))
   }
   return <div className="flex items-center gap-1.5 text-xs">
     <label htmlFor={id}>{label}</label>
       <span className="flex h-6 overflow-hidden rounded border border-input bg-background focus-within:ring-1 focus-within:ring-ring">
-        <input id={id} type="number" value={value} step={step} disabled={disabled} aria-invalid={invalid}
+        <input id={id} data-testid={testId} type="number" value={value} step={step} disabled={disabled} aria-invalid={invalid}
           className="h-full w-11 min-w-0 appearance-none bg-transparent px-1 text-right tabular-nums outline-none disabled:opacity-50 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
           onChange={e => onChange(e.target.value)} onBlur={onCommit}
           onKeyDown={e => {

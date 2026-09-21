@@ -1117,6 +1117,12 @@ class CanonicalAnalysisPipeline:
         """V2 per-bar falloff state (None for non-V2 engines or before first frame)."""
         return getattr(self._spectrum_processor._engine, "v2_bar_smooth", None)
 
+    def latest_level(self) -> float | None:
+        """Freshest raw stereo RMS from the existing loudness publication."""
+        with self._pub_lock:
+            record = self._latest_loudness_pub
+            return record.features.level if record is not None else None
+
     def latest_loudness(self) -> tuple[float | None, float | None]:
         """Freshest loudness publication, independent of Spectrum latency.
 
@@ -1243,7 +1249,7 @@ class CanonicalAnalysisPipeline:
                 >= (latest.sample_end, latest.sample_pos)
             ):
                 self._latest_pub = record
-            if (features.loudness_momentary_lufs is not None
+            if (features.level is not None or features.loudness_momentary_lufs is not None
                     or features.loudness_short_term_lufs is not None):
                 previous = self._latest_loudness_pub
                 if (previous is None or record.epoch != previous.epoch
@@ -1270,9 +1276,11 @@ class CanonicalAnalysisPipeline:
         onset_strength = 0.0
         onset_bass = onset_mid = onset_treble = False
         onset_bass_str = onset_mid_str = onset_treble_str = 0.0
-        momentary = short_term = None
+        momentary = short_term = level = None
 
         for pu in onset_batch:
+            if pu.level is not None:
+                level = pu.level
             if pu.loudness_momentary_lufs is not None:
                 momentary = pu.loudness_momentary_lufs
             if pu.loudness_short_term_lufs is not None:
@@ -1315,6 +1323,7 @@ class CanonicalAnalysisPipeline:
             sustained_energy=None,
             hpss_active=False,
             relative_exertion=full,
+            level=level,
             loudness_momentary_lufs=momentary,
             loudness_short_term_lufs=short_term,
         )
@@ -2977,7 +2986,8 @@ class SyncEngine:
                 # Copy only for rendering: PublicationRecord remains authoritative.
                 if isinstance(self._analyser, CanonicalAnalysisPipeline):
                     momentary, short_term = self._analyser.latest_loudness()
-                    features = replace(features, loudness_momentary_lufs=momentary,
+                    features = replace(features, level=self._analyser.latest_level(),
+                                       loudness_momentary_lufs=momentary,
                                        loudness_short_term_lufs=short_term)
                 scene: Scene = self._effect.render(features, t)
                 self._last_mix = self._effect.mix
