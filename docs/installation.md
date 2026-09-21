@@ -25,7 +25,7 @@ neither requires manual JSON edits.
 | CAVA Core | GCC, libfftw3-dev | Packaged native library plus FFTW runtime pulled by apt |
 | Squeezelite | GCC/make/patch, ALSA and codec headers | Pinned patched binary at /usr/local/bin/squeezelite; VISEXPORT mandatory |
 | Squeezelite default codecs | FLAC, Vorbis/Ogg, MAD, MPG123, FAAD development packages | Matching shared libraries: PCM/FLAC/Vorbis/MP3/AAC; no optional Opus/FFmpeg/ALAC/resampler flags |
-| External CAVA/FIFO | Debian CAVA + same pinned Squeezelite source | `cava` plus dedicated `lampastream-squeezelite-fifo` producer; separate derived-bars route |
+| External CAVA/FIFO | Debian CAVA + same pinned Squeezelite source | `cava` plus the shared `squeezelite` producer; separate derived-bars route |
 | AirPlay 2 | Autotools, FFmpeg, crypto/plist/Avahi/soxr/systemd development packages | Pinned shairport-sync + nqptp source builds, Avahi, capabilities, managed FIFO |
 | Frontend | Private Node 22.22.2 archive, pinned SHA256; npm ci | Compiled assets in wheel; Node is not a runtime requirement |
 | Services | systemd, polkit | lampastream user/audio group, repository unit, narrow receiver-restart authorization |
@@ -113,15 +113,14 @@ change unrelated firewall, host-kernel or container configuration.
 Native memory stress, live producer continuity, realtime performance and visual A/B
 remain **REQUIRES LXC VALIDATION**. See [deployment checklist](deployment-lxc.md).
 
-### Two producer ABIs, one deployment authority
+### One producer for both consumers
 
-Canonical LMS uses `/usr/local/bin/squeezelite` with LampaStream SHM v1 (ring at byte
-120). External CAVA expects the upstream SHM ring at byte 80. The installer therefore
-also builds `/usr/local/bin/lampastream-squeezelite-fifo` from the same pinned revision,
-with VISEXPORT but without the v1 patch. Runtime selects it only for `bars_source=cava`.
-There is no fallback between these executables; a missing binary is an explicit error.
-Both hashes are verified against the installation manifest. This preserves the
-intentional external-FIFO feature without weakening canonical v1 requirements.
+Canonical LMS and external CAVA both use `/usr/local/bin/squeezelite`, built from
+`ThaYapeMan/squeezelite` at `9a346227e9c3314bfdd15e9b189ddf5a8ab00899` with
+VISEXPORT. PCM remains at byte 80; the v1 extension follows the ring at byte 32848.
+External CAVA maps the stock prefix, while canonical analysis requires the trailing
+v1 extension. The installer builds once and verifies one binary hash against the
+installation manifest. A missing binary is an explicit error.
 
 For static/unit checks on development hosts, use [testing.md](testing.md).
 `bash scripts/validate.sh` provides supplementary target diagnostics and a synthetic
@@ -142,7 +141,8 @@ SysV-generated services for non-LampaStream Squeezelite executables. It logs eac
 conflicting unit, disables it, explicitly stops it, and checks for remaining
 processes. An ineffective stop aborts installation rather than starting a
 competing ALSA consumer. LampaStream's `/usr/local/bin/squeezelite` and
-`/usr/local/bin/lampastream-squeezelite-fifo` are excluded.
+the former `/usr/local/bin/lampastream-squeezelite-fifo` path are excluded;
+the latter is recognized only for upgrades from older installations.
 
 `--check` reports discovered units and their active/inactive state without
 stopping or disabling anything. Active conflicts fail the check; an inactive

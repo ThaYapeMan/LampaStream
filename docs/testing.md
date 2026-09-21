@@ -30,13 +30,19 @@ must survive in the queue; they need not replace a newer live Spectrum snapshot.
 
 ## Producer checks without deployment
 
-Use a fresh temporary checkout of pinned upstream
-`c7c4248ddd70e47dbfeba0bf4a8a7ec08d8a995c`. Copy the two producer files, dry-run and
-apply `output_vis_v1.patch`, inspect `make -n OPTS=-DVISEXPORT`, and compile
-`make OPTS=-DVISEXPORT output_vis.o output_vis_v1.o`.
-A successful plan is not compilation. Successful objects are not a full link or
-live SHM validation. The production build script does these integration steps and
-also links/installs; do not execute its install stage on the review host by accident.
+Run the single-build helper with temporary build and installation directories:
+
+```sh
+BUILD_DIR=/tmp/lampastream-producer-build INSTALL_DIR=/tmp/lampastream-producer-bin \
+  bash scripts/build-squeezelite.sh
+```
+
+It clones the shared `ThaYapeMan/squeezelite` fork at
+`9a346227e9c3314bfdd15e9b189ddf5a8ab00899`, which already includes the v1 producer
+and preserves the legacy PCM offsets. It inspects `make -n OPTS=-DVISEXPORT`,
+compiles both producer objects, links and installs one binary. The fork integration
+test checks the pinned source for producer markers and the trailing extension.
+A successful build is not live SHM validation on the deployment target.
 
 ## Offline acceptance
 

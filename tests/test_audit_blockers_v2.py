@@ -174,8 +174,8 @@ def test_producer_patch_marks_init_writes_in_progress():
 # ---------------------------------------------------------------------------
 
 
-_V1_MMAP_SIZE = 32888   # 80 + 40 + 32768
-_V2_EXT_OFFSET = 80
+_V1_MMAP_SIZE = 32888   # 80 + 32768 + 40
+_V2_EXT_OFFSET = 32848
 _HDR_FMT = "<IIBxxxIQ"
 _HDR_SIZE = struct.calcsize(_HDR_FMT)
 
@@ -192,17 +192,17 @@ def _write_v1_segment(
 ) -> None:
     """Materialise a fake v1 SHM segment at ``path``.
 
-    Uses the same offsets as the real producer: legacy header at 0,
-    extension block at offset 80, buffer at offset 120.
+    Uses the same offsets as the real producer: legacy fields at 56,
+    extension block at offset 32848, buffer at offset 80.
     """
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "wb") as f:
         f.write(b"\x00" * _V1_MMAP_SIZE)
     # Legacy header: buf_size, buf_index, running, rate, updated.
     with open(path, "r+b") as f:
-        f.seek(0)
+        f.seek(56)
         f.write(struct.pack(_HDR_FMT, 16384, 0, 1, 48000, 0))
-        # Extension header at offset 80.
+        # Extension header follows the legacy PCM ring.
         f.seek(_V2_EXT_OFFSET)
         # <IHHIQQQ4x  (magic, abi, flags, write_seq, generation, abs_write_pos, gap_seq, 4x pad)
         f.write(
@@ -225,9 +225,9 @@ def _write_v0_segment(path: Path) -> None:
     with open(path, "wb") as f:
         f.write(b"\x00" * 32848)  # v0 size: 80 + 32768
     with open(path, "r+b") as f:
-        f.seek(0)
+        f.seek(56)
         f.write(struct.pack(_HDR_FMT, 16384, 0, 1, 48000, 0))
-        # Deliberately leave extension bytes at offset 80 as zeros — no v1 magic.
+        # No trailing extension block exists in this legacy segment.
 
 
 def test_shm_absent_replacement_stays_in_pending_remap(tmp_path):

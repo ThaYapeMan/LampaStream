@@ -1413,9 +1413,9 @@ class PlayerManager:
         return True
 
     def _start_squeezelite(self, session: ActiveSession, profile: Profile) -> None:
-        # External CAVA consumes upstream SHM ABI v0; canonical analysis requires
-        # our v1 producer. Both binaries are built by the repository installer.
-        name = "lampastream-squeezelite-fifo" if profile.bars_source == "cava" else "squeezelite"
+        # The fork preserves the legacy CAVA layout and appends the v1 extension,
+        # so both ingress routes use the same installed producer.
+        name = "squeezelite"
         binary = shutil.which(name)
         if not binary:
             raise RuntimeError(f"{name} binary not found; run scripts/install-lampastream.sh")

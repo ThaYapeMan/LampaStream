@@ -495,31 +495,18 @@ def test_setup_airplay_version_uses_absolute_path() -> None:
             )
 
 
-def test_squeezelite_patch_applicable() -> None:
-    """BLOCKER 1: output_vis_v1.patch must be a real, machine-applicable
-    unified diff that applies cleanly to the pinned upstream squeezelite
-    revision.  Skipped when git/patch are unavailable or when we cannot
-    reach the upstream repository (e.g. offline CI).
-    """
+def test_squeezelite_fork_contains_v1_producer() -> None:
+    """The pinned fork must include the producer and preserve the stock PCM prefix."""
     import shutil
     import subprocess
     import tempfile
 
-    patch_path = ROOT / "squeezelite" / "output_vis_v1.patch"
-    assert patch_path.exists(), "output_vis_v1.patch missing"
-    assert patch_path.stat().st_size > 0, "output_vis_v1.patch is empty"
-
-    body = patch_path.read_text()
-    assert body.startswith("diff --git ") or "\ndiff --git " in body, (
-        "output_vis_v1.patch must be a git-style unified diff"
-    )
-
-    if shutil.which("git") is None or shutil.which("patch") is None:
+    if shutil.which("git") is None:
         import pytest
-        pytest.skip("git or patch not available")
+        pytest.skip("git not available")
 
     # Extract the pinned commit hash from the build script so the two stay
-    # in sync — bumping upstream requires editing exactly one place.
+    # in sync — the checkout follows the build defaults.
     build_script = (ROOT / "scripts" / "build-squeezelite.sh").read_text()
     commit_line = next(
         (
@@ -534,13 +521,17 @@ def test_squeezelite_patch_applicable() -> None:
     m = re.search(r":-([0-9a-f]{40})", commit_line)
     assert m is not None, f"Cannot parse pinned commit hash from {commit_line!r}"
     pinned = m.group(1)
+    repo_match = re.search(r'SQUEEZELITE_REPO="\$\{SQUEEZELITE_REPO:-([^}]+)', build_script)
+    assert repo_match is not None
+    repo = repo_match.group(1)
+    assert repo == "https://github.com/ThaYapeMan/squeezelite.git"
 
     with tempfile.TemporaryDirectory() as td:
         clone_dir = Path(td) / "squeezelite"
         clone = subprocess.run(
             [
                 "git", "clone", "--quiet", "--depth", "200",
-                "https://github.com/ralph-irving/squeezelite.git",
+                repo,
                 str(clone_dir),
             ],
             capture_output=True,
@@ -548,7 +539,7 @@ def test_squeezelite_patch_applicable() -> None:
         if clone.returncode != 0:
             import pytest
             pytest.skip(
-                f"cannot reach upstream repository: {clone.stderr.decode(errors='replace')}"
+                f"cannot reach fork repository: {clone.stderr.decode(errors='replace')}"
             )
         checkout = subprocess.run(
             ["git", "-C", str(clone_dir), "checkout", "--quiet", pinned],
@@ -569,19 +560,18 @@ def test_squeezelite_patch_applicable() -> None:
             f"{checkout.stderr.decode(errors='replace')}"
         )
 
-        # patch --dry-run must succeed against this fresh checkout.
-        with open(patch_path, "rb") as pf:
-            result = subprocess.run(
-                ["patch", "--dry-run", "-p1"],
-                stdin=pf,
-                cwd=str(clone_dir),
-                capture_output=True,
-            )
-        assert result.returncode == 0, (
-            f"patch --dry-run failed:\n"
-            f"stdout: {result.stdout.decode(errors='replace')}\n"
-            f"stderr: {result.stderr.decode(errors='replace')}"
-        )
+        assert subprocess.check_output(
+            ["git", "-C", str(clone_dir), "rev-parse", "HEAD"], text=True,
+        ).strip() == pinned
+        producer = (clone_dir / "output_vis.c").read_text()
+        header = (clone_dir / "vis_shm_v1.h").read_text()
+        helpers = (clone_dir / "output_vis_v1.c").read_text()
+        assert "VIS_SHM_V1_MAGIC" in header
+        assert "vis_shm_v1_begin_write" in producer
+        assert "vis_shm_v1_begin_write" in helpers
+        layout = producer.split("static struct vis_t {", 1)[1].split("}", 1)[0]
+        assert layout.index("buffer[VIS_BUF_SIZE]") < layout.index("lampastream_v1_ext")
+        assert "output_vis_v1.c" in (clone_dir / "Makefile").read_text()
 
 
 def test_validate_script_fd_zero_is_allowed() -> None:

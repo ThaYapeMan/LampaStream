@@ -901,13 +901,13 @@ def test_lms_cava_path_when_bars_source_cava(tmp_path: Path) -> None:
 
 
 def test_installed_producer_matches_ingress_abi(tmp_path):
-    """No implicit distro fallback: external CAVA and canonical PCM have distinct ABIs."""
+    """External CAVA and canonical PCM select the same installed fork producer."""
     from lampastream.models import Profile
     from lampastream.player_manager import ActiveSession, PlayerManager
     from lampastream.storage import Storage
 
     manager = PlayerManager(Storage(tmp_path / 'config.json'))
-    cases = [('cava', 'lampastream-squeezelite-fifo'), ('pcm_pipeline', 'squeezelite')]
+    cases = [('cava', 'squeezelite'), ('pcm_pipeline', 'squeezelite')]
     for mode, expected in cases:
         profile = Profile(player_mac='aa:bb:cc:dd:ee:ff', bars_source=mode)
         session = ActiveSession(profile)

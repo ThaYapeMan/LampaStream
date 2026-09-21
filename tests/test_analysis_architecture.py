@@ -977,7 +977,7 @@ def _write_shm_v1(
         abs_write_pos,         # stereo-frame counter
         gap_seq,               # skipped-export counter
     )
-    data = bytes(_HDR_OFFSET) + legacy_hdr + ext_hdr + bytes(VIS_BUF_SIZE * 2)
+    data = bytes(_HDR_OFFSET) + legacy_hdr + bytes(VIS_BUF_SIZE * 2) + ext_hdr
     assert len(data) == _MMAP_SIZE_V1, f"Expected {_MMAP_SIZE_V1}, got {len(data)}"
     path.write_bytes(data)
 
@@ -1411,8 +1411,8 @@ def test_stereo_source_rejects_v0_when_require_v1(tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_stereo_source_v1_buf_offset_is_120(tmp_path):
-    """v1 mode reads PCM from offset 120, not 80 (the extension is between)."""
+def test_stereo_source_v1_buf_offset_is_80(tmp_path):
+    """v1 mode preserves the stock PCM offset; the extension follows the ring."""
     from lampastream.pcm_source import (
         _BUF_OFFSET_V1,
         SqueezeliteShmStereoSource,
@@ -1421,7 +1421,8 @@ def test_stereo_source_v1_buf_offset_is_120(tmp_path):
     _write_shm_v1(p, buf_index=0, generation=1, abs_write_pos=0)
     src = SqueezeliteShmStereoSource()
     src.open("x", _path=p, require_v1=False)  # accept either
-    assert src._buf_offset() == _BUF_OFFSET_V1
+    assert src._buf_offset() == _BUF_OFFSET_V1 == 80
+    src.close()
 
 
 # ---------------------------------------------------------------------------

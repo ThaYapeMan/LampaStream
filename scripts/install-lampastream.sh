@@ -45,7 +45,7 @@ verify() {
     done
     pkg-config --exists alsa fftw3
     local binary linkage
-    for binary in /usr/local/bin/squeezelite /usr/local/bin/lampastream-squeezelite-fifo /usr/local/bin/shairport-sync /usr/local/bin/nqptp; do
+    for binary in /usr/local/bin/squeezelite /usr/local/bin/shairport-sync /usr/local/bin/nqptp; do
         linkage=$(ldd "$binary")
         [[ "$linkage" != *"not found"* ]] || fail "Unresolved runtime libraries: $binary"
     done
@@ -69,7 +69,7 @@ verify() {
 # Inspect executable paths, not service display names (SysV generators may rename units).
 squeezelite_conflict_definition() {
     local definition="$1"
-    # The two repository-built binaries are intentional and never conflicts.
+    # Recognize the shared producer and the former FIFO path during upgrades.
     definition=${definition//\/usr\/local\/bin\/lampastream-squeezelite-fifo/}
     definition=${definition//\/usr\/local\/bin\/squeezelite/}
     [[ "$definition" =~ /[[:alnum:]_./-]*/squeezelite([[:space:]\"\';]|$) ]]
@@ -298,8 +298,6 @@ for unit in lampastream shairport-sync nqptp; do
 done
 install -m 0755 "$WORK/bin/squeezelite" /usr/local/bin/squeezelite
 cmp "$WORK/bin/squeezelite" /usr/local/bin/squeezelite
-install -m 0755 "$WORK/bin/lampastream-squeezelite-fifo" /usr/local/bin/lampastream-squeezelite-fifo
-cmp "$WORK/bin/lampastream-squeezelite-fifo" /usr/local/bin/lampastream-squeezelite-fifo
 AIRPLAY_BUILD_DIR="$WORK/airplay" LAMPASTREAM_DEFER_START=1 LAMPASTREAM_DEPENDENCIES_READY=1 bash "$WORK/scripts/setup-airplay.sh"
 log '4/7 Migrate persisted configuration before starting current runtime'
 migrate_huesync_layout

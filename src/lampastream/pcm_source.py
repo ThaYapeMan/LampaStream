@@ -99,12 +99,12 @@ _MMAP_SIZE = _BUF_OFFSET + VIS_BUF_SIZE * 2  # 32848
 # second restart from ordinary polling.
 #
 # The extended ABI (v1) adds a 40-byte extension block immediately after the
-# legacy header (at _V2_EXT_OFFSET = _HDR_OFFSET + _HDR_SIZE = 80).  When the
+# legacy PCM ring (at _V2_EXT_OFFSET = _MMAP_SIZE = 32848).  When the
 # magic 0x48555345 ('HUSE') is present at that offset, SqueezeliteShmSource
 # reads the full extension and uses it for reliable continuity tracking.
 # When absent the source falls back to heuristic v0 tracking.
 #
-# The v1 extension block layout (40 bytes at offset 80):
+# The v1 extension block layout (40 bytes at offset 32848):
 #   offset  0: uint32_t magic         = 0x48555345 'HUSE'
 #   offset  4: uint16_t abi_version   = 1
 #   offset  6: uint16_t flags         = reserved, currently 0
@@ -128,14 +128,14 @@ _MMAP_SIZE = _BUF_OFFSET + VIS_BUF_SIZE * 2  # 32848
 SHM_ABI_V1_MAGIC: int = 0x48555345  # 'HUSE' — marks extended header present
 SHM_ABI_VERSION: int = 1
 
-_V2_EXT_OFFSET: int = _HDR_OFFSET + _HDR_SIZE        # 80
+_V2_EXT_OFFSET: int = _MMAP_SIZE                    # 32848
 # magic(4), abi_version(2), flags(2), write_seq(4),
 # generation(8), abs_write_pos(8), gap_seq(8), pad(4)
 _V2_EXT_FMT: str = "<IHHIQQQ4x"
 _V2_EXT_SIZE: int = struct.calcsize(_V2_EXT_FMT)     # should be 40
 assert _V2_EXT_SIZE == 40, f"_V2_EXT_SIZE={_V2_EXT_SIZE}, expected 40"
-_BUF_OFFSET_V1: int = _V2_EXT_OFFSET + _V2_EXT_SIZE  # 120
-_MMAP_SIZE_V1: int = _BUF_OFFSET_V1 + VIS_BUF_SIZE * 2  # 32888
+_BUF_OFFSET_V1: int = _BUF_OFFSET                   # 80, unchanged legacy PCM ring
+_MMAP_SIZE_V1: int = _V2_EXT_OFFSET + _V2_EXT_SIZE    # 32888
 
 # Maximum retries on a seqlock coherent-snapshot read.  Producer holds odd
 # write_seq only for the few microseconds it takes to memcpy a small ring
@@ -862,7 +862,7 @@ class SqueezeliteShmStereoSource:
 
         When ``require_v1`` is True (the default for the production canonical
         LMS PCM path), the SHM segment MUST expose the LampaStream v1 extension
-        header at offset 80 (magic 0x48555345 'HUSE') AND advertise the
+        header at offset 32848 (magic 0x48555345 'HUSE') AND advertise the
         exact ABI version this consumer supports (SHM_ABI_VERSION == 1).
         A stock squeezelite exposes only the legacy v0 header, and a future
         producer running a newer v2 layout would be silently misinterpreted
@@ -903,8 +903,8 @@ class SqueezeliteShmStereoSource:
                     f"Squeezelite SHM at {path} does not provide the v1 ABI "
                     f"(magic 0x{SHM_ABI_V1_MAGIC:08X} not found at offset "
                     f"{_V2_EXT_OFFSET}). "
-                    "Rebuild squeezelite with the LampaStream v1 producer patch "
-                    "from squeezelite/output_vis_v1.c and redeploy."
+                    "Rebuild squeezelite from the pinned shared fork using "
+                    "scripts/build-squeezelite.sh and redeploy."
                 )
             self._abi_version = 0
         else:
@@ -920,7 +920,7 @@ class SqueezeliteShmStereoSource:
                         f"Squeezelite SHM at {path} advertises ABI version "
                         f"{ext.abi_version}, but this consumer only supports "
                         f"version {SHM_ABI_VERSION}.  Rebuild squeezelite "
-                        "against the LampaStream v1 producer patch, or upgrade "
+                        "from the pinned LampaStream producer fork, or upgrade "
                         "LampaStream to a matching consumer."
                     )
                 self._unsupported_abi = True

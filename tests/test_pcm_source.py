@@ -728,19 +728,18 @@ def _write_stereo_shm_v1(
     generation: int = 0xC0FFEE,
     abs_write_pos: int = 0,
     gap_seq: int = 0,
-    pcm_at_120: bytes | None = None,
+    pcm_at_80: bytes | None = None,
     name: str = "shm-v1",
 ) -> Path:
     """Materialise a fully-formed v1 SHM segment on disk.
 
-    Layout mirrors what the patched squeezelite producer would write:
+    Layout mirrors what the fork squeezelite producer would write:
       * legacy vis_t header at offset 0 (56 bytes lock + 24 bytes fields)
-      * v1 extension header at offset 80 (40 bytes)
-      * PCM ring buffer at offset 120 (VIS_BUF_SIZE * sizeof(int16_t) bytes)
+      * v1 extension header at offset 32848 (40 bytes)
+      * PCM ring buffer at offset 80 (VIS_BUF_SIZE * sizeof(int16_t) bytes)
 
-    Note that PCM starts at 120 on the v1 path — writing samples at 80 would
-    corrupt the extension header and cause every read to invalidate.
-    ``pcm_at_120`` accepts a raw byte string that occupies the leading part
+    PCM keeps its stock offset; the extension follows the complete ring.
+    ``pcm_at_80`` accepts a raw byte string that occupies the leading part
     of the ring buffer; leftover bytes stay zero.  ``write_seq`` defaults to
     2 (even, stable) so the seqlock accepts the snapshot immediately.
     """
@@ -770,9 +769,9 @@ def _write_stereo_shm_v1(
         abs_write_pos,
         gap_seq,
     )
-    if pcm_at_120 is not None:
-        assert len(pcm_at_120) <= VIS_BUF_SIZE * 2, "pcm block would overflow the ring"
-        data[_BUF_OFFSET_V1 : _BUF_OFFSET_V1 + len(pcm_at_120)] = pcm_at_120
+    if pcm_at_80 is not None:
+        assert len(pcm_at_80) <= VIS_BUF_SIZE * 2, "pcm block would overflow the ring"
+        data[_BUF_OFFSET_V1 : _BUF_OFFSET_V1 + len(pcm_at_80)] = pcm_at_80
     p.write_bytes(bytes(data))
     return p
 
@@ -829,8 +828,8 @@ def _mutate_stereo_shm_v1(
         abs_write_pos,
         gap_seq,
     )
-    if "pcm_at_120" in fields:
-        pcm = fields["pcm_at_120"]
+    if "pcm_at_80" in fields:
+        pcm = fields["pcm_at_80"]
         assert isinstance(pcm, (bytes, bytearray))
         assert len(pcm) <= VIS_BUF_SIZE * 2
         data[_BUF_OFFSET_V1 : _BUF_OFFSET_V1 + len(pcm)] = pcm
@@ -838,7 +837,7 @@ def _mutate_stereo_shm_v1(
 
 
 def test_stereo_v1_basic_read(tmp_path: Path) -> None:
-    """A valid v1 SHM segment with PCM at offset 120 reads back non-zero stereo."""
+    """A valid v1 SHM segment with PCM at offset 80 reads back non-zero stereo."""
     # 4 stereo frames = 8 int16 values.  All non-zero so the finite check
     # and downstream shape verification stay meaningful.
     frames = [1000, -1000, 2000, -2000, 3000, -3000, 4000, -4000]
@@ -847,7 +846,7 @@ def test_stereo_v1_basic_read(tmp_path: Path) -> None:
         tmp_path,
         buf_index=len(frames),
         abs_write_pos=len(frames) // 2,
-        pcm_at_120=pcm,
+        pcm_at_80=pcm,
     )
     src = SqueezeliteShmStereoSource()
     src.open("x", _path=p, require_v1=True)
@@ -864,26 +863,18 @@ def test_stereo_v1_basic_read(tmp_path: Path) -> None:
     assert np.any(np.abs(result.frame.samples) > 0.0)
 
 
-def test_stereo_pcm_at_offset_120(tmp_path: Path) -> None:
-    """v1 reader must consume PCM from offset 120, not the extension at 80."""
-    # Fill positions 80..119 (the extension) with a distinctive non-zero
-    # byte AFTER writing the header, then place real PCM starting at 120.
-    # If the reader still copied from 80 it would see the sentinel and the
-    # decoded samples would not match the payload we placed at 120.
+def test_stereo_pcm_at_offset_80(tmp_path: Path) -> None:
+    """v1 reads stock-offset PCM and the extension after the complete ring."""
+    assert _BUF_OFFSET_V1 == 80
+    assert _V2_EXT_OFFSET == 32848
     real_frames = [500, -500, 600, -600]
     pcm = struct.pack("<4h", *real_frames)
     p = _write_stereo_shm_v1(
         tmp_path,
         buf_index=len(real_frames),
         abs_write_pos=len(real_frames) // 2,
-        pcm_at_120=pcm,
+        pcm_at_80=pcm,
     )
-    # Overwrite the 40 bytes 80..119 with 0xAA in a way that keeps the
-    # extension header valid: we cannot corrupt the header, so instead we
-    # verify by comparing the read samples to what a decoder acting on
-    # offset 120 would produce.  A read that used offset 80 would have to
-    # reinterpret the header bytes as PCM and would produce a very
-    # different waveform.
     src = SqueezeliteShmStereoSource()
     src.open("x", _path=p, require_v1=True)
     src._prev_index = 0
@@ -896,6 +887,38 @@ def test_stereo_pcm_at_offset_120(tmp_path: Path) -> None:
     expected_r = np.array(real_frames[1::2], dtype=np.float32) / 32768.0
     np.testing.assert_allclose(result.frame.samples[:, 0], expected_l, rtol=1e-6)
     np.testing.assert_allclose(result.frame.samples[:, 1], expected_r, rtol=1e-6)
+
+
+def test_v1_segment_preserves_legacy_mmap_prefix(tmp_path: Path) -> None:
+    """A stock-sized mapping sees the same PCM as the canonical v1 reader."""
+    pcm = struct.pack("<4h", 1234, -5678, 2345, -6789)
+    path = _write_stereo_shm_v1(tmp_path, buf_index=4, abs_write_pos=2, pcm_at_80=pcm)
+    with path.open("rb") as stream, mmap.mmap(
+        stream.fileno(), 32848, access=mmap.ACCESS_READ,
+    ) as legacy:
+        assert struct.unpack_from("<I", legacy, 60)[0] == 4
+        assert legacy[80:88] == pcm
+    source = SqueezeliteShmStereoSource()
+    try:
+        source.open("x", _path=path, require_v1=True)
+        source._prev_index = 0
+        source._abs_write_pos_frames = 0
+        result = source.read()
+        assert isinstance(result, DataResult)
+        expected = np.array([[1234, -5678], [2345, -6789]], dtype=np.float32) / 32768
+        np.testing.assert_array_equal(result.frame.samples, expected)
+    finally:
+        source.close()
+
+
+def test_old_pre_buffer_v1_layout_rejected(tmp_path: Path) -> None:
+    """Historical local patch layout must not be accepted as the fork layout."""
+    path = _write_stereo_shm_v1(tmp_path)
+    data = path.read_bytes()
+    path.write_bytes(data[:80] + data[32848:] + data[80:32848])
+    source = SqueezeliteShmStereoSource()
+    with pytest.raises(RuntimeError, match="not found at offset 32848"):
+        source.open("x", _path=path, require_v1=True)
 
 
 def test_stereo_v0_rejected(tmp_path: Path) -> None:
@@ -953,7 +976,7 @@ def test_stereo_gap_sequence_invalidates_once(tmp_path: Path) -> None:
         buf_index=4,
         abs_write_pos=2,
         gap_seq=0,
-        pcm_at_120=pcm,
+        pcm_at_80=pcm,
     )
     src = SqueezeliteShmStereoSource()
     src.open("x", _path=p, require_v1=True)
@@ -972,7 +995,7 @@ def test_stereo_gap_sequence_invalidates_once(tmp_path: Path) -> None:
         gap_seq=1,
         abs_write_pos=6,
         buf_index=12,
-        pcm_at_120=struct.pack("<8h", *frames, *more_frames),
+        pcm_at_80=struct.pack("<8h", *frames, *more_frames),
     )
     second = src.read()
     src.close()
@@ -1045,7 +1068,7 @@ def test_stereo_shm_replacement_remaps_and_delivers_new_pcm(tmp_path: Path) -> N
         tmp_path,
         abs_write_pos=100,
         buf_index=200,
-        pcm_at_120=pcm_a,
+        pcm_at_80=pcm_a,
     )
     src = SqueezeliteShmStereoSource()
     src.open("x", _path=path, require_v1=True)
@@ -1067,7 +1090,7 @@ def test_stereo_shm_replacement_remaps_and_delivers_new_pcm(tmp_path: Path) -> N
         tmp_path,
         abs_write_pos=100,        # baseline aligned with the source's snapshot
         buf_index=0,
-        pcm_at_120=pcm_b,
+        pcm_at_80=pcm_b,
     )
 
     # First read after replacement: must invalidate the epoch.

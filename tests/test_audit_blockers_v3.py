@@ -126,8 +126,8 @@ def test_producer_patch_calls_begin_init_before_legacy_writes():
 # ---------------------------------------------------------------------------
 
 
-_V1_MMAP_SIZE = 32888   # 80 + 40 + 32768
-_V2_EXT_OFFSET = 80
+_V1_MMAP_SIZE = 32888   # 80 + 32768 + 40
+_V2_EXT_OFFSET = 32848
 _HDR_FMT = "<IIBxxxIQ"
 
 
@@ -144,7 +144,7 @@ def _write_v1_segment(
     with open(path, "wb") as f:
         f.write(b"\x00" * _V1_MMAP_SIZE)
     with open(path, "r+b") as f:
-        f.seek(0)
+        f.seek(56)
         f.write(struct.pack(_HDR_FMT, 16384, 0, 1, 48000, 0))
         f.seek(_V2_EXT_OFFSET)
         f.write(
@@ -165,7 +165,7 @@ def _write_v0_segment(path: Path) -> None:
     with open(path, "wb") as f:
         f.write(b"\x00" * 32848)
     with open(path, "r+b") as f:
-        f.seek(0)
+        f.seek(56)
         f.write(struct.pack(_HDR_FMT, 16384, 0, 1, 48000, 0))
 
 

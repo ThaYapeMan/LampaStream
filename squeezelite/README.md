@@ -5,8 +5,8 @@ legacy external CAVA/FIFO is separate. Native live deployment **REQUIRES LXC VAL
 
 ## Automatic build
 
-Pinned upstream: `ralph-irving/squeezelite` at
-`c7c4248ddd70e47dbfeba0bf4a8a7ec08d8a995c`.
+Pinned shared fork: `ThaYapeMan/squeezelite` at
+`9a346227e9c3314bfdd15e9b189ddf5a8ab00899`.
 
 For a standard installation, from the repository:
 
@@ -19,15 +19,17 @@ all build/runtime dependencies and invokes `scripts/build-squeezelite.sh` automa
 The helper remains available for isolated developer builds with dependencies already
 present; it is not a second standard deployment procedure.
 
-The helper clones and verifies the pin, copies `vis_shm_v1.h` and `output_vis_v1.c`,
-dry-runs/applies `output_vis_v1.patch`, forces VISEXPORT, checks both producer objects
-in the make plan, compiles them and performs the full link. The installer copies the
-result to `/usr/local/bin/squeezelite`, compares bytes and records SHA256 provenance.
+The helper clones and verifies the pin, forces VISEXPORT, checks both producer
+objects in the make plan, compiles them and performs the full link. The fork already
+contains the producer; no local sources are copied and no patch is applied.
+The installer copies the result to `/usr/local/bin/squeezelite`, compares bytes and
+records SHA256 provenance. Both external CAVA and canonical PCM use this binary:
+the fork preserves stock offsets and appends the v1 extension after the PCM ring.
 The service PATH selects this binary ahead of any packaged Squeezelite.
-The helper also builds `lampastream-squeezelite-fifo` from unpatched pinned upstream
-with VISEXPORT, specifically for external CAVA's byte-80 ring layout. That binary
-is selected only by `bars_source=cava`; canonical PCM always uses the v1 binary.
-Neither route falls back to a distro executable.
+
+The local `vis_shm_v1.h`, `output_vis_v1.c` and `output_vis_v1.patch` are retained,
+unchanged, as historical provenance and for seqlock audit tests. Their earlier layout
+is not the current fork's layout described below.
 
 The standard build enables the default PCM/FLAC/Vorbis/MP3/AAC codecs and VISEXPORT;
 optional Opus/FFmpeg/ALAC/resampler flags are not enabled. AirPlay dependencies and
@@ -42,7 +44,7 @@ are not a full link, deployment or live continuity test.
 ## ABI layout
 
 The supported target layout is little-endian, with the legacy pthread-lock/header
-region preserved and a packed 40-byte extension before the PCM ring. C static
+region preserved and a packed 40-byte extension after the PCM ring. C static
 assertions and Python struct formats define the same offsets.
 
 | Absolute byte offset | Field | Type / units |
@@ -53,20 +55,20 @@ assertions and Python struct formats define the same offsets.
 | 64 | running | uint8; padding through 67 |
 | 68 | rate | uint32, Hz |
 | 72 | updated | int64 legacy timestamp; not continuity evidence |
-| 80 | magic | uint32 `0x48555345` |
-| 84 | abi_version | uint16, exactly 1 |
-| 86 | flags | uint16 reserved |
-| 88 | write_seq | uint32, odd while writing; even stable |
-| 92 | generation | uint64 producer lifetime ID |
-| 100 | abs_write_pos | uint64 exclusive **stereo-frame** position |
-| 108 | gap_seq | uint64 export-gap counter |
-| 116–119 | padding | 4 bytes |
-| 120 | PCM ring | Interleaved signed int16 L/R |
+| 80 | PCM ring | Interleaved signed int16 L/R, 32768 bytes |
+| 32848 | magic | uint32 `0x48555345` |
+| 32852 | abi_version | uint16, exactly 1 |
+| 32854 | flags | uint16 reserved |
+| 32856 | write_seq | uint32, odd while writing; even stable |
+| 32860 | generation | uint64 producer lifetime ID |
+| 32868 | abs_write_pos | uint64 exclusive **stereo-frame** position |
+| 32876 | gap_seq | uint64 export-gap counter |
+| 32884–32887 | padding | 4 bytes |
 
 Default ring capacity is 16384 scalar samples = 8192 stereo frames = 32768 bytes;
 total mapping size is 32888 bytes. One stereo frame advances abs_write_pos by 1 and
 buf_index by 2 modulo scalar capacity. Do not double-add absolute positions or treat
-extension bytes at offset 80 as PCM.
+the trailing extension bytes as PCM.
 
 ## Snapshot, initialization and gaps
 
@@ -106,10 +108,10 @@ from a second management path while that worker is active.
 ## Diagnostics
 
 ```sh
-xxd /dev/shm/squeezelite-<mac> | head -8
+xxd -s 32848 -l 40 /dev/shm/squeezelite-<mac>
 ```
 
-At offset 0x50, little-endian magic bytes are `45 53 55 48`; version bytes are
+At offset 0x8050, little-endian magic bytes are `45 53 55 48`; version bytes are
 `01 00`. Wrong bytes commonly mean the stock/old executable is still running.
 Check process executable, permissions, rate, generation, sequence and gap changes.
 Do not use the legacy updated timestamp to prove continuity.

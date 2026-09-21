@@ -24,11 +24,9 @@ assert lampastream.__git_hash__ == short, (lampastream.__git_hash__, short)
 manifest = json.loads((root.parent / 'installation.json').read_text())
 assert manifest['commit'] == commit
 assert manifest['short_commit'] == short
-assert manifest['squeezelite_revision'] == 'c7c4248ddd70e47dbfeba0bf4a8a7ec08d8a995c'
+assert manifest['squeezelite_revision'] == '9a346227e9c3314bfdd15e9b189ddf5a8ab00899'
 actual_sha = hashlib.sha256(Path('/usr/local/bin/squeezelite').read_bytes()).hexdigest()
 assert actual_sha == manifest['squeezelite_sha256']
-assert hashlib.sha256(Path('/usr/local/bin/lampastream-squeezelite-fifo').read_bytes()
-                      ).hexdigest() == manifest['fifo_producer_sha256']
 assert manifest['producer_objects'] == ['output_vis.o', 'output_vis_v1.o']
 assert not migrate_file(Path(config), check=True), 'Migration required'
 receiver_config = Path('/usr/local/etc/shairport-sync.conf').read_text()
