@@ -81,7 +81,7 @@ function StatusGrid({ status, analyser, playerType }: {
         {status?.effect_type ? <code className="text-xs font-mono">{status.effect_type}</code> : unknown}
       </StatusRow>
       <StatusRow label="Sync master">
-        {playerType === 'AirPlay' ? <span className="text-muted-foreground">n/a</span> : status?.sync_master ? (
+        {playerType === 'AirPlay' || playerType === 'Spotify' ? <span className="text-muted-foreground">n/a</span> : status?.sync_master ? (
           <div>
             {status.sync_master_name && <div className="font-medium">{status.sync_master_name}</div>}
             <code className="text-xs font-mono text-muted-foreground">{status.sync_master}</code>
@@ -116,6 +116,13 @@ function SessionDiagnostics({ status, playerType }: {
               <Badge variant={status.airplay_receiving ? 'default' : 'secondary'} className="text-xs">
                 {status.airplay_receiving === true ? 'Receiving audio'
                   : status.airplay_receiving === false ? 'Waiting for AirPlay connection…' : '—'}
+              </Badge>
+            </StatusRow>
+          )}
+          {playerType === 'Spotify' && (
+            <StatusRow label="Spotify Connect">
+              <Badge variant={status.track ? 'default' : 'secondary'} className="text-xs">
+                {status.track ? 'Playing' : 'Waiting for Spotify Connect…'}
               </Badge>
             </StatusRow>
           )}
@@ -420,7 +427,7 @@ export function NowPlaying({ expertMode = false, colour, channel_colours, onset,
       />
 
       <TrackProgress track={status?.track ?? null} connected={connected}
-        showControls={playerType !== 'AirPlay'}
+        showControls={playerType !== 'AirPlay' && playerType !== 'Spotify'}
         transport={playerType === 'LMS' && couplingId && status?.follow_target_mac ? {
           couplingId, targetMac: status.follow_target_mac, targetName: status.follow_target_name || status.follow_target_mac,
         } : undefined} />

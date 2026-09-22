@@ -147,6 +147,7 @@ export function Players({ activeCouplingId = null }: { activeCouplingId?: string
   }
 
   const isAirPlay = form.playerType === 'AirPlay'
+  const isSpotify = form.playerType === 'Spotify'
 
   async function handleSave() {
     setSaving(true)
@@ -303,7 +304,9 @@ export function Players({ activeCouplingId = null }: { activeCouplingId?: string
               <p className="text-xs text-muted-foreground">
                 {isAirPlay
                   ? 'Name shown in the AirPlay menu. Changing this restarts the AirPlay receiver.'
-                  : 'Name shown in the LMS player list. Changing this restarts the player.'}
+                  : isSpotify
+                    ? 'Name shown in the Spotify Connect device picker. Changing this restarts the go-librespot receiver.'
+                    : 'Name shown in the LMS player list. Changing this restarts the player.'}
               </p>
               <Input
                 value={form.display_name}
@@ -312,7 +315,7 @@ export function Players({ activeCouplingId = null }: { activeCouplingId?: string
               />
             </div>
 
-            {isAirPlay ? (
+            {isAirPlay || isSpotify ? (
               <>
                 <div className="space-y-1">
                   <Label className="text-sm">Player name</Label>
@@ -324,11 +327,12 @@ export function Players({ activeCouplingId = null }: { activeCouplingId?: string
                 </div>
                 <div className="rounded-md border border-muted bg-muted/40 px-4 py-3 text-sm text-muted-foreground space-y-1">
                   <p>
-                    <strong className="text-foreground">Silent AirPlay destination for analysis.</strong>
+                    <strong className="text-foreground">Silent {isSpotify ? 'Spotify Connect' : 'AirPlay'} destination for analysis.</strong>
                   </p>
                   <p>
-                    Select this player alongside your real speaker in Control Center to keep audio
-                    playing through your speaker while LampaStream analyses the stream.
+                    {isSpotify
+                      ? 'Select this device in Spotify Connect to send audio to LampaStream for analysis.'
+                      : 'Select this player alongside your real speaker in Control Center to keep audio playing through your speaker while LampaStream analyses the stream.'}
                   </p>
                 </div>
               </>
