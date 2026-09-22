@@ -797,3 +797,50 @@ cleanup_huesync_layout
         "New lampastream rules must survive cleanup (replaced, not just deleted)"
     )
     assert 'subject.user === "lampastream"' in new_rules.read_text()
+
+
+def test_spotify_pinned_provisioning_contract():
+    from lampastream.pcm_source import SPOTIFY_PIPE, SPOTIFY_SAMPLE_RATE
+    from lampastream.spotify_config import SPOTIFY_CONFIG, SPOTIFY_STATUS_URL, receiver_config
+
+    setup = (ROOT / 'scripts/setup-spotify.sh').read_text()
+    uninstall = (ROOT / 'scripts/uninstall-spotify.sh').read_text()
+    installer = SCRIPT.read_text()
+    import tomllib
+
+    project = tomllib.loads((ROOT / 'pyproject.toml').read_text())['project']
+    assert 'httpx>=0.27' in project['dependencies']
+    config = receiver_config('LampaStream Spotify')
+    assert 'LIBRESPOT_VERSION=v0.10.0' in setup
+    assert '57d7278d94a9233060c2a6238f5926ffd1e72de4' in setup
+    assert 'e37514e6df740c5db5d975243bdcaa8068d63fc7e39d75000293049b8c7915f8' in setup
+    assert (setup.index('sha256sum --check') < setup.index('tar -xzf')
+            < setup.index('install -m 0755'))
+    assert 'receiver_config("LampaStream Spotify")' in setup
+    assert str(SPOTIFY_CONFIG) in setup and SPOTIFY_SAMPLE_RATE == 44100
+    assert f'p {SPOTIFY_PIPE} 0600 lampastream lampastream' in setup
+    assert f'audio_output_pipe: {SPOTIFY_PIPE}' in config
+    for expected in ('audio_backend: pipe', 'audio_output_pipe_format: s16le',
+                     'audio_output_pipe_wait_for_reader: true', 'external_volume: true',
+                     'type: zeroconf', 'persist_credentials: false',
+                     'address: 127.0.0.1', 'port: 3678'):
+        assert expected in config
+    assert SPOTIFY_STATUS_URL == 'http://127.0.0.1:3678/status'
+    assert 'User=lampastream' in setup and 'Group=lampastream' in setup
+    assert 'ExecStart=/usr/local/bin/go-librespot -config_dir /etc/lampastream-spotify' in setup
+    assert '[[ "$DEFER_START" != 1 ]]' in setup
+    assert 'systemctl enable --now go-librespot' in setup
+    assert 'LAMPASTREAM_DEPENDENCIES_READY' in setup
+    assert ('LAMPASTREAM_PYTHON="$RELEASE/venv/bin/python" LAMPASTREAM_DEFER_START=1 '
+            'LAMPASTREAM_DEPENDENCIES_READY=1 bash "$WORK/scripts/setup-spotify.sh"') in installer
+    assert 'for unit in lampastream go-librespot shairport-sync nqptp' in installer
+    assert 'restart avahi-daemon nqptp shairport-sync go-librespot lampastream' in installer
+    assert 'stop go-librespot' in uninstall and 'disable go-librespot' in uninstall
+    assert '/etc/lampastream-spotify /run/lampastream-spotify' in uninstall
+    assert '/run/lampastream/' not in uninstall
+    rule = (ROOT / 'systemd/49-lampastream-spotify.rules').read_text()
+    assert 'subject.user === "lampastream"' in rule
+    assert 'action.lookup("unit") === "go-librespot.service"' in rule
+    assert 'action.lookup("verb") === "restart"' in rule
+    for script in ('setup-spotify.sh', 'uninstall-spotify.sh', 'install-lampastream.sh'):
+        subprocess.run(['bash', '-n', str(ROOT / 'scripts' / script)], check=True)

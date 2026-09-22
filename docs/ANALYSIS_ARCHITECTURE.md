@@ -100,7 +100,7 @@ from native availability checks. See [api.md](api.md).
 
 ## Ingress separation
 
-AirPlay and LMS PCM use the common canonical factory. LMS SHM continuity is a
+AirPlay, Spotify Connect and LMS PCM use the common canonical factory. LMS SHM continuity is a
 producer/source contract, not an analysis scheduler responsibility. Exact v1 is
 required for production stereo PCM. See [Squeezelite ABI](../squeezelite/README.md).
 

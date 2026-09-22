@@ -1602,6 +1602,147 @@ class AirPlayPipeStereoSource:
         return DataResult(frame=frame)
 
 
+# Verified against go-librespot v0.10.0 (57d7278d94a9233060c2a6238f5926ffd1e72de4):
+# player/player.go fixes 44100 Hz stereo; audio_output_pipe_format selects s16le.
+# A separate runtime directory keeps receiver install/uninstall lifecycles isolated.
+SPOTIFY_PIPE: Path = Path("/run/lampastream-spotify/spotify.pcm")
+SPOTIFY_SAMPLE_RATE: int = 44100
+SPOTIFY_CHANNELS: int = 2
+SPOTIFY_SAMPLE_WIDTH: int = 2
+SPOTIFY_BYTES_PER_FRAME: int = SPOTIFY_CHANNELS * SPOTIFY_SAMPLE_WIDTH
+_SPOTIFY_STALE_S: float = 2.0
+
+
+class SpotifyPipeStereoSource:
+    """Reads stereo decoded float32 PCM from go-librespot's named pipe.
+
+    Returns
+    SourceReadResult with a stereo DecodedSourceFrame.
+
+    Source contract: 44100 Hz, S16_LE, 2 channels (stereo).
+    L and R are preserved separately — no (L+R)/2 downmix.
+
+    IMPORTANT — one ingress reader:
+    Only one instance may read from the production FIFO at a time.  A FIFO
+    is not broadcast. Do not open a second reader against the same path.
+
+    Lifecycle:
+    - EAGAIN (no data) → TemporarilyNoData
+    - EOF (write-end closed, Spotify disconnected) → EndOfStream
+    - Valid read → DataResult(DecodedSourceFrame)
+
+    Partial-byte carry: sub-frame bytes from one read are prepended to the next
+    so that L/R alignment is always preserved across read boundaries.
+    """
+
+    def __init__(self, path: Path = SPOTIFY_PIPE) -> None:
+        self._path = path
+        self._next_read_t: float | None = None
+        self._fd: int | None = None
+        self._last_data_t: float | None = None
+        self._remainder: bytes = b""
+        self._source_id: str = f"spotify:{path}"
+
+    def open(self) -> None:
+        """Open the pipe non-blocking.  Raises OSError if it does not exist."""
+        self._fd = os.open(self._path, os.O_RDONLY | os.O_NONBLOCK)
+        self._last_data_t = None
+        self._next_read_t = None
+        self._remainder = b""
+
+    def close(self) -> None:
+        if self._fd is not None:
+            try:
+                os.close(self._fd)
+            except OSError:
+                pass
+            self._fd = None
+
+    @property
+    def sample_rate(self) -> int:
+        return SPOTIFY_SAMPLE_RATE
+
+    @property
+    def running(self) -> bool:
+        if self._last_data_t is None:
+            return False
+        return time.monotonic() - self._last_data_t < _SPOTIFY_STALE_S
+
+    @property
+    def source_id(self) -> str:
+        return self._source_id
+
+    def read(self) -> SourceReadResult:
+        """Return a SourceReadResult from the Spotify pipe.
+
+        Stereo layout: samples[:, 0] = L, samples[:, 1] = R.
+        """
+        if self._fd is None:
+            return TemporarilyNoData()
+
+        # v0.10.0's pipe writer runs as fast as its reader: unlike AirPlay,
+        # FIFO backpressure is the playback clock. Bound lookahead to 10 ms,
+        # retain fractional deadlines, and never catch up a long idle period.
+        now = time.monotonic()
+        if self._next_read_t is not None and now < self._next_read_t:
+            return TemporarilyNoData()
+        try:
+            raw = os.read(self._fd, (SPOTIFY_SAMPLE_RATE // 100) * SPOTIFY_BYTES_PER_FRAME)
+        except OSError as exc:
+            if exc.errno == errno.EAGAIN:
+                self._next_read_t = None
+                return TemporarilyNoData()
+            raise
+
+        if not raw:
+            # EOF: the write-end was closed (Spotify sender disconnected).
+            # Discard any partial-byte carry: it belongs to the just-ended stream
+            # and must not prefix the next reconnect's audio.
+            self._remainder = b""
+            self._next_read_t = None
+            self._last_data_t = None
+            return EndOfStream()
+
+        # Prepend sub-frame carry from previous read to preserve L/R alignment.
+        combined = self._remainder + raw
+        n_frames = len(combined) // SPOTIFY_BYTES_PER_FRAME
+        if n_frames == 0:
+            self._remainder = combined
+            return TemporarilyNoData()
+
+        self._remainder = combined[n_frames * SPOTIFY_BYTES_PER_FRAME :]
+        self._last_data_t = now
+        previous = self._next_read_t if self._next_read_t is not None else now
+        self._next_read_t = max(previous, now - 0.01) + n_frames / SPOTIFY_SAMPLE_RATE
+
+        s16 = np.frombuffer(combined[: n_frames * SPOTIFY_BYTES_PER_FRAME], dtype="<i2")
+        # Interleaved stereo S16_LE: even indices = L, odd = R.
+        # Scale to float32 in [−1.0, +1.0] by dividing each channel by 32768.
+        # L and R are preserved separately — no downmix.
+        left = s16[0::2].astype(np.float32) / 32768.0
+        right = s16[1::2].astype(np.float32) / 32768.0
+        stereo = np.column_stack([left, right])  # shape (n_frames, 2)
+
+        # Validate (s16 → float32 cannot produce NaN/Inf in practice).
+        if not np.all(np.isfinite(stereo)):
+            _log.warning("Spotify stereo source: non-finite samples; invalidating epoch.")
+            return StreamInvalidated(cause=InvalidationCause.UNKNOWN, known_lost_samples=None)
+
+        over_range = bool(np.any(np.abs(stereo) >= 1.0))
+        wall_ns = time.time_ns()
+
+        frame = DecodedSourceFrame(
+            samples=stereo,
+            sample_rate=SPOTIFY_SAMPLE_RATE,
+            channels=2,
+            source_id=self._source_id,
+            source_sample_pos=None,
+            over_range=over_range,
+            wall_ns=wall_ns,
+        )
+        return DataResult(frame=frame)
+
+
 if __name__ == "__main__":
     # Quick benchmark: `python3 -m lampastream.pcm_source`
     import timeit

@@ -353,3 +353,127 @@ def test_airplay_receiver_invalidation_discards_previous_track():
     assert source.read() is None
     source.feed(item('phbt', '44100/999'))
     assert source.read() is None
+
+
+def spotify_status(**changes):
+    data = {'paused': False, 'stopped': False, 'buffering': False,
+            'track': {'name': 'Track', 'artist_names': ['One', 'Two'],
+                      'uri': 'spotify:track:example', 'album_name': 'Album',
+                      'position': 12500, 'duration': 180000}}
+    data.update(changes)
+    return data
+
+
+def test_spotify_rest_poll_mapping_failures_and_reopen():
+    import httpx
+
+    from lampastream.track_position import SpotifyTrackPositionSource
+
+    async def run():
+        payload = [spotify_status()]
+        requests = []
+
+        def handle(request):
+            requests.append(request)
+            value = payload[0]
+            if isinstance(value, Exception):
+                raise value
+            if isinstance(value, int):
+                return httpx.Response(value)
+            if isinstance(value, bytes):
+                return httpx.Response(200, content=value)
+            return httpx.Response(200, json=value)
+
+        client_type = httpx.AsyncClient
+        clients = []
+
+        def client(**kwargs):
+            instance = client_type(transport=httpx.MockTransport(handle), **kwargs)
+            clients.append(instance)
+            return instance
+
+        with patch('lampastream.track_position.httpx.AsyncClient', side_effect=client):
+            source = SpotifyTrackPositionSource(interval=0.001)
+            source.open()
+            task = source._task
+            source.open()
+            assert source._task is task
+            try:
+                await until(lambda: source.read() is not None)
+                snapshot = source.read()
+                assert (snapshot.title, snapshot.artist, snapshot.position_s,
+                        snapshot.duration_s, snapshot.playing) == (
+                            'Track', 'One, Two', 12.5, 180, True)
+                assert snapshot.observed_at > 0
+                for flag in ('paused', 'stopped', 'buffering'):
+                    payload[0] = spotify_status(**{flag: True})
+                    await until(lambda: source.read() is not None and not source.read().playing)
+                    payload[0] = spotify_status()
+                    await until(lambda: source.read() is not None and source.read().playing)
+                payload[0] = spotify_status(track={**spotify_status()['track'], 'position': 5000})
+                await until(lambda: source.read().position_s == 5)  # seek
+                for bad in (204, 500, b'not json', [], {'track': 'bad'},
+                            spotify_status(paused='false'),
+                            spotify_status(track={'name': 'bad'}),
+                            httpx.ConnectError('not running')):
+                    payload[0] = bad
+                    await until(lambda: source.read() is None)
+                    assert source.running
+                    payload[0] = spotify_status()
+                    await until(lambda: source.read() is not None)
+                source.invalidate()
+                assert source.read() is None
+                await until(lambda: source.read() is not None)
+            finally:
+                await source.close()
+            assert clients[0].is_closed and not source.running and source.read() is None
+            source.open()
+            await until(lambda: source.read() is not None)
+            await source.close()
+            await source.close()
+            assert clients[-1].is_closed
+            assert all(r.method == 'GET' and str(r.url) == 'http://127.0.0.1:3678/status'
+                       for r in requests)
+
+    asyncio.run(run())
+
+
+def test_spotify_invalid_times_and_metadata():
+    import pytest
+
+    from lampastream.track_position import SpotifyTrackPositionSource
+
+    for change in ({'position': float('nan')}, {'duration': float('inf')},
+                   {'position': -1}, {'position': True}, {'artist_names': 'One'},
+                   {'artist_names': [None]}, {'name': []}):
+        with pytest.raises(ValueError):
+            SpotifyTrackPositionSource._parse(spotify_status(
+                track={**spotify_status()['track'], **change}))
+    assert SpotifyTrackPositionSource._parse(spotify_status(track=None)) is None
+
+
+def test_spotify_invalidation_discards_inflight_response():
+    import httpx
+
+    from lampastream.track_position import SpotifyTrackPositionSource
+
+    async def run():
+        entered, release = asyncio.Event(), asyncio.Event()
+
+        async def handle(request):
+            entered.set()
+            await release.wait()
+            return httpx.Response(200, json=spotify_status())
+
+        client = httpx.AsyncClient(transport=httpx.MockTransport(handle))
+        with patch('lampastream.track_position.httpx.AsyncClient', return_value=client):
+            source = SpotifyTrackPositionSource(interval=10)
+            source.open()
+            await entered.wait()
+            source.invalidate()
+            release.set()
+            await asyncio.sleep(0.02)
+            assert source.read() is None
+            await source.close()
+
+    asyncio.run(run())

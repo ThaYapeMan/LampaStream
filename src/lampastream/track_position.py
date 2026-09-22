@@ -8,6 +8,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import binascii
+import math
 import os
 import stat
 import time
@@ -18,7 +19,10 @@ from pathlib import Path
 from typing import Protocol
 from urllib.parse import unquote
 
+import httpx
+
 from .lms_status import LmsPlayerStatus, _parse_status
+from .spotify_config import SPOTIFY_STATUS_URL
 
 
 @dataclass(frozen=True)
@@ -49,7 +53,7 @@ class TrackPositionSource(Protocol):
 
     open starts acquisition; close awaits its completion and releases descriptors.
     read returns a stable immutable anchor, not a continuously ticking clock.
-    LMS readers are session-owned; the shared AirPlay receiver reader is manager-owned.
+    LMS readers are session-owned; shared AirPlay/Spotify receiver readers are manager-owned.
     """
     def open(self) -> None: ...
     async def close(self) -> None: ...
@@ -300,3 +304,84 @@ class AirPlayTrackPositionSource:
                 self._update(playing=False)
             elif code in ('pend', 'aend'):
                 self._snapshot, self._start, self._batch = None, None, None
+
+
+class SpotifyTrackPositionSource:
+    """Read-only REST polling of the manager-owned go-librespot receiver.
+
+    v0.10.0 api-spec.yml: GET /status returns 204 without a session, otherwise
+    track.{name,artist_names,position,duration}; times are milliseconds. No
+    playback commands or credentials are sent. /events is deliberately unused.
+    """
+
+    def __init__(self, url: str = SPOTIFY_STATUS_URL, interval: float = 1.0):
+        self._url = url
+        self._interval = interval
+        self._task: asyncio.Task | None = None
+        self._snapshot: TrackPosition | None = None
+        self._generation = 0
+
+    @property
+    def running(self) -> bool:
+        return self._task is not None and not self._task.done()
+
+    def open(self) -> None:
+        if not self.running:
+            self._task = asyncio.create_task(self._run())
+
+    def read(self) -> TrackPosition | None:
+        return self._snapshot
+
+    def invalidate(self) -> None:
+        self._generation += 1
+        self._snapshot = None
+
+    async def close(self) -> None:
+        if self._task is not None:
+            self._task.cancel()
+            try:
+                await self._task
+            except asyncio.CancelledError:
+                if asyncio.current_task().cancelling():
+                    raise
+            self._task = None
+        self.invalidate()
+
+    @staticmethod
+    def _parse(data: object) -> TrackPosition | None:
+        if not isinstance(data, dict):
+            raise ValueError("status must be an object")
+        track = data.get('track')
+        if track is None:
+            return None
+        if not isinstance(track, dict):
+            raise ValueError("track must be an object")
+        states = [data.get(key) for key in ('paused', 'stopped', 'buffering')]
+        title, artists = track.get('name'), track.get('artist_names')
+        if (any(type(state) is not bool for state in states)
+                or not isinstance(title, str) or not isinstance(artists, list)
+                or not all(isinstance(artist, str) for artist in artists)):
+            raise ValueError("invalid metadata or playback state")
+        times = [track.get(key) for key in ('position', 'duration')]
+        if any(type(value) not in (int, float) or not math.isfinite(value) or value < 0
+               for value in times):
+            raise ValueError("invalid track times")
+        position, duration = (value / 1000 for value in times)
+        return TrackPosition(title=title or None, artist=', '.join(artists) or None,
+                             position_s=min(position, duration), duration_s=duration,
+                             playing=not any(states), observed_at=time.monotonic())
+
+    async def _run(self) -> None:
+        # Loopback only by default; do not inherit proxy credentials/environment.
+        async with httpx.AsyncClient(timeout=2.0, trust_env=False) as client:
+            while True:
+                generation = self._generation
+                try:
+                    response = await client.get(self._url)
+                    response.raise_for_status()
+                    snapshot = None if response.status_code == 204 else self._parse(response.json())
+                except (httpx.HTTPError, ValueError, TypeError, OverflowError):
+                    snapshot = None
+                if generation == self._generation:
+                    self._snapshot = snapshot
+                await asyncio.sleep(self._interval)

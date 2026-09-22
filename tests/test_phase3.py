@@ -1310,3 +1310,37 @@ def test_v2_per_bar_falloff_holds_after_silence():
         f"peak_before={bar_peak:.3f} peak_after={peak_after:.3f} — "
         f"if peak_after ≈ 0, per-bar falloff is not applied"
     )
+
+
+def test_spotify_pipe_through_canonical_factory_preserves_opposite_phase(tmp_path, monkeypatch):
+    from lampastream.models import Profile
+    from lampastream.pcm_source import SpotifyPipeStereoSource
+    from lampastream.player_manager import _make_canonical_pipeline
+
+    path = tmp_path / 'spotify.pcm'
+    os.mkfifo(path)
+    source = SpotifyPipeStereoSource(path)
+    source.open()
+    writer = os.open(path, os.O_WRONLY | os.O_NONBLOCK)
+    clock = [100.0]
+    monkeypatch.setattr('lampastream.pcm_source.time.monotonic', lambda: clock[0])
+    pipeline = _make_canonical_pipeline(source, Profile(spectrum_backend='v2'))
+    canonicalizer = AudioCanonicalizer()
+    signal = np.sin(2 * np.pi * 440 * np.arange(44100) / 44100).astype(np.float32) * 0.5
+    try:
+        for start in range(0, len(signal), 441):
+            chunk = signal[start:start + 441]
+            os.write(writer, _s16le_stereo(chunk, -chunk))
+            clock[0] += 0.011
+            for result in canonicalizer.push(source.read()):
+                if isinstance(result, CanonicalData):
+                    assert result.frame.SAMPLE_RATE == 48000
+                    pipeline.feed(result.frame)
+        features = pipeline.latest()
+        assert features is not None
+        assert max(features.bars) > 0.01
+        assert features.level > 0.1
+    finally:
+        pipeline.stop()
+        source.close()
+        os.close(writer)

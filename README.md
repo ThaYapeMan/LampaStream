@@ -2,7 +2,7 @@
 
 > Formerly known as **HueSync**; renamed when the project outgrew Philips Hue.
 
-Music-reactive Philips Hue Entertainment lighting from LMS or AirPlay 2.
+Music-reactive Philips Hue Entertainment lighting from LMS, AirPlay 2 or Spotify Connect (backend Phase 1).
 LampaStream analyzes live audio, produces generic audio features, and renders Effects
 through a Hue Entertainment output driver. No microphone or precomputed BPM tags
 are required.
@@ -17,7 +17,7 @@ features. The frozen canonical pipeline is a subsystem within the broader model.
 
 | Entity | Role |
 |---|---|
-| **VirtualPlayer** | The player/audio-source integration boundary. LMS/Squeezelite and AirPlay are implemented. It holds source identity and connection settings, not Spectrum, Beat or Effects logic. |
+| **VirtualPlayer** | The player/audio-source integration boundary. LMS/Squeezelite, AirPlay and Spotify Connect (backend only) are implemented. It holds source identity and connection settings, not Spectrum, Beat or Effects logic. |
 | **Controller** | The physical lighting controller and its connection credentials. The current runtime output is Philips Hue Bridge; a Controller is separate from a Zone. |
 | **Zone** | A logical group of lights controlled together, currently mapped to a Hue Entertainment Area on its Controller. Formerly **LightProvider**. |
 | **Analyser** | Reusable analysis configuration: Spectrum engine selection, bands/cutoffs and onset algorithm/settings. It is source-independent. Formerly **AnalysisConfig**. |
@@ -65,7 +65,7 @@ with a backup and conflict checks. See [configuration](docs/configuration.md).
 
 ## Player-independent audio architecture
 
-**LMS/Squeezelite and AirPlay are current integrations. Neither defines LampaStream's
+**LMS/Squeezelite, AirPlay and Spotify Connect are current integrations. None defines LampaStream's
 architecture. The player-specific boundary ends at canonical audio ingress.**
 Once audio has been canonicalised, downstream analysis and Effects do not need to
 know which player supplied it.
@@ -78,21 +78,53 @@ know which player supplied it.
 |---|---|---|---|---|
 | LMS / Squeezelite | IMPLEMENTED | Stereo shared memory from patched Squeezelite SHM v1 | Yes | Shared canonical PCM analysis. |
 | AirPlay | IMPLEMENTED | shairport-sync → S16_LE stereo, 44.1 kHz named pipe → `AirPlayPipeStereoSource` | Yes, always | Same canonical pipeline factory and downstream Effects as LMS PCM. |
+| Spotify | IMPLEMENTED (backend only) | go-librespot → S16_LE stereo, 44.1 kHz named pipe → `SpotifyPipeStereoSource` | Yes, always | Same canonical pipeline factory; creation UI and Now Playing wiring deferred to Phase 2. |
 | Sonos (dedicated integration) | NOT PRESENT | — | — | Potential future adapter. A Sonos player exposed through a third-party LMS plugin can be followed through the LMS integration; this is not a native Sonos ingress. |
 | Roon | NOT PRESENT | — | — | Potential future adapter; no production Roon player type or ingress. |
 
-No other production VirtualPlayer types are currently defined. AirPlay uses one
-managed global shairport-sync instance and `/run/lampastream/airplay.pcm`, with one
-reader; it does not create an independent receiver per configured VirtualPlayer.
-LMS SHM continuity and AirPlay pipe framing/disconnect events belong to their
-respective ingress adapters. Both canonical routes retain stereo channels and
-use the shared canonicalizer, including conversion to 48 kHz canonical PCM.
+AirPlay and Spotify each use one managed global receiver, not an independent
+receiver per configured VirtualPlayer: shairport-sync uses
+`/run/lampastream/airplay.pcm`, and go-librespot uses
+`/run/lampastream-spotify/spotify.pcm`. Each FIFO has exactly one reader.
+LMS SHM continuity and receiver pipe framing/disconnect events belong to their
+respective ingress adapters. All three routes retain stereo channels and use the
+shared canonicalizer, including conversion to 48 kHz canonical PCM.
+
+Spotify provisioning is owned by `scripts/install-lampastream.sh`, through
+`scripts/setup-spotify.sh`; `scripts/uninstall-spotify.sh` removes only that receiver.
+It pins [go-librespot v0.10.0](https://github.com/devgianlu/go-librespot/tree/v0.10.0)
+(commit `57d7278d94a9233060c2a6238f5926ffd1e72de4`) and verifies the Linux x86_64
+archive against its published SHA-256. It runs as the `lampastream` user, separately
+from Python, and pairs through Zeroconf/Avahi only, with
+`credentials.zeroconf.persist_credentials: false`. Its managed config is
+`/etc/lampastream-spotify/config.yml`; `device_name` follows the active
+VirtualPlayer's display name. Identical configuration does not restart the service.
+`audio_backend: pipe`, `audio_output_pipe` and `audio_output_pipe_format: s16le`
+select the FIFO contract. The pinned player fixes stereo at 44100 Hz; there is no
+sample-rate setting. `external_volume: true` keeps analysis independent of the
+Spotify volume control, and `audio_output_pipe_wait_for_reader: true` allows
+pairing before a coupling opens its reader. The pipe writer is unpaced, so the
+source bounds reads to 10 ms chunks and applies monotonic-clock backpressure.
+
+Metadata uses read-only polling of `http://127.0.0.1:3678/status` every second
+(`server.enabled/address/port`), with no additional dependency. The pinned
+[REST specification](https://github.com/devgianlu/go-librespot/blob/v0.10.0/api-spec.yml)
+returns 204 without a session; otherwise `track.name`, `track.artist_names`,
+`track.position` and `track.duration` supply the snapshot (times in milliseconds).
+`paused`, `stopped` and `buffering` control position interpolation. `track.uri`
+and `track.album_name` exist upstream but the current TrackPosition contract has
+no corresponding fields. The verified `/events` WebSocket provides `metadata`,
+`seek`, `playing` and `paused` events in `{type, data}` messages; this integration deliberately polls REST.
+API failures clear stale metadata and retry without stopping audio analysis.
+Receiver installation, Spotify pairing/playback and Hue output on real hardware
+remain user-run validation; local tests do not establish that deployment evidence.
 
 ### Internal analysis subsystem
 
 ```text
 LMS / Squeezelite ─┐
 AirPlay ───────────┤
+Spotify Connect ──┤
 future player ────┤
                   ▼
         player-specific ingress

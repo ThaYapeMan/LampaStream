@@ -1037,3 +1037,107 @@ def test_band_colours_reach_all_runtime_profile_paths(tmp_path: Path) -> None:
         asyncio.run(manager.activate_coupling(coupling))
     check(activate.call_args.args[1], high)
     check(activate.call_args.args[3], low)
+
+
+@pytest.mark.parametrize('restart', [False, True])
+def test_spotify_activation_reuses_metadata_and_teardown_owns_pipe(tmp_path, restart):
+    storage, coupling = _make_airplay_storage(tmp_path)
+    player = storage.get_virtual_player(coupling.player_id)
+    player.type = VirtualPlayerType.SPOTIFY
+    player.player_mac = ''
+    storage.save_virtual_player(player)
+    reloaded = Storage(tmp_path / "config.json").get_virtual_player(player.id)
+    assert reloaded.type == VirtualPlayerType.SPOTIFY
+    manager = PlayerManager(storage)
+    pm = 'lampastream.player_manager'
+
+    async def run():
+        receiver = MagicMock(close=AsyncMock())
+        engine = MagicMock(run=AsyncMock(), retirement_pending=False)
+        driver = MagicMock(start=AsyncMock(), stop=AsyncMock(), aclose=AsyncMock())
+        area = MagicMock(id='ae-ap', name='AP Room AE')
+        with (
+            patch(f'{pm}.list_entertainment_areas', AsyncMock(return_value=[area])),
+            patch(f'{pm}.get_channel_infos', AsyncMock(return_value=[])),
+            patch(f'{pm}.SpotifyTrackPositionSource', return_value=receiver) as tracks,
+            patch(f'{pm}.SpotifyPipeStereoSource') as source,
+            patch(f'{pm}._make_canonical_pipeline') as pipeline,
+            patch(f'{pm}.SyncEngine', return_value=engine),
+            patch(f'{pm}.HueDriver', return_value=driver),
+            patch.object(manager, '_configure_librespot_name', return_value=restart),
+            patch.object(manager, '_activate_lms') as lms,
+            patch.object(manager, '_activate_airplay') as airplay,
+        ):
+            for _ in range(2):
+                await manager.activate_coupling(coupling)
+                session = manager._active
+                assert manager.active_player_type == 'Spotify'
+                assert session.squeezelite is None and session.follower is None
+                assert session.track_source is receiver
+                assert session.shm_source is source.return_value
+                pipeline.assert_called_with(source.return_value, session.profile)
+                await manager.deactivate()
+                receiver.close.assert_not_called()
+            tracks.assert_called_once()
+            assert receiver.invalidate.call_count == (2 if restart else 0)
+            assert source.return_value.open.call_count == 2
+            assert source.return_value.close.call_count == 2
+            lms.assert_not_called()
+            airplay.assert_not_called()
+            await manager.close()
+            receiver.close.assert_awaited_once()
+            assert manager._spotify_tracks is None
+
+    asyncio.run(run())
+
+
+def test_spotify_teardown_retains_source_until_worker_stops(tmp_path):
+    manager = _make_manager(tmp_path)
+    receiver = MagicMock(close=AsyncMock())
+    manager._spotify_tracks = receiver
+    source = MagicMock()
+    session = ActiveSession(Profile(player_mac=''), player_type=VirtualPlayerType.SPOTIFY)
+    session.track_source = receiver
+    session.shm_source = source
+    session.sync_engine = MagicMock(retirement_pending=True)
+    manager._active = session
+
+    async def run():
+        with pytest.raises(RuntimeError, match='still retiring'):
+            await manager.deactivate()
+        source.close.assert_not_called()
+        receiver.close.assert_not_called()
+        assert manager._active is session
+        session.sync_engine.retirement_pending = False
+        await manager.deactivate()
+        source.close.assert_called_once()
+        await manager.close()
+        receiver.close.assert_awaited_once()
+
+    asyncio.run(run())
+
+
+def test_spotify_receiver_config_noop_and_name_escaping(tmp_path):
+    from lampastream.spotify_config import receiver_config
+
+    manager = _make_manager(tmp_path)
+    manager._LIBRESPOT_CONF = tmp_path / 'config.yml'
+    name = 'Room "One"\nSecond line'
+    with patch('lampastream.player_manager.subprocess.run') as restart:
+        assert manager._configure_librespot_name(name)
+        restart.assert_called_once_with(['systemctl', 'restart', 'go-librespot'],
+                                        check=True, timeout=10, capture_output=True)
+        assert manager._LIBRESPOT_CONF.read_text() == receiver_config(name)
+        assert json.loads(manager._LIBRESPOT_CONF.read_text().splitlines()[1][13:]) == name
+        assert not manager._configure_librespot_name(name)
+        assert restart.call_count == 1
+        assert manager._configure_librespot_name('Other room')
+        assert restart.call_count == 2
+
+
+def test_spotify_receiver_config_write_failure_does_not_restart(tmp_path):
+    manager = _make_manager(tmp_path)
+    manager._LIBRESPOT_CONF = tmp_path / 'missing' / 'config.yml'
+    with patch('lampastream.player_manager.subprocess.run') as restart:
+        assert not manager._configure_librespot_name('Room')
+        restart.assert_not_called()

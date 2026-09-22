@@ -130,6 +130,12 @@ reader before releasing it, including failed activation and retried teardown.
   pause/resume/end events control interpolation. See the upstream
   [metadata protocol](https://github.com/mikebrady/shairport-sync-metadata-reader).
 
+- **Spotify Connect:** the manager-owned go-librespot v0.10.0 REST poller reads
+  loopback `/status` once per second. Nested track times are milliseconds;
+  paused/stopped/buffering states suspend position interpolation. Missing sessions
+  and malformed/unreachable API responses clear the snapshot and retry. No
+  WebSocket client or playback commands are used (backend Phase 1 only).
+
 Snapshots retain a monotonic position anchor. WebSocket delivery rebases the
 position when sending a changed status, so browsers do not need a synchronized
 server clock. The UI interpolates locally only while playing and connected,

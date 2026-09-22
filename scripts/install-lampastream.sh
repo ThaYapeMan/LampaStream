@@ -45,7 +45,7 @@ verify() {
     done
     pkg-config --exists alsa fftw3
     local binary linkage
-    for binary in /usr/local/bin/squeezelite /usr/local/bin/shairport-sync /usr/local/bin/nqptp; do
+    for binary in /usr/local/bin/squeezelite /usr/local/bin/shairport-sync /usr/local/bin/nqptp /usr/local/bin/go-librespot; do
         linkage=$(ldd "$binary")
         [[ "$linkage" != *"not found"* ]] || fail "Unresolved runtime libraries: $binary"
     done
@@ -61,10 +61,14 @@ verify() {
     /usr/local/bin/shairport-sync --version | grep -i metadata >/dev/null ||
         fail 'AirPlay metadata support not built'
     [[ -f /etc/polkit-1/rules.d/49-lampastream-airplay.rules ]] || fail 'AirPlay service permission missing'
+    [[ -x /usr/local/bin/go-librespot ]] || fail 'Spotify receiver binary missing'
+    [[ -p /run/lampastream-spotify/spotify.pcm ]] || fail 'Spotify FIFO missing'
+    [[ -f /etc/lampastream-spotify/config.yml ]] || fail 'Spotify receiver config missing'
+    [[ -f /etc/polkit-1/rules.d/49-lampastream-spotify.rules ]] || fail 'Spotify service permission missing'
     "$environment/bin/python" -I -B "$SCRIPT_DIR/verify-install.py" "$COMMIT" "$SHORT" "$CONFIG"
     "$environment/bin/python" -I -B -m pip check
     repo_check
-    printf 'AirPlay prerequisites: PASS\nRepository tracked state: CLEAN\n'
+    printf 'Spotify prerequisites: PASS\nAirPlay prerequisites: PASS\nRepository tracked state: CLEAN\n'
 }
 # Inspect executable paths, not service display names (SysV generators may rename units).
 squeezelite_conflict_definition() {
@@ -140,7 +144,7 @@ squeezelite_conflicts() {
 verify_services() {
     local unit
     # is-active with multiple units succeeds if any is active; require every one.
-    for unit in lampastream shairport-sync nqptp avahi-daemon; do
+    for unit in lampastream go-librespot shairport-sync nqptp avahi-daemon; do
         systemctl is-active --quiet "$unit" || fail "Service is not active: $unit"
     done
 }
@@ -287,18 +291,19 @@ RELEASE=$(mktemp -d "$PREFIX/releases/$COMMIT.XXXXXX")
 chmod 0755 "$RELEASE"
 python3 -m venv "$RELEASE/venv"
 "$RELEASE/venv/bin/pip" install "$WORK"/wheels/*.whl
-log '3/7 Build pinned SHM v1 Squeezelite and AirPlay 2'
+log '3/7 Provision pinned Squeezelite, AirPlay 2 and Spotify Connect'
 # Do not inherit optional flags or upstream overrides from a shell environment.
 env -u OPTS -u SQUEEZELITE_COMMIT -u SQUEEZELITE_REPO BUILD_DIR="$WORK/squeezelite-build" \
     INSTALL_DIR="$WORK/bin" bash "$WORK/scripts/build-squeezelite.sh"
 # Stop conflicting package services and owned services before replacing binaries.
 squeezelite_conflicts install
-for unit in lampastream shairport-sync nqptp; do
+for unit in lampastream go-librespot shairport-sync nqptp; do
     if systemctl is-active --quiet "$unit"; then systemctl stop "$unit"; fi
 done
 install -m 0755 "$WORK/bin/squeezelite" /usr/local/bin/squeezelite
 cmp "$WORK/bin/squeezelite" /usr/local/bin/squeezelite
 AIRPLAY_BUILD_DIR="$WORK/airplay" LAMPASTREAM_DEFER_START=1 LAMPASTREAM_DEPENDENCIES_READY=1 bash "$WORK/scripts/setup-airplay.sh"
+LAMPASTREAM_PYTHON="$RELEASE/venv/bin/python" LAMPASTREAM_DEFER_START=1 LAMPASTREAM_DEPENDENCIES_READY=1 bash "$WORK/scripts/setup-spotify.sh"
 log '4/7 Migrate persisted configuration before starting current runtime'
 migrate_huesync_layout
 "$RELEASE/venv/bin/python" -I -B -m lampastream.migration "$CONFIG"
@@ -320,13 +325,13 @@ ln -sfn "$RELEASE/venv" "$PREFIX/.venv.next"
 mv -Tf "$PREFIX/.venv.next" "$PREFIX/.venv"
 systemd-analyze verify /etc/systemd/system/lampastream.service
 log '7/7 Start verified services'
-systemctl enable avahi-daemon nqptp shairport-sync lampastream
-systemctl restart avahi-daemon nqptp shairport-sync lampastream
+systemctl enable avahi-daemon nqptp shairport-sync go-librespot lampastream
+systemctl restart avahi-daemon nqptp shairport-sync go-librespot lampastream
 verify_services
 cleanup_huesync_layout
 curl --fail --retry 10 --retry-connrefused --retry-delay 1 http://127.0.0.1:8420/api/status >/dev/null
 repo_check
 printf '\nINSTALLATION COMPLETE\nGit commit: %s\nPython: %s\nSqueezelite: /usr/local/bin/squeezelite\n' "$COMMIT" "$RELEASE/venv"
 sha256sum /usr/local/bin/squeezelite
-printf 'Logs: journalctl -u lampastream -u shairport-sync -u nqptp\nUI: http://<target>:8420\n'
+printf 'Logs: journalctl -u lampastream -u shairport-sync -u nqptp -u go-librespot\nUI: http://<target>:8420\n'
 printf 'LMS pacing requires host-provided /dev/snd devices; LXC host configuration is not modified.\n'
