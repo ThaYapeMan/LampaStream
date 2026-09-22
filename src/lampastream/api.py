@@ -31,6 +31,7 @@ from .lms_follower import TransportAction
 from .lms_status import list_lms_players
 from .models import (
     EFFECT_IDS,
+    GRADIENT_PALETTES,
     VIRTUAL_PLAYER_TYPES,
     Analyser,
     BridgeConfig,
@@ -226,6 +227,7 @@ class EffectCreateBody(BaseModel):
 
     name: str = "Default Effect"
     effect_type: str = "spectrum_rgb"
+    gradient_palette: str = "sunset"
     effect_speed: float = 1.0
     effect_decay: float = 0.3
     sensitivity: float = 1.0
@@ -240,6 +242,7 @@ class EffectPatchBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
     name: str | None = None
     effect_type: str | None = None
+    gradient_palette: str | None = None
     effect_speed: float | None = None
     effect_decay: float | None = None
     sensitivity: float | None = None
@@ -1018,8 +1021,13 @@ async def create_effect_route(request: Request, body: EffectCreateBody):
         raise HTTPException(
             status_code=422, detail=f"Unknown effect: {body.effect_type!r}"
         )
+    if body.gradient_palette not in GRADIENT_PALETTES:
+        raise HTTPException(
+            status_code=422, detail=f"Unknown gradient palette: {body.gradient_palette!r}"
+        )
     effect = Effect(
         name=body.name,
+        gradient_palette=body.gradient_palette,
         effect_type=body.effect_type,
         effect_speed=body.effect_speed,
         effect_decay=body.effect_decay,
@@ -1061,6 +1069,10 @@ async def patch_effect_route(effect_id: str, request: Request, body: EffectPatch
         if field == "effect_type" and value not in EFFECT_IDS:
             raise HTTPException(
                 status_code=422, detail=f"Unknown effect: {value!r}"
+            )
+        if field == "gradient_palette" and value not in GRADIENT_PALETTES:
+            raise HTTPException(
+                status_code=422, detail=f"Unknown gradient palette: {value!r}"
             )
         setattr(effect, field, value)
     storage.save_effect(effect)

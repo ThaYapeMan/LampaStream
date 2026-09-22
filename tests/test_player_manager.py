@@ -969,3 +969,32 @@ def test_reshape_reaches_all_runtime_profiles(tmp_path: Path) -> None:
     profile = activate.call_args.args[1]
     assert profile.peak_reshape_enabled is True
     assert profile.peak_reshape_power == .8
+
+
+def test_gradient_palette_reaches_all_runtime_profile_paths(tmp_path: Path) -> None:
+    from unittest.mock import AsyncMock, MagicMock, patch
+
+    from lampastream.player_manager import _build_mellow_profile
+
+    storage, coupling = _make_full_storage(tmp_path)
+    energy = storage.get_energy_profile(coupling.energy_profile_id)
+    high = storage.get_effect(energy.high_energy_effect_id)
+    high.effect_type = "gradient"
+    high.gradient_palette = "ocean"
+    storage.save_effect(high)
+    low = Effect(name="Low gradient", effect_type="gradient", gradient_palette="neon")
+    storage.save_effect(low)
+    energy.low_energy_effect_id = low.id
+    storage.save_energy_profile(energy)
+    assert _build_engine_profile(coupling, storage).gradient_palette == "ocean"
+    assert _build_mellow_profile(coupling, storage).gradient_palette == "neon"
+    manager = PlayerManager(storage)
+    with (
+        patch("lampastream.player_manager.list_entertainment_areas",
+              new=AsyncMock(return_value=[MagicMock(id="ae-001", name="Living Room AE")])),
+        patch("lampastream.player_manager.get_channel_infos", new=AsyncMock(return_value=[])),
+        patch.object(manager, "_activate_lms", new_callable=AsyncMock) as activate,
+    ):
+        asyncio.run(manager.activate_coupling(coupling))
+    assert activate.call_args.args[1].gradient_palette == "ocean"
+    assert activate.call_args.args[3].gradient_palette == "neon"

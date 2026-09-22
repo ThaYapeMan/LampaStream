@@ -1884,6 +1884,22 @@ class CavaPipeline:
         return "external_cava_fifo"
 
 
+# Curated RGB stops at centroid positions 0.0, 0.5 and 1.0.
+# Keep in sync with GRADIENT_STOPS in web/src/components/EffectPreview.tsx.
+_GRADIENTS: dict[str, tuple[Colour, Colour, Colour]] = {
+    "sunset": (Colour(0.10, 0.00, 0.20), Colour(1.00, 0.35, 0.00), Colour(1.00, 0.80, 0.10)),
+    "ocean": (Colour(0.00, 0.05, 0.35), Colour(0.00, 0.55, 0.55), Colour(0.55, 0.95, 0.90)),
+    "neon": (Colour(0.85, 0.00, 0.85), Colour(0.00, 0.85, 0.85), Colour(0.60, 0.95, 0.15)),
+    "monochrome": (Colour(0.05, 0.05, 0.15), Colour(0.30, 0.35, 0.55), Colour(0.85, 0.90, 1.00)),
+}
+
+
+def _lerp_colour(a: Colour, b: Colour, t: float) -> Colour:
+    return Colour(a.r + (b.r - a.r) * t,
+                  a.g + (b.g - a.g) * t,
+                  a.b + (b.b - a.b) * t)
+
+
 def _hsv_to_colour(h: float, s: float, v: float) -> Colour:
     """Convert HSV (each in 0.0–1.0) to a Colour."""
     if s == 0.0:
@@ -2320,6 +2336,31 @@ class _SolidRenderer(_EffectRenderer):
         return UniformScene(_hsv_to_colour(self._hue, 0.7, brightness))
 
 
+class _GradientRenderer(_EffectRenderer):
+    """Centroid selects a curated colour; overall energy controls brightness.
+
+    Inspired by LedFx gradients; see the historical analysis in
+    docs/archive/LampaStream_colour_v2_ledfx_lessons.md.
+    """
+
+    def render(self, profile: Profile, features: AudioFeatures, t: float) -> Scene:  # noqa: ARG002
+        stops = _GRADIENTS.get(profile.gradient_palette, _GRADIENTS["sunset"])
+        position = max(0.0, min(1.0, features.centroid))
+        if position < 0.5:
+            base = _lerp_colour(stops[0], stops[1], position * 2.0)
+        else:
+            base = _lerp_colour(stops[1], stops[2], (position - 0.5) * 2.0)
+        effective = (
+            features.harmonic_energy * features.full if features.hpss_active else features.full
+        )
+        brightness = max(effective * profile.sensitivity, profile.brightness_floor)
+        return UniformScene(Colour(
+            r=min(base.r * brightness, 1.0),
+            g=min(base.g * brightness, 1.0),
+            b=min(base.b * brightness, 1.0),
+        ))
+
+
 class _NoneRenderer(_EffectRenderer):
     """Layer off — always black."""
 
@@ -2350,6 +2391,8 @@ def _make_renderer(effect: str) -> _EffectRenderer:
             return _WaveRenderer()
         case "solid":
             return _SolidRenderer()
+        case "gradient":
+            return _GradientRenderer()
         case "none":
             return _NoneRenderer()
         case _:

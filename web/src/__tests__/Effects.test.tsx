@@ -532,3 +532,36 @@ describe('EffectPreview dots', () => {
     expect(screen.getByTestId('effect-preview')).toBeDefined()
   })
 })
+
+
+describe('Gradient palette', () => {
+  beforeEach(() => { vi.clearAllMocks() })
+
+  it('shows four palette choices in Standard mode only for gradient and saves the selection', async () => {
+    const user = await renderSpectrumInWorkspace()
+    expect(screen.queryByTestId('field-gradient-palette')).not.toBeInTheDocument()
+    await user.click(screen.getByTestId('effect-type-change'))
+    await user.click(screen.getByTestId('type-option-gradient'))
+    const palette = screen.getByTestId('field-gradient-palette')
+    expect(palette).toHaveValue('sunset')
+    expect(within(palette).getAllByRole('option').map(o => o.getAttribute('value')))
+      .toEqual(['sunset', 'ocean', 'neon', 'monochrome'])
+    const preview = screen.getAllByTestId('effect-preview').find(p => p.querySelector('.w-10'))!
+    const sunset = (preview.firstElementChild as HTMLElement).style.backgroundColor
+    await user.selectOptions(palette, 'ocean')
+    expect((preview.firstElementChild as HTMLElement).style.backgroundColor).not.toBe(sunset)
+    await user.click(screen.getByTestId('editor-save'))
+    expect(apiModule.updateEffect).toHaveBeenCalledWith('e2', expect.objectContaining({
+      effect_type: 'gradient', gradient_palette: 'ocean',
+    }))
+  })
+
+  it('hides palette controls for every other effect type', async () => {
+    const user = await renderSpectrumInWorkspace()
+    for (const effect of apiModule.EFFECTS.filter(e => e.id !== 'gradient')) {
+      await user.click(screen.getByTestId('effect-type-change'))
+      await user.click(screen.getByTestId(`type-option-${effect.id}`))
+      expect(screen.queryByTestId('field-gradient-palette')).not.toBeInTheDocument()
+    }
+  })
+})

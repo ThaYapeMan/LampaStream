@@ -1694,3 +1694,35 @@ def test_reshape_api_roundtrip_validation_and_live_propagation(client):
                                         "peak_reshape_power": 0}).status_code == 200
     assert client.patch(endpoint, json={"peak_reshape_enabled": True}).status_code == 400
     client._manager.deactivate.assert_not_awaited()
+
+
+@pytest.mark.parametrize("palette", ["sunset", "ocean", "neon", "monochrome"])
+def test_gradient_palette_api_roundtrip_and_validation(client, palette):
+    invalid = client.post("/api/effects", json={"name": "Invalid", "gradient_palette": "unknown"})
+    assert invalid.status_code == 422
+    assert "Unknown gradient palette" in invalid.json()["detail"]
+    created = client.post("/api/effects", json={"name": "Gradient", "effect_type": "gradient",
+                                               "gradient_palette": palette})
+    assert created.status_code == 201
+    endpoint = f"/api/effects/{created.json()['id']}"
+    assert client.get(endpoint).json()["gradient_palette"] == palette
+    for invalid in ("unknown", "", None):
+        response = client.patch(endpoint, json={"name": "Must not persist",
+                                               "gradient_palette": invalid})
+        assert response.status_code == 422
+        assert client.get(endpoint).json() == created.json()
+    assert client.patch(endpoint, json={"gradient_palette": "ocean"}).status_code == 200
+    assert client.get(endpoint).json()["gradient_palette"] == "ocean"
+
+
+def test_gradient_palette_edit_updates_active_runtime(client):
+    coupling = _make_full_coupling(client._storage)
+    client._storage.set_active_coupling_id(coupling.id)
+    energy = client._storage.get_energy_profile(coupling.energy_profile_id)
+    response = client.patch(f"/api/effects/{energy.high_energy_effect_id}",
+                            json={"effect_type": "gradient", "gradient_palette": "neon"})
+    assert response.status_code == 200
+    profile = client._manager.update_render.call_args.args[0]
+    assert profile.effect_type == "gradient"
+    assert profile.gradient_palette == "neon"
+    client._manager.deactivate.assert_not_awaited()

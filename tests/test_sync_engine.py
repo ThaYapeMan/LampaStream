@@ -1447,3 +1447,69 @@ def test_fireworks_colour_follows_spectrum():
     assert c.r > c.b + 0.1, (
         f"Fireworks: bass-heavy onset must dominate blue; r={c.r:.3f} b={c.b:.3f}"
     )
+
+
+_GRADIENT_EXPECTED = {
+    "sunset": ((.10, 0, .20), (1, .35, 0), (1, .80, .10)),
+    "ocean": ((0, .05, .35), (0, .55, .55), (.55, .95, .90)),
+    "neon": ((.85, 0, .85), (0, .85, .85), (.60, .95, .15)),
+    "monochrome": ((.05, .05, .15), (.30, .35, .55), (.85, .90, 1)),
+}
+
+
+@pytest.mark.parametrize("palette", _GRADIENT_EXPECTED)
+@pytest.mark.parametrize("centroid", [0, .25, .5, .75, 1, -1, 2])
+def test_gradient_palette_anchors_and_both_segments(palette, centroid):
+    from lampastream.sync_engine import _GradientRenderer, _make_renderer
+
+    renderer = _make_renderer("gradient")
+    assert isinstance(renderer, _GradientRenderer)
+    features = _make_features([.4] * 30)
+    features.centroid = centroid
+    colour = renderer.render(Profile(effect_type="gradient", gradient_palette=palette,
+                                     sensitivity=2, brightness_floor=0), features, 0).colour
+    stops = _GRADIENT_EXPECTED[palette]
+    position = max(0, min(1, centroid))
+    if position in (0, .5, 1):
+        expected = stops[int(position * 2)]
+    else:
+        lo = 0 if position == .25 else 1
+        expected = tuple((a + b) / 2 for a, b in zip(stops[lo], stops[lo + 1], strict=True))
+        assert expected != stops[lo] and expected != stops[lo + 1]
+    assert (colour.r, colour.g, colour.b) == pytest.approx(tuple(c * .8 for c in expected))
+
+
+@pytest.mark.parametrize("full,sensitivity,floor,hpss,harmonic", [
+    (0, 2, .15, False, 1), (.2, 2, 0, False, 1),
+    (.8, 1, .1, True, .25), (.8, 1, .1, False, .25), (1, 4, 0, False, 1),
+])
+def test_gradient_brightness_matches_solid_and_clips(full, sensitivity, floor, hpss, harmonic):
+    from lampastream.sync_engine import _GradientRenderer, _SolidRenderer
+
+    features = _make_features([full] * 30)
+    features.centroid = 1
+    features.hpss_active = hpss
+    features.harmonic_energy = harmonic
+    profile = Profile(gradient_palette="sunset", sensitivity=sensitivity, brightness_floor=floor)
+    solid = _SolidRenderer().render(profile, features, 0).colour
+    brightness = max(solid.r, solid.g, solid.b)
+    actual = _GradientRenderer().render(profile, features, 0).colour
+    assert (actual.r, actual.g, actual.b) == pytest.approx(
+        tuple(min(c * brightness, 1) for c in (1, .8, .1)))
+    assert brightness == pytest.approx(max(full * (harmonic if hpss else 1) * sensitivity, floor))
+
+
+def test_gradient_distinct_palettes_fallback_and_legacy_defaults():
+    from lampastream.models import GRADIENT_PALETTES, Effect
+    from lampastream.sync_engine import _GradientRenderer
+
+    assert GRADIENT_PALETTES == _GRADIENT_EXPECTED.keys()
+    assert Effect.from_dict({}).gradient_palette == "sunset"
+    assert Profile.from_dict({}).gradient_palette == "sunset"
+    features = _make_features([1] * 30)
+    features.centroid = .5
+    renderer = _GradientRenderer()
+    sunset = renderer.render(Profile(gradient_palette="sunset"), features, 0).colour
+    ocean = renderer.render(Profile(gradient_palette="ocean"), features, 0).colour
+    assert sunset != ocean
+    assert renderer.render(Profile(gradient_palette="unknown"), features, 0).colour == sunset

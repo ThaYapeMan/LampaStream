@@ -13,6 +13,7 @@ import { usePreviewSocket } from '@/hooks/usePreviewSocket'
 import { cn } from '@/lib/utils'
 import {
   EFFECTS,
+  GRADIENT_PALETTES,
   type Effect,
   type EnergyProfile,
   getEffects,
@@ -27,6 +28,7 @@ import {
 // ── Effect defaults (from models.py) ─────────────────────────────────────────
 
 export const EFFECT_DEFAULTS = {
+  gradient_palette:      'sunset',
   sensitivity:           1.0,
   brightness_floor:      0.15,
   onset_flash_intensity: 0.0,
@@ -50,6 +52,7 @@ const s2dec  = (v: number) => Math.round((0.01 + v * 0.98) * 100) / 100
 interface FormState {
   name: string
   effect_type: string
+  gradient_palette: string
   effect_speed: string
   effect_decay: string
   sensitivity: string
@@ -62,6 +65,7 @@ interface FormState {
 
 function defaultForm(cfg?: Effect): FormState {
   return {
+    gradient_palette:      cfg?.gradient_palette ?? EFFECT_DEFAULTS.gradient_palette,
     name:                  cfg?.name                    ?? '',
     effect_type:           cfg?.effect_type             ?? 'spectrum_rgb',
     effect_speed:          String(cfg?.effect_speed         ?? EFFECT_DEFAULTS.effect_speed),
@@ -234,7 +238,7 @@ function GalleryCard({ effect, isActive, onEdit, onDelete }: GalleryCardProps) {
       data-testid={`effect-card-${effect.id}`}
     >
       <div className="bg-black/20 py-5 px-4 flex flex-col items-center justify-center gap-3 min-h-[96px]">
-        <EffectPreview effectType={effect.effect_type} energy={0.80} count={6} size="md" />
+        <EffectPreview effectType={effect.effect_type} gradientPalette={effect.gradient_palette} energy={0.80} count={6} size="md" />
         <div className={cn('h-1 w-14 rounded-full opacity-60', swatchClass)} />
       </div>
       <div className="p-4 flex flex-col gap-2 flex-1">
@@ -375,6 +379,7 @@ export function Effects({ activeCouplingId = null }: { activeCouplingId?: string
       const body = {
         name:                  form.name,
         effect_type:           form.effect_type,
+        gradient_palette:      form.gradient_palette,
         effect_speed:          parseFloat(form.effect_speed),
         effect_decay:          parseFloat(form.effect_decay),
         sensitivity:           parseFloat(form.sensitivity),
@@ -452,6 +457,7 @@ export function Effects({ activeCouplingId = null }: { activeCouplingId?: string
               <div className="py-10 px-6 flex flex-col items-center gap-4">
                 <EffectPreview
                   effectType={form.effect_type}
+                  gradientPalette={form.gradient_palette}
                   energy={displayEnergy}
                   count={8}
                   size="lg"
@@ -568,6 +574,20 @@ export function Effects({ activeCouplingId = null }: { activeCouplingId?: string
                       />
                     )}
                   </FieldRow>
+
+                  {selectedMeta?.hasPalette && (
+                    <label className="block space-y-1.5 text-xs text-muted-foreground">
+                      Palette
+                      <select data-testid="field-gradient-palette" value={form.gradient_palette}
+                        onChange={e => set('gradient_palette', e.target.value)}
+                        className="block w-full rounded-md border border-input bg-background p-2 text-foreground">
+                        {GRADIENT_PALETTES.map(palette => (
+                          <option key={palette.value} value={palette.value}>{palette.label}</option>
+                        ))}
+                      </select>
+                      <span className="block">{GRADIENT_PALETTES.find(p => p.value === form.gradient_palette)?.description}</span>
+                    </label>
+                  )}
 
                   {/* Speed — fireworks, swirl, wave only */}
                   {selectedMeta?.hasSpeed && (

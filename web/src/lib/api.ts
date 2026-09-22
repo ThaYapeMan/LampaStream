@@ -27,7 +27,7 @@ export const SPECTRUM_BACKEND_OPTIONS = [
 
 
 // Canonical list of effects.  Keep in sync with EFFECT_IDS in models.py.
-export const EFFECTS = [
+const EFFECT_DEFINITIONS = [
   { id: 'spectrum_rgb', label: 'Spectrum RGB', description: 'Bass drives red, mid drives green, treble drives blue',       hasSpeed: false, hasDecay: false },
   { id: 'spectrum_rgb_spatial', label: 'Spectrum RGB (Spatial)', description: 'Bass left, mid centre, treble right — cross-faded across the room', hasSpeed: false, hasDecay: false },
   { id: 'mono_pulse',   label: 'Mono Pulse',   description: 'All lights dim and brighten with the overall energy',         hasSpeed: false, hasDecay: false },
@@ -37,8 +37,19 @@ export const EFFECTS = [
   { id: 'fireworks',    label: 'Fireworks',    description: 'Colour burst expands outward from a point on each beat',      hasSpeed: true,  hasDecay: true  },
   { id: 'swirl',        label: 'Swirl',        description: 'Colour gradient rotates continuously across the lights',      hasSpeed: true,  hasDecay: false },
   { id: 'wave',         label: 'Wave',         description: 'Colour wave sweeps across the room in time with the beat',    hasSpeed: true,  hasDecay: false },
+  { id: 'gradient', label: 'Gradient', description: 'Colour position follows the spectral centroid within a curated palette; brightness follows overall energy', hasSpeed: false, hasDecay: false, hasPalette: true },
   { id: 'solid',        label: 'Solid',        description: 'Single steady colour that shifts slowly with the music',      hasSpeed: false, hasDecay: false },
   { id: 'none',         label: 'None',         description: 'Lights off — no output sent to this zone',                   hasSpeed: false, hasDecay: false },
+] as const
+
+export const EFFECTS: readonly (typeof EFFECT_DEFINITIONS[number] & { hasPalette?: boolean })[] = EFFECT_DEFINITIONS
+
+// Keep in sync with GRADIENT_PALETTES in models.py.
+export const GRADIENT_PALETTES = [
+  { value: 'sunset', label: 'Sunset', description: 'Deep purple through orange to warm gold' },
+  { value: 'ocean', label: 'Ocean', description: 'Deep blue through teal to pale turquoise' },
+  { value: 'neon', label: 'Neon', description: 'Magenta through cyan to lime' },
+  { value: 'monochrome', label: 'Monochrome', description: 'A blue-white family from dark to light' },
 ] as const
 
 export type EffectId = typeof EFFECTS[number]['id']
@@ -198,6 +209,7 @@ export interface Effect {
   id: string
   name: string
   effect_type: string
+  gradient_palette: string
   effect_speed: number
   effect_decay: number
   sensitivity: number

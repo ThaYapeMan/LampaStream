@@ -15,6 +15,7 @@
 
 interface Props {
   effectType: string
+  gradientPalette?: string
   energy?: number  // 0–1; defaults to 0.7
   count?: number   // number of dots; defaults to 8
   size?: 'sm' | 'md' | 'lg'
@@ -103,6 +104,15 @@ const SWIRL_CYCLE: [number,number,number][] = [
   [ 72, 218, 158],  // green-teal
 ]
 
+// Normalised RGB stops at centroid positions 0, 0.5 and 1.
+// Keep in sync with _GRADIENTS in src/lampastream/sync_engine.py.
+const GRADIENT_STOPS: Record<string, readonly [number, number, number][]> = {
+  sunset: [[0.10, 0.00, 0.20], [1.00, 0.35, 0.00], [1.00, 0.80, 0.10]],
+  ocean: [[0.00, 0.05, 0.35], [0.00, 0.55, 0.55], [0.55, 0.95, 0.90]],
+  neon: [[0.85, 0.00, 0.85], [0.00, 0.85, 0.85], [0.60, 0.95, 0.15]],
+  monochrome: [[0.05, 0.05, 0.15], [0.30, 0.35, 0.55], [0.85, 0.90, 1.00]],
+}
+
 // ── spatial y-offsets by effect type ────────────────────────────────────────
 // Normalised to [−1, +1]; multiplied by size-specific max pixels at render.
 // Sliced to `count`, so 6-dot cards use the first 6 values.
@@ -123,7 +133,7 @@ const Y: Record<string, number[]> = {
 
 // ── dot construction ─────────────────────────────────────────────────────────
 
-function buildDots(effectType: string, energy: number, count: number): Dot[] {
+function buildDots(effectType: string, energy: number, count: number, gradientPalette: string): Dot[] {
   const e = Math.max(0.22, energy)
   const yArr = Y[effectType] ?? Y.none
 
@@ -207,6 +217,18 @@ function buildDots(effectType: string, energy: number, count: number): Dot[] {
       })
     }
 
+    case 'gradient': {
+      const stops = GRADIENT_STOPS[gradientPalette] ?? GRADIENT_STOPS.sunset
+      // Preview energy stands in for centroid; the actual renderer uses audio centroid.
+      const position = Math.max(0, Math.min(1, energy)) * 2
+      const segment = position < 1 ? 0 : 1
+      const t = position - segment
+      const base = stops[segment].map((channel, i) =>
+        255 * (channel + (stops[segment + 1][i] - channel) * t),
+      ) as [number, number, number]
+      return Array.from({ length: count }, () => ({ base, intensity: e * 0.78, yFrac: 0 }))
+    }
+
     case 'solid':
       return Array.from({ length: count }, () => ({
         base: SLATE, intensity: e * 0.78, yFrac: 0,
@@ -238,8 +260,8 @@ const GLOW_SCALE: Record<string, number> = { sm: 0.32, md: 0.62, lg: 1.0 }
 
 // ── component ─────────────────────────────────────────────────────────────────
 
-export function EffectPreview({ effectType, energy = 0.7, count = 8, size = 'md' }: Props) {
-  const dots = buildDots(effectType, energy, count)
+export function EffectPreview({ effectType, gradientPalette = 'sunset', energy = 0.7, count = 8, size = 'md' }: Props) {
+  const dots = buildDots(effectType, energy, count, gradientPalette)
   const dotClass = DOT_CLASS[size] ?? DOT_CLASS.md
   const gapClass = GAP_CLASS[size] ?? GAP_CLASS.md
   const maxY = MAX_Y[size] ?? MAX_Y.md

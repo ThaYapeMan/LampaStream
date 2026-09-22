@@ -200,6 +200,19 @@ each renderer actually uses. Controller creation/pairing and Spectrum backend
 selection currently use the API; the UI lists existing Controllers for Zones and
 edits bars-source/onset settings but does not expose `spectrum_backend`.
 
+### Gradient (`gradient`)
+
+Gradient follows spectral centroid through a curated three-stop RGB palette,
+interpolating at positions 0, 0.5 and 1. Choose **Sunset** (default), **Ocean**,
+**Neon**, or **Monochrome** (a blue-white family, not greyscale) in the standard
+Effect editor. `gradient_palette` defaults to `"sunset"` for older Effects;
+no migration is required. Brightness uses the same overall/harmonic energy,
+sensitivity and brightness floor as Solid, with per-channel clipping at 1.
+The preview uses its illustrative energy input as the palette position; live
+rendering uses centroid. See the historical
+[LedFx colour analysis](archive/LampaStream_colour_v2_ledfx_lessons.md#root-cause-2-three-bands--rgb-is-not-how-this-is-done)
+for the motivation. This effect does not change audio analysis or energy sources.
+
 ## Referenced entities and deletion
 
 Deleting a VirtualPlayer, Zone, Analyser or EnergyProfile referenced by a Coupling

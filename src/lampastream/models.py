@@ -73,8 +73,13 @@ EFFECT_IDS: frozenset[str] = frozenset({
     "swirl",
     "wave",
     "solid",
+    "gradient",
     "none",
 })
+
+
+# Keep in sync with GRADIENT_PALETTES in web/src/lib/api.ts.
+GRADIENT_PALETTES: frozenset[str] = frozenset({"sunset", "ocean", "neon", "monochrome"})
 
 
 @dataclass
@@ -167,6 +172,7 @@ class Profile:
 
     # Colour mapping / effect selection
     effect_type: str = "spectrum_rgb"
+    gradient_palette: str = "sunset"
     effect_speed: float = 1.0
     effect_decay: float = 0.3
     blend_start: float = 0.3
@@ -484,6 +490,7 @@ class Effect:
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     name: str = "Default Effect"
     effect_type: str = "spectrum_rgb"
+    gradient_palette: str = "sunset"
     effect_speed: float = 1.0
     effect_decay: float = 0.3
     sensitivity: float = 1.0
@@ -498,6 +505,7 @@ class Effect:
             "id": self.id,
             "name": self.name,
             "effect_type": self.effect_type,
+            "gradient_palette": self.gradient_palette,
             "effect_speed": self.effect_speed,
             "effect_decay": self.effect_decay,
             "sensitivity": self.sensitivity,
