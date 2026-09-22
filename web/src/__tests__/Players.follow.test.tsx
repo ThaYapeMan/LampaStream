@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest'
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Players } from '../pages/Players'
-import { updateVirtualPlayer, createVirtualPlayer, getVirtualPlayers, PLAYER_TYPES } from '../lib/api'
+import { updateVirtualPlayer } from '../lib/api'
 
 vi.mock('../lib/api', async (importOriginal) => ({
   ...await importOriginal<typeof import('../lib/api')>(),
@@ -11,7 +11,6 @@ vi.mock('../lib/api', async (importOriginal) => ({
     lms_port: 3483, player_mac: 'aa:bb:cc:dd:ee:01',
     follow_player_mac: 'aa:bb:cc:dd:ee:02',
   }]),
-  createVirtualPlayer: vi.fn().mockResolvedValue(undefined),
   updateVirtualPlayer: vi.fn().mockResolvedValue(undefined),
   getCouplings: vi.fn().mockResolvedValue([]),
   listLmsPlayers: vi.fn().mockResolvedValue([
@@ -60,42 +59,6 @@ describe('Follow player discovery', () => {
     expect(updateVirtualPlayer).toHaveBeenCalledWith('managed', expect.objectContaining({
       follow_mode: 'sync_group', follow_player_mac: 'aa:bb:cc:dd:ee:02',
     }))
-  })
-
-  it('offers Spotify and creates a receiver without an LMS host', async () => {
-    expect(PLAYER_TYPES).toContainEqual({ value: 'Spotify', label: 'Spotify Connect (go-librespot)' })
-    const user = userEvent.setup()
-    render(<Players />)
-    await user.click(await screen.findByRole('button', { name: /New virtual player/i }))
-    const dialog = within(screen.getByRole('dialog'))
-    expect(dialog.getByText('LMS host')).toBeVisible()
-    fireEvent.keyDown(dialog.getAllByRole('combobox')[0], { key: 'ArrowDown' })
-    await user.click(await screen.findByRole('option', { name: 'Spotify Connect (go-librespot)' }))
-    for (const label of ['LMS host', 'LMS port', 'ALSA device', 'Follow mode', 'Follow player']) {
-      expect(dialog.queryByText(label, { exact: true })).not.toBeInTheDocument()
-    }
-    expect(dialog.getByText(/Spotify Connect device picker.*restarts the go-librespot receiver/)).toBeVisible()
-    expect(dialog.getByText('Silent Spotify Connect destination for analysis.')).toBeVisible()
-    expect(dialog.queryByText(/alongside your real speaker/)).not.toBeInTheDocument()
-    await user.click(dialog.getByRole('button', { name: 'Save', exact: true }))
-    expect(createVirtualPlayer).toHaveBeenCalledWith(expect.objectContaining({ type: 'Spotify', lms_host: '' }))
-  })
-
-  it('edits a saved Spotify receiver using the same receiver-only form', async () => {
-    vi.mocked(getVirtualPlayers).mockResolvedValueOnce([{
-      id: 'spotify', type: 'Spotify', player_name: 'Spotify room', display_name: 'Room',
-      lms_host: '', lms_port: 9000, player_mac: '', alsa_device: '', follow_player_mac: '', follow_mode: 'manual',
-    }])
-    const user = userEvent.setup()
-    render(<Players />)
-    await user.click(await screen.findByRole('button', { name: 'Edit', exact: true }))
-    const dialog = within(screen.getByRole('dialog'))
-    expect(dialog.getByText('Spotify Connect (go-librespot)')).toBeVisible()
-    expect(dialog.queryByText('LMS host')).not.toBeInTheDocument()
-    await user.clear(dialog.getByDisplayValue('Room'))
-    await user.type(dialog.getByDisplayValue(''), 'New room')
-    await user.click(dialog.getByRole('button', { name: 'Save', exact: true }))
-    expect(updateVirtualPlayer).toHaveBeenCalledWith('spotify', expect.objectContaining({ display_name: 'New room' }))
   })
 
 })

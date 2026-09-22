@@ -438,8 +438,7 @@ def test_update_delegates_to_authoritative_installer() -> None:
     assert 'exec "$REPO_DIR/scripts/install-lampastream.sh"' in script
     assert 'pip install' not in script
     installer = (ROOT / "scripts" / "install-lampastream.sh").read_text()
-    assert ('systemctl restart avahi-daemon nqptp shairport-sync go-librespot lampastream'
-            in installer)
+    assert 'systemctl restart avahi-daemon nqptp shairport-sync lampastream' in installer
 
 
 def test_update_script_contains_git_pull() -> None:

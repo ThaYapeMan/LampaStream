@@ -1535,7 +1535,7 @@ Tolerance: onset ±1 hop; activity ±0.15. Not bit-identical.
 - ML-based music understanding
 - New controller implementations (WLED, Nanoleaf, etc.)
 - Zone refactoring; mobile or UI work
-- Spotify/TIDAL/Roon integration (architecture accommodates; no adapter work)
+- TIDAL/Roon integration (architecture accommodates; no adapter work)
 - ReplayGain, loudness normalisation, per-track pre-analysis
 - Reconfiguring shairport-sync to 48 kHz (adapter handles resampling)
 - Spatial/stereo-width effects (deferred)

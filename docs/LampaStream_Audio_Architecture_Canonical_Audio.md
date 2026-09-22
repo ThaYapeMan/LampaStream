@@ -32,8 +32,7 @@ apples-to-oranges comparison.
 ## 2. Target data flow
 
 ``` text
-Spotify ──────┐
-Apple Music ────┤
+Apple Music ────┐
 YouTube ────────┤
 Other apps ─────┘
         ↓

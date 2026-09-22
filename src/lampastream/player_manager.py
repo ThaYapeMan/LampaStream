@@ -27,17 +27,14 @@ from .models import BridgeConfig, Controller, Coupling, Profile, VirtualPlayerTy
 from .pcm_source import (
     AirPlayPipeStereoSource,
     PcmSource,
-    SpotifyPipeStereoSource,
     SqueezeliteShmStereoSource,
 )
 from .spectrum_engine import make_spectrum_engine as _make_spectrum_engine
-from .spotify_config import SPOTIFY_CONFIG, receiver_config
 from .storage import Storage
 from .sync_engine import CanonicalAnalysisPipeline, SyncEngine
 from .track_position import (
     AirPlayTrackPositionSource,
     LmsTrackPositionSource,
-    SpotifyTrackPositionSource,
     TrackPosition,
     TrackPositionSource,
 )
@@ -261,7 +258,7 @@ class ActiveSession:
         self.task: asyncio.Task | None = None
         self.probe: LatencyProbe = NoLatencyProbe()
         self.poller_task: asyncio.Task | None = None
-        self.shm_source: PcmSource | AirPlayPipeStereoSource | SpotifyPipeStereoSource | None = None
+        self.shm_source: PcmSource | AirPlayPipeStereoSource | None = None
         self.follower: LmsFollower | None = None
         self.follower_task: asyncio.Task | None = None
         self.unsync_task: asyncio.Task | None = None
@@ -275,7 +272,6 @@ class PlayerManager:
         # Shairport's FIFO is an event stream, not a replayable snapshot. Keep
         # one reader across Stop/Go so events during inactive sessions aren't lost.
         self._airplay_tracks: AirPlayTrackPositionSource | None = None
-        self._spotify_tracks: SpotifyTrackPositionSource | None = None
         self.latency_warning: str | None = None
         self._detected_sync_master: str | None = None
         self._detected_sync_master_name: str | None = None
@@ -658,10 +654,6 @@ class PlayerManager:
                 await self._activate_airplay(
                     session, profile, mellow_profile, output_config, channels
                 )
-            elif player.type == VirtualPlayerType.SPOTIFY:
-                await self._activate_spotify(
-                    session, profile, mellow_profile, output_config, channels
-                )
             elif player.type == VirtualPlayerType.LMS:
                 await self._activate_lms(
                     session, profile, player, mellow_profile, output_config, channels
@@ -843,60 +835,14 @@ class PlayerManager:
             profile.spectrum_backend,
         )
 
-    async def _activate_spotify(
-        self,
-        session: ActiveSession,
-        profile: Profile,
-        mellow_profile: Profile | None,
-        output_config: HueOutputConfig,
-        channels: list[ChannelInfo],
-    ) -> None:
-        """Spotify Connect: a paced stereo FIFO through the common canonical factory."""
-        if self._spotify_tracks is None:
-            self._spotify_tracks = SpotifyTrackPositionSource()
-        session.track_source = self._spotify_tracks
-        session.track_source.open()
-        if self._configure_librespot_name(profile.display_name or profile.player_name):
-            self._spotify_tracks.invalidate()
-
-        pipe_source = SpotifyPipeStereoSource()
-        pipe_source.open()
-        session.shm_source = pipe_source
-
-        pcm_analyser = _make_canonical_pipeline(pipe_source, profile)
-
-        engine = SyncEngine(
-            None, profile, probe=session.probe,
-            mellow_profile=mellow_profile, analyser=pcm_analyser,
-        )
-        session.sync_engine = engine
-        engine.start()
-
-        hue_driver = HueDriver(output_config, channels)
-        await hue_driver.start()
-        session.hue_driver = hue_driver
-
-        session.task = asyncio.create_task(engine.run(hue_driver))
-        session.task.add_done_callback(_log_task_failure)
-        log.info(
-            "Spotify coupling %s active — backend=%r pipe: /run/lampastream-spotify/spotify.pcm",
-            session.coupling and session.coupling.name,
-            profile.spectrum_backend,
-        )
-
     async def close(self) -> None:
         """Application shutdown, including the persistent receiver metadata reader."""
         try:
             await self.deactivate()
         finally:
-            try:
-                if self._airplay_tracks is not None:
-                    await self._airplay_tracks.close()
-                    self._airplay_tracks = None
-            finally:
-                if self._spotify_tracks is not None:
-                    await self._spotify_tracks.close()
-                    self._spotify_tracks = None
+            if self._airplay_tracks is not None:
+                await self._airplay_tracks.close()
+                self._airplay_tracks = None
 
     async def deactivate(self) -> None:
         if not self._active:
@@ -916,8 +862,7 @@ class PlayerManager:
     async def _teardown_session(self, session: ActiveSession) -> None:
         session.stopping = True
         if session.track_source is not None:
-            if (session.track_source is not self._airplay_tracks
-                    and session.track_source is not self._spotify_tracks):
+            if session.track_source is not self._airplay_tracks:
                 await session.track_source.close()
             session.track_source = None
         if session.unsync_task:
@@ -1266,30 +1211,6 @@ class PlayerManager:
     # host kernel) and the resulting /dev/snd nodes passed into the
     # container - see README.
     DEFAULT_ALSA_DEVICE = "hw:CARD=Dummy,DEV=0"
-    _LIBRESPOT_CONF = SPOTIFY_CONFIG
-
-    def _configure_librespot_name(self, name: str) -> bool:
-        """Apply the pinned receiver config; unchanged activation preserves pairing."""
-        conf = receiver_config(name)
-        try:
-            existing = self._LIBRESPOT_CONF.read_text()
-        except OSError:
-            existing = None
-        if existing == conf:
-            return False
-        try:
-            self._LIBRESPOT_CONF.write_text(conf)
-        except OSError as exc:
-            log.warning("Could not write go-librespot config: %s", exc)
-            return False
-        try:
-            subprocess.run(["systemctl", "restart", "go-librespot"],
-                           check=True, timeout=10, capture_output=True)
-        except (OSError, subprocess.SubprocessError) as exc:
-            log.warning("Could not restart go-librespot: %s", exc)
-        # Invalidate cached metadata even when restart completion is uncertain.
-        return True
-
     _SHAIRPORT_CONF = Path("/usr/local/etc/shairport-sync.conf")
 
     def _configure_shairport_name(self, name: str) -> bool:

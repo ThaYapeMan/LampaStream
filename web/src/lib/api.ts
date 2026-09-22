@@ -5,7 +5,6 @@
 export const PLAYER_TYPES = [
   { value: 'LMS',     label: 'LMS (squeezelite)' },
   { value: 'AirPlay', label: 'AirPlay (shairport-sync)' },
-  { value: 'Spotify', label: 'Spotify Connect (go-librespot)' },
 ] as const
 
 export type PlayerType = typeof PLAYER_TYPES[number]['value']

@@ -13,7 +13,7 @@
 
 HueSync will proceed with a **PCM-first audio architecture**.
 
-All realtime audio sources should be adapted and decoded into one explicit canonical analysis representation before native musical analysis. The analyser must not need to know whether the audio originated from LMS/Squeezelite, AirPlay, an MP3 stream, Spotify-related playback, TIDAL, Roon, Cast, or a future source.
+All realtime audio sources should be adapted and decoded into one explicit canonical analysis representation before native musical analysis. The analyser must not need to know whether the audio originated from LMS/Squeezelite, AirPlay, an MP3 stream, TIDAL, Roon, Cast, or a future source.
 
 The architectural target is:
 
@@ -125,7 +125,6 @@ Instead:
 LMS / Squeezelite ─┐
 AirPlay ────────────┤
 MP3/AAC stream ─────┤
-Spotify path ───────┤
 TIDAL path ─────────┤
 Roon path ──────────┤
 Cast path ──────────┤
@@ -416,7 +415,7 @@ Analysis PCM
 
 Codec artifacts present in decoded audio are part of the observed source signal. Canonicalization should not attempt to reconstruct information lost by lossy compression.
 
-### 7.4 Spotify, TIDAL, Roon, and Cast
+### 7.4 TIDAL, Roon, and Cast
 
 These names describe ecosystems/playback paths, not analyser types.
 
@@ -899,7 +898,7 @@ This architecture does **not** authorize:
 removing CAVA immediately
 rewriting all DSP at once
 making native DSP imitate CAVA
-per-Spotify/TIDAL/Roon DSP
+per-TIDAL/Roon DSP
 automatic track pre-analysis
 phrase/build/drop detection
 ML music understanding
@@ -946,7 +945,7 @@ The following are the north-star rules for the audio system:
 ## 22. Architectural north star
 
 ```text
-        Spotify / TIDAL / Roon / streams
+        TIDAL / Roon / streams
                     AirPlay / LMS / future
                               │
                               ▼

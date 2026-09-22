@@ -346,10 +346,10 @@ describe('VirtualPlayer configured name precedence', () => {
   it.each([
     ['Configured player', 'Advertised receiver', 'Configured player'],
     ['', 'Advertised receiver', 'Advertised receiver'],
-    ['', '', 'Spotify'],
+    ['', '', 'LMS'],
   ])('uses player_name=%j before display_name=%j in the list, routing node and dropdown', async (playerName, displayName, expected) => {
     setupDefaultMocks({
-      players: [{ id: 'p1', type: 'Spotify', player_name: playerName, display_name: displayName }],
+      players: [{ id: 'p1', type: 'LMS', player_name: playerName, display_name: displayName }],
       couplings: [{ id: 'c1', name: 'Room coupling', player_id: 'p1', zone_id: 'z1', analyser_id: 'a1', energy_profile_id: 'ep1', enabled: true }],
     })
     const user = await renderAndSelectCoupling('c1')

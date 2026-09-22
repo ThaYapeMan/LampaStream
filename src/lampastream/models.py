@@ -52,14 +52,12 @@ def _validate_energy_source(
             raise ValueError("peak_attack_s must be below peak_release_s")
 
 
-# Virtual-player source type. Spotify is backend-only until frontend Phase 2.
-# Other values match PLAYER_TYPES in web/src/lib/api.ts.
+# Virtual-player source type.  Keep in sync with PLAYER_TYPES in web/src/lib/api.ts.
 # Adding a new type: add the enum value here, implement the canonical ingress contract,
 # and add an activation branch in player_manager.activate_coupling().
 class VirtualPlayerType(StrEnum):
     LMS = "LMS"
     AIRPLAY = "AirPlay"
-    SPOTIFY = "Spotify"
 
 VIRTUAL_PLAYER_TYPES: frozenset[str] = frozenset(t.value for t in VirtualPlayerType)
 

@@ -279,20 +279,6 @@ def test_create_airplay_virtual_player(client: TestClient):
     assert resp2.json()["type"] == "AirPlay"
 
 
-def test_create_spotify_virtual_player(client: TestClient):
-    """Creating an Spotify player must succeed with type='Spotify' and no lms_host required."""
-    payload = {"type": "Spotify"}
-    resp = client.post("/api/virtual-players", json=payload)
-    assert resp.status_code == 201, f"Expected 201, got {resp.status_code}: {resp.text}"
-    body = resp.json()
-    assert body["type"] == "Spotify"
-
-    player_id = body["id"]
-    resp2 = client.get(f"/api/virtual-players/{player_id}")
-    assert resp2.status_code == 200
-    assert resp2.json()["type"] == "Spotify"
-
-
 def test_airplay_virtual_player_in_list(client: TestClient):
     """An AirPlay player appears in the virtual-players list with correct type."""
     client.post(
