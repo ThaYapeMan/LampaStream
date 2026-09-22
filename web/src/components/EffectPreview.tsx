@@ -238,7 +238,10 @@ function buildDots(effectType: string, energy: number, count: number, gradientPa
         return Array.from({ length: count }, (_, i) => {
           const bandIndex = i - leftPad
           if (bandIndex < 0 || bandIndex >= n) {
-            return { base: [22, 22, 22] as [number, number, number], intensity: 0.05, yFrac: 0 }
+            // Clearly grey, not near-black — a dim slate dot that reads as
+            // "unused slot", not as an unlit/off lamp (fixed brightness,
+            // independent of the preview energy input).
+            return { base: SLATE, intensity: 0.35, yFrac: 0 }
           }
           return { base: colours[bandIndex], intensity: e * 0.78, yFrac: 0 }
         })

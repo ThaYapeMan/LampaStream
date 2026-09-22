@@ -839,7 +839,7 @@ export function Effects({ activeCouplingId = null, initialEffectId }: { activeCo
         ) : (
           <div
             className="grid gap-4"
-            style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}
+            style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))' }}
             data-testid="effects-gallery"
           >
             {effects.map((e) => (

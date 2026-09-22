@@ -549,7 +549,7 @@ describe('EffectPreview dots', () => {
     render(<EffectPreview effectType="band_colours" bandColours={bandColours} count={8} />)
     const dots = screen.getByTestId('effect-preview').children
     expect(dots.length).toBe(8)
-    const grey = 'rgb(4, 4, 4)' // emissiveRgb([22,22,22], 0.05) padding.
+    const grey = 'rgb(91, 97, 112)' // emissiveRgb(SLATE, intensity=0.35) — a clearly visible dim slate grey, not near-black
     expect((dots[0] as HTMLElement).style.backgroundColor).toBe(grey)
     expect((dots[7] as HTMLElement).style.backgroundColor).toBe(grey)
     // The six real bands occupy the central slots, in palette order.
