@@ -1,0 +1,80 @@
+diff --git a/rtsp.c b/rtsp.c
+index d83c7c1b..572cade4 100644
+--- a/rtsp.c
++++ b/rtsp.c
+@@ -2593,38 +2593,44 @@ void handle_setpeers(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp
+   debug(3, "Connection %d: SETPEERS %s Content-Length %d", conn->connection_number, req->path,
+         req->contentlength);
+   debug_log_rtsp_message(3, "SETPEERS request", req);
+-  /*
+-    char timing_list_message[4096];
+-    timing_list_message[0] = 'T';
+-    timing_list_message[1] = 0;
+-
+-    // ensure the client itself is first -- it's okay if it's duplicated later
+-    strncat(timing_list_message, " ", sizeof(timing_list_message) - 1 -
+-    strlen(timing_list_message)); strncat(timing_list_message, (const char
+-    *)&conn->client_ip_string, sizeof(timing_list_message) - 1 - strlen(timing_list_message));
+-
+-    plist_t addresses_array = NULL;
+-    plist_from_memory(req->content, req->contentlength, &addresses_array);
+-    uint32_t items = plist_array_get_size(addresses_array);
+-    if (items) {
+-      uint32_t item;
+-      for (item = 0; item < items; item++) {
+-        plist_t n = plist_array_get_item(addresses_array, item);
+-        char *ip_address = NULL;
+-        plist_get_string_val(n, &ip_address);
+-        // debug(1,ip_address);
+-        strncat(timing_list_message, " ",
+-                sizeof(timing_list_message) - 1 - strlen(timing_list_message));
+-        strncat(timing_list_message, ip_address,
+-                sizeof(timing_list_message) - 1 - strlen(timing_list_message));
+-        if (ip_address != NULL)
+-          free(ip_address);
+-      }
+-      ptp_send_control_message_string(timing_list_message);
++  // LampaStream: re-enable forwarding the full AirPlay 2 timing-peer list to
++  // NQPTP. Upstream has left this block disabled since 2023-09-09 (commit
++  // 986f9587), falling back to registering only the immediate RTSP client as
++  // the sole timing peer (see set_client_as_ptp_clock()). That is insufficient
++  // when a device is added to or removed from an already-playing AirPlay 2
++  // group: iOS signals that change via SETPEERS, and without this forwarded
++  // list NQPTP never learns the other group members' addresses, so clock
++  // synchronisation with them can silently fail. See
++  // docs/airplay-grouping-setpeers-patch.md for the investigation.
++  char timing_list_message[4096];
++  timing_list_message[0] = 'T';
++  timing_list_message[1] = 0;
++
++  // ensure the client itself is first -- it's okay if it's duplicated later
++  strncat(timing_list_message, " ",
++          sizeof(timing_list_message) - 1 - strlen(timing_list_message));
++  strncat(timing_list_message, (const char *)&conn->client_ip_string,
++          sizeof(timing_list_message) - 1 - strlen(timing_list_message));
++
++  plist_t addresses_array = NULL;
++  plist_from_memory(req->content, req->contentlength, &addresses_array);
++  uint32_t items = plist_array_get_size(addresses_array);
++  if (items) {
++    uint32_t item;
++    for (item = 0; item < items; item++) {
++      plist_t n = plist_array_get_item(addresses_array, item);
++      char *ip_address = NULL;
++      plist_get_string_val(n, &ip_address);
++      strncat(timing_list_message, " ",
++              sizeof(timing_list_message) - 1 - strlen(timing_list_message));
++      strncat(timing_list_message, ip_address,
++              sizeof(timing_list_message) - 1 - strlen(timing_list_message));
++      if (ip_address != NULL)
++        free(ip_address);
+     }
+-    plist_free(addresses_array);
+-  */
+-  // set_client_as_ptp_clock(conn);
++    ptp_send_control_message_string(timing_list_message);
++  }
++  plist_free(addresses_array);
+   resp->respcode = 200;
+ }
+ #endif

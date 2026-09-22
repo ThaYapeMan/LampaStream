@@ -8,6 +8,8 @@
 set -Eeuo pipefail
 export DEBIAN_FRONTEND=noninteractive
 DEFER_START="${LAMPASTREAM_DEFER_START:-0}"
+# Resolve before the build phases change directory, including relative invocation.
+PATCH_FILE="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/patches/shairport-sync-0001-setpeers.patch"
 # Upstream make install creates a sample config at the live path. Distinguish
 # that first-install sample from an existing operator-owned receiver config.
 CONFIG_EXISTED=0
@@ -165,6 +167,20 @@ EOF
 # ---------------------------------------------------------------------------
 echo "==> [3/6] Building shairport-sync (AirPlay 2)..."
 checkout_pinned shairport-sync "$SHAIRPORT_COMMIT"
+
+echo "==> Applying LampaStream patch: re-enable SETPEERS timing-peer forwarding..."
+if ! git -C "$SRC/shairport-sync" apply --check "$PATCH_FILE" 2>/dev/null; then
+    if git -C "$SRC/shairport-sync" apply --check --reverse "$PATCH_FILE" 2>/dev/null; then
+        echo "  Patch already applied (source tree matches post-patch state) — skipping."
+    else
+        echo "error: shairport-sync-0001-setpeers.patch no longer applies cleanly." >&2
+        echo "       The pinned commit may have changed underneath this patch." >&2
+        echo "       See docs/airplay-grouping-setpeers-patch.md and re-verify by hand." >&2
+        exit 1
+    fi
+else
+    git -C "$SRC/shairport-sync" apply "$PATCH_FILE"
+fi
 
 cd "$SRC/shairport-sync"
 autoreconf -fi
