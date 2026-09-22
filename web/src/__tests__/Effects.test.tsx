@@ -532,6 +532,31 @@ describe('EffectPreview dots', () => {
     render(<EffectPreview effectType="none" />)
     expect(screen.getByTestId('effect-preview')).toBeDefined()
   })
+
+  it('band_colours shows each chosen colour directly, not an averaged blend', async () => {
+    const { EffectPreview } = await import('../components/EffectPreview')
+    const bandColours = ['#F42525', '#25F425', '#2525F4']
+    render(<EffectPreview effectType="band_colours" bandColours={bandColours} count={3} />)
+    const dots = screen.getByTestId('effect-preview').children
+    // Each slot retains its band's hue instead of sharing a flat grey average.
+    expect((dots[0] as HTMLElement).style.backgroundColor).not.toBe((dots[1] as HTMLElement).style.backgroundColor)
+    expect((dots[1] as HTMLElement).style.backgroundColor).not.toBe((dots[2] as HTMLElement).style.backgroundColor)
+  })
+
+  it('band_colours pads unused dot slots grey, symmetrically, when there are fewer bands than slots', async () => {
+    const { EffectPreview } = await import('../components/EffectPreview')
+    const bandColours = ['#F42525', '#F4F425', '#25F425', '#25F4F4', '#2525F4', '#F425F4']
+    render(<EffectPreview effectType="band_colours" bandColours={bandColours} count={8} />)
+    const dots = screen.getByTestId('effect-preview').children
+    expect(dots.length).toBe(8)
+    const grey = 'rgb(4, 4, 4)' // emissiveRgb([22,22,22], 0.05) padding.
+    expect((dots[0] as HTMLElement).style.backgroundColor).toBe(grey)
+    expect((dots[7] as HTMLElement).style.backgroundColor).toBe(grey)
+    // The six real bands occupy the central slots, in palette order.
+    for (let i = 1; i <= 6; i++) {
+      expect((dots[i] as HTMLElement).style.backgroundColor).not.toBe(grey)
+    }
+  })
 })
 
 

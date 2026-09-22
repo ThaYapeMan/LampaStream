@@ -253,7 +253,7 @@ function GalleryCard({ effect, isActive, onEdit, onDelete }: GalleryCardProps) {
       data-testid={`effect-card-${effect.id}`}
     >
       <div className="bg-black/20 py-5 px-4 flex flex-col items-center justify-center gap-3 min-h-[96px]">
-        <EffectPreview effectType={effect.effect_type} gradientPalette={effect.gradient_palette} bandColours={effect.band_colours} energy={0.80} count={6} size="md" />
+        <EffectPreview effectType={effect.effect_type} gradientPalette={effect.gradient_palette} bandColours={effect.band_colours} energy={0.80} count={8} size="md" />
         <div className={cn('h-1 w-14 rounded-full opacity-60', swatchClass)} />
       </div>
       <div className="p-4 flex flex-col gap-2 flex-1">

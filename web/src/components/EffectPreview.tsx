@@ -220,13 +220,33 @@ function buildDots(effectType: string, energy: number, count: number, gradientPa
 
     case 'band_colours':
     case 'band_colours_spatial': {
-      const colours = bandColours.map(hex => [1, 3, 5].map(start => parseInt(hex.slice(start, start + 2), 16)))
+      // Preview always shows the chosen per-band palette directly (same
+      // treatment for both variants, mirroring spectrum_rgb/spectrum_rgb_spatial
+      // sharing one preview) — only the real renderer performs the
+      // energy-weighted blend-to-one-colour (band_colours) or spatial
+      // cross-fade (band_colours_spatial). Averaging all bands into a single
+      // preview colour washes an evenly-spaced palette out to near grey,
+      // which reads as "no colour chosen" rather than showing the picks.
+      const colours = bandColours.map(hex => [1, 3, 5].map(start => parseInt(hex.slice(start, start + 2), 16))) as [number, number, number][]
+      const n = colours.length
+      if (count > n) {
+        // Fewer bands than requested dot slots: show each band in its own
+        // true colour, centred among the slots, with the outer padding
+        // slots dimmed grey rather than stretching/interpolating the
+        // palette to fill every slot.
+        const leftPad = Math.floor((count - n) / 2)
+        return Array.from({ length: count }, (_, i) => {
+          const bandIndex = i - leftPad
+          if (bandIndex < 0 || bandIndex >= n) {
+            return { base: [22, 22, 22] as [number, number, number], intensity: 0.05, yFrac: 0 }
+          }
+          return { base: colours[bandIndex], intensity: e * 0.78, yFrac: 0 }
+        })
+      }
       return Array.from({ length: count }, (_, i) => {
-        const position = (count === 1 ? 0.5 : i / (count - 1)) * (colours.length - 1)
-        const lo = Math.floor(position), hi = Math.min(lo + 1, colours.length - 1), t = position - lo
-        const base = [0, 1, 2].map(channel => effectType === 'band_colours'
-          ? Math.min(255, colours.reduce((sum, colour) => sum + colour[channel] / colours.length, 0))
-          : colours[lo][channel] * (1 - t) + colours[hi][channel] * t) as [number, number, number]
+        const position = (count === 1 ? 0.5 : i / (count - 1)) * (n - 1)
+        const lo = Math.floor(position), hi = Math.min(lo + 1, n - 1), t = position - lo
+        const base = [0, 1, 2].map(channel => colours[lo][channel] * (1 - t) + colours[hi][channel] * t) as [number, number, number]
         return { base, intensity: e * 0.78, yFrac: 0 }
       })
     }
