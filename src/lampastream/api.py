@@ -14,7 +14,7 @@ from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse, Response
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from . import __git_hash__, __version__, hue_bridge
 from .backup import (
@@ -44,6 +44,7 @@ from .models import (
     VirtualPlayer,
     VirtualPlayerType,
     Zone,
+    _validate_band_colours,
 )
 from .player_manager import PlayerManager, _build_engine_profile, _build_mellow_profile
 from .schema import REFERENCES
@@ -228,6 +229,10 @@ class EffectCreateBody(BaseModel):
     name: str = "Default Effect"
     effect_type: str = "spectrum_rgb"
     gradient_palette: str = "sunset"
+    band_colours: list[str] = Field(default_factory=lambda: ["#F42525", "#25F425", "#2525F4"])
+    band_playback: str = "static"
+    band_advance: str = "beat"
+    band_advance_interval_s: float = 2.0
     effect_speed: float = 1.0
     effect_decay: float = 0.3
     sensitivity: float = 1.0
@@ -243,6 +248,10 @@ class EffectPatchBody(BaseModel):
     name: str | None = None
     effect_type: str | None = None
     gradient_palette: str | None = None
+    band_colours: list[str] | None = None
+    band_playback: str | None = None
+    band_advance: str | None = None
+    band_advance_interval_s: float | None = None
     effect_speed: float | None = None
     effect_decay: float | None = None
     sensitivity: float | None = None
@@ -262,7 +271,7 @@ class EnergyProfileCreateBody(BaseModel):
     blend_start: float = 0.3
     blend_end: float = 0.7
     energy_source: Literal[
-        "sustained", "loudness_fixed", "loudness_adaptive", "peak_envelope"
+        "sustained", "loudness_fixed", "loudness_adaptive", "peak_envelope", "off"
     ] = "sustained"
     lufs_floor: float = -30.0
     lufs_ceiling: float = -8.0
@@ -283,7 +292,7 @@ class EnergyProfilePatchBody(BaseModel):
     blend_start: float | None = None
     blend_end: float | None = None
     energy_source: Literal[
-        "sustained", "loudness_fixed", "loudness_adaptive", "peak_envelope"
+        "sustained", "loudness_fixed", "loudness_adaptive", "peak_envelope", "off"
     ] | None = None
     lufs_floor: float | None = None
     lufs_ceiling: float | None = None
@@ -1028,6 +1037,10 @@ async def create_effect_route(request: Request, body: EffectCreateBody):
     effect = Effect(
         name=body.name,
         gradient_palette=body.gradient_palette,
+        band_colours=body.band_colours,
+        band_playback=body.band_playback,
+        band_advance=body.band_advance,
+        band_advance_interval_s=body.band_advance_interval_s,
         effect_type=body.effect_type,
         effect_speed=body.effect_speed,
         effect_decay=body.effect_decay,
@@ -1038,6 +1051,11 @@ async def create_effect_route(request: Request, body: EffectCreateBody):
         exertion_clip=body.exertion_clip,
         onset_flash_intensity=body.onset_flash_intensity,
     )
+    try:
+        _validate_band_colours(effect.band_colours, effect.band_playback,
+                               effect.band_advance, effect.band_advance_interval_s)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     storage.save_effect(effect)
     return JSONResponse(content=effect.to_dict(), status_code=201)
 
@@ -1075,16 +1093,21 @@ async def patch_effect_route(effect_id: str, request: Request, body: EffectPatch
                 status_code=422, detail=f"Unknown gradient palette: {value!r}"
             )
         setattr(effect, field, value)
+    try:
+        _validate_band_colours(effect.band_colours, effect.band_playback,
+                               effect.band_advance, effect.band_advance_interval_s)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     storage.save_effect(effect)
     # Trigger render/pcm update if the active coupling uses this Effect
-    # (via its energy_profile's high_energy_effect_id).
+    # (via either of its energy_profile's Effect references).
     active_id = storage.get_active_coupling_id()
     active_fields = set(updates.keys()) - {"name"}
     if active_fields and active_id:
         coupling = storage.get_coupling(active_id)
         if coupling and coupling.energy_profile_id:
             cf = storage.get_energy_profile(coupling.energy_profile_id)
-            if cf and cf.high_energy_effect_id == effect_id:
+            if cf and effect_id in (cf.high_energy_effect_id, cf.low_energy_effect_id):
                 await _apply_coupling_action(coupling, storage, manager, active_fields)
     return effect.to_dict()
 

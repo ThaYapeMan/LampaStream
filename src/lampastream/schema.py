@@ -17,6 +17,7 @@ from .models import (
     PlayerLatency,
     VirtualPlayer,
     Zone,
+    _validate_band_colours,
 )
 
 SCHEMA_VERSION = 1
@@ -75,7 +76,10 @@ def validate_current(data: dict, *, references: bool = False) -> None:
             if not isinstance(identity, str) or not identity or identity in seen:
                 raise ValueError(f"{key}: missing/duplicate ID {identity!r}")
             seen.add(identity)
-            model.from_dict(row)
+            entity = model.from_dict(row)
+            if key == "effects":
+                _validate_band_colours(entity.band_colours, entity.band_playback,
+                                       entity.band_advance, entity.band_advance_interval_s)
             for field, value in row.items():
                 expected = _FIELD_TYPES[key][field]
                 choices = (get_args(expected) if get_origin(expected) is types.UnionType
@@ -84,6 +88,8 @@ def validate_current(data: dict, *, references: bool = False) -> None:
                 for choice in choices:
                     if isinstance(choice, type) and issubclass(choice, Enum):
                         valid |= value in {item.value for item in choice}
+                    elif choice == list[str]:
+                        valid |= type(value) is list and all(type(item) is str for item in value)
                     elif choice is float:
                         valid |= type(value) in (int, float) and math.isfinite(value)
                     else:

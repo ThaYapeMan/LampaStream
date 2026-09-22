@@ -15,6 +15,7 @@
 
 interface Props {
   effectType: string
+  bandColours?: string[]
   gradientPalette?: string
   energy?: number  // 0–1; defaults to 0.7
   count?: number   // number of dots; defaults to 8
@@ -133,7 +134,7 @@ const Y: Record<string, number[]> = {
 
 // ── dot construction ─────────────────────────────────────────────────────────
 
-function buildDots(effectType: string, energy: number, count: number, gradientPalette: string): Dot[] {
+function buildDots(effectType: string, energy: number, count: number, gradientPalette: string, bandColours: string[]): Dot[] {
   const e = Math.max(0.22, energy)
   const yArr = Y[effectType] ?? Y.none
 
@@ -217,6 +218,19 @@ function buildDots(effectType: string, energy: number, count: number, gradientPa
       })
     }
 
+    case 'band_colours':
+    case 'band_colours_spatial': {
+      const colours = bandColours.map(hex => [1, 3, 5].map(start => parseInt(hex.slice(start, start + 2), 16)))
+      return Array.from({ length: count }, (_, i) => {
+        const position = (count === 1 ? 0.5 : i / (count - 1)) * (colours.length - 1)
+        const lo = Math.floor(position), hi = Math.min(lo + 1, colours.length - 1), t = position - lo
+        const base = [0, 1, 2].map(channel => effectType === 'band_colours'
+          ? Math.min(255, colours.reduce((sum, colour) => sum + colour[channel] / colours.length, 0))
+          : colours[lo][channel] * (1 - t) + colours[hi][channel] * t) as [number, number, number]
+        return { base, intensity: e * 0.78, yFrac: 0 }
+      })
+    }
+
     case 'gradient': {
       const stops = GRADIENT_STOPS[gradientPalette] ?? GRADIENT_STOPS.sunset
       // Preview energy stands in for centroid; the actual renderer uses audio centroid.
@@ -260,8 +274,8 @@ const GLOW_SCALE: Record<string, number> = { sm: 0.32, md: 0.62, lg: 1.0 }
 
 // ── component ─────────────────────────────────────────────────────────────────
 
-export function EffectPreview({ effectType, gradientPalette = 'sunset', energy = 0.7, count = 8, size = 'md' }: Props) {
-  const dots = buildDots(effectType, energy, count, gradientPalette)
+export function EffectPreview({ effectType, gradientPalette = 'sunset', bandColours = ['#F42525', '#25F425', '#2525F4'], energy = 0.7, count = 8, size = 'md' }: Props) {
+  const dots = buildDots(effectType, energy, count, gradientPalette, bandColours)
   const dotClass = DOT_CLASS[size] ?? DOT_CLASS.md
   const gapClass = GAP_CLASS[size] ?? GAP_CLASS.md
   const maxY = MAX_Y[size] ?? MAX_Y.md

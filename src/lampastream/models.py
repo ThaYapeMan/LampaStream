@@ -7,6 +7,7 @@ whole config can live in one human-readable, git-diffable file.
 from __future__ import annotations
 
 import math
+import re
 import uuid
 from dataclasses import dataclass, field
 from enum import StrEnum
@@ -20,7 +21,7 @@ from .spectrum_engine import VALID_ENGINE_IDS as _VALID_ENGINE_IDS
 ONSET_METHODS: frozenset[str] = frozenset({"combined", "multiband", "superflux"})
 
 ENERGY_SOURCES: frozenset[str] = frozenset({
-    "sustained", "loudness_fixed", "loudness_adaptive", "peak_envelope",
+    "sustained", "loudness_fixed", "loudness_adaptive", "peak_envelope", "off",
 })
 
 
@@ -74,12 +75,33 @@ EFFECT_IDS: frozenset[str] = frozenset({
     "wave",
     "solid",
     "gradient",
+    "band_colours",
+    "band_colours_spatial",
     "none",
 })
 
 
 # Keep in sync with GRADIENT_PALETTES in web/src/lib/api.ts.
 GRADIENT_PALETTES: frozenset[str] = frozenset({"sunset", "ocean", "neon", "monochrome"})
+
+
+# Keep in sync with BAND_PLAYBACK_OPTIONS and BAND_ADVANCE_OPTIONS in web/src/lib/api.ts.
+BAND_PLAYBACK_MODES: frozenset[str] = frozenset({"static", "loop", "shuffle", "random", "mix"})
+BAND_ADVANCE_MODES: frozenset[str] = frozenset({"beat", "timer"})
+
+
+def _validate_band_colours(colours: list[str], playback: str, advance: str,
+                           interval: float) -> None:
+    if not isinstance(colours, list) or not 3 <= len(colours) <= 8:
+        raise ValueError("band_colours must contain 3–8 colours")
+    if any(not isinstance(c, str) or not re.fullmatch(r"#[0-9a-fA-F]{6}", c) for c in colours):
+        raise ValueError("band_colours entries must be six-digit hex colours (#rrggbb)")
+    if not isinstance(playback, str) or playback not in BAND_PLAYBACK_MODES:
+        raise ValueError("Unknown band_playback")
+    if not isinstance(advance, str) or advance not in BAND_ADVANCE_MODES:
+        raise ValueError("Unknown band_advance")
+    if (type(interval) not in (int, float) or not math.isfinite(interval) or interval <= 0):
+        raise ValueError("band_advance_interval_s must be finite and positive")
 
 
 @dataclass
@@ -173,6 +195,10 @@ class Profile:
     # Colour mapping / effect selection
     effect_type: str = "spectrum_rgb"
     gradient_palette: str = "sunset"
+    band_colours: list[str] = field(default_factory=lambda: ["#F42525", "#25F425", "#2525F4"])
+    band_playback: str = "static"
+    band_advance: str = "beat"
+    band_advance_interval_s: float = 2.0
     effect_speed: float = 1.0
     effect_decay: float = 0.3
     blend_start: float = 0.3
@@ -246,6 +272,8 @@ class Profile:
     enabled: bool = True
 
     def __post_init__(self) -> None:
+        _validate_band_colours(self.band_colours, self.band_playback,
+                               self.band_advance, self.band_advance_interval_s)
         _validate_energy_source(
             self.energy_source, self.lufs_floor, self.lufs_ceiling, self.adaptation_tau_s,
             self.peak_envelope_auto, self.peak_attack_s, self.peak_release_s,
@@ -491,6 +519,10 @@ class Effect:
     name: str = "Default Effect"
     effect_type: str = "spectrum_rgb"
     gradient_palette: str = "sunset"
+    band_colours: list[str] = field(default_factory=lambda: ["#F42525", "#25F425", "#2525F4"])
+    band_playback: str = "static"
+    band_advance: str = "beat"
+    band_advance_interval_s: float = 2.0
     effect_speed: float = 1.0
     effect_decay: float = 0.3
     sensitivity: float = 1.0
@@ -506,6 +538,10 @@ class Effect:
             "name": self.name,
             "effect_type": self.effect_type,
             "gradient_palette": self.gradient_palette,
+            "band_colours": self.band_colours,
+            "band_playback": self.band_playback,
+            "band_advance": self.band_advance,
+            "band_advance_interval_s": self.band_advance_interval_s,
             "effect_speed": self.effect_speed,
             "effect_decay": self.effect_decay,
             "sensitivity": self.sensitivity,

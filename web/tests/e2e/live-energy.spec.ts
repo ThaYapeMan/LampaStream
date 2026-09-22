@@ -20,15 +20,15 @@ test('live energy source patching and unchanged preview geometry', async ({ page
   await page.getByLabel('Editor mode').selectOption('expert')
   const radios = page.getByRole('radiogroup', {name:'Energy source'}).getByRole('radio')
   const groupBox = (await page.getByRole('radiogroup', {name:'Energy source'}).boundingBox())!
-  expect(groupBox.width).toBeLessThan(550)
+  expect(groupBox.width).toBeLessThan(620)
   expect(groupBox.height).toBeLessThanOrEqual(28)
-  const widths = await Promise.all([0,1,2,3].map(async i => (await radios.nth(i).boundingBox())!.width))
+  const widths = await Promise.all([0,1,2,3,4].map(async i => (await radios.nth(i).boundingBox())!.width))
   expect(Math.max(...widths)-Math.min(...widths)).toBeLessThanOrEqual(.02)
   const boxes = await geometry(page) as Boxes
   for (const key of ['track-block', 'colour-preview-size', 'floorplan-preview-size', 'status'] as const) expect(boxes[key]).toEqual(baseline[key])
   // Expert controls only move the later spectrum card by their added height.
   const controlBox = (await controls.boundingBox())!
-  expect(controlBox.height).toBeLessThan(105)
+  expect(controlBox.height).toBeLessThan(120)
   const spectrumY = [boxes['spectrum-panel'].y]
   expect((await page.getByTestId('energy-parameters').boundingBox())!.height).toBe(28)
   expect(boxes['spectrum-panel'].x).toBe(baseline['spectrum-panel'].x)
@@ -93,7 +93,7 @@ test('live energy source patching and unchanged preview geometry', async ({ page
   await expect(controls.getByRole('radiogroup')).toHaveCount(0)
   await expect(controls.getByRole('spinbutton')).toHaveCount(0)
   await page.getByLabel('Editor mode').selectOption('expert')
-  await page.getByText('Open profile', {exact:true}).click()
+  await page.getByText('Open trigger', {exact:true}).click()
   await expect(page.getByLabel('Energy source settings')).toBeVisible()
 })
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Separator } from '@/components/ui/separator'
@@ -6,6 +6,7 @@ import { Slider } from '@/components/ui/slider'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { EditorPageHeader } from '@/components/editor/EditorPageHeader'
 import { SectionLabel } from '@/components/editor/SectionLabel'
+import { BandColoursEditor, distributeBandColours } from '@/components/BandColoursEditor'
 import { EffectPreview } from '@/components/EffectPreview'
 import { EffectTypeSelector } from '@/components/EffectTypeSelector'
 import { getEffectSwatchClass } from '@/lib/effectColors'
@@ -14,6 +15,8 @@ import { cn } from '@/lib/utils'
 import {
   EFFECTS,
   GRADIENT_PALETTES,
+  getAnalysers,
+  type Analyser,
   type Effect,
   type EnergyProfile,
   getEffects,
@@ -29,6 +32,10 @@ import {
 
 export const EFFECT_DEFAULTS = {
   gradient_palette:      'sunset',
+  band_colours: distributeBandColours(3),
+  band_playback: 'static',
+  band_advance: 'beat',
+  band_advance_interval_s: 2,
   sensitivity:           1.0,
   brightness_floor:      0.15,
   onset_flash_intensity: 0.0,
@@ -53,6 +60,10 @@ interface FormState {
   name: string
   effect_type: string
   gradient_palette: string
+  band_colours: string[]
+  band_playback: string
+  band_advance: string
+  band_advance_interval_s: string
   effect_speed: string
   effect_decay: string
   sensitivity: string
@@ -65,6 +76,10 @@ interface FormState {
 
 function defaultForm(cfg?: Effect): FormState {
   return {
+    band_colours: [...(cfg?.band_colours ?? EFFECT_DEFAULTS.band_colours)],
+    band_playback: cfg?.band_playback ?? EFFECT_DEFAULTS.band_playback,
+    band_advance: cfg?.band_advance ?? EFFECT_DEFAULTS.band_advance,
+    band_advance_interval_s: String(cfg?.band_advance_interval_s ?? EFFECT_DEFAULTS.band_advance_interval_s),
     gradient_palette:      cfg?.gradient_palette ?? EFFECT_DEFAULTS.gradient_palette,
     name:                  cfg?.name                    ?? '',
     effect_type:           cfg?.effect_type             ?? 'spectrum_rgb',
@@ -238,7 +253,7 @@ function GalleryCard({ effect, isActive, onEdit, onDelete }: GalleryCardProps) {
       data-testid={`effect-card-${effect.id}`}
     >
       <div className="bg-black/20 py-5 px-4 flex flex-col items-center justify-center gap-3 min-h-[96px]">
-        <EffectPreview effectType={effect.effect_type} gradientPalette={effect.gradient_palette} energy={0.80} count={6} size="md" />
+        <EffectPreview effectType={effect.effect_type} gradientPalette={effect.gradient_palette} bandColours={effect.band_colours} energy={0.80} count={6} size="md" />
         <div className={cn('h-1 w-14 rounded-full opacity-60', swatchClass)} />
       </div>
       <div className="p-4 flex flex-col gap-2 flex-1">
@@ -275,7 +290,9 @@ function GalleryCard({ effect, isActive, onEdit, onDelete }: GalleryCardProps) {
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-export function Effects({ activeCouplingId = null }: { activeCouplingId?: string | null }) {
+export function Effects({ activeCouplingId = null, initialEffectId }: { activeCouplingId?: string | null; initialEffectId?: string | null }) {
+  const openedInitialEffect = useRef(false)
+  const [analysers, setAnalysers] = useState<Analyser[]>([])
   const [couplings, setCouplings] = useState<Coupling[]>([])
   const activeCoupling = couplings.find(c => c.id === activeCouplingId)
   const [effects, setEffects] = useState<Effect[]>([])
@@ -305,6 +322,9 @@ export function Effects({ activeCouplingId = null }: { activeCouplingId?: string
   const midHz        = parseInt(form.mid_hz, 10)             || EFFECT_DEFAULTS.mid_hz
   const exertionClip = parseFloat(form.exertion_clip)        || EFFECT_DEFAULTS.exertion_clip
 
+  const rangeAnalyser = editingId && (inUseProfile?.high_energy_effect_id === editingId || inUseProfile?.low_energy_effect_id === editingId)
+    ? analysers.find(analyser => analyser.id === activeCoupling?.analyser_id) : undefined
+
   // ── at-default checks ──
   const sensDef    = Math.abs(sensitivity  - EFFECT_DEFAULTS.sensitivity)           < 0.001
   const floorDef   = Math.abs(floor        - EFFECT_DEFAULTS.brightness_floor)      < 0.001
@@ -332,7 +352,13 @@ export function Effects({ activeCouplingId = null }: { activeCouplingId?: string
   // ── load ──
   async function load() {
     try {
-      const [effs, eps, cs] = await Promise.all([getEffects(), getEnergyProfiles(), getCouplings()])
+      const [effs, eps, cs, ans] = await Promise.all([getEffects(), getEnergyProfiles(), getCouplings(), getAnalysers()])
+      setAnalysers(ans)
+      const requested = effs.find(effect => effect.id === initialEffectId)
+      if (requested && !openedInitialEffect.current) {
+        openedInitialEffect.current = true
+        openEdit(requested)
+      }
       setCouplings(cs)
       setEffects(effs)
       setEnergyProfiles(eps)
@@ -380,6 +406,10 @@ export function Effects({ activeCouplingId = null }: { activeCouplingId?: string
         name:                  form.name,
         effect_type:           form.effect_type,
         gradient_palette:      form.gradient_palette,
+        band_colours: form.band_colours,
+        band_playback: form.band_playback,
+        band_advance: form.band_advance,
+        band_advance_interval_s: Number(form.band_advance_interval_s),
         effect_speed:          parseFloat(form.effect_speed),
         effect_decay:          parseFloat(form.effect_decay),
         sensitivity:           parseFloat(form.sensitivity),
@@ -457,7 +487,7 @@ export function Effects({ activeCouplingId = null }: { activeCouplingId?: string
               <div className="py-10 px-6 flex flex-col items-center gap-4">
                 <EffectPreview
                   effectType={form.effect_type}
-                  gradientPalette={form.gradient_palette}
+                  gradientPalette={form.gradient_palette} bandColours={form.band_colours}
                   energy={displayEnergy}
                   count={8}
                   size="lg"
@@ -516,6 +546,14 @@ export function Effects({ activeCouplingId = null }: { activeCouplingId?: string
               </div>
             </div>
 
+            {selectedMeta?.hasBandColours && <BandColoursEditor key={editingId}
+              colours={form.band_colours} playback={form.band_playback} advance={form.band_advance}
+              interval={form.band_advance_interval_s} expertMode={expertMode}
+              lower={rangeAnalyser?.lower_cutoff_freq ?? 50} upper={rangeAnalyser?.higher_cutoff_freq ?? 12000}
+              rangeLabel={rangeAnalyser ? `Active analyser: ${rangeAnalyser.name}` : 'Default range preview: 50–12000 Hz'}
+              onColours={colours => setForm(f => ({ ...f, band_colours: colours }))}
+              onPlayback={value => set('band_playback', value)} onAdvance={value => set('band_advance', value)}
+              onInterval={value => set('band_advance_interval_s', value)} />}
           </div>
 
           {/* ── Inspector ── */}
@@ -721,7 +759,7 @@ export function Effects({ activeCouplingId = null }: { activeCouplingId?: string
                   <Separator />
 
                   {/* Frequency bands — bass/mid boundaries (grouped reset) */}
-                  <ExpertSection
+                  {!selectedMeta?.hasBandColours && <ExpertSection
                     title="Frequency bands"
                     isAtDefault={freqDef}
                     onReset={() => {
@@ -752,7 +790,7 @@ export function Effects({ activeCouplingId = null }: { activeCouplingId?: string
                         />
                       </div>
                     </div>
-                  </ExpertSection>
+                  </ExpertSection>}
 
                   <Separator />
 

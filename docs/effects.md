@@ -21,6 +21,8 @@ sample. Time-driven motion is evaluated at the lighting render cadence.
 |---|---|---|---|
 | `spectrum_rgb` | Uniform bass-red, mid-green, treble-blue mixture | `sensitivity`, `bass_hz`, `mid_hz`, `onset_flash_intensity` | `bars`, `onset`; deliberately ignores `brightness_floor`, so silent channels remain dark |
 | `spectrum_rgb_spatial` | Bass red at left, mid green at centre, treble blue at right, with linear crossfades | Same as `spectrum_rgb` | `bars`, `onset`; uses x positions clamped to −1…1; no brightness floor |
+| `band_colours` | Uniform energy-weighted mixture of 3–8 user colours | `band_colours`, `band_playback`, `band_advance`, `band_advance_interval_s`, `sensitivity`, `onset_flash_intensity` | `bars`, `onset`; equal log-frequency bands; no brightness floor |
+| `band_colours_spatial` | The same bands at evenly spaced room positions, cross-faded | Same as `band_colours` | `bars`, `onset`; x positions clamped to −1…1 |
 | `mono_pulse` | Uniform white brightness following average spectrum energy, optionally boosted on onset | `sensitivity`, `brightness_floor`, `onset_flash_intensity` | `bars`, `onset`; no selectable fixed hue |
 | `pulses` | Onset-triggered envelope with spectrum color captured at the trigger | `effect_decay`, `brightness_floor`, `bass_hz`, `mid_hz`, `sensitivity` | `bars`, `onset`; retains previous hue when bars are silent; sensitivity scales bands before hue normalization, not the pulse envelope |
 | `flashes` | White onset flash with a four-render-tick cooldown and rapid decay | `effect_decay`, `brightness_floor` | `onset`; floor is scaled to 30%; does not use spectrum hue or sensitivity |

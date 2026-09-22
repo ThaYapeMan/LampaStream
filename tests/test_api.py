@@ -1726,3 +1726,64 @@ def test_gradient_palette_edit_updates_active_runtime(client):
     assert profile.effect_type == "gradient"
     assert profile.gradient_palette == "neon"
     client._manager.deactivate.assert_not_awaited()
+
+
+@pytest.mark.parametrize('invalid', [
+    {'band_colours': []}, {'band_colours': ['#FFFFFF'] * 9},
+    {'band_colours': ['#gggggg'] * 3}, {'band_colours': ['#abc'] * 3},
+    {'band_colours': None}, {'band_playback': 'unknown'}, {'band_playback': None},
+    {'band_advance': 'unknown'}, {'band_advance': None},
+    {'band_advance_interval_s': 0}, {'band_advance_interval_s': -1},
+    {'band_advance_interval_s': None},
+])
+def test_band_colours_api_rejects_invalid_create_and_atomic_patch(client, invalid):
+    assert client.post('/api/effects', json={'name': 'Invalid bands', **invalid}).status_code == 422
+    created = client.post('/api/effects', json={'name': 'Valid bands',
+        'effect_type': 'band_colours'}).json()
+    endpoint = f"/api/effects/{created['id']}"
+    assert client.patch(endpoint, json={'name': 'Must not persist', **invalid}).status_code == 422
+    assert client.get(endpoint).json() == created
+
+
+@pytest.mark.parametrize('effect_type', ['band_colours', 'band_colours_spatial'])
+def test_band_colours_api_roundtrip(client, effect_type):
+    body = {'name': 'Bands', 'effect_type': effect_type, 'band_colours': ['#aaBBcc', '#012345',
+        '#987654'],
+            'band_playback': 'shuffle', 'band_advance': 'timer', 'band_advance_interval_s': 3.5}
+    response = client.post('/api/effects', json=body)
+    assert response.status_code == 201
+    endpoint = f"/api/effects/{response.json()['id']}"
+    assert all(client.get(endpoint).json()[key] == value for key, value in body.items())
+    for mode in ['static', 'loop', 'shuffle', 'random', 'mix']:
+        assert client.patch(endpoint, json={'band_playback': mode}).status_code == 200
+        assert client.get(endpoint).json()['band_playback'] == mode
+
+
+@pytest.mark.parametrize('role', ['high', 'low'])
+def test_band_edit_updates_both_active_runtime_paths_without_analysis_restart(client, role):
+    from lampastream.models import Effect
+    coupling = _make_full_coupling(client._storage)
+    energy = client._storage.get_energy_profile(coupling.energy_profile_id)
+    low = Effect(name='Low bands', effect_type='band_colours')
+    client._storage.save_effect(low)
+    energy.low_energy_effect_id = low.id
+    client._storage.save_energy_profile(energy)
+    client._storage.set_active_coupling_id(coupling.id)
+    effect_id = getattr(energy, f'{role}_energy_effect_id')
+    body = {'effect_type': 'band_colours', 'band_colours': ['#123456', '#ABCDEF', '#654321'],
+            'band_playback': 'loop', 'band_advance': 'timer', 'band_advance_interval_s': 4}
+    assert client.patch(f'/api/effects/{effect_id}', json=body).status_code == 200
+    profile = client._manager.update_render.call_args.args[0 if role == 'high' else 1]
+    assert all(getattr(profile, key) == value for key, value in body.items())
+    client._manager.deactivate.assert_not_awaited()
+    client._manager.update_onset_pipeline.assert_not_called()
+    client._manager.replace_pcm_analyser.assert_not_called()
+
+
+def test_off_energy_source_persists_and_reaches_runtime(client):
+    coupling = _make_full_coupling(client._storage)
+    client._storage.set_active_coupling_id(coupling.id)
+    endpoint = f'/api/energy-profiles/{coupling.energy_profile_id}'
+    assert client.patch(endpoint, json={'energy_source': 'off'}).status_code == 200
+    assert client.get(endpoint).json()['energy_source'] == 'off'
+    assert client._manager.update_render.call_args.args[0].energy_source == 'off'

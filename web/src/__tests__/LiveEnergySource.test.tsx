@@ -4,7 +4,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { useState } from 'react'
 import { LiveEnergySource } from '../components/LiveEnergySource'
 import { EnergySourceControls } from '../components/EnergyBlendEditor'
-import { updateEnergyProfile, type EnergyProfile } from '../lib/api'
+import { updateEnergyProfile, type EnergyProfile, type Effect, ENERGY_SOURCE_OPTIONS } from '../lib/api'
 vi.mock('../lib/api', async original => ({ ...await original<typeof import('../lib/api')>(), updateEnergyProfile: vi.fn() }))
 const initial = { id:'e', name:'Spectrum RGB', energy_source:'sustained', lufs_floor:-30, lufs_ceiling:-8, adaptation_tau_s:60 } as EnergyProfile
 function Harness() {
@@ -21,7 +21,7 @@ it('applies modes immediately, commits validated numbers only on blur/Enter, and
   const user = userEvent.setup()
   render(<Harness />)
   const group = screen.getByRole('radiogroup', { name:'Energy source' })
-  expect(within(group).getAllByRole('radio')).toHaveLength(4)
+  expect(within(group).getAllByRole('radio')).toHaveLength(5)
   await user.click(screen.getByRole('radio', {name:'Fixed loudness'}))
   await waitFor(() => expect(updateEnergyProfile).toHaveBeenCalledWith('e', {energy_source:'loudness_fixed'}))
   const floor = screen.getByRole('spinbutton', {name:'Floor'})
@@ -54,7 +54,7 @@ it('keeps all segments visible but disabled without an active coupling', () => {
   render(<LiveEnergySource expertMode active={false} onUpdated={vi.fn()} />)
   expect(screen.getByText('No active coupling')).toBeInTheDocument()
   for (const radio of screen.getAllByRole('radio')) expect(radio).toBeDisabled()
-  expect(screen.queryByText('Open profile')).not.toBeInTheDocument()
+  expect(screen.queryByText('Open trigger')).not.toBeInTheDocument()
 })
 it('supports arrow-key selection and shows server failure without changing persisted selection', async () => {
   const user = userEvent.setup()
@@ -126,7 +126,7 @@ it('hides source controls and manual fields in Standard mode', () => {
   expect(screen.queryByLabelText('Energy source settings')).not.toBeInTheDocument()
   expect(screen.queryByTestId('field-peak-attack')).not.toBeInTheDocument()
   expect(screen.queryByTestId('field-peak-release')).not.toBeInTheDocument()
-  expect(screen.getByText('Open profile')).toBeVisible()
+  expect(screen.getByText('Open trigger')).toBeVisible()
 })
 
 it('patches peak Auto/Manual and validates attack and release before committing', async () => {
@@ -215,4 +215,44 @@ it.each([
   } else {
     expect(screen.queryByTestId('field-peak-reshape-power')).not.toBeInTheDocument()
   }
+})
+
+it('selects Off with a muted active pill and a caption instead of parameters', async () => {
+  const user = userEvent.setup()
+  render(<Harness />)
+  await user.click(screen.getByRole('radio', { name: 'Off' }))
+  await waitFor(() => expect(updateEnergyProfile).toHaveBeenCalledWith('e', { energy_source: 'off' }))
+  expect(screen.getByRole('radio', { name: 'Off' })).toHaveAttribute('aria-checked', 'true')
+  expect(screen.getByRole('radio', { name: 'Off' })).toHaveClass('bg-muted')
+  expect(screen.getByText('No energy input — always shows the High-energy Effect.')).toBeVisible()
+  expect(screen.queryByTestId('energy-parameters')).not.toBeInTheDocument()
+  expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument()
+})
+
+it.each(ENERGY_SOURCE_OPTIONS.flatMap(source => [false, true].map(expertMode => [source.value, expertMode] as const)))(
+  'keeps Low/High links visible for %s with Expert=%s and only dims Low for Off', async (source, expertMode) => {
+    const user = userEvent.setup(), onOpenEffect = vi.fn(), onOpen = vi.fn()
+    const effects = [{ id: 'low', name: 'Quiet glow' }, { id: 'high', name: 'Bright bands' }] as Effect[]
+    render(<LiveEnergySource active expertMode={expertMode} effects={effects} onOpenEffect={onOpenEffect} onOpen={onOpen}
+      profile={{ ...initial, low_energy_effect_id: 'low', high_energy_effect_id: 'high', energy_source: source }} onUpdated={vi.fn()} />)
+    expect(screen.getByRole('link', { name: 'Quiet glow' })).toHaveAttribute('href', '#effects/low')
+    expect(screen.getByRole('link', { name: 'Bright bands' })).toBeVisible()
+    expect(screen.getByTestId('low-energy-effect').classList.contains('opacity-40')).toBe(source === 'off')
+    expect(screen.getByTestId('high-energy-effect')).not.toHaveClass('opacity-40')
+    await user.click(screen.getByRole('link', { name: 'Quiet glow' }))
+    await user.click(screen.getByRole('link', { name: 'Bright bands' }))
+    expect(onOpenEffect.mock.calls).toEqual([['low'], ['high']])
+    await user.click(screen.getByRole('link', { name: 'Open trigger' }))
+    expect(onOpen).toHaveBeenCalledWith('e')
+    expect(screen.getByText('Energy Trigger')).toHaveAttribute('title', 'Decides how loud the music needs to get before the Low-energy Effect gives way to the High-energy Effect — and how smoothly the two blend.')
+  },
+)
+
+it('shows placeholders without links for missing effects or an inactive coupling', () => {
+  const { rerender } = render(<LiveEnergySource active profile={initial} onUpdated={vi.fn()} />)
+  expect(screen.getByTestId('low-energy-effect')).toHaveTextContent('—')
+  expect(within(screen.getByTestId('high-energy-effect')).queryByRole('link')).not.toBeInTheDocument()
+  rerender(<LiveEnergySource active={false} profile={{ ...initial, high_energy_effect_id: 'high' }}
+    effects={[{ id: 'high', name: 'Stale effect' }] as Effect[]} onUpdated={vi.fn()} />)
+  expect(screen.queryByRole('link')).not.toBeInTheDocument()
 })

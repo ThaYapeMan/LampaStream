@@ -316,3 +316,25 @@ def test_reshape_defaults_roundtrip_and_boolean_validation(model):
     for invalid in ('false', 1, None):
         with pytest.raises(ValueError, match='peak_reshape_enabled'):
             model(peak_reshape_enabled=invalid)
+
+
+def test_off_returns_one_without_accessing_any_audio_feature():
+    class UnreadableFeatures:
+        def __getattribute__(self, name):
+            raise AssertionError(f'Off must not access {name}')
+
+    selector = EnergyInput(Profile(energy_source='off'))
+    for t in (0, 1, 100):
+        assert selector.select(UnreadableFeatures(), t) == 1.0
+        assert selector.select(features(sustained=None), t) == 1.0
+
+
+def test_off_converges_to_high_effect_through_existing_blend_smoothing():
+    high = Profile(energy_source='off', effect_type='solid')
+    low = Profile(effect_type='none')
+    mixer = LayerMixer(high, low)
+    for t in range(200):
+        mixer.render(features(sustained=None), t)
+    assert mixer.last_energy_input == 1.0
+    assert mixer.mix == pytest.approx(1.0, abs=1e-8)
+    assert round(mixer.mix * 100) == 100

@@ -998,3 +998,42 @@ def test_gradient_palette_reaches_all_runtime_profile_paths(tmp_path: Path) -> N
         asyncio.run(manager.activate_coupling(coupling))
     assert activate.call_args.args[1].gradient_palette == "ocean"
     assert activate.call_args.args[3].gradient_palette == "neon"
+
+
+def test_band_colours_reach_all_runtime_profile_paths(tmp_path: Path) -> None:
+    from unittest.mock import AsyncMock, MagicMock, patch
+
+    from lampastream.player_manager import _build_mellow_profile
+
+    def check(profile, effect):
+        for name in ("band_colours", "band_playback", "band_advance", "band_advance_interval_s"):
+            assert getattr(profile, name) == getattr(effect, name)
+        assert profile.band_colours is not effect.band_colours
+
+    storage, coupling = _make_full_storage(tmp_path)
+    energy = storage.get_energy_profile(coupling.energy_profile_id)
+    high = storage.get_effect(energy.high_energy_effect_id)
+    high.effect_type = "gradient"
+    high.band_colours = ["#123456", "#ABCDEF", "#654321", "#FEDCBA"]
+    high.band_playback = "loop"
+    high.band_advance = "timer"
+    high.band_advance_interval_s = 4.5
+    storage.save_effect(high)
+    low = Effect(name="Low gradient", effect_type="gradient", band_colours=["#FFFFFF", "#888888",
+        "#000000"],
+                 band_playback="mix", band_advance="beat", band_advance_interval_s=1.5)
+    storage.save_effect(low)
+    energy.low_energy_effect_id = low.id
+    storage.save_energy_profile(energy)
+    check(_build_engine_profile(coupling, storage), high)
+    check(_build_mellow_profile(coupling, storage), low)
+    manager = PlayerManager(storage)
+    with (
+        patch("lampastream.player_manager.list_entertainment_areas",
+              new=AsyncMock(return_value=[MagicMock(id="ae-001", name="Living Room AE")])),
+        patch("lampastream.player_manager.get_channel_infos", new=AsyncMock(return_value=[])),
+        patch.object(manager, "_activate_lms", new_callable=AsyncMock) as activate,
+    ):
+        asyncio.run(manager.activate_coupling(coupling))
+    check(activate.call_args.args[1], high)
+    check(activate.call_args.args[3], low)

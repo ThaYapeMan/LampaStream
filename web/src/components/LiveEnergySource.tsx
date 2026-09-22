@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { EnergySourceControls, validateEnergySettings, type EnergySetting } from './EnergyBlendEditor'
-import { updateEnergyProfile, type EnergyProfile } from '@/lib/api'
+import { updateEnergyProfile, type EnergyProfile, type Effect } from '@/lib/api'
 
-export function LiveEnergySource({ profile, active, expertMode = false, onUpdated, onOpen }: {
+export function LiveEnergySource({ profile, active, expertMode = false, onUpdated, onOpen, effects = [], onOpenEffect }: {
+  effects?: Effect[]; onOpenEffect?: (id: string) => void
   profile?: EnergyProfile; active: boolean; expertMode?: boolean
   onUpdated: (profile: EnergyProfile) => void; onOpen?: (id: string) => void
 }) {
@@ -60,12 +61,25 @@ export function LiveEnergySource({ profile, active, expertMode = false, onUpdate
     stepTimer.current = setTimeout(() => commit(next), 250)
   }
   const header = <div className="min-w-0 text-xs text-muted-foreground">
-    <span>Energy profile </span><span className="text-foreground">{active ? profile?.name ?? '—' : '—'}</span>
+    <span title="Decides how loud the music needs to get before the Low-energy Effect gives way to the High-energy Effect — and how smoothly the two blend.">Energy Trigger </span><span className="text-foreground">{active ? profile?.name ?? '—' : '—'}</span>
     {active && profile && <> · <a href={`#energy-profiles/${encodeURIComponent(profile.id)}`}
       onClick={e => { if (onOpen) { e.preventDefault(); onOpen(profile.id) } }}
-      className="text-primary hover:underline underline-offset-2">Open profile</a></>}
+      className="text-primary hover:underline underline-offset-2">Open trigger</a></>}
   </div>
   return <div className="mt-3" data-testid="live-energy-source">
+    <div className="mb-2 flex justify-between gap-3" aria-label="Energy effects">
+      {(['low', 'high'] as const).map(role => {
+        const effect = active ? effects.find(item => item.id === profile?.[`${role}_energy_effect_id`]) : undefined
+        return <div key={role} data-testid={`${role}-energy-effect`}
+          className={`${role === 'high' ? 'text-right' : ''} ${role === 'low' && profile?.energy_source === 'off' ? 'opacity-40' : ''}`}>
+          <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{role === 'low' ? 'Low energy' : 'High energy'}</div>
+          {effect ? <a href={`#effects/${encodeURIComponent(effect.id)}`}
+            onClick={e => { if (onOpenEffect) { e.preventDefault(); onOpenEffect(effect.id) } }}
+            className="text-xs text-primary hover:underline underline-offset-2">{effect.name}</a>
+            : <span className="text-xs text-muted-foreground">—</span>}
+        </div>
+      })}
+    </div>
     {expertMode ? <EnergySourceControls compact header={header} source={profile?.energy_source ?? 'sustained'}
       floor={draft.floor} ceiling={draft.ceiling} tau={draft.tau} onChange={change}
       peakAuto={profile?.peak_envelope_auto ?? true} attack={draft.attack} release={draft.release}

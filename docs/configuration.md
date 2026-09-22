@@ -213,6 +213,31 @@ rendering uses centroid. See the historical
 [LedFx colour analysis](archive/LampaStream_colour_v2_ledfx_lessons.md#root-cause-2-three-bands--rgb-is-not-how-this-is-done)
 for the motivation. This effect does not change audio analysis or energy sources.
 
+### Band Colours (`band_colours`, `band_colours_spatial`)
+
+Choose 3–8 colours, one per equal logarithmic frequency band. **Band Colours**
+adds their energy-weighted RGB channels into a uniform scene; **Band Colours
+(Spatial)** places the bands from left to right, cross-fading between neighbours.
+Sensitivity scales band energies; channels clip at 1 and onset flash lifts them
+towards white. These renderers have no brightness floor.
+
+The Standard editor offers band count, native colour swatches and the approved
+preset table. **Distribute evenly** spaces hues at S=90%, L=55%; changing band
+count also redistributes the entire list. The default colours are `#F42525`,
+`#25F425`, `#2525F4`. Frequency labels use the active coupling's analyser when its
+EnergyProfile references the edited Effect. Otherwise they explicitly show a
+50–12000 Hz default-range preview. These labels do not persist per-effect cutoffs.
+
+Expert **Colour Table & Playback** reorders colours without changing band ranges.
+`band_playback` defaults to `static`. `loop` rotates the table; `shuffle` draws
+non-zero rotation amounts from a shuffled queue of 1…N−1, applied to the current
+colours, with no repeated amount across cycle boundaries; `random` creates
+fresh hues at S=85%, L=55%; `mix` independently samples the original table for each
+band, allowing duplicates. `band_advance=beat` advances on onset rising edges only.
+`timer` advances once when `band_advance_interval_s` has elapsed (default 2 seconds,
+finite and positive). Playback state belongs to each renderer instance. Duplicate
+colour entries remain permitted. No new audio analysis or schema migration is needed.
+
 ## Referenced entities and deletion
 
 Deleting a VirtualPlayer, Zone, Analyser or EnergyProfile referenced by a Coupling
@@ -306,6 +331,13 @@ canonical blend on steady music is not evidence that the dual-timescale tracker
 decayed: that tracker is not its input. Optional colour band normalisation does
 not change this fallback or any raw-derived aggregate.
 
+Now Playing labels the profile **Energy Trigger**, with **Open trigger** linking
+to its editor. Low- and High-energy Effect links are always visible in Standard
+and Expert modes; Off dims the Low-energy link without hiding it.
+
+- `off`: immediately supplies a constant energy input of 1 without reading audio
+  features. Existing blend smoothing settles at 100% High-energy Effect. There
+  are no source parameters; audio analysis needed by the Effects continues normally.
 - `loudness_fixed`: map momentary LUFS linearly between `lufs_floor=-30` and
   `lufs_ceiling=-8`, clamped to 0..1. At −11 LUFS the input is about 86%, even
   on a constant-level track. Bounds must be finite and strictly ordered.

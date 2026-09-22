@@ -261,7 +261,8 @@ export function EnergySourceControls({ source, floor, ceiling, tau, peakAuto = t
     <div className={compact ? 'flex flex-wrap items-center justify-between gap-2' : undefined}>
     {compact && header}
     <div role={compact ? 'radiogroup' : undefined} aria-label={compact ? 'Energy source' : undefined}
-      className={compact ? 'inline-grid w-max grid-cols-4 rounded-md border-[0.5px] border-border bg-background/40 p-0.5' : 'grid grid-cols-1 gap-1.5'}>
+      style={compact ? { gridTemplateColumns: `repeat(${ENERGY_SOURCE_OPTIONS.length}, minmax(0, 1fr))` } : undefined}
+      className={compact ? 'inline-grid w-max rounded-md border-[0.5px] border-border bg-background/40 p-0.5' : 'grid grid-cols-1 gap-1.5'}>
       {ENERGY_SOURCE_OPTIONS.map((opt, index) => <button key={opt.value} type="button"
         role={compact ? 'radio' : undefined} aria-checked={compact ? source === opt.value : undefined}
         tabIndex={compact ? (source === opt.value ? 0 : -1) : undefined}
@@ -277,8 +278,8 @@ export function EnergySourceControls({ source, floor, ceiling, tau, peakAuto = t
           onChange('energy_source', ENERGY_SOURCE_OPTIONS[next].value)
         }}
         className={compact
-          ? `h-5 whitespace-nowrap rounded px-3 text-xs disabled:opacity-50 ${source === opt.value ? 'bg-secondary text-foreground font-medium shadow-sm ring-[0.5px] ring-border' : 'text-muted-foreground'}`
-          : `rounded border p-2.5 text-left text-sm ${source === opt.value ? 'border-primary bg-primary/10' : 'border-border hover:border-muted-foreground/60'}`}>
+          ? `h-5 whitespace-nowrap rounded px-1 text-xs disabled:opacity-50 ${source === opt.value && opt.value === 'off' ? 'bg-muted text-muted-foreground font-medium shadow-sm ring-[0.5px] ring-border' : source === opt.value ? 'bg-secondary text-foreground font-medium shadow-sm ring-[0.5px] ring-border' : 'text-muted-foreground'}`
+          : `rounded border p-2.5 text-left text-sm ${source === opt.value && opt.value === 'off' ? 'border-muted-foreground bg-muted' : source === opt.value ? 'border-primary bg-primary/10' : 'border-border hover:border-muted-foreground/60'}`}>
         <div className={compact ? undefined : "font-medium"}>{opt.label}</div>
         {!compact && <div className="mt-0.5 text-xs text-muted-foreground">{opt.description}</div>}
       </button>)}
@@ -302,10 +303,10 @@ export function EnergySourceControls({ source, floor, ceiling, tau, peakAuto = t
         disabled={disabled || pending} invalid={!!error} onChange={v => onChange(field, v)}
         onCommit={onCommit} onStep={v => onStep?.(field, v)} />))}
     </div>}
-    {!(compact && source === 'peak_envelope') && (compact || fields.length > 0) && <div data-testid={compact ? 'energy-parameters' : undefined}
+    {!(compact && source === 'peak_envelope') && (compact || fields.length > 0) && <div data-testid={compact && source !== 'off' ? 'energy-parameters' : undefined}
       className={compact ? 'flex h-7 items-center gap-5' : fields.length === 1 ? 'block' : 'grid grid-cols-2 gap-3'}>
       {compact && (disabled || fields.length === 0) ? <span className="text-xs text-muted-foreground">
-        {disabled ? 'No active coupling' : source === 'peak_envelope' ? 'Auto: 0.05 s attack · 2 s release' : 'No parameters for this source'}
+        {disabled ? 'No active coupling' : source === 'peak_envelope' ? 'Auto: 0.05 s attack · 2 s release' : source === 'off' ? 'No energy input — always shows the High-energy Effect.' : 'No parameters for this source'}
       </span> : fields.map(({field, label, unit, value}) => compact ? <CompactEnergyNumber key={field}
         testId={field === 'peak_attack_s' ? 'field-peak-attack' : field === 'peak_release_s' ? 'field-peak-release' : undefined}
         label={label} unit={unit} value={value} step={field === 'adaptation_tau_s' ? 5 : field === 'peak_attack_s' ? 0.01 : field === 'peak_release_s' ? 0.1 : 1}
@@ -346,7 +347,7 @@ export function EnergySourceControls({ source, floor, ceiling, tau, peakAuto = t
 
 // The text field and attached arrow pair share a single border. Keyboard edits
 // commit on blur/Enter; pointer steps use the parent's short PATCH debounce.
-function CompactEnergyNumber({ testId, label, unit, value, step, disabled, invalid, onChange, onCommit, onStep }: {
+export function CompactEnergyNumber({ testId, label, unit, value, step, disabled, invalid, onChange, onCommit, onStep }: {
   testId?: string; label: string; unit: string; value: string; step: number; disabled: boolean; invalid: boolean
   onChange: (value: string) => void; onCommit?: () => void; onStep: (value: string) => void
 }) {

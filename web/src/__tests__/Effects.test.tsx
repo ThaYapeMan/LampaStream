@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, within, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Effects, EFFECT_DEFAULTS } from '../pages/Effects'
 import * as apiModule from '../lib/api'
@@ -51,6 +51,7 @@ vi.mock('../lib/api', async (importOriginal) => {
     }),
     updateEffect: vi.fn().mockResolvedValue(undefined),
     deleteEffect: vi.fn().mockResolvedValue(undefined),
+    getAnalysers: vi.fn().mockResolvedValue([]),
     getCouplings: vi.fn().mockResolvedValue([]),
     getEnergyProfiles: vi.fn().mockResolvedValue([]),
   }
@@ -563,5 +564,102 @@ describe('Gradient palette', () => {
       await user.click(screen.getByTestId(`type-option-${effect.id}`))
       expect(screen.queryByTestId('field-gradient-palette')).not.toBeInTheDocument()
     }
+  })
+})
+
+describe('Band Colours', () => {
+  beforeEach(() => { vi.clearAllMocks() })
+
+  async function openBands(spatial = false) {
+    const user = await renderSpectrumInWorkspace()
+    await user.click(screen.getByTestId('effect-type-change'))
+    await user.click(screen.getByTestId(`type-option-band_colours${spatial ? '_spatial' : ''}`))
+    return user
+  }
+
+  it.each([false, true])('offers count, evenly spaced colours and approved presets in Standard mode (spatial=%s)', async spatial => {
+    const user = await openBands(spatial)
+    const panel = screen.getByRole('region', { name: 'Band colours' })
+    expect(within(panel).queryByRole('region', { name: 'Colour Table & Playback' })).not.toBeInTheDocument()
+    expect(within(panel).getByLabelText('Bass colour')).toHaveValue('#f42525')
+    expect(within(panel).getByLabelText('Mid colour')).toHaveValue('#25f425')
+    expect(within(panel).getByLabelText('Treble colour')).toHaveValue('#2525f4')
+    expect(within(panel).getByText(/Default range preview/)).toBeVisible()
+    expect(screen.getByRole('group', { name: 'Presets for Bass' }).querySelectorAll('button')).toHaveLength(14)
+    fireEvent.change(screen.getByLabelText('Bass colour'), { target: { value: '#123456' } })
+    expect(screen.getByLabelText('Bass colour')).toHaveValue('#123456')
+    await user.click(within(screen.getByTestId('band-row-1')).getByRole('button'))
+    await user.click(screen.getByRole('button', { name: 'Use #FF9E3B' }))
+    expect(screen.getByLabelText('Mid colour')).toHaveValue('#ff9e3b')
+    await user.click(screen.getByRole('button', { name: 'Distribute evenly' }))
+    expect(screen.getByLabelText('Mid colour')).toHaveValue('#25f425')
+    for (const n of [5, 8, 3]) {
+      await user.click(within(screen.getByRole('group', { name: 'Band count' })).getByRole('button', { name: String(n) }))
+      expect(panel.querySelectorAll('input[type="color"]')).toHaveLength(n)
+    }
+    await user.click(screen.getByTestId('editor-save'))
+    expect(apiModule.updateEffect).toHaveBeenCalledWith('e2', expect.objectContaining({
+      effect_type: spatial ? 'band_colours_spatial' : 'band_colours',
+      band_colours: ['#F42525', '#25F425', '#2525F4'], band_playback: 'static', band_advance: 'beat', band_advance_interval_s: 2,
+    }))
+  })
+
+  it('reorders colours without moving frequency labels and preserves Expert playback when returning to Standard', async () => {
+    const user = await openBands()
+    await user.click(screen.getByTestId('mode-expert-btn'))
+    const panel = screen.getByRole('region', { name: 'Colour Table & Playback' })
+    const range = screen.getByTestId('band-row-0').textContent?.split('#')[0]
+    await user.click(within(panel).getByRole('button', { name: 'Move Mid up' }))
+    expect(screen.getByLabelText('Bass colour')).toHaveValue('#25f425')
+    expect(screen.getByTestId('band-row-0').textContent?.split('#')[0]).toBe(range)
+    expect(screen.queryByRole('group', { name: 'Advance on' })).not.toBeInTheDocument()
+    await user.click(within(panel).getByRole('button', { name: 'Loop', exact: true }))
+    expect(screen.getByRole('button', { name: 'Beat', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.queryByLabelText('Interval (s)')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Every…', exact: true }))
+    const interval = screen.getByLabelText('Interval (s)')
+    await user.clear(interval); await user.type(interval, '4.5')
+    await user.click(screen.getByTestId('mode-standard-btn'))
+    expect(screen.queryByRole('region', { name: 'Colour Table & Playback' })).not.toBeInTheDocument()
+    await user.click(screen.getByTestId('editor-save'))
+    expect(apiModule.updateEffect).toHaveBeenCalledWith('e2', expect.objectContaining({
+      band_colours: ['#25F425', '#F42525', '#2525F4'], band_playback: 'loop', band_advance: 'timer', band_advance_interval_s: 4.5,
+    }))
+  })
+
+  it('opens initialEffectId once through the existing editor and stays closed after saving', async () => {
+    const user = userEvent.setup()
+    render(<Effects initialEffectId="e2" />)
+    expect(await screen.findByTestId('editor-name-input')).toHaveValue('Calm Spectrum')
+    await user.click(screen.getByTestId('editor-save'))
+    expect(await screen.findByTestId('effects-gallery')).toBeVisible()
+    expect(screen.queryByTestId('editor-name-input')).not.toBeInTheDocument()
+  })
+
+  it('ignores an unknown initialEffectId', async () => {
+    render(<Effects initialEffectId="missing" />)
+    expect(await screen.findByTestId('effects-gallery')).toBeVisible()
+  })
+
+  it('uses the matching active analyser range for read-only frequency labels', async () => {
+    vi.mocked(apiModule.getCouplings).mockResolvedValueOnce([{ id: 'c', analyser_id: 'a', energy_profile_id: 'ep' }] as never)
+    vi.mocked(apiModule.getEnergyProfiles).mockResolvedValueOnce([{ id: 'ep', high_energy_effect_id: 'e2' }] as never)
+    vi.mocked(apiModule.getAnalysers).mockResolvedValueOnce([{ id: 'a', name: 'Room analysis', lower_cutoff_freq: 20, higher_cutoff_freq: 20000 }] as never)
+    const user = userEvent.setup()
+    render(<Effects initialEffectId="e2" activeCouplingId="c" />)
+    await screen.findByTestId('editor-name-input')
+    await user.click(screen.getByTestId('effect-type-change'))
+    await user.click(screen.getByTestId('type-option-band_colours'))
+    expect(screen.getByText(/Active analyser: Room analysis/)).toBeVisible()
+    expect(screen.getByText('20–200 Hz')).toBeVisible()
+    expect(screen.getByText('200–2000 Hz')).toBeVisible()
+    expect(screen.getByText('2000–20000 Hz')).toBeVisible()
+  })
+
+  it('distributes the exact HSL colours at 3, 5 and 8 bands', async () => {
+    const { distributeBandColours } = await import('../components/BandColoursEditor')
+    expect(distributeBandColours(3)).toEqual(['#F42525', '#25F425', '#2525F4'])
+    expect(distributeBandColours(5)).toEqual(['#F42525', '#CAF425', '#25F478', '#2578F4', '#CA25F4'])
+    expect(distributeBandColours(8)).toEqual(['#F42525', '#F4C025', '#8CF425', '#25F459', '#25F4F4', '#2559F4', '#8C25F4', '#F425C0'])
   })
 })

@@ -14,6 +14,8 @@ import {
   type Analyser,
   type EnergyProfile,
   getEnergyProfiles,
+  getEffects,
+  type Effect,
   SPECTRUM_BACKEND_OPTIONS,
   ONSET_METHODS,
   type VirtualPlayer,
@@ -235,6 +237,7 @@ function CouplingSelector({
 
 type Props = Pick<PreviewState, 'colour' | 'channel_colours' | 'onset' | 'bars' | 'status'> & {
   expertMode?: boolean
+  onOpenEffect?: (id: string) => void
   onOpenEnergyProfile?: (id: string) => void
   last_energy_input?: number
   normalised_bars?: number[]
@@ -246,7 +249,7 @@ type Props = Pick<PreviewState, 'colour' | 'channel_colours' | 'onset' | 'bars' 
   connected?: boolean
 }
 
-export function NowPlaying({ expertMode = false, colour, channel_colours, onset, onset_bass = false, onset_mid = false, onset_treble = false, mix = 0, loudness_momentary_lufs = null, bars, normalised_bars, status, connected = true, onOpenEnergyProfile, last_energy_input = 0 }: Props) {
+export function NowPlaying({ expertMode = false, colour, channel_colours, onset, onset_bass = false, onset_mid = false, onset_treble = false, mix = 0, loudness_momentary_lufs = null, bars, normalised_bars, status, connected = true, onOpenEffect, onOpenEnergyProfile, last_energy_input = 0 }: Props) {
   const couplingId = status?.active_coupling_id ?? null
   const zoneId = status?.active_zone_id ?? null
 
@@ -278,12 +281,14 @@ export function NowPlaying({ expertMode = false, colour, channel_colours, onset,
   const [reloadKey, setReloadKey] = useState(0)
   const [couplings, setCouplings] = useState<Coupling[]>([])
   const [analysers, setAnalysers] = useState<Analyser[]>([])
+  const [effects, setEffects] = useState<Effect[]>([])
   const [energyProfiles, setEnergyProfiles] = useState<EnergyProfile[]>([])
   const [players, setPlayers] = useState<VirtualPlayer[]>([])
   useEffect(() => {
     let cancelled = false
     getCouplings().then((items) => { if (!cancelled) setCouplings(items) }).catch(() => {})
     getAnalysers().then((items) => { if (!cancelled) setAnalysers(items) }).catch(() => {})
+    getEffects().then((items) => { if (!cancelled) setEffects(items) }).catch(() => {})
     getEnergyProfiles().then((items) => { if (!cancelled) setEnergyProfiles(items) }).catch(() => {})
     getVirtualPlayers().then((items) => { if (!cancelled) setPlayers(items) }).catch(() => {})
     return () => { cancelled = true }
@@ -474,7 +479,7 @@ export function NowPlaying({ expertMode = false, colour, channel_colours, onset,
             </div>
           </div>
           <LiveEnergySource expertMode={expertMode} key={activeEnergyProfile?.id ?? 'none'} profile={activeEnergyProfile} active={!!couplingId}
-            onOpen={onOpenEnergyProfile} onUpdated={updated => setEnergyProfiles(items => items.map(item => item.id === updated.id ? updated : item))} />
+            effects={effects} onOpenEffect={onOpenEffect} onOpen={onOpenEnergyProfile} onUpdated={updated => setEnergyProfiles(items => items.map(item => item.id === updated.id ? updated : item))} />
           <SessionDiagnostics status={status} playerType={playerType} />
         </CardContent>
       </Card>

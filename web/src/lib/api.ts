@@ -38,11 +38,13 @@ const EFFECT_DEFINITIONS = [
   { id: 'swirl',        label: 'Swirl',        description: 'Colour gradient rotates continuously across the lights',      hasSpeed: true,  hasDecay: false },
   { id: 'wave',         label: 'Wave',         description: 'Colour wave sweeps across the room in time with the beat',    hasSpeed: true,  hasDecay: false },
   { id: 'gradient', label: 'Gradient', description: 'Colour position follows the spectral centroid within a curated palette; brightness follows overall energy', hasSpeed: false, hasDecay: false, hasPalette: true },
+  { id: 'band_colours', label: 'Band Colours', description: 'Assign your own colour to each of 3–8 frequency bands; blends into one colour on every light', hasSpeed: false, hasDecay: false, hasBandColours: true },
+  { id: 'band_colours_spatial', label: 'Band Colours (Spatial)', description: 'Same as Band Colours, but each band is placed at its own position across the room, low→high', hasSpeed: false, hasDecay: false, hasBandColours: true },
   { id: 'solid',        label: 'Solid',        description: 'Single steady colour that shifts slowly with the music',      hasSpeed: false, hasDecay: false },
   { id: 'none',         label: 'None',         description: 'Lights off — no output sent to this zone',                   hasSpeed: false, hasDecay: false },
 ] as const
 
-export const EFFECTS: readonly (typeof EFFECT_DEFINITIONS[number] & { hasPalette?: boolean })[] = EFFECT_DEFINITIONS
+export const EFFECTS: readonly (typeof EFFECT_DEFINITIONS[number] & { hasPalette?: boolean; hasBandColours?: boolean })[] = EFFECT_DEFINITIONS
 
 // Keep in sync with GRADIENT_PALETTES in models.py.
 export const GRADIENT_PALETTES = [
@@ -50,6 +52,19 @@ export const GRADIENT_PALETTES = [
   { value: 'ocean', label: 'Ocean', description: 'Deep blue through teal to pale turquoise' },
   { value: 'neon', label: 'Neon', description: 'Magenta through cyan to lime' },
   { value: 'monochrome', label: 'Monochrome', description: 'A blue-white family from dark to light' },
+] as const
+
+// Keep in sync with BAND_PLAYBACK_MODES and BAND_ADVANCE_MODES in models.py.
+export const BAND_PLAYBACK_OPTIONS = [
+  { value: 'static', label: 'Static', description: 'Colours never move.' },
+  { value: 'loop', label: 'Loop', description: 'All colours are used in their respective order; once all have been shown, it starts again from the top.' },
+  { value: 'shuffle', label: 'Shuffle', description: 'Rotates by shuffled amounts from 1 to N−1, using each once per cycle without repeating an amount at cycle boundaries.' },
+  { value: 'random', label: 'Random', description: 'Ignores the table; generates a fresh, bounded-saturation colour for every band on each advance.' },
+  { value: 'mix', label: 'Mix', description: 'Each band independently draws a random colour from the table on each advance; duplicates across bands are possible.' },
+] as const
+export const BAND_ADVANCE_OPTIONS = [
+  { value: 'beat', label: 'Beat', description: 'Advances on every detected beat.' },
+  { value: 'timer', label: 'Every…', description: 'Advances on a fixed interval.' },
 ] as const
 
 export type EffectId = typeof EFFECTS[number]['id']
@@ -210,6 +225,10 @@ export interface Effect {
   name: string
   effect_type: string
   gradient_palette: string
+  band_colours: string[]
+  band_playback: string
+  band_advance: string
+  band_advance_interval_s: number
   effect_speed: number
   effect_decay: number
   sensitivity: number
@@ -332,4 +351,5 @@ export const ENERGY_SOURCE_OPTIONS = [
   { value: 'loudness_fixed', label: 'Fixed loudness', description: 'Absolute LUFS inside a fixed window; steady loud music stays high.' },
   { value: 'loudness_adaptive', label: 'Adaptive loudness', description: 'Slow programme-relative window; steady material becomes ordinary.' },
   { value: 'peak_envelope', label: 'Peak envelope', description: 'Self-calibrating RMS peak tracking; follows level variation on heavily mastered tracks.' },
+  { value: 'off', label: 'Off', description: 'No energy input — always shows the High-energy Effect.' },
 ] as const

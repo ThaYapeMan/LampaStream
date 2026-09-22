@@ -34,6 +34,8 @@ class EnergyInput:
         self._last_t: float | None = None
 
     def select(self, features: AudioFeatures, t: float) -> float:
+        if self.mode == "off":
+            return 1.0
         if self.mode == "sustained":
             # Exact existing default, including canonical's full fallback.
             return (features.sustained_energy if features.sustained_energy is not None

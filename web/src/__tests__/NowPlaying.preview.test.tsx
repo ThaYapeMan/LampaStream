@@ -6,6 +6,7 @@ import { getAnalysers, getCouplings, getVirtualPlayers } from '../lib/api'
 
 vi.mock('../lib/api', async importOriginal => ({
   ...await importOriginal<typeof import('../lib/api')>(),
+  getEffects: vi.fn().mockResolvedValue([]),
   getEnergyProfiles: vi.fn().mockResolvedValue([]), getCouplings: vi.fn(), getAnalysers: vi.fn(), getVirtualPlayers: vi.fn(),
   getZoneChannels: vi.fn().mockResolvedValue([{ channel_id: 1, x: .5, y: 0, z: .5 }]),
   activateCoupling: vi.fn(), deactivateCoupling: vi.fn(), restartCouplingCava: vi.fn(),
@@ -138,4 +139,17 @@ it('shows raw spectrum, tick comparison, readouts and description from one pair'
   expect(screen.queryByTestId('spectrum-legend')).not.toBeInTheDocument()
   expect(screen.queryByTestId('spectrum-tick')).not.toBeInTheDocument()
   await screen.findByText('CAVA Core')
+})
+
+it('fetches both effect links and displays a naturally converged Off blend as 100%', async () => {
+  const api = await import('../lib/api')
+  const onOpenEffect = vi.fn()
+  vi.mocked(api.getEnergyProfiles).mockResolvedValueOnce([{ id: 'e', name: 'Trigger', energy_source: 'off', high_energy_effect_id: 'high', low_energy_effect_id: 'low' }] as never)
+  vi.mocked(api.getEffects).mockResolvedValueOnce([{ id: 'high', name: 'High bands' }, { id: 'low', name: 'Low glow' }] as never)
+  render(<NowPlaying {...props} status={status} mix={1 - 0.9 ** 200} onOpenEffect={onOpenEffect} />)
+  const high = await screen.findByRole('link', { name: 'High bands' })
+  high.click()
+  expect(onOpenEffect).toHaveBeenCalledWith('high')
+  expect(screen.getByRole('link', { name: 'Low glow' })).toBeVisible()
+  expect(within(screen.getByTestId('energy-blend')).getByText('100%')).toBeVisible()
 })

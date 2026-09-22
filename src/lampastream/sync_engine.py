@@ -18,9 +18,11 @@ lives in hue_output.py.
 from __future__ import annotations
 
 import asyncio
+import colorsys
 import logging
 import math
 import os
+import random
 import threading
 import time
 from collections import deque
@@ -1799,6 +1801,14 @@ def _hz_to_frac(hz: float, lower: float, upper: float) -> float:
     return max(0.0, min(1.0, (math.log10(max(hz, 1.0)) - log_min) / (log_max - log_min)))
 
 
+def _band_edges(n: int, lower: float, upper: float) -> list[float]:
+    """N-1 bar fractions for equally spaced log-frequency boundaries."""
+    log_min = math.log10(max(lower, 1.0))
+    log_max = math.log10(max(upper, lower + 1.0))
+    return [_hz_to_frac(10 ** (log_min + (log_max - log_min) * i / n), lower, upper)
+            for i in range(1, n)]
+
+
 def _band_avg(bars: list[float], lo: int, hi: int) -> float:
     """Average of bars[lo:hi]; 0.0 if the band has no bars."""
     segment = bars[lo:hi]
@@ -2004,6 +2014,103 @@ class _SpectrumRgbSpatialRenderer(_EffectRenderer):
                 g = g + fi * (1.0 - g)
                 b = b + fi * (1.0 - b)
         return _SpectrumRgbSpatialScene(r, g, b)
+
+
+class _BandColoursScene:
+    """Energy-scaled colours at equally spaced room positions."""
+
+    def __init__(self, colours: list[Colour]) -> None:
+        self._colours = colours
+
+    def color_at(self, position: Position, t: float) -> Colour:  # noqa: ARG002
+        x = (max(-1.0, min(1.0, position.x)) + 1.0) * (len(self._colours) - 1) / 2
+        weights = [_tri_weight(x, i) for i in range(len(self._colours))]
+        return Colour(*(min(sum(getattr(c, channel) * w
+                                for c, w in zip(self._colours, weights, strict=True)), 1.0)
+                        for channel in ("r", "g", "b")))
+
+
+class _BandColoursRenderer(_EffectRenderer):
+    """User-coloured frequency bands with independent, per-instance playback."""
+
+    def __init__(self) -> None:
+        self._configuration: tuple | None = None
+        self._colours: list[Colour] = []
+        self._prev_onset = False
+        self._last_advance_t: float | None = None
+        self._rng = random.Random()
+        self._shuffle_queue: list[int] = []
+        self._last_offset = 0
+
+    def _working_colours(self, profile: Profile, onset: bool, t: float) -> list[Colour]:
+        configuration = (tuple(profile.band_colours), profile.band_playback,
+                         profile.band_advance, profile.band_advance_interval_s)
+        table = [Colour(*(int(c[i:i + 2], 16) / 255 for i in (1, 3, 5)))
+                 for c in profile.band_colours]
+        if configuration != self._configuration:
+            self._configuration = configuration
+            self._colours = table.copy()
+            self._prev_onset = False
+            self._last_advance_t = t
+            self._shuffle_queue = []
+            self._last_offset = 0
+        if self._last_advance_t is None or t < self._last_advance_t:
+            self._last_advance_t = t
+        advance = (onset and not self._prev_onset if profile.band_advance == "beat"
+                   else t - self._last_advance_t >= profile.band_advance_interval_s)
+        self._prev_onset = onset
+        if advance and profile.band_playback != "static":
+            self._last_advance_t = t
+            if profile.band_playback == "loop":
+                self._colours = self._colours[-1:] + self._colours[:-1]
+            elif profile.band_playback == "shuffle":
+                if not self._shuffle_queue:
+                    self._shuffle_queue = list(range(1, len(table)))
+                    self._rng.shuffle(self._shuffle_queue)
+                    while self._shuffle_queue[0] == self._last_offset:
+                        self._rng.shuffle(self._shuffle_queue)
+                offset = self._shuffle_queue.pop(0)
+                self._last_offset = offset
+                self._colours = self._colours[-offset:] + self._colours[:-offset]
+            elif profile.band_playback == "random":
+                self._colours = [Colour(*colorsys.hls_to_rgb(self._rng.random(), .55, .85))
+                                 for _ in table]
+            elif profile.band_playback == "mix":
+                self._colours = [self._rng.choice(table) for _ in table]
+        return self._colours
+
+    def _band_values(self, profile: Profile, features: AudioFeatures,
+                     t: float) -> list[Colour]:
+        colours = self._working_colours(profile, features.onset, t)
+        count = len(features.bars)
+        # Round fractions before truncating to avoid log round-off moving an exact boundary.
+        edges = [0] + [int(round(f * count, 12)) for f in _band_edges(
+            len(colours), profile.lower_cutoff_freq, profile.higher_cutoff_freq)] + [count]
+        energies = [_band_avg(features.bars, edges[i], edges[i + 1]) * profile.sensitivity
+                    for i in range(len(colours))]
+        return [Colour(colour.r * energy, colour.g * energy, colour.b * energy)
+                for colour, energy in zip(colours, energies, strict=True)]
+
+    @staticmethod
+    def _clip_and_flash(colour: Colour, profile: Profile, onset: bool) -> Colour:
+        values = [min(v, 1.0) for v in (colour.r, colour.g, colour.b)]
+        if onset and profile.onset_flash_intensity > 0:
+            values = [v + profile.onset_flash_intensity * (1.0 - v) for v in values]
+        return Colour(*values)
+
+    def render(self, profile: Profile, features: AudioFeatures, t: float) -> Scene:
+        bands = self._band_values(profile, features, t)
+        colour = Colour(*(sum(getattr(band, channel) for band in bands)
+                          for channel in ("r", "g", "b")))
+        return UniformScene(self._clip_and_flash(colour, profile, features.onset))
+
+
+class _BandColoursSpatialRenderer(_BandColoursRenderer):
+    """The same band playback, cross-faded across low-to-high room positions."""
+
+    def render(self, profile: Profile, features: AudioFeatures, t: float) -> Scene:
+        return _BandColoursScene([self._clip_and_flash(c, profile, features.onset)
+                                  for c in self._band_values(profile, features, t)])
 
 
 class _MonoPulseRenderer(_EffectRenderer):
@@ -2391,6 +2498,10 @@ def _make_renderer(effect: str) -> _EffectRenderer:
             return _WaveRenderer()
         case "solid":
             return _SolidRenderer()
+        case "band_colours":
+            return _BandColoursRenderer()
+        case "band_colours_spatial":
+            return _BandColoursSpatialRenderer()
         case "gradient":
             return _GradientRenderer()
         case "none":
