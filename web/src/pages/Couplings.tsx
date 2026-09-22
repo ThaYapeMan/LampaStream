@@ -142,7 +142,7 @@ function VirtualPlayerRoutingNode({ player, followPlayerName, onOpen }: {
   onOpen?: () => void
 }) {
   const displayName = player
-    ? (player.display_name || player.player_name || player.type)
+    ? (player.player_name || player.display_name || player.type)
     : undefined
 
   let context: string | undefined
@@ -467,7 +467,7 @@ function CouplingWorkspace({
   // Edit-mode option lists
   const playerOptions = players.map(p => ({
     id: p.id,
-    label: p.display_name || p.player_name || p.type,
+    label: p.player_name || p.display_name || p.type,
   }))
   const analyserOptions = analysers.map(a => ({
     id: a.id,
@@ -812,7 +812,7 @@ export function Couplings({ activeCouplingId: activeCouplingIdProp, onActivation
                 <CouplingListItem
                   key={c.id}
                   coupling={c}
-                  playerLabel={p ? (p.display_name || p.player_name || p.type) : '—'}
+                  playerLabel={p ? (p.player_name || p.display_name || p.type) : '—'}
                   zoneLabel={z?.name ?? '—'}
                   isActive={c.id === activeCouplingId}
                   isSelected={!isCreating && c.id === selectedId}

@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, within, waitFor } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, beforeAll, afterAll } from 'vitest'
+import { render, screen, within, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Couplings } from '../pages/Couplings'
 
@@ -327,5 +327,49 @@ describe('Missing references — graceful fallback', () => {
     // Falls back to just showing light count without controller type prefix
     expect(within(zoneNode).getByText('Orphan Zone')).toBeDefined()
     expect(within(zoneNode).getByText(/3 lights/i)).toBeDefined()
+  })
+})
+
+
+describe('VirtualPlayer configured name precedence', () => {
+  const originalScroll = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'scrollIntoView')
+  beforeAll(() => {
+    // Radix scrolls the focused option; jsdom does not implement layout.
+    Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', { configurable: true, value: vi.fn() })
+  })
+  afterAll(() => {
+    if (originalScroll) Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', originalScroll)
+    else Reflect.deleteProperty(HTMLElement.prototype, 'scrollIntoView')
+  })
+  beforeEach(() => { vi.clearAllMocks() })
+
+  it.each([
+    ['Configured player', 'Advertised receiver', 'Configured player'],
+    ['', 'Advertised receiver', 'Advertised receiver'],
+    ['', '', 'Spotify'],
+  ])('uses player_name=%j before display_name=%j in the list, routing node and dropdown', async (playerName, displayName, expected) => {
+    setupDefaultMocks({
+      players: [{ id: 'p1', type: 'Spotify', player_name: playerName, display_name: displayName }],
+      couplings: [{ id: 'c1', name: 'Room coupling', player_id: 'p1', zone_id: 'z1', analyser_id: 'a1', energy_profile_id: 'ep1', enabled: true }],
+    })
+    const user = await renderAndSelectCoupling('c1')
+    const item = screen.getByTestId('coupling-item-c1')
+    const node = screen.getByTestId('node-virtual-player')
+    expect(item).toHaveTextContent(expected)
+    expect(node).toHaveTextContent(expected)
+    if (playerName && displayName) {
+      expect(item).not.toHaveTextContent(displayName)
+      expect(node).not.toHaveTextContent(displayName)
+    }
+
+    await user.click(screen.getByRole('button', { name: 'New coupling', exact: true }))
+    const selector = screen.getAllByRole('combobox')[0]
+    fireEvent.keyDown(selector, { key: 'ArrowDown' })
+    const option = await screen.findByRole('option', { name: expected, exact: true })
+    if (playerName && displayName) {
+      expect(screen.queryByRole('option', { name: displayName, exact: true })).not.toBeInTheDocument()
+    }
+    await user.click(option)
+    expect(selector).toHaveTextContent(expected)
   })
 })
