@@ -253,7 +253,7 @@ export function EnergySourceControls({ source, floor, ceiling, tau, peakAuto = t
        { field: 'lufs_ceiling' as const, label: 'Ceiling', unit: 'LUFS', value: ceiling }]
     : source === 'loudness_adaptive'
       ? [{ field: 'adaptation_tau_s' as const, label: 'Adaptation', unit: 's', value: tau }]
-      : source === 'peak_envelope' && !peakAuto
+      : source === 'peak_envelope' && !peakAuto && !compact
         ? [{ field: 'peak_attack_s' as const, label: 'Attack (s)', unit: '', value: attack },
            { field: 'peak_release_s' as const, label: 'Release (s)', unit: '', value: release }] : []
   return <section className={compact ? 'space-y-2' : 'space-y-3'} aria-label="Energy source settings">
@@ -284,7 +284,7 @@ export function EnergySourceControls({ source, floor, ceiling, tau, peakAuto = t
       </button>)}
     </div>
     </div>
-    {source === 'peak_envelope' && <div className="flex flex-wrap items-center gap-2">
+    {source === 'peak_envelope' && <div className={compact ? 'flex h-7 items-center gap-2 whitespace-nowrap' : 'flex flex-wrap items-center gap-2'}>
       <div role="group" aria-label="Peak envelope mode" className="inline-flex rounded border border-input p-0.5">
         {[true, false].map(auto => <button key={String(auto)} type="button"
           aria-pressed={peakAuto === auto} disabled={disabled || pending}
@@ -294,8 +294,15 @@ export function EnergySourceControls({ source, floor, ceiling, tau, peakAuto = t
         </button>)}
       </div>
       {peakAuto && <span className="text-xs text-muted-foreground">Self-calibrating with preset attack and release.</span>}
+      {compact && !peakAuto && ([
+        { field: 'peak_attack_s' as const, label: 'Attack (s)', value: attack, step: 0.01, testId: 'field-peak-attack' },
+        { field: 'peak_release_s' as const, label: 'Release (s)', value: release, step: 0.1, testId: 'field-peak-release' },
+      ].map(({ field, label, value, step, testId }) => <CompactEnergyNumber key={field}
+        testId={testId} label={label} unit="" value={value} step={step}
+        disabled={disabled || pending} invalid={!!error} onChange={v => onChange(field, v)}
+        onCommit={onCommit} onStep={v => onStep?.(field, v)} />))}
     </div>}
-    {(compact || fields.length > 0) && <div data-testid={compact ? 'energy-parameters' : undefined}
+    {!(compact && source === 'peak_envelope') && (compact || fields.length > 0) && <div data-testid={compact ? 'energy-parameters' : undefined}
       className={compact ? 'flex h-7 items-center gap-5' : fields.length === 1 ? 'block' : 'grid grid-cols-2 gap-3'}>
       {compact && (disabled || fields.length === 0) ? <span className="text-xs text-muted-foreground">
         {disabled ? 'No active coupling' : source === 'peak_envelope' ? 'Auto: 0.05 s attack · 2 s release' : 'No parameters for this source'}
@@ -315,7 +322,7 @@ export function EnergySourceControls({ source, floor, ceiling, tau, peakAuto = t
         </span>
       </label>)}
     </div>}
-    {source === 'peak_envelope' && <div role="group" aria-label="Reshape settings" className="space-y-2 border-t border-border/50 pt-2">
+    {source === 'peak_envelope' && <div role="group" aria-label="Reshape settings" className={compact ? "flex h-9 items-center gap-3 border-t border-border/50 pt-2" : "space-y-2 border-t border-border/50 pt-2"}>
       <label className="flex items-center gap-2 text-xs">
         <input type="checkbox" checked={reshapeEnabled} disabled={disabled || pending}
           onChange={e => onChange('peak_reshape_enabled', String(e.target.checked))} />

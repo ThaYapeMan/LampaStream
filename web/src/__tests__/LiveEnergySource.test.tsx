@@ -177,3 +177,42 @@ it('hides enabled reshape in Standard mode', () => {
   expect(screen.queryByRole('checkbox', {name:'Reshape'})).not.toBeInTheDocument()
   expect(screen.queryByRole('spinbutton', {name:'Reshape power'})).not.toBeInTheDocument()
 })
+
+it.each([
+  [true, false], [true, true], [false, false], [false, true],
+])('reserves two compact peak rows for Auto=%s and Reshape=%s', (auto, reshape) => {
+  render(<LiveEnergySource expertMode active profile={{...initial,
+    energy_source:'peak_envelope', peak_envelope_auto:auto, peak_reshape_enabled:reshape,
+  }} onUpdated={vi.fn()} />)
+  expect(screen.queryByTestId('energy-parameters')).not.toBeInTheDocument()
+  const mode = screen.getByRole('group', {name:'Peak envelope mode'})
+  const agcRow = mode.parentElement!
+  const reshapeRow = screen.getByRole('group', {name:'Reshape settings'})
+  expect(agcRow).toHaveClass('flex', 'h-7', 'items-center')
+  expect(agcRow).not.toHaveClass('flex-wrap')
+  expect(reshapeRow).toHaveClass('flex', 'h-9', 'items-center', 'border-t', 'pt-2')
+  expect(reshapeRow).not.toHaveClass('space-y-2')
+  expect(agcRow.nextElementSibling).toBe(reshapeRow)
+  expect(reshapeRow.nextElementSibling).toBeNull()
+  expect(screen.queryByText('Auto: 0.05 s attack · 2 s release')).not.toBeInTheDocument()
+  if (auto) {
+    expect(screen.getAllByText('Self-calibrating with preset attack and release.')).toHaveLength(1)
+    expect(within(agcRow).getByText('Self-calibrating with preset attack and release.')).toBeVisible()
+    expect(screen.queryByTestId('field-peak-attack')).not.toBeInTheDocument()
+  } else {
+    expect(screen.queryByText('Self-calibrating with preset attack and release.')).not.toBeInTheDocument()
+    for (const field of ['field-peak-attack', 'field-peak-release']) {
+      const input = screen.getByTestId(field)
+      expect(input.closest('div')!.parentElement).toBe(agcRow)
+      expect(within(agcRow).getByTestId(field)).toBeVisible()
+    }
+  }
+  expect(screen.getByRole('checkbox', {name:'Reshape'}).parentElement!.parentElement).toBe(reshapeRow)
+  if (reshape) {
+    const input = screen.getByTestId('field-peak-reshape-power')
+    expect(input.closest('div')!.parentElement).toBe(reshapeRow)
+    expect(input).toHaveValue(.4)
+  } else {
+    expect(screen.queryByTestId('field-peak-reshape-power')).not.toBeInTheDocument()
+  }
+})
