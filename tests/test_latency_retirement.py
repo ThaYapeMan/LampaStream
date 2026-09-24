@@ -10,7 +10,6 @@ import numpy as np
 import pytest
 from fastapi import HTTPException
 from test_analysis_architecture import _make_cap, _make_frame
-from test_audit_blockers_v3 import _make_engine_and_start
 
 from lampastream.api import deactivate_coupling
 from lampastream.canonicalizer import (
@@ -20,8 +19,11 @@ from lampastream.canonicalizer import (
     TemporarilyNoData,
 )
 from lampastream.cavacore import CavaCoreBackend
+from lampastream.models import Profile
+from lampastream.pcm_source import TeePcmSource
 from lampastream.player_manager import ActiveSession, PlayerManager
 from lampastream.spectrum_engine import CavaCoreSpectrumEngine, ProcessorUpdate
+from lampastream.sync_engine import SyncEngine
 
 
 def _real_cava_scheduler():
@@ -150,7 +152,14 @@ def test_real_manager_teardown_retains_blocked_reader(tmp_path, monkeypatch):
             self.closed += 1
 
     source = Source()
-    engine, cap = _make_engine_and_start(source)
+    tee = TeePcmSource(source)
+    cap = _make_cap(source=tee)
+    engine = SyncEngine(fifo_path=None, profile=Profile(name="test"), analyser=cap)
+    cap.start()
+    deadline = time.monotonic() + 2
+    while source.total_reads == 0 and time.monotonic() < deadline:
+        time.sleep(0.01)
+    assert source.total_reads > 0, "worker never entered wrapped source.read()"
     original_join = cap._thread.join
     monkeypatch.setattr(cap._thread, 'join', lambda timeout=None: original_join(0.02))
     closes = [0]
@@ -168,7 +177,7 @@ def test_real_manager_teardown_retains_blocked_reader(tmp_path, monkeypatch):
     session.fifo_path = tmp_path / 'fifo'
     session.cava_conf_path = tmp_path / 'conf'
     session.sync_engine = engine
-    session.shm_source = source
+    session.shm_source = tee
     manager._active = session
     candidate = _make_cap()
     candidate_close = MagicMock(wraps=candidate._spectrum_processor.close)

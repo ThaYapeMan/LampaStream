@@ -19,9 +19,10 @@ import mmap
 import os
 import struct
 import time
+from collections import deque
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Protocol, runtime_checkable
+from typing import Generic, ParamSpec, Protocol, runtime_checkable
 
 import numpy as np
 import numpy.lib.stride_tricks
@@ -70,6 +71,82 @@ class PcmSource(Protocol):
     def running(self) -> bool:
         """True when the source is actively delivering audio data."""
         ...
+
+_OpenArgs = ParamSpec("_OpenArgs")
+
+
+class CanonicalPcmSource(Protocol[_OpenArgs]):
+    """Structural source-ingress contract, separate from the legacy mono tap."""
+
+    def open(self, *args: _OpenArgs.args, **kwargs: _OpenArgs.kwargs) -> None: ...
+
+    def close(self) -> None: ...
+
+    @property
+    def running(self) -> bool: ...
+
+    def read(self) -> SourceReadResult: ...
+
+
+class TeePcmSource(Generic[_OpenArgs]):
+    """Transparent primary reader with one optional, lossy secondary drain.
+
+    One analysis worker calls read; one secondary owner attaches, drains and
+    detaches. Deque append/popleft are thread-safe; the primary never takes a
+    consumer lock or calls consumer code. Overflow drops the oldest result,
+    including lifecycle events: this is best-effort history, not durable audio.
+    Frames are immutable and shared without copying. Epoch handling remains
+    entirely in the analysis pipeline.
+
+    Attach is idempotent. Detach discards pending history; reattach starts fresh.
+    A read racing detach may append to the discarded queue, never a new one.
+    Source open/close ownership stays with PlayerManager.
+    """
+
+    def __init__(self, source: CanonicalPcmSource[_OpenArgs], *, capacity: int = 128):
+        if capacity <= 0:
+            raise ValueError("capacity must be positive")
+        self._source = source
+        self._capacity = capacity
+        self._secondary: deque[SourceReadResult] | None = None
+
+    def open(self, *args: _OpenArgs.args, **kwargs: _OpenArgs.kwargs) -> None:
+        return self._source.open(*args, **kwargs)
+
+    def close(self) -> None:
+        return self._source.close()
+
+    @property
+    def running(self) -> bool:
+        return self._source.running
+
+    def read(self) -> SourceReadResult:
+        result = self._source.read()
+        queue = self._secondary
+        if queue is not None:
+            queue.append(result)
+        return result
+
+    def attach_secondary(self) -> None:
+        if self._secondary is None:
+            self._secondary = deque(maxlen=self._capacity)
+
+    def detach_secondary(self) -> None:
+        self._secondary = None
+
+    def drain_secondary(self, max_items: int) -> list[SourceReadResult]:
+        if max_items < 0:
+            raise ValueError("max_items must be non-negative")
+        queue = self._secondary
+        results = []
+        if queue is not None:
+            for _ in range(max_items):
+                try:
+                    results.append(queue.popleft())
+                except IndexError:
+                    break
+        return results
+
 
 VIS_BUF_SIZE = 16384  # s16 samples in the circular buffer (8192 stereo frames)
 WINDOW_SIZE = 2048  # FFT window length in samples

@@ -28,6 +28,7 @@ from .pcm_source import (
     AirPlayPipeStereoSource,
     PcmSource,
     SqueezeliteShmStereoSource,
+    TeePcmSource,
 )
 from .spectrum_engine import make_spectrum_engine as _make_spectrum_engine
 from .storage import Storage
@@ -258,7 +259,7 @@ class ActiveSession:
         self.task: asyncio.Task | None = None
         self.probe: LatencyProbe = NoLatencyProbe()
         self.poller_task: asyncio.Task | None = None
-        self.shm_source: PcmSource | AirPlayPipeStereoSource | None = None
+        self.shm_source: PcmSource | AirPlayPipeStereoSource | TeePcmSource | None = None
         self.follower: LmsFollower | None = None
         self.follower_task: asyncio.Task | None = None
         self.unsync_task: asyncio.Task | None = None
@@ -758,7 +759,7 @@ class PlayerManager:
         """
         await asyncio.to_thread(self._wait_for_shm, profile.player_mac)
 
-        shm_source = SqueezeliteShmStereoSource()
+        shm_source = TeePcmSource(SqueezeliteShmStereoSource())
         shm_source.open(profile.player_mac)
         session.shm_source = shm_source
 
@@ -810,7 +811,7 @@ class PlayerManager:
         if self._configure_shairport_name(profile.display_name or profile.player_name):
             self._airplay_tracks.invalidate()
 
-        pipe_source = AirPlayPipeStereoSource()
+        pipe_source = TeePcmSource(AirPlayPipeStereoSource())
         pipe_source.open()
         session.shm_source = pipe_source
 

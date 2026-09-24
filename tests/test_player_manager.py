@@ -655,9 +655,13 @@ def test_airplay_activation_skips_squeezelite(tmp_path: Path) -> None:
     assert manager._active.squeezelite is None, (
         "_activate_airplay must not spawn squeezelite"
     )
-    assert manager._active.shm_source is mock_src, (
-        "_activate_airplay must assign AirPlayPipeStereoSource to session.shm_source"
+    from lampastream.pcm_source import TeePcmSource
+
+    assert isinstance(manager._active.shm_source, TeePcmSource)
+    mock_analyser_factory.assert_called_once_with(
+        manager._active.shm_source, manager._active.profile
     )
+    assert manager._active.shm_source.read() is mock_src.read.return_value
     mock_src.open.assert_called_once()
 
 
