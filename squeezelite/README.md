@@ -6,7 +6,7 @@ legacy external CAVA/FIFO is separate. Native live deployment **REQUIRES LXC VAL
 ## Automatic build
 
 Pinned shared fork: `ThaYapeMan/squeezelite` at
-`9a346227e9c3314bfdd15e9b189ddf5a8ab00899`.
+`0e1667ead996834e355fc51f6a8eb2ea7e55f44b`.
 
 For a standard installation, from the repository:
 

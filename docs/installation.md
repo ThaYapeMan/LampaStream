@@ -116,7 +116,7 @@ remain **REQUIRES LXC VALIDATION**. See [deployment checklist](deployment-lxc.md
 ### One producer for both consumers
 
 Canonical LMS and external CAVA both use `/usr/local/bin/squeezelite`, built from
-`ThaYapeMan/squeezelite` at `9a346227e9c3314bfdd15e9b189ddf5a8ab00899` with
+`ThaYapeMan/squeezelite` at `0e1667ead996834e355fc51f6a8eb2ea7e55f44b` with
 VISEXPORT. PCM remains at byte 80; the v1 extension follows the ring at byte 32848.
 External CAVA maps the stock prefix, while canonical analysis requires the trailing
 v1 extension. The installer builds once and verifies one binary hash against the

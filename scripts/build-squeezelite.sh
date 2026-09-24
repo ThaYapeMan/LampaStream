@@ -31,7 +31,7 @@ set -Eeuo pipefail
 
 # Pinned shared fork revision, including the v1 producer and legacy layout fix.
 # Update deliberately and verify producer integration at the new revision.
-SQUEEZELITE_COMMIT="${SQUEEZELITE_COMMIT:-9a346227e9c3314bfdd15e9b189ddf5a8ab00899}"
+SQUEEZELITE_COMMIT="${SQUEEZELITE_COMMIT:-0e1667ead996834e355fc51f6a8eb2ea7e55f44b}"
 SQUEEZELITE_REPO="${SQUEEZELITE_REPO:-https://github.com/ThaYapeMan/squeezelite.git}"
 
 INSTALL_DIR="${INSTALL_DIR:-/usr/local/bin}"

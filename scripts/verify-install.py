@@ -24,7 +24,7 @@ assert lampastream.__git_hash__ == short, (lampastream.__git_hash__, short)
 manifest = json.loads((root.parent / 'installation.json').read_text())
 assert manifest['commit'] == commit
 assert manifest['short_commit'] == short
-assert manifest['squeezelite_revision'] == '9a346227e9c3314bfdd15e9b189ddf5a8ab00899'
+assert manifest['squeezelite_revision'] == '0e1667ead996834e355fc51f6a8eb2ea7e55f44b'
 actual_sha = hashlib.sha256(Path('/usr/local/bin/squeezelite').read_bytes()).hexdigest()
 assert actual_sha == manifest['squeezelite_sha256']
 assert manifest['producer_objects'] == ['output_vis.o', 'output_vis_v1.o']

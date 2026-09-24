@@ -38,7 +38,7 @@ BUILD_DIR=/tmp/lampastream-producer-build INSTALL_DIR=/tmp/lampastream-producer-
 ```
 
 It clones the shared `ThaYapeMan/squeezelite` fork at
-`9a346227e9c3314bfdd15e9b189ddf5a8ab00899`, which already includes the v1 producer
+`0e1667ead996834e355fc51f6a8eb2ea7e55f44b`, which already includes the v1 producer
 and preserves the legacy PCM offsets. It inspects `make -n OPTS=-DVISEXPORT`,
 compiles both producer objects, links and installs one binary. The fork integration
 test checks the pinned source for producer markers and the trailing extension.
