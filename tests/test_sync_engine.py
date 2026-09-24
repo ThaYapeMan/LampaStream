@@ -901,7 +901,7 @@ def test_sync_engine_update_profile_takes_effect():
 
 
 def test_update_onset_pipeline_clears_state():
-    """update_onset_pipeline() resets all onset flags regardless of shm source."""
+    """update_onset_pipeline() resets the onset status exposed to the app."""
     from lampastream.sync_engine import SyncEngine
 
     fifo = "/tmp/_nonexistent_fifo_for_test_pipeline"
@@ -919,19 +919,6 @@ def test_update_onset_pipeline_clears_state():
     assert not engine._last_onset_bass
     assert not engine._last_onset_mid
     assert not engine._last_onset_treble
-
-
-def test_update_onset_pipeline_without_shm_nulls_pipelines():
-    """Without a SHM source attached, all PCM pipelines are None after update."""
-    from lampastream.sync_engine import SyncEngine
-
-    fifo = "/tmp/_nonexistent_fifo_for_test_pipeline2"
-    engine = SyncEngine(fifo, Profile(onset_method="combined"))
-
-    engine.update_onset_pipeline(Profile(onset_method="multiband"))
-    assert engine._pcm_onset is None
-    assert engine._pcm_multiband is None
-    assert engine._pcm_superflux is None
 
 
 def test_update_render_updates_exertion_clip():

@@ -44,7 +44,7 @@ from .hpss_analyzer import HpssAnalyzer
 from .latency import NoLatencyProbe
 from .loudness_analyzer import KWeightedLoudnessAnalyzer
 from .models import Profile
-from .pcm_source import WINDOW_SIZE, PcmHpss, PcmSource, PcmStft
+from .pcm_source import WINDOW_SIZE, PcmStft
 from .spectrum_engine import (
     AnalysisProcessor,
     ProcessorUpdate,
@@ -173,9 +173,7 @@ class BandNormaliser:
     # alpha = 1 - exp(-dt/tau) is recomputed per call so the EMA evolves at the
     # same real-time rate regardless of call frequency (30 Hz cava vs ~100 Hz PCM).
     #
-    # Starting values follow PPM-style ballistics; empirical direction still TBD —
-    # compare_bars.py can be used to test both fast-attack/slow-release and the
-    # inverse before committing to final tau values (see project memory).
+    # Starting values follow PPM-style ballistics: fast attack and slow release.
     #
     # Convention: alpha multiplies the CHANGE (state += alpha*(input-state)), which
     # corresponds to alpha = 1-exp(-dt/tau).  Do NOT mix with the other common DSP
@@ -2674,19 +2672,12 @@ class SyncEngine:
         self._last_mix: float = 0.0
         self._last_energy: float = 0.0
         self._last_bars: list[float] = []
-        self._shm_source: PcmSource | None = None
-        self._pcm_onset: StftOnsetPipeline | None = None
-        self._pcm_multiband: MultibandStftPipeline | None = None
-        self._pcm_superflux: SuperfluxStftPipeline | None = None
-        self._pcm_hpss: PcmHpss | None = None
         self._last_pcm_onset: bool = False
         self._last_onset_bass: bool = False
         self._last_onset_mid: bool = False
         self._last_onset_treble: bool = False
         self._diag_frame: int = 0
-        self._se_tracker: SustainedEnergyTracker = SustainedEnergyTracker()
         self._last_sustained_energy: float | None = None
-        self._last_tick_t: float | None = None
         # BLOCKER 1 audit (round 3): the production PCM source has NO
         # concurrent-reader contract.  When ``replace_analyser`` times
         # out stopping the old analyser its worker thread is still
@@ -2697,45 +2688,6 @@ class SyncEngine:
         # code detect the situation, and no new reader is spawned until
         # every retiring worker has exited.
         self._retiring: list[AudioPipeline] = []
-
-    def attach_shm_source(self, source: PcmSource) -> None:
-        """Connect a PCM source for the PCM-tap onset pipeline.
-
-        Selects the appropriate pipeline based on profile.onset_method:
-        - "combined"  → StftOnsetPipeline (comparison only, no colour effect)
-        - "multiband" → MultibandStftPipeline (drives onset_bass/mid/treble)
-        - "superflux" → SuperfluxStftPipeline (max-filter vibrato suppression)
-
-        Call after the squeezelite SHM segment is confirmed ready and before
-        run() is started.
-        """
-        self._shm_source = source
-        method = self.profile.onset_method
-        if method == "multiband":
-            self._pcm_multiband = MultibandStftPipeline(
-                source.sample_rate,
-                bass_hz=self.profile.bass_hz,
-                mid_hz=self.profile.mid_hz,
-                delta=self.profile.onset_delta,
-                alpha=self.profile.onset_alpha,
-            )
-        elif method == "superflux":
-            self._pcm_superflux = SuperfluxStftPipeline(
-                source.sample_rate,
-                mu=self.profile.superflux_mu,
-                lag=self.profile.superflux_lag,
-                delta=self.profile.onset_delta,
-                alpha=self.profile.onset_alpha,
-            )
-        else:
-            self._pcm_onset = StftOnsetPipeline(
-                source.sample_rate,
-                delta=self.profile.onset_delta,
-                alpha=self.profile.onset_alpha,
-            )
-        if self.profile.use_hpss_separation:
-            self._pcm_hpss = PcmHpss(source.sample_rate)
-            log.info("HPSS separation enabled for this session")
 
     def update_probe(self, probe: LatencyProbe) -> None:
         """Swap the latency probe live. Safe to call from the asyncio event loop."""
@@ -2748,61 +2700,17 @@ class SyncEngine:
         self._effect = LayerMixer(profile, effective_mellow)
 
     def update_onset_pipeline(self, profile: Profile) -> None:
-        """Switch the PCM-tap onset detection method without restarting any process.
+        """Rebuild canonical onset/HPSS processing without restarting the session.
 
-        Tears down the current onset pipeline and builds a new one from
-        profile.onset_method.  squeezelite, cava, and the Hue Entertainment
-        session continue running without interruption.
-
-        Side effect: onset warmup state (_last_pcm_onset, _last_onset_bass/mid/
-        treble) resets to False.  The new pipeline's OnsetDetector needs ~30
-        frames (~0.3 s at 100 Hz) to accumulate enough history for reliable
-        detections.  This is a much smaller disturbance than a full
-        deactivate/reactivate cycle (which resets BandNormaliser EMA and the
-        Hue DTLS session too), but it is not zero — when measuring A/B
-        differences between onset methods, wait at least 5 s after switching
-        before comparing bars_mean values.
+        Reset published onset status while preserving the analyser's band
+        normalisation and the active output session.
         """
-        # Reset state before rebuilding.  All assignments are atomic under the
-        # GIL; run() is a coroutine in the same event-loop thread, so there is
-        # no concurrent access to these attributes.
-        self._pcm_onset = None
-        self._pcm_multiband = None
-        self._pcm_superflux = None
-        self._pcm_hpss = None
         self._last_pcm_onset = False
         self._last_onset_bass = False
         self._last_onset_mid = False
         self._last_onset_treble = False
         self.profile = profile
 
-        if self._shm_source is not None:
-            method = profile.onset_method
-            if method == "multiband":
-                self._pcm_multiband = MultibandStftPipeline(
-                    self._shm_source.sample_rate,
-                    bass_hz=profile.bass_hz,
-                    mid_hz=profile.mid_hz,
-                    delta=profile.onset_delta,
-                    alpha=profile.onset_alpha,
-                )
-            elif method == "superflux":
-                self._pcm_superflux = SuperfluxStftPipeline(
-                    self._shm_source.sample_rate,
-                    mu=profile.superflux_mu,
-                    lag=profile.superflux_lag,
-                    delta=profile.onset_delta,
-                    alpha=profile.onset_alpha,
-                )
-            else:
-                self._pcm_onset = StftOnsetPipeline(
-                    self._shm_source.sample_rate,
-                    delta=profile.onset_delta,
-                    alpha=profile.onset_alpha,
-                )
-            if profile.use_hpss_separation:
-                self._pcm_hpss = PcmHpss(self._shm_source.sample_rate)
-                log.info("HPSS separation enabled (pipeline rebuild)")
         # For pcm_pipeline sessions the analyser IS a CanonicalAnalysisPipeline;
         # rebuild its BeatDetector so the new onset parameters take effect.
         if isinstance(self._analyser, CanonicalAnalysisPipeline):
@@ -3114,61 +3022,6 @@ class SyncEngine:
         while True:
             features = self._analyser.latest()
             t = time.monotonic()
-
-            # PCM-tap onset path runs BEFORE the effect render so that
-            # multiband overwrites features.onset* before _last_onset and the
-            # Scene are captured.
-            tick_t = time.monotonic()
-            dt = (tick_t - self._last_tick_t) if self._last_tick_t is not None else SEND_INTERVAL_S
-            self._last_tick_t = tick_t
-
-            if self._shm_source is not None:
-                samples = self._shm_source.read_new()
-                if len(samples) > 0:
-                    if self._pcm_multiband is not None:
-                        band_results = self._pcm_multiband.push(samples)
-                        if band_results:
-                            (b_on, b_str), (m_on, m_str), (t_on, t_str) = band_results[-1]
-                            self._last_onset_bass = b_on
-                            self._last_onset_mid = m_on
-                            self._last_onset_treble = t_on
-                            self._last_pcm_onset = b_on or m_on or t_on
-                            if features is not None:
-                                features.onset_bass = b_on
-                                features.onset_bass_strength = b_str
-                                features.onset_mid = m_on
-                                features.onset_mid_strength = m_str
-                                features.onset_treble = t_on
-                                features.onset_treble_strength = t_str
-                                features.onset = self._last_pcm_onset
-                    elif self._pcm_superflux is not None:
-                        sf_results = self._pcm_superflux.push(samples)
-                        if sf_results:
-                            onset, _ = sf_results[-1]
-                            self._last_pcm_onset = onset
-                            if features is not None:
-                                features.onset = onset
-                    elif self._pcm_onset is not None:
-                        # "combined": parallel comparison only, colour unchanged.
-                        results = self._pcm_onset.push(samples)
-                        if results:
-                            self._last_pcm_onset = any(onset for onset, _ in results)
-
-                    # HPSS runs in parallel with whichever onset method is active.
-                    if self._pcm_hpss is not None and features is not None:
-                        hpss_results = self._pcm_hpss.push(samples)
-                        if hpss_results:
-                            p_energy, h_energy = hpss_results[-1]
-                            features.hpss_active = True
-                            features.percussive_energy = p_energy
-                            features.harmonic_energy = h_energy
-
-                    # Sustained energy uses the same samples buffer (do not call
-                    # read_new() again — the PCM position would advance).
-                    se = self._se_tracker.push(samples, dt)
-                    self._last_sustained_energy = se
-                    if features is not None:
-                        features.sustained_energy = se
 
             if features is not None:
                 self._last_onset = features.onset

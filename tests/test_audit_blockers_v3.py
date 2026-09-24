@@ -445,7 +445,7 @@ def test_eos_with_delayed_processor_preserves_interval():
 
 
 class _BlockingSource:
-    """PcmSource stub that blocks in read() until released.
+    """Canonical source stub that blocks in read() until released.
 
     Tracks the maximum number of threads observed inside read() at any
     single moment so the "MAX SIMULTANEOUS SOURCE READERS = 1" audit

@@ -26,7 +26,6 @@ from .lms_status import query_lms_status, query_lms_sync_peers, unsync_player
 from .models import BridgeConfig, Controller, Coupling, Profile, VirtualPlayerType
 from .pcm_source import (
     AirPlayPipeStereoSource,
-    PcmSource,
     SqueezeliteShmStereoSource,
     TeePcmSource,
 )
@@ -259,7 +258,7 @@ class ActiveSession:
         self.task: asyncio.Task | None = None
         self.probe: LatencyProbe = NoLatencyProbe()
         self.poller_task: asyncio.Task | None = None
-        self.shm_source: PcmSource | AirPlayPipeStereoSource | TeePcmSource | None = None
+        self.shm_source: TeePcmSource | None = None
         self.follower: LmsFollower | None = None
         self.follower_task: asyncio.Task | None = None
         self.unsync_task: asyncio.Task | None = None

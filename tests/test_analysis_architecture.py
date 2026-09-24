@@ -32,8 +32,6 @@ from lampastream.pcm_source import (
     _V2_EXT_FMT,
     SHM_ABI_V1_MAGIC,
     VIS_BUF_SIZE,
-    ShmContinuityEvent,
-    SqueezeliteShmSource,
 )
 from lampastream.spectrum_engine import (
     ProcessorUpdate,
@@ -931,23 +929,8 @@ def test_h3_cap_rebuild_beat_detector():
 
 
 # ---------------------------------------------------------------------------
-# Test 4: SHM continuity v0 and v1
+# SHM v1 fixture for canonical stereo ingress
 # ---------------------------------------------------------------------------
-
-
-def _write_shm_v0(
-    path: _Path,
-    buf_index: int,
-    running: bool = True,
-    rate: int = 44100,
-    buf_size: int = VIS_BUF_SIZE,
-) -> None:
-    """Write a synthetic v0 SHM segment."""
-    header = _struct.pack(
-        _HDR_FMT, buf_size, buf_index % VIS_BUF_SIZE, int(running), rate, 0
-    )
-    data = bytes(_HDR_OFFSET) + header + bytes(VIS_BUF_SIZE * 2)
-    path.write_bytes(data)
 
 
 def _write_shm_v1(
@@ -982,123 +965,6 @@ def _write_shm_v1(
     data = bytes(_HDR_OFFSET) + legacy_hdr + bytes(VIS_BUF_SIZE * 2) + ext_hdr
     assert len(data) == _MMAP_SIZE_V1, f"Expected {_MMAP_SIZE_V1}, got {len(data)}"
     path.write_bytes(data)
-
-
-def test_shm_advance_v0(tmp_path):
-    p = tmp_path / "shm"
-    _write_shm_v0(p, buf_index=0)
-    src = SqueezeliteShmSource()
-    src.open("x", _path=p)
-    # Write 100 new stereo samples (200 bytes) at offset 0.
-    data = bytearray(p.read_bytes())
-    # Advance buf_index by 100.
-    buf_index_new = 100
-    _struct.pack_into(_HDR_FMT, data, _HDR_OFFSET, VIS_BUF_SIZE, buf_index_new, 1, 44100, 0)
-    p.write_bytes(bytes(data))
-    result = src.read_new_checked()
-    assert result.event == ShmContinuityEvent.ADVANCE
-    assert result.n_delivered > 0
-
-
-def test_shm_no_data_v0(tmp_path):
-    p = tmp_path / "shm"
-    _write_shm_v0(p, buf_index=50)
-    src = SqueezeliteShmSource()
-    src.open("x", _path=p)
-    result = src.read_new_checked()  # no advance since open
-    assert result.event == ShmContinuityEvent.NO_DATA
-
-
-def test_shm_overrun_v0(tmp_path):
-    p = tmp_path / "shm"
-    _write_shm_v0(p, buf_index=0)
-    src = SqueezeliteShmSource()
-    src.open("x", _path=p)
-    # Advance by more than VIS_BUF_SIZE//2 (overrun).
-    data = bytearray(p.read_bytes())
-    _struct.pack_into(
-        _HDR_FMT, data, _HDR_OFFSET, VIS_BUF_SIZE, VIS_BUF_SIZE // 2 + 1, 1, 44100, 0
-    )
-    p.write_bytes(bytes(data))
-    result = src.read_new_checked()
-    assert result.event == ShmContinuityEvent.OVERRUN
-    assert result.n_delivered == 0
-
-
-def test_shm_restart_on_running_transition(tmp_path):
-    p = tmp_path / "shm"
-    _write_shm_v0(p, buf_index=0, running=True)
-    src = SqueezeliteShmSource()
-    src.open("x", _path=p)
-    # Transition running → False.
-    _write_shm_v0(p, buf_index=0, running=False)
-    src.read_new_checked()  # consume the running=False transition
-    # Transition running → True.
-    _write_shm_v0(p, buf_index=100, running=True)
-    result = src.read_new_checked()
-    assert result.event == ShmContinuityEvent.RESTART
-
-
-def test_shm_restart_on_rate_change(tmp_path):
-    p = tmp_path / "shm"
-    _write_shm_v0(p, buf_index=0, rate=44100)
-    src = SqueezeliteShmSource()
-    src.open("x", _path=p)
-    _write_shm_v0(p, buf_index=50, rate=48000)  # rate changed
-    result = src.read_new_checked()
-    assert result.event == ShmContinuityEvent.RESTART
-
-
-def test_shm_v1_full_lap_detectable(tmp_path):
-    p = tmp_path / "shm"
-    # abs_write_pos is in stereo frames; ring capacity is VIS_BUF_SIZE // 2.
-    frame_capacity = VIS_BUF_SIZE // 2
-    _write_shm_v1(p, buf_index=0, generation=1, abs_write_pos=500)
-    src = SqueezeliteShmSource()
-    src.open("x", _path=p)
-    # Advance abs_write_pos by exactly one full lap.
-    _write_shm_v1(p, buf_index=0, generation=1, abs_write_pos=500 + frame_capacity)
-    result = src.read_new_checked()
-    assert result.event == ShmContinuityEvent.FULL_LAP
-
-
-def test_shm_v1_multiple_laps(tmp_path):
-    p = tmp_path / "shm"
-    frame_capacity = VIS_BUF_SIZE // 2
-    _write_shm_v1(p, buf_index=0, generation=1, abs_write_pos=0)
-    src = SqueezeliteShmSource()
-    src.open("x", _path=p)
-    # Advance by 3 full laps.
-    _write_shm_v1(p, buf_index=0, generation=1, abs_write_pos=3 * frame_capacity)
-    result = src.read_new_checked()
-    assert result.event == ShmContinuityEvent.MULTIPLE_LAPS
-
-
-def test_shm_v1_gap_sequence(tmp_path):
-    p = tmp_path / "shm"
-    _write_shm_v1(p, buf_index=0, generation=1, abs_write_pos=0, gap_seq=0)
-    src = SqueezeliteShmSource()
-    src.open("x", _path=p)
-    _write_shm_v1(p, buf_index=100, generation=1, abs_write_pos=50, gap_seq=1)
-    result = src.read_new_checked()
-    assert result.event == ShmContinuityEvent.GAP_SEQUENCE
-
-
-def test_shm_producer_generation_change(tmp_path):
-    p = tmp_path / "shm"
-    _write_shm_v1(p, buf_index=0, generation=1, abs_write_pos=5000)
-    src = SqueezeliteShmSource()
-    src.open("x", _path=p)
-    # Producer restarted: generation incremented, abs_write_pos reset to small value.
-    _write_shm_v1(p, buf_index=10, generation=2, abs_write_pos=10)
-    result = src.read_new_checked()
-    # Generation change must be classified as a continuity break.
-    assert result.event in (
-        ShmContinuityEvent.RESTART,
-        ShmContinuityEvent.SHM_REPLACED,
-        ShmContinuityEvent.OVERRUN,
-        ShmContinuityEvent.MULTIPLE_LAPS,
-    )
 
 
 # ---------------------------------------------------------------------------
@@ -1155,92 +1021,6 @@ def test_acceptance_uses_registry():
     from lampastream.spectrum_engine import ENGINES
     assert "v2" in ENGINES
     assert "cavacore" in ENGINES  # registered even if not available on this system
-
-
-# ---------------------------------------------------------------------------
-# H1: seqlock coherent read
-# ---------------------------------------------------------------------------
-
-
-def test_shm_v1_seqlock_mid_write_rejected(tmp_path):
-    """A persistently odd write_seq (writer never finishes) surfaces as TORN_READ."""
-    p = tmp_path / "shm"
-    _write_shm_v1(p, buf_index=0, generation=1, abs_write_pos=0, write_seq=1)
-    src = SqueezeliteShmSource()
-    src.open("x", _path=p)
-    result = src.read_new_checked()
-    assert result.event in (
-        ShmContinuityEvent.NO_DATA,
-        ShmContinuityEvent.TORN_READ,
-    ), f"expected NO_DATA or TORN_READ, got {result.event}"
-
-
-# ---------------------------------------------------------------------------
-# H2: abs position is not double-counted
-# ---------------------------------------------------------------------------
-
-
-def test_shm_v1_abs_write_pos_used_verbatim(tmp_path):
-    """abs_write_pos from SHM is used as-is; consumer does not add delivered frames."""
-    p = tmp_path / "shm"
-    _write_shm_v1(p, buf_index=100, generation=1, abs_write_pos=50)
-    src = SqueezeliteShmSource()
-    src.open("x", _path=p)
-    _write_shm_v1(p, buf_index=200, generation=1, abs_write_pos=100)
-    result = src.read_new_checked()
-    assert result.event == ShmContinuityEvent.ADVANCE
-    assert result.abs_write_pos == 100
-
-
-# ---------------------------------------------------------------------------
-# H3: gap_seq observed exactly once
-# ---------------------------------------------------------------------------
-
-
-def test_shm_v1_gap_seq_observed_exactly_once(tmp_path):
-    p = tmp_path / "shm"
-    _write_shm_v1(p, buf_index=0, generation=1, abs_write_pos=0, gap_seq=0)
-    src = SqueezeliteShmSource()
-    src.open("x", _path=p)
-    _write_shm_v1(p, buf_index=50, generation=1, abs_write_pos=25, gap_seq=1)
-    r1 = src.read_new_checked()
-    assert r1.event == ShmContinuityEvent.GAP_SEQUENCE
-
-    _write_shm_v1(p, buf_index=100, generation=1, abs_write_pos=50, gap_seq=1)
-    r2 = src.read_new_checked()
-    assert r2.event == ShmContinuityEvent.ADVANCE
-
-
-# ---------------------------------------------------------------------------
-# H4: producer generation change detected between polls
-# ---------------------------------------------------------------------------
-
-
-def test_shm_v1_generation_change_detected(tmp_path):
-    p = tmp_path / "shm"
-    _write_shm_v1(p, buf_index=0, generation=1, abs_write_pos=0)
-    src = SqueezeliteShmSource()
-    src.open("x", _path=p)
-    _write_shm_v1(p, buf_index=10, generation=1, abs_write_pos=5)
-    src.read_new_checked()  # consume the initial advance
-    _write_shm_v1(p, buf_index=10, generation=2, abs_write_pos=0)
-    result = src.read_new_checked()
-    assert result.event == ShmContinuityEvent.RESTART
-
-
-# ---------------------------------------------------------------------------
-# H5: abs_write_pos regression = restart
-# ---------------------------------------------------------------------------
-
-
-def test_shm_v1_abs_write_pos_regression_is_restart(tmp_path):
-    p = tmp_path / "shm"
-    _write_shm_v1(p, buf_index=0, generation=1, abs_write_pos=5000)
-    src = SqueezeliteShmSource()
-    src.open("x", _path=p)
-    _write_shm_v1(p, buf_index=10, generation=1, abs_write_pos=10)
-    result = src.read_new_checked()
-    assert result.event == ShmContinuityEvent.RESTART
 
 
 # ---------------------------------------------------------------------------
