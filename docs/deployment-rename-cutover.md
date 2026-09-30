@@ -7,7 +7,9 @@ A fresh install (no prior `/etc/huesync/`) needs only the standard steps.
 
 - SSH access to the LXC container as a user with `sudo`.
 - The LXC has network access (apt, curl for the Node.js bootstrap).
-- Proxmox host has `snd-dummy` provisioned and passed into the LXC.
+- LMS PCM is paced internally by yeney-player; `snd-dummy` and `/dev/snd`
+  passthrough are no longer required. Existing mappings can remain harmlessly;
+  optional removal steps are in [deployment-lxc.md](deployment-lxc.md).
 
 ## Cutover steps
 
