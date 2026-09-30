@@ -216,7 +216,8 @@ Open **`http://<host>:8420`** after installation. The current UI provides:
   Controllers and Hue Entertainment Areas for Zones.
 - **Analysers / Effects / Energy Profiles:** edit analysis settings, visual algorithms
   and high/low-energy blends.
-- **Latency:** manage listening-player timing settings.
+- **Latency:** None, Fixed or universal Auto timing for manually followed LMS players,
+  with live estimates and manual trim. See [configuration](docs/configuration.md#automatic-followed-player-latency).
 - **Backup and restore:** download or restore sensitive configuration with confirmation.
 
 Controller creation/pairing is API-only. The Analyser page offers source, Spectrum
@@ -247,7 +248,7 @@ the Zone, player, Analyser, Effects/EnergyProfile and Coupling. Host audio-devic
 prerequisite for paced LMS playback; a guest script cannot provision host devices.
 See [installation](docs/installation.md) and [LXC deployment](docs/deployment-lxc.md).
 LMS virtual players use `yeney-player` from the recursive `third_party/yeney-core`
-submodule at `0c4b369`. Initialize it with `git submodule update --init --recursive`.
+submodule at `13e606f`. Initialize it with `git submodule update --init --recursive`.
 It paces PCM internally and preserves full-scale analysis PCM regardless of LMS volume.
 No snd-dummy or `/dev/snd` passthrough is required. Existing host mappings can remain
 harmlessly; optional removal steps are in [LXC deployment](docs/deployment-lxc.md).

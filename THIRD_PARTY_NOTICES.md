@@ -2,7 +2,7 @@
 
 LampaStream's own code is MIT licensed. The separately built yeney-player is
 PolyForm Noncommercial 1.0.0, from ThaYapeMan/yeney-core at
-0c4b3699355b9cefd7f05b8591fe5210952c1409. This does not change either licence.
+13e606f452d9a2ae729f9590ec4ea696ab4dbcde. This does not change either licence.
 
 Complete distribution texts:
 

@@ -91,7 +91,7 @@ used for file and HTTP operations.
 | Visual algorithm and rendering settings | `effects` | All fields |
 | High/low Effect references and blend behavior | `energy_profiles` | All fields |
 | Entity bindings and enabled selection | `couplings` | All fields |
-| Per-listening-player latency strategy, delay, name and optional speaker address | `player_latencies` | All fields |
+| Per-listening-player latency strategy, delay, name, manual trim and saved measurement | `player_latencies` | All fields |
 
 Selected references must resolve. Empty references allowed by the current editable
 schema remain unbound; backup does not invent missing entities. Invalid nonempty
@@ -289,7 +289,7 @@ intended Coupling. Never edit the JSON manually to bypass validation.
 VirtualPlayers have a `follow_mode` setting:
 
 - `manual` (default, including existing configurations): retains the existing
-  fixed `follow_player_mac` and its event-driven track mirroring behavior.
+  fixed `follow_player_mac` and its event-driven track mirroring behaviour.
 - `sync_group`: manually sync LampaStream with a room in LMS first. Native LMS sync
   delivers the audio. LampaStream passively observes `listen 1` and queries its own
   player's `sync ?` on activation/reconnection, on sync/client notifications,
@@ -302,7 +302,7 @@ activate the Coupling again to use the new setting.
 
 Auto mode excludes all LampaStream-managed player identities. With multiple external
 group members it keeps the selected peer while that peer remains present;
-otherwise it selects the first normalized MAC in sorted order. The displayed
+otherwise it selects the first normalised MAC in sorted order. The displayed
 target and latency configuration follow that selection. Different rooms can
 have different latency settings even though they share a queue; use manual mode
 when a specific room must be pinned.
@@ -410,3 +410,81 @@ Reference systems checked for this design: [LedFx's melbank filtering](https://d
 uses attack/decay filtering for reactive signals; [Logic Pro's Compressor controls](https://support.apple.com/en-nz/guide/logicpro/lgcef1bec9f3/10.7/mac/11.0)
 retain Attack and Release terminology. LampaStream uses the same DSP terms in
 Expert mode while keeping source configuration out of Standard mode.
+
+## Automatic followed-player latency
+
+The Latency page offers **None**, **Fixed** and **Auto**, independently for each
+listening player's MAC. Auto works in **Manual — fixed player** follow mode using
+standard LMS CLI positions, without UPnP or player-specific protocols. It requires
+both players to be playing the same mirrored URL. The page labels this target
+**Followed player**; sync-group mode retains **Sync master detected**.
+
+Auto reads `<mac> time ?` for both players back to back, compensates for their
+query midpoints with a monotonic clock, and alternates the query order. It adds no
+status polling. Existing event-driven follower URL lookups and the track display's
+status subscription retain their separate roles; repeated full status polling of
+the followed player remains forbidden.
+
+A five-second guard follows newsong, seek, pause, resume and reconnect events on
+either player. A thirty-second burst starts after the guard, sampling every three
+seconds; subsequent samples are fifteen seconds apart. Paused, stopped, disconnected
+or mismatched tracks produce no measurement requests. The estimator retains seven
+valid samples, rejects values more than 400 ms from its current median (including
+whole-second position corrections), and reports precision as 1.4826 times the
+median absolute deviation. Precision describes position consistency, not a
+measurement of acoustic latency.
+
+The followed player's `playerpref playDelay ?` preference is read once when the
+activation first becomes eligible. An absent preference contributes zero. LMS's
+Player → Synchronisation **Player Delay** is expressed in milliseconds: positive
+values compensate for a player's delayed output. The applied delay is:
+
+```
+max(0, median residual ms + Player Delay ms + trim ms)
+```
+
+Manual trim ranges from −1000 to +1000 ms. The first estimate after a newsong or
+re-alignment steps directly once three samples agree within 200 ms; subsequent
+updates change by at most 50 ms. Editing trim preserves the estimator and applies
+the new target through that same limit. A median below −300 ms after the burst triggers
+one own-player position re-alignment per followed track and a fresh burst. This
+once-per-track guard survives latency-entry edits; explicit followed-player seeks
+still mirror to the own player independently. The
+followed player is never sought by this mechanism; non-seekable streams may remain
+uncompensated when the own player runs behind.
+
+Stable `measured_delay_ms` and `measured_at` (Unix seconds) are saved per MAC. The
+saved measurement includes Player Delay but excludes trim; it supplies the starting
+value on the next activation. Configuration writes do not accept these read-only
+fields. `GET /api/player-latencies` includes a read-only `status` with effective
+strategy, applied delay, median residual, Player Delay, trim, sample count,
+precision, last accepted sample time and state. Auto status refreshes every two
+seconds in the UI. States are `idle`, `measuring`, `stable` and
+`not measurable (sync group)`; the latter includes the fallback reason.
+
+Sync-group members share LMS's reported position, so Auto falls back to
+`fixed_delay_ms` without position or preference measurement queries. Manual trim
+is not added to that explicitly configured Fixed fallback.
+
+This delay queues rendered scenes at the existing Hue output boundary, with
+approximately 33 ms frame quantisation. Analysis publication, Hue transport and
+physical lamp response retain their intrinsic latency; Auto does not measure or
+subtract those delays. Use trim to adjust the audible/visible result. DSP and PCM
+processing remain unchanged.
+
+The existing explicit, backed-up schema-1 migration normalises old latency entries:
+`upnp` becomes `fixed`, retaining `fixed_delay_ms`, and the unused `speaker_ip`
+placeholder is removed. New fields default to zero/null. Existing None and Fixed
+configurations remain valid. Run the installer migration before opening an older
+configuration containing reserved fields. The LMS editor no longer exposes an
+ALSA device; older API/configuration values remain accepted for compatibility and
+are ignored by yeney-player.
+
+Preference verification: LMS source at
+[`f0a77cd`](https://github.com/LMS-Community/slimserver/tree/f0a77cdce73ef1d1cc53019967d845dfcd0f8fb1),
+[`Synchronization.pm`](https://github.com/LMS-Community/slimserver/blob/f0a77cdce73ef1d1cc53019967d845dfcd0f8fb1/Slim/Web/Settings/Player/Synchronization.pm#L39)
+selects `playDelay`;
+[`StreamingController.pm`](https://github.com/LMS-Community/slimserver/blob/f0a77cdce73ef1d1cc53019967d845dfcd0f8fb1/Slim/Player/StreamingController.pm#L1509)
+subtracts positive delay from the player's scheduled start time and adds it to
+synchronisation play points. `Queries.pm` defaults player preferences to the
+`server` namespace.

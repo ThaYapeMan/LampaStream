@@ -19,7 +19,7 @@ from pathlib import Path
 
 from .hue_bridge import list_entertainment_areas
 from .hue_output import ChannelInfo, HueDriver, HueOutputConfig, get_channel_infos
-from .latency import FixedLatencyProbe, NoLatencyProbe
+from .latency import AutoLatencyProbe, FixedLatencyProbe, NoLatencyProbe, latency_status
 from .lms_discovery import discover_lms
 from .lms_follower import LmsFollower, LmsSyncGroupObserver, TransportAction
 from .lms_status import query_lms_status, query_lms_sync_peers, unsync_player
@@ -257,6 +257,8 @@ class ActiveSession:
         self.hue_driver: HueDriver | None = None
         self.task: asyncio.Task | None = None
         self.probe: LatencyProbe = NoLatencyProbe()
+        self.latency_preferences: dict[str, int] = {}
+        self.latency_mac: str | None = None
         self.poller_task: asyncio.Task | None = None
         self.shm_source: TeePcmSource | None = None
         self.follower: LmsFollower | None = None
@@ -1022,6 +1024,27 @@ class PlayerManager:
             return
         await self._apply_probe_for_master(self._active, self._detected_sync_master)
 
+    @property
+    def follow_mode(self) -> str | None:
+        if self._active and self._active.coupling:
+            player = self.storage.get_virtual_player(self._active.coupling.player_id)
+            return player.follow_mode if player else None
+        return None
+
+    def latency_status(self, config) -> dict:
+        session = self._active
+        if session is None or session.latency_mac != config.player_mac:
+            return latency_status(config, delay=0)
+        if isinstance(session.probe, AutoLatencyProbe):
+            return session.probe.status()
+        fallback = config.strategy == "auto" and isinstance(session.follower, LmsSyncGroupObserver)
+        return latency_status(
+            config, state="not measurable (sync group)" if fallback else "idle",
+            strategy="fixed" if fallback else config.strategy,
+            delay=session.probe.current_delay_ms(),
+            reason="LMS reports a shared group position; using Fixed delay" if fallback else None,
+        )
+
     async def _apply_probe_for_master(
         self, session: ActiveSession, master: str | None
     ) -> None:
@@ -1034,12 +1057,35 @@ class PlayerManager:
         else:
             pl = self.storage.get_player_latency(master)
             log.debug("PlayerLatency lookup for sync_master=%r -> %r", master, pl)
+            if (pl is not None and pl.strategy == "auto"
+                    and isinstance(session.probe, AutoLatencyProbe)
+                    and session.latency_mac == master
+                    and session.probe.follower is session.follower):
+                # Trim/name edits preserve cadence, estimates and the first-step
+                # allowance. The next sample applies trim through the normal limit.
+                session.probe.config = pl
+                self.latency_warning = None
+                return
             if pl is None:
                 self.latency_warning = (
                     f"Sync master {master} has no latency config — "
                     f"using 0 ms. Add it in the Player latency section."
                 )
                 new_probe = NoLatencyProbe()
+            elif pl.strategy == "auto" and isinstance(session.follower, LmsSyncGroupObserver):
+                new_probe = FixedLatencyProbe(pl.fixed_delay_ms)
+                self.latency_warning = (
+                    "Auto cannot measure a shared LMS sync-group position; using Fixed delay")
+            elif pl.strategy == "auto" and session.follower is not None:
+                def persist(measured, timestamp):
+                    current = self.storage.get_player_latency(master)
+                    if current is not None and current.strategy == "auto":
+                        current.measured_delay_ms = measured
+                        current.measured_at = timestamp
+                        self.storage.save_player_latency(current)
+                new_probe = AutoLatencyProbe(
+                    pl, session.follower, persist, session.latency_preferences)
+                self.latency_warning = None
             elif pl.strategy == "fixed":
                 new_probe = FixedLatencyProbe(pl.fixed_delay_ms)
                 self.latency_warning = None
@@ -1048,11 +1094,12 @@ class PlayerManager:
                 self.latency_warning = None
 
         old_probe = session.probe
+        await old_probe.stop()
+        session.latency_mac = master
         await new_probe.start()
         session.probe = new_probe
         if session.sync_engine:
             session.sync_engine.update_probe(new_probe)
-        await old_probe.stop()
         log.info(
             "Latency probe updated: sync_master=%s probe=%s delay_ms=%d",
             master,

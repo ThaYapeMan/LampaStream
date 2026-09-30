@@ -117,6 +117,7 @@ export default function App() {
                   <Latency
                     syncMaster={status?.sync_master ?? null}
                     syncMasterName={status?.sync_master_name ?? null}
+                    followMode={status?.follow_mode ?? null}
                   />
                 )}
               </div>

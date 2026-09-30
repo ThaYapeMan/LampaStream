@@ -286,7 +286,7 @@ chmod 0755 "$RELEASE"
 python3 -m venv "$RELEASE/venv"
 "$RELEASE/venv/bin/pip" install "$WORK"/wheels/*.whl
 log '3/7 Build pinned SHM v1 yeney-player and AirPlay 2'
-YENEY_CORE_REVISION=0c4b3699355b9cefd7f05b8591fe5210952c1409
+YENEY_CORE_REVISION=13e606f452d9a2ae729f9590ec4ea696ab4dbcde
 # Git archives omit submodule contents. Initialize and verify both immutable pins,
 # then archive their committed sources separately into the isolated build tree.
 git -c safe.directory="$REPO_DIR" \

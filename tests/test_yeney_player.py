@@ -16,7 +16,7 @@ from lampastream.pcm_source import DataResult, SqueezeliteShmStereoSource
 
 ROOT = Path(__file__).resolve().parents[1]
 CORE = ROOT / 'third_party/yeney-core'
-REVISION = '0c4b3699355b9cefd7f05b8591fe5210952c1409'
+REVISION = '13e606f452d9a2ae729f9590ec4ea696ab4dbcde'
 
 
 def load_script(name):

@@ -138,19 +138,22 @@ class PlayerLatency:
 
     player_mac: str
     name: str | None = None      # human-readable label, e.g. "Sonos Living Room"
-    strategy: str = "fixed"      # "none" | "fixed"; "upnp" reserved for step 3
-    fixed_delay_ms: int = 2000   # used when strategy == "fixed"
-    # Reserved for step 3 (UpnpPositionProbe). No effect for strategy != "upnp".
-    speaker_ip: str | None = None
+    strategy: str = "fixed"      # "none" | "fixed" | "auto"
+    fixed_delay_ms: int = 2000   # also the sync-group fallback
+    trim_ms: int = 0
+    measured_delay_ms: int | None = None  # residual + Player Delay, before trim
+    measured_at: float | None = None  # Unix seconds
+
+    def __post_init__(self) -> None:
+        if self.strategy not in {"none", "fixed", "auto"}:
+            raise ValueError("Unknown latency strategy")
+        if not -1000 <= self.trim_ms <= 1000:
+            raise ValueError("trim_ms must be between -1000 and 1000")
 
     def to_dict(self) -> dict:
-        return {
-            "player_mac": self.player_mac,
-            "name": self.name,
-            "strategy": self.strategy,
-            "fixed_delay_ms": self.fixed_delay_ms,
-            "speaker_ip": self.speaker_ip,
-        }
+        return {key: getattr(self, key) for key in (
+            "player_mac", "name", "strategy", "fixed_delay_ms", "trim_ms",
+            "measured_delay_ms", "measured_at")}
 
     @classmethod
     def from_dict(cls, d: dict) -> PlayerLatency:

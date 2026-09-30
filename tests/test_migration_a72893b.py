@@ -37,6 +37,10 @@ def expected_current_rows(data, key):
             if row.get('bars_source') == 'cava':
                 row['bars_source'] = 'pcm_pipeline'
                 row.setdefault('spectrum_backend', 'v2')
+    if key == "player_latencies":
+        for row in rows:
+            row.pop("speaker_ip", None)
+            row.update(trim_ms=0, measured_delay_ms=None, measured_at=None)
     return rows
 
 

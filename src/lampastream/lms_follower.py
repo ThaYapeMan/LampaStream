@@ -19,12 +19,14 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import math
 import socket
 import time
 from collections.abc import Awaitable, Callable, Iterable
 from typing import Literal
 from urllib.parse import quote, unquote
 
+from .latency import FollowPositionContext
 from .lms_status import query_lms_status
 
 TransportAction = Literal[
@@ -117,6 +119,37 @@ class LmsFollower:
         self._connected: bool = False
         self._transport_mode: str | None = None
         self._pause_confirmation: asyncio.Task | None = None
+        self._own_mode: str | None = None
+        self._mirrored_url: str | None = None
+        self._own_url: str | None = None
+        self._auto_aligned_track: int | None = None
+        self._track_generation = 0
+        self._transition_generation = 0
+        self._changed_at = time.monotonic()
+
+    def _position_transition(self, *, newsong=False) -> None:
+        self._changed_at = time.monotonic()
+        self._transition_generation += 1
+        if newsong:
+            self._track_generation += 1
+
+    def latency_context(self) -> FollowPositionContext:
+        return FollowPositionContext(
+            connected=self._connected,
+            playing=self._transport_mode == "play" and self._own_mode == "play",
+            same_track=bool(self._mirrored_url and self._mirrored_url == self._own_url),
+            track=self._track_generation, transition=self._transition_generation,
+            changed_at=self._changed_at,
+        )
+
+    def realign_own_player(self, track: int, once: bool = True) -> None:
+        if once and self._auto_aligned_track == track:
+            return
+        if (not self._stop_event.is_set() and track == self._track_generation
+                and self.latency_context().playing and self._mirrored_url):
+            if once:
+                self._auto_aligned_track = track
+            self._align_seed_position(self._mirrored_url)
 
     @property
     def target_mac(self) -> str | None:
@@ -184,6 +217,7 @@ class LmsFollower:
             writer.write(b"listen 1\n")
             await writer.drain()
             self._connected = True
+            self._position_transition()
             log.info(
                 "LMS follower: connected to %s:%d, watching %s",
                 self._host,
@@ -211,6 +245,7 @@ class LmsFollower:
                 )
         finally:
             self._connected = False
+            self._position_transition()
             await self._cancel_pause_confirmation()
             self._transport_mode = None
             writer.close()
@@ -228,6 +263,34 @@ class LmsFollower:
         player_id = unquote(parts[0]).lower()
         command = parts[1]
         sub = parts[2] if len(parts) > 2 else ""
+
+        if self._MIRRORS_PLAYBACK and player_id in {
+                self._follow_mac, self._lampastream_mac.lower()}:
+            own_event = player_id == self._lampastream_mac.lower()
+            event_parts = sub.split() if command == "playlist" else [command, *sub.split()]
+            if command == "playlist" and sub.startswith("newsong"):
+                self._position_transition(newsong=not own_event)
+                if own_event:
+                    self._own_mode = "play"
+                    self._own_url = await self._owned_transport_call(
+                        self._get_current_url, self._lampastream_mac)
+                else:
+                    self._mirrored_url = None
+            elif event_parts and event_parts[0] in {"time", "pause", "stop", "play"}:
+                self._position_transition()
+                if own_event:
+                    action = event_parts[0]
+                    if action == "stop":
+                        self._own_mode = "stop"
+                    elif action == "play":
+                        self._own_mode = "play"
+                    elif action == "pause":
+                        self._own_mode = (
+                            "pause" if len(event_parts) > 1 and event_parts[1] == "1"
+                            else "play" if len(event_parts) > 1 and event_parts[1] == "0"
+                            else "pause" if self._own_mode == "play" else "play")
+            if own_event:
+                return
 
         # Diagnostic: log ALL newsong events so we can see if the wrong player
         # is triggering, or if the same player fires more than once per track.
@@ -260,6 +323,10 @@ class LmsFollower:
         )
 
         if not self._MIRRORS_PLAYBACK:
+            return
+        if command == "time" and sub and sub != "?":
+            await self._owned_transport_call(
+                self.realign_own_player, self._track_generation, False)
             return
         if command == "playlist" and sub.startswith("newsong"):
             await self._cancel_pause_confirmation()
@@ -331,6 +398,7 @@ class LmsFollower:
                 else:
                     await self._owned_transport_call(self._send_pause, int(mode == "pause"))
                 self._transport_mode = mode
+                self._position_transition()
         except OSError:
             log.warning("LMS follower: deferred pause confirmation failed")
 
@@ -380,9 +448,12 @@ class LmsFollower:
         """Query the followed player's current URL and play it on LampaStream."""
         url = self._get_current_url()
         if url:
+            self._mirrored_url = url
             if only_if_needed:
                 if (self._query_mode(self._lampastream_mac) == "play"
                         and self._get_current_url(self._lampastream_mac) == url):
+                    self._own_mode = "play"
+                    self._own_url = url
                     return None
                 if self._stop_event.is_set():
                     return None
@@ -397,24 +468,39 @@ class LmsFollower:
         CLI cannot prove audible output or seekability; target verification is
         still needed for remote streams. Never add analysis-side latency here.
         """
+        track = self._track_generation
         deadline = time.monotonic() + 3.0
         while not self._stop_event.is_set() and time.monotonic() < deadline:
             own = query_lms_status(self._host, self._lampastream_mac, self._port)
             if own.mode == "play" and not own.waiting_to_play:
-                observed_at = time.monotonic()
-                source = query_lms_status(self._host, self._follow_mac, self._port)
-                if (source.mode != "play" or source.waiting_to_play
-                        or source.time is None or self._stop_event.is_set()):
+                if (self._mirrored_url != seeded_url or self._transport_mode != "play"
+                        or track != self._track_generation):
                     return
-                if self._get_current_url() != seeded_url or self._stop_event.is_set():
-                    return  # source changed tracks during startup
-                target = source.time + max(0.0, time.monotonic() - observed_at)
-                if source.duration is not None and target >= source.duration:
-                    return  # track ended during startup; let newsong handle it
+                before = time.monotonic()
+                raw = _cli_exchange(self._host, self._port,
+                                    f"{self._follow_mac} time ?\n")
+                after = time.monotonic()
+                parts = unquote(raw).split()
+                if (len(parts) != 3 or parts[:2] != [self._follow_mac, "time"]
+                        or self._stop_event.is_set() or self._mirrored_url != seeded_url):
+                    return
+                try:
+                    position = float(parts[2])
+                except ValueError:
+                    return
+                target = position + max(0.0, after - (before + after) / 2)
+                if not math.isfinite(target) or target < 0:
+                    return
+                if (self._stop_event.is_set() or self._transport_mode != "play"
+                        or track != self._track_generation
+                        or (own.duration is not None and target >= own.duration)):
+                    return
+                self._own_mode = "play"
+                self._own_url = seeded_url
+                self._position_transition()
                 _cli_exchange(self._host, self._port,
                               f"{self._lampastream_mac} time {target:.3f}\n")
-                log.info("LMS follower seed alignment: source=%.3fs seek=%.3fs",
-                         source.time, target)
+                log.info("LMS follower own-player alignment: seek=%.3fs", target)
                 return
             time.sleep(0.1)
         log.warning("LMS follower: seeded stream not ready; position alignment skipped")

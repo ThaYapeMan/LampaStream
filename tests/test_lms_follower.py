@@ -80,6 +80,9 @@ class MockLmsServer:
             if cmd.endswith(" mode ?"):
                 writer.write(f"{mac} mode {self.modes[mac]}\n".encode())
                 await writer.drain()
+            elif cmd.endswith(" time ?"):
+                writer.write(f"{mac} time {self.positions[mac]}\n".encode())
+                await writer.drain()
             elif cmd.endswith(" sync ?"):
                 writer.write(f"{mac} sync {FOLLOW_MAC}\n".encode())
                 await writer.drain()
@@ -571,8 +574,9 @@ def test_seed_seeks_current_position_only_after_play_and_newsong_never_seeks():
         follower = LmsFollower('127.0.0.1', FOLLOW_MAC, LAMPASTREAM_MAC, cli_port=port)
         task = follower.start()
         try:
-            assert await _wait_for(lambda: any(' time ' in c for c in server.received))
-            seeks = [c for c in server.received if ' time ' in c]
+            assert await _wait_for(lambda: any(
+                ' time ' in c and not c.endswith('?') for c in server.received))
+            seeks = [c for c in server.received if ' time ' in c and not c.endswith('?')]
             assert len(server.play_commands()) == len(seeks) == 1
             assert seeks[0].startswith(f'{LAMPASTREAM_MAC} time ')
             assert 196 <= float(seeks[0].split()[2]) < 197
@@ -582,7 +586,7 @@ def test_seed_seeks_current_position_only_after_play_and_newsong_never_seeks():
             await server.send_newsong(FOLLOW_MAC)
             assert await _wait_for(lambda: len(server.play_commands()) == 2)
             await asyncio.sleep(0.1)
-            assert [c for c in server.received if ' time ' in c] == seeks
+            assert [c for c in server.received if ' time ' in c and not c.endswith('?')] == seeks
         finally:
             await _stop_follower(follower, task)
             await server.stop()
@@ -606,7 +610,8 @@ def test_manual_pause_resume_and_stop_with_followed_track_position(pause, resume
         source.open()
         task = follower.start()
         try:
-            assert await _wait_for(lambda: any(' time ' in c for c in server.received)
+            assert await _wait_for(lambda: any(
+                ' time ' in c and not c.endswith('?') for c in server.received)
                                    and FOLLOW_MAC in server.status_writers)
             server.positions[FOLLOW_MAC] = 201.0
             await server.transport(pause, 'pause')
@@ -664,30 +669,33 @@ def test_documented_transport_notifications_reach_manual_relay(event, method, ar
 
 
 def test_seed_alignment_waits_for_ready_and_compensates_query_delay(monkeypatch):
-    from unittest.mock import Mock
-
     from lampastream.lms_status import LmsPlayerStatus
     follower = LmsFollower('host', FOLLOW_MAC, LAMPASTREAM_MAC)
+    follower._mirrored_url = MOCK_URL
+    follower._transport_mode = 'play'
     clock = [100.0]
     monkeypatch.setattr('lampastream.lms_follower.time.monotonic', lambda: clock[0])
     monkeypatch.setattr('lampastream.lms_follower.time.sleep', lambda delay: clock.__setitem__(
         0, clock[0] + delay))
     calls = []
+    commands = []
 
     def status(host, mac, port):
         calls.append(mac)
-        if mac == LAMPASTREAM_MAC:
-            return LmsPlayerStatus(mode='play', waiting_to_play=len(calls) == 1)
-        clock[0] += 0.25
-        return LmsPlayerStatus(mode='play', time=196, duration=326)
+        return LmsPlayerStatus(mode='play', waiting_to_play=len(calls) == 1)
+
+    def exchange(host, port, command):
+        commands.append(command)
+        if command.endswith('time ?\n'):
+            clock[0] += .25
+            return f'{FOLLOW_MAC} time 196'
+        return command
 
     monkeypatch.setattr('lampastream.lms_follower.query_lms_status', status)
-    monkeypatch.setattr(follower, '_get_current_url', lambda: MOCK_URL)
-    exchange = Mock()
     monkeypatch.setattr('lampastream.lms_follower._cli_exchange', exchange)
     follower._align_seed_position(MOCK_URL)
-    assert calls == [LAMPASTREAM_MAC, LAMPASTREAM_MAC, FOLLOW_MAC]
-    exchange.assert_called_once_with('host', 9090, f'{LAMPASTREAM_MAC} time 196.250\n')
+    assert calls == [LAMPASTREAM_MAC, LAMPASTREAM_MAC]
+    assert commands == [f'{FOLLOW_MAC} time ?\n', f'{LAMPASTREAM_MAC} time 196.125\n']
 
 
 @pytest.mark.parametrize('reason', ['unknown_position', 'paused', 'track_changed', 'stopped'])
@@ -696,18 +704,17 @@ def test_seed_alignment_does_not_seek_invalid_or_changed_source(monkeypatch, rea
 
     from lampastream.lms_status import LmsPlayerStatus
     follower = LmsFollower('host', FOLLOW_MAC, LAMPASTREAM_MAC)
+    follower._mirrored_url = 'different' if reason == 'track_changed' else MOCK_URL
+    follower._transport_mode = 'pause' if reason == 'paused' else 'play'
     if reason == 'stopped':
         follower._stop_event.set()
-    source = LmsPlayerStatus(mode='pause' if reason == 'paused' else 'play',
-                             time=None if reason == 'unknown_position' else 196)
-    monkeypatch.setattr('lampastream.lms_follower.query_lms_status', Mock(side_effect=[
-        LmsPlayerStatus(mode='play'), source]))
-    monkeypatch.setattr(follower, '_get_current_url', lambda:
-                        'different' if reason == 'track_changed' else MOCK_URL)
-    exchange = Mock()
+    monkeypatch.setattr('lampastream.lms_follower.query_lms_status',
+                        lambda *args: LmsPlayerStatus(mode='play'))
+    exchange = Mock(return_value=f'{FOLLOW_MAC} time ?')
     monkeypatch.setattr('lampastream.lms_follower._cli_exchange', exchange)
     follower._align_seed_position(MOCK_URL)
-    exchange.assert_not_called()
+    assert not any(c.args[2].startswith(f'{LAMPASTREAM_MAC} time')
+                   for c in exchange.call_args_list)
 
 
 @pytest.mark.parametrize("initial,confirmed,commands", [

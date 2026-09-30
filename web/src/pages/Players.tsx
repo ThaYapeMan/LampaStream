@@ -44,7 +44,6 @@ interface FormState {
   lms_port: string
   player_name: string
   display_name: string
-  alsa_device: string
   follow_player_mac: string
   follow_mode: 'manual' | 'sync_group'
 }
@@ -56,7 +55,6 @@ function defaultForm(player?: VirtualPlayer): FormState {
     lms_port: String(player?.lms_port ?? 9000),
     player_name: player?.player_name ?? 'LampaStream',
     display_name: player?.display_name ?? '',
-    alsa_device: player?.alsa_device ?? '',
     follow_player_mac: player?.follow_player_mac ?? '',
     follow_mode: player?.follow_mode ?? 'manual',
   }
@@ -159,7 +157,6 @@ export function Players({ activeCouplingId = null }: { activeCouplingId?: string
           lms_port: parseInt(form.lms_port, 10),
           player_name: form.player_name,
           display_name: form.display_name,
-          alsa_device: form.alsa_device,
           follow_player_mac: form.follow_player_mac,
           follow_mode: form.follow_mode,
         })
@@ -170,7 +167,6 @@ export function Players({ activeCouplingId = null }: { activeCouplingId?: string
           lms_port: parseInt(form.lms_port, 10),
           player_name: form.player_name,
           display_name: form.display_name,
-          alsa_device: form.alsa_device,
           follow_player_mac: form.follow_player_mac,
           follow_mode: form.follow_mode,
         })
@@ -356,14 +352,6 @@ export function Players({ activeCouplingId = null }: { activeCouplingId?: string
                   />
                   {nameError && <p className="text-xs text-destructive">{nameError}</p>}
                 </div>
-                <FormRow label="ALSA device">
-                  <Input
-                    value={form.alsa_device}
-                    onChange={(e) => set('alsa_device', e.target.value)}
-                    placeholder="hw:CARD=Dummy,DEV=0"
-                  />
-                </FormRow>
-
                 <FormRow label="Follow mode">
                   <Select value={form.follow_mode} onValueChange={(v) => set('follow_mode', v)}>
                     <SelectTrigger aria-label="Follow mode"><SelectValue /></SelectTrigger>

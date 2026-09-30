@@ -18,6 +18,7 @@ export interface SocketStatus {
   active_player_type: string | null
   active_zone_id: string | null
   active_energy_profile_id: string | null
+  follow_mode?: "manual" | "sync_group" | null
   sync_master: string | null
   sync_master_name: string | null
   applied_delay_ms: number

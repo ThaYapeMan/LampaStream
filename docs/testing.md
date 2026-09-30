@@ -109,3 +109,19 @@ dependencies. Optional/native skips are reported as skips, not runtime proof.
 The package list in `scripts/native-build-packages.txt` is intentionally smaller
 than the target installer stack. `--check` remains a booted Debian 13/systemd
 installation check, not a generic CI bootstrap.
+
+
+Auto latency regressions live in `tests/test_auto_latency.py`: median/outlier
+rejection, scaled MAD, initial steps and 50 ms limits, transition guards,
+burst/steady cadence, Player Delay/trim arithmetic, negative residual re-alignment,
+persisted starting values, sync-group fallback and a real fake CLI server that
+allows only measurement position/preference commands. Migration tests verify exact
+backups, reserved-field retirement and idempotency; API tests reject writable
+measurement fields and invalid trims. `web/src/__tests__/Latency.test.tsx` and
+`web/tests/e2e/latency.spec.ts` exercise Auto status, trim, fallback and the removed
+ALSA editor field. The real SHM integration builds yeney-player at `13e606f` and
+reads it through the unchanged strict-v1 PCM consumer.
+
+Another repository may run tests concurrently on the development machine. If the
+CAVA per-hop timing test fails, repeat that test alone and report both results;
+do not weaken its threshold or change DSP to compensate for host contention.

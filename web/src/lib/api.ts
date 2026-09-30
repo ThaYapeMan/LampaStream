@@ -80,7 +80,21 @@ export interface PlayerLatency {
   name: string | null
   strategy: string
   fixed_delay_ms: number
-  speaker_ip: string | null
+  trim_ms: number
+  measured_delay_ms: number | null
+  measured_at: number | null
+  status?: {
+    strategy: string
+    applied_delay_ms: number
+    median_residual_ms: number | null
+    player_delay_ms: number | null
+    trim_ms: number
+    sample_count: number
+    precision_ms: number | null
+    last_sample_time: number | null
+    state: string
+    reason: string | null
+  }
 }
 
 export interface LmsServer {
@@ -94,6 +108,7 @@ export interface ApiStatus {
   active_coupling_id: string | null
   active_coupling_name: string | null
   active_player_type: string | null
+  follow_mode?: "manual" | "sync_group" | null
   sync_master: string | null
   sync_master_name: string | null
   applied_delay_ms: number
@@ -147,10 +162,11 @@ export const createPlayerLatency = (body: {
   name?: string
   strategy?: string
   fixed_delay_ms?: number
+  trim_ms?: number
 }) => request<PlayerLatency>('/api/player-latencies', json('POST', body))
 export const updatePlayerLatency = (
   mac: string,
-  body: Partial<{ name: string; strategy: string; fixed_delay_ms: number }>
+  body: Partial<{ name: string; strategy: string; fixed_delay_ms: number; trim_ms: number }>
 ) => request<PlayerLatency>(`/api/player-latencies/${mac}`, json('PATCH', body))
 export const deletePlayerLatency = (mac: string) =>
   request<void>(`/api/player-latencies/${mac}`, { method: 'DELETE' })
@@ -178,7 +194,7 @@ export interface VirtualPlayer {
   player_name: string
   display_name: string
   player_mac: string
-  alsa_device: string
+  alsa_device?: string
   follow_player_mac: string
   follow_mode: 'manual' | 'sync_group'
 }

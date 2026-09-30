@@ -210,6 +210,20 @@ def _migrate_bars_source(data: dict) -> None:
             row.setdefault("spectrum_backend", "v2")
 
 
+def _migrate_player_latency(data: dict) -> None:
+    """Normalise legacy reserved fields through the existing backed-up migration."""
+    rows = data.get("player_latencies", [])
+    if not isinstance(rows, list) or any(not isinstance(row, dict) for row in rows):
+        raise ValueError("Malformed player latencies")
+    for row in rows:
+        if row.get("strategy") == "upnp":
+            row["strategy"] = "fixed"
+        row.pop("speaker_ip", None)
+        row.setdefault("trim_ms", 0)
+        row.setdefault("measured_delay_ms", None)
+        row.setdefault("measured_at", None)
+
+
 def convert(original: dict) -> dict:
     if not isinstance(original, dict):
         raise ValueError("Configuration must be a JSON object")
@@ -218,6 +232,7 @@ def convert(original: dict) -> dict:
     if original.get("schema_version") == SCHEMA_VERSION:
         data = copy.deepcopy(original)
         _migrate_bars_source(data)
+        _migrate_player_latency(data)
         validate_current(data, references=True)
         return data
     if original.get("schema_version", 0) != 0:
@@ -298,6 +313,7 @@ def convert(original: dict) -> dict:
             effect.pop(key)
     data["schema_version"] = SCHEMA_VERSION
     _migrate_bars_source(data)
+    _migrate_player_latency(data)
     _migrate_flat_residue(data)
     validate_current(data, references=True)
     return data

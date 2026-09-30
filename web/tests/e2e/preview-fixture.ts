@@ -18,7 +18,7 @@ export async function setupPreview(page: Page) {
   await page.routeWebSocket('**/ws/preview', ws => {
     socket = ws
     ws.send(JSON.stringify({ type: 'status', active_coupling_id: 'c', active_energy_profile_id: 'e',
-      active_player_type: 'LMS', active_zone_id: 'z', active_bars_source: 'pcm_pipeline',
+      active_player_type: 'LMS', follow_mode: 'manual', active_zone_id: 'z', active_bars_source: 'pcm_pipeline',
       effect_type: 'spectrum_rgb', processes: { lms_player: true }, applied_delay_ms: 1100,
       follow_target_mac: 'aa:bb:cc:dd:ee:ff', follow_target_name: 'Room',
       track: { title: 'Jealous (Extended Mix)', artist: 'Mochakk', position_s: 26, duration_s: 345, playing: true } }))

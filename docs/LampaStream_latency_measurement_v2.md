@@ -4,6 +4,10 @@
 > [configuration](configuration.md) and [testing](testing.md). Measurements apply
 > only to their original commit/environment; current LXC validation is pending.
 
+> **UPnP plan superseded (30 September 2026).** The current universal LMS Auto
+> strategy uses guarded position queries in manual follow mode. See
+> [Automatic followed-player latency](configuration.md#automatic-followed-player-latency).
+
 # LampaStream — output latency: measuring and compensating
 
 *Replaces v1. v1 proposed comparing LMS's reported position between the virtual

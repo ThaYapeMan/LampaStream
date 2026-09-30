@@ -107,7 +107,7 @@ def configured(tmp_path):
         )
     storage.save_player_latency(
         PlayerLatency(
-            player_mac="speaker-mac", name="Speaker", fixed_delay_ms=1234, speaker_ip="192.0.2.11"
+            player_mac="speaker-mac", name="Speaker", fixed_delay_ms=1234, trim_ms=123
         )
     )
     return storage

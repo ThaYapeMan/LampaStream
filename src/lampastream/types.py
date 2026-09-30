@@ -283,7 +283,7 @@ class LatencyProbe(Protocol):
     Implementations:
         NoLatencyProbe    — returns 0 (local LMS player, no delay needed)
         FixedLatencyProbe — returns a constant (AirPlay, stable negotiated delay)
-        UpnpPositionProbe — polls UPnP continuously (Sonos, step 3)
+        AutoLatencyProbe — samples standard LMS positions for manual follow mode
     """
 
     async def start(self) -> None: ...

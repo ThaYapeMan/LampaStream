@@ -135,6 +135,8 @@ async def ws_preview(websocket: WebSocket):
                 "active_player_type": player_manager.active_player_type,
                 "follow_target_mac": player_manager.follow_target_mac,
                 "follow_target_name": player_manager.follow_target_name,
+                "follow_mode": (player_manager.follow_mode
+                                if isinstance(player_manager.follow_mode, str) else None),
                 "sync_master": player_manager.detected_sync_master,
                 "sync_master_name": player_manager.detected_sync_master_name,
                 "applied_delay_ms": player_manager.applied_delay_ms,

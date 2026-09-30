@@ -26,6 +26,7 @@ from .backup import (
     restore_configuration,
 )
 from .hue_output import get_channel_infos
+from .latency import latency_status
 from .lms_discovery import discover_lms
 from .lms_follower import TransportAction
 from .lms_status import list_lms_players
@@ -113,18 +114,18 @@ class PlayerLatencyCreateBody(BaseModel):
 
     player_mac: str
     name: str | None = None
-    strategy: str = "fixed"
-    fixed_delay_ms: int = 2000
-    speaker_ip: str | None = None
+    strategy: Literal["none", "fixed", "auto"] = "fixed"
+    fixed_delay_ms: int = Field(default=2000, ge=0)
+    trim_ms: int = Field(default=0, ge=-1000, le=1000)
 
 
 class PlayerLatencyPatchBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     name: str | None = None
-    strategy: str | None = None
-    fixed_delay_ms: int | None = None
-    speaker_ip: str | None = None
+    strategy: Literal["none", "fixed", "auto"] | None = None
+    fixed_delay_ms: int | None = Field(default=None, ge=0)
+    trim_ms: int | None = Field(default=None, ge=-1000, le=1000)
 
 
 class ControllerCreateBody(BaseModel):
@@ -513,7 +514,14 @@ def _manager(request: Request) -> PlayerManager:
 @router.get("/player-latencies")
 async def list_player_latencies(request: Request):
     storage = _storage(request)
-    return [pl.to_dict() for pl in storage.list_player_latencies()]
+    result = []
+    for pl in storage.list_player_latencies():
+        status = _manager(request).latency_status(pl)
+        # Test/third-party manager adapters may not supply this optional accessor.
+        if not isinstance(status, dict):
+            status = latency_status(pl)
+        result.append(dict(pl.to_dict(), status=status))
+    return result
 
 
 @router.post("/player-latencies", status_code=201)
@@ -526,7 +534,7 @@ async def create_player_latency(request: Request, body: PlayerLatencyCreateBody)
         name=body.name,
         strategy=body.strategy,
         fixed_delay_ms=body.fixed_delay_ms,
-        speaker_ip=body.speaker_ip,
+        trim_ms=body.trim_ms,
     )
     storage.save_player_latency(pl)
     await manager.refresh_probe()
@@ -544,6 +552,8 @@ async def patch_player_latency(player_mac: str, request: Request, body: PlayerLa
 
     updates = body.model_dump(exclude_unset=True)
     for field, value in updates.items():
+        if field in {"strategy", "fixed_delay_ms", "trim_ms"} and value is None:
+            raise HTTPException(status_code=422, detail=f"{field} cannot be null")
         setattr(pl, field, value)
 
     storage.save_player_latency(pl)
@@ -618,6 +628,7 @@ async def get_status(request: Request):
         "active_coupling_name": manager.active_coupling_name,
         "active_player_type": manager.active_player_type,
         "analysis_stopping": manager.analysis_stopping,
+        "follow_mode": manager.follow_mode if isinstance(manager.follow_mode, str) else None,
         "sync_master": manager.detected_sync_master,
         "sync_master_name": manager.detected_sync_master_name,
         "applied_delay_ms": manager.applied_delay_ms,

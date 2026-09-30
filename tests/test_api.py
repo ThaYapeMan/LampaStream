@@ -1787,3 +1787,21 @@ def test_off_energy_source_persists_and_reaches_runtime(client):
     assert client.patch(endpoint, json={'energy_source': 'off'}).status_code == 200
     assert client.get(endpoint).json()['energy_source'] == 'off'
     assert client._manager.update_render.call_args.args[0].energy_source == 'off'
+
+
+def test_auto_latency_config_status_trim_and_readonly_fields(client):
+    mac = '02:00:00:00:00:aa'
+    response = client.post('/api/player-latencies', json={
+        'player_mac': mac, 'strategy': 'auto', 'trim_ms': -125,
+        'fixed_delay_ms': 678})
+    assert response.status_code == 201
+    assert response.json()['trim_ms'] == -125
+    entry = client.get('/api/player-latencies').json()[0]
+    assert entry['status']['state'] == 'idle'
+    assert entry['status']['sample_count'] == 0
+    assert entry['measured_delay_ms'] is None
+    for payload in ({'trim_ms': 1001}, {'trim_ms': -1001}, {'strategy': 'upnp'},
+                    {'measured_delay_ms': 10}, {'speaker_ip': '192.0.2.1'}):
+        assert client.patch(f'/api/player-latencies/{mac}', json=payload).status_code == 422
+    assert client.patch(f'/api/player-latencies/{mac}', json={'trim_ms': 250}).status_code == 200
+    assert client.get('/api/player-latencies').json()[0]['trim_ms'] == 250

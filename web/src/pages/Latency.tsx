@@ -37,6 +37,7 @@ import {
 interface Props {
   syncMaster: string | null
   syncMasterName: string | null
+  followMode?: "manual" | "sync_group" | null
 }
 
 interface EntryForm {
@@ -44,6 +45,7 @@ interface EntryForm {
   name: string
   strategy: string
   fixed_delay_ms: number
+  trim_ms: number
 }
 
 function defaultForm(prefill?: Partial<EntryForm>): EntryForm {
@@ -52,6 +54,7 @@ function defaultForm(prefill?: Partial<EntryForm>): EntryForm {
     name: prefill?.name ?? '',
     strategy: prefill?.strategy ?? 'fixed',
     fixed_delay_ms: prefill?.fixed_delay_ms ?? 0,
+    trim_ms: prefill?.trim_ms ?? 0,
   }
 }
 
@@ -91,6 +94,7 @@ function EditorDialog({ open, entry, onClose, onSave, prefill }: EditorDialogPro
           name: form.name || undefined,
           strategy: form.strategy,
           fixed_delay_ms: form.fixed_delay_ms,
+          trim_ms: form.trim_ms,
         })
       } else {
         await createPlayerLatency({
@@ -98,6 +102,7 @@ function EditorDialog({ open, entry, onClose, onSave, prefill }: EditorDialogPro
           name: form.name || undefined,
           strategy: form.strategy,
           fixed_delay_ms: form.fixed_delay_ms,
+          trim_ms: form.trim_ms,
         })
       }
       onSave()
@@ -140,12 +145,13 @@ function EditorDialog({ open, entry, onClose, onSave, prefill }: EditorDialogPro
               <SelectContent>
                 <SelectItem value="fixed">Fixed</SelectItem>
                 <SelectItem value="none">None</SelectItem>
+                <SelectItem value="auto">Auto</SelectItem>
               </SelectContent>
             </Select>
           </div>
-          {form.strategy === 'fixed' && (
+          {(form.strategy === 'fixed' || form.strategy === 'auto') && (
             <SliderField
-              label="Fixed delay"
+              label={form.strategy === 'auto' ? 'Fixed delay (sync-group fallback)' : 'Fixed delay'}
               value={form.fixed_delay_ms}
               min={0}
               max={3000}
@@ -153,6 +159,11 @@ function EditorDialog({ open, entry, onClose, onSave, prefill }: EditorDialogPro
               format={(v) => `${v} ms`}
               onChange={(v) => set('fixed_delay_ms', v)}
             />
+          )}
+          {form.strategy === 'auto' && (
+            <SliderField label="Manual trim" value={form.trim_ms}
+              min={-1000} max={1000} step={10} format={(v) => `${v} ms`}
+              onChange={(v) => set('trim_ms', v)} />
           )}
         </div>
         {error && <p className="text-destructive text-sm mt-2">{error}</p>}
@@ -165,7 +176,7 @@ function EditorDialog({ open, entry, onClose, onSave, prefill }: EditorDialogPro
   )
 }
 
-export function Latency({ syncMaster, syncMasterName }: Props) {
+export function Latency({ syncMaster, syncMasterName, followMode }: Props) {
   const [latencies, setLatencies] = useState<PlayerLatency[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -187,6 +198,8 @@ export function Latency({ syncMaster, syncMasterName }: Props) {
 
   useEffect(() => {
     load()
+    const timer = window.setInterval(load, 2000)
+    return () => window.clearInterval(timer)
   }, [])
 
   async function handleDelete(mac: string) {
@@ -225,7 +238,7 @@ export function Latency({ syncMaster, syncMasterName }: Props) {
       {syncMaster && (
         <div className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-sm">
           <span>
-            Sync master detected:{' '}
+            {followMode === 'manual' ? 'Followed player:' : 'Sync master detected:'}{' '}
             <span className="font-medium">{syncMasterName ?? syncMaster}</span>{' '}
             <code className="text-xs font-mono text-muted-foreground">({syncMaster})</code>
           </span>
@@ -265,7 +278,16 @@ export function Latency({ syncMaster, syncMasterName }: Props) {
                 <TableCell className="font-mono text-xs text-muted-foreground">{l.player_mac}</TableCell>
                 <TableCell className="text-sm">{l.strategy}</TableCell>
                 <TableCell className="text-sm">
-                  {l.strategy === 'fixed' ? `${l.fixed_delay_ms} ms` : '—'}
+                  {l.strategy === 'fixed' ? `${l.fixed_delay_ms} ms` : l.strategy === 'auto' ? (
+                    <div className="space-y-1" aria-label="Auto latency status">
+                      <p>{l.status?.state ?? 'idle'} · {l.status?.applied_delay_ms ?? Math.max(0, (l.measured_delay_ms ?? 0) + l.trim_ms)} ms</p>
+                      <p>Strategy in effect: {l.status?.strategy ?? 'auto'}</p>
+                      <p>Residual: {l.status?.median_residual_ms ?? '—'} ms · Player Delay: {l.status?.player_delay_ms ?? '—'} ms</p>
+                      <p>Trim: {l.trim_ms} ms · Samples: {l.status?.sample_count ?? 0} · Precision: ±{l.status?.precision_ms ?? '—'} ms</p>
+                      <p>Last sample: {l.status?.last_sample_time ? new Date(l.status.last_sample_time * 1000).toLocaleTimeString() : '—'}</p>
+                      {l.status?.reason && <p>{l.status.reason}</p>}
+                    </div>
+                  ) : '—'}
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex items-center justify-end gap-1">
