@@ -42,7 +42,7 @@ app.include_router(api_router)
 @app.on_event("startup")
 async def on_startup() -> None:
     # A previously "active" coupling from before a restart has no real
-    # squeezelite process behind it anymore — clear the stale state
+    # LMS player process behind it anymore — clear the stale state
     # rather than pretending it's still running.
     app.state.configuration_mutation_lock = asyncio.Lock()
     lease = configuration_lease(app.state.storage.path)

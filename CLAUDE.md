@@ -37,10 +37,10 @@ Do not implement `docs/future/` proposals unless asked.
 
 ## Operational constraints
 
-LMS playback uses a paced audio device. `snd-dummy` is provisioned on the host and
-passed into the LXC; an unpaced ALSA null device can decode faster than realtime.
-External FIFO readers must start before their CAVA writer. Canonical LMS requires
-SHM v1 and the pinned producer build; do not fall back to legacy mono/v0 semantics.
+LMS playback uses yeney-player from the pinned yeney-core submodule. It paces PCM
+internally; snd-dummy and /dev/snd passthrough are no longer required. External FIFO
+readers must start before their CAVA writer. Canonical LMS requires SHM v1 and the
+pinned producer build; do not fall back to legacy mono/v0 semantics.
 
 See [deployment-lxc.md](docs/deployment-lxc.md) before deployment. The dev environment
 may have Python/toolchains; inspect it rather than assuming it lacks them.

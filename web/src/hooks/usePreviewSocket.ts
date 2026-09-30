@@ -22,7 +22,7 @@ export interface SocketStatus {
   sync_master_name: string | null
   applied_delay_ms: number
   latency_warning: string | null
-  processes: { squeezelite: boolean }
+  processes: { lms_player: boolean }
   bridge_connected: boolean
   effect_type: string | null
   follower_warning: string | null

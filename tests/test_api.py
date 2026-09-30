@@ -40,7 +40,7 @@ def _make_mock_manager() -> MagicMock:
     manager.latency_warning = None
     type(manager).applied_delay_ms = PropertyMock(return_value=0)
     type(manager).bridge_connected = PropertyMock(return_value=False)
-    type(manager).process_status = PropertyMock(return_value={"squeezelite": False})
+    type(manager).process_status = PropertyMock(return_value={"lms_player": False})
     # WebSocket frame properties
     type(manager).last_colours = PropertyMock(return_value=[])
     type(manager).last_bars = PropertyMock(return_value=[])
@@ -147,7 +147,7 @@ def test_get_status_returns_correct_shape(client: TestClient):
     assert "applied_delay_ms" in body
     assert "latency_warning" in body
     assert "processes" in body
-    assert "squeezelite" in body["processes"]
+    assert "lms_player" in body["processes"]
     assert "cava" not in body["processes"]
     assert "bridge_connected" in body
 

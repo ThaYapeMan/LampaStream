@@ -457,7 +457,7 @@ def _write_stereo_shm_v1(
 ) -> Path:
     """Materialise a fully-formed v1 SHM segment on disk.
 
-    Layout mirrors what the fork squeezelite producer would write:
+    Layout mirrors what the yeney-core SHM v1 producer writes:
       * legacy vis_t header at offset 0 (56 bytes lock + 24 bytes fields)
       * v1 extension header at offset 32848 (40 bytes)
       * PCM ring buffer at offset 80 (VIS_BUF_SIZE * sizeof(int16_t) bytes)
@@ -636,7 +636,7 @@ def test_v1_segment_preserves_legacy_mmap_prefix(tmp_path: Path) -> None:
 
 
 def test_old_pre_buffer_v1_layout_rejected(tmp_path: Path) -> None:
-    """Historical local patch layout must not be accepted as the fork layout."""
+    """Historical local patch layout must not be accepted as the current producer layout."""
     path = _write_stereo_shm_v1(tmp_path)
     data = path.read_bytes()
     path.write_bytes(data[:80] + data[32848:] + data[80:32848])

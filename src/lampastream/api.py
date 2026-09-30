@@ -375,7 +375,7 @@ class CouplingPatchBody(BaseModel):
 # Priority: deactivate > spectrum > pcm > render.
 
 _C_DEACTIVATE_FIELDS: frozenset[str] = frozenset({
-    # Changing these requires a full squeezelite + analysis + DTLS restart because
+    # Changing these requires a full LMS player + analysis + DTLS restart because
     # a new process (player_id) or a new Zone cannot be hot-swapped into a
     # running session.
     "player_id", "zone_id",

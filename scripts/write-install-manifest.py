@@ -4,12 +4,18 @@ import json
 import sys
 from pathlib import Path
 
-commit, short, release = sys.argv[1:]
-binary = Path('/usr/local/bin/squeezelite')
-manifest = {
-    'commit': commit, 'short_commit': short,
-    'squeezelite_revision': '0e1667ead996834e355fc51f6a8eb2ea7e55f44b',
-    'squeezelite_sha256': hashlib.sha256(binary.read_bytes()).hexdigest(),
-    'producer_objects': ['output_vis.o', 'output_vis_v1.o'],
-}
-Path(release, 'installation.json').write_text(json.dumps(manifest, indent=2) + '\n')
+
+def write_manifest(commit: str, short: str, release: Path, revision: str,
+                   binary: Path = Path('/usr/local/bin/yeney-player')) -> None:
+    assert revision == '0c4b3699355b9cefd7f05b8591fe5210952c1409'
+    manifest = {
+        'commit': commit, 'short_commit': short,
+        'yeney_core_revision': revision,
+        'yeney_player_sha256': hashlib.sha256(binary.read_bytes()).hexdigest(),
+    }
+    (release / 'installation.json').write_text(json.dumps(manifest, indent=2) + '\n')
+
+
+if __name__ == '__main__':
+    commit, short, release, revision = sys.argv[1:]
+    write_manifest(commit, short, Path(release), revision)

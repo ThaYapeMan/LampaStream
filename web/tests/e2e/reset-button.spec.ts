@@ -39,7 +39,7 @@ const STATUS_BASE = {
   sync_master_name: null,
   applied_delay_ms: 0,
   latency_warning: null,
-  processes: { squeezelite: true },
+  processes: { lms_player: true },
   bridge_connected: false,
   effect_type: 'spectrum_rgb',
 }

@@ -3,7 +3,7 @@
 // list must match backend validation for the shared PCM beat detector.
 // Virtual-player source types.  Keep in sync with VIRTUAL_PLAYER_TYPES in models.py.
 export const PLAYER_TYPES = [
-  { value: 'LMS',     label: 'LMS (squeezelite)' },
+  { value: 'LMS',     label: 'LMS (yeney-player)' },
   { value: 'AirPlay', label: 'AirPlay (shairport-sync)' },
 ] as const
 
@@ -98,7 +98,7 @@ export interface ApiStatus {
   sync_master_name: string | null
   applied_delay_ms: number
   latency_warning: string | null
-  processes: { squeezelite: boolean }
+  processes: { lms_player: boolean }
   bridge_connected: boolean
   airplay_receiving: boolean | null
 }

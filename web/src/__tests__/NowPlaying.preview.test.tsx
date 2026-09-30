@@ -16,7 +16,7 @@ const status = {
   active_coupling_id: 'c', active_zone_id: 'z', active_energy_profile_id: 'e',
   active_player_type: null,
   sync_master_name: 'Living room', sync_master: 'aa:bb:cc:dd:ee:ff', applied_delay_ms: 1100,
-  processes: { squeezelite: true }, bridge_connected: true,
+  processes: { lms_player: true }, bridge_connected: true,
   effect_type: 'spectrum_rgb', onset_method: 'combined',
 } as SocketStatus
 const props = { colour: { r: 1, g: 0, b: 0 }, channel_colours: [], onset: false, bars: [] }
@@ -60,7 +60,7 @@ it('resolves the five technical status rows in order, preserving the preview lay
 it('shows muted placeholders while the analyser is unavailable', async () => {
   vi.mocked(getAnalysers).mockReturnValue(new Promise(() => {}))
   render(<NowPlaying {...props} status={status} />)
-  await screen.findByText('squeezelite')
+  await screen.findByText('LMS player')
   const names = screen.getByLabelText('Session status').querySelectorAll('dd')
   for (const index of [0, 1]) {
     expect(names[index]).toHaveTextContent('—')
@@ -68,12 +68,12 @@ it('shows muted placeholders while the analyser is unavailable', async () => {
   }
 })
 
-it('shows squeezelite only for LMS and never an external CAVA process', async () => {
+it('shows LMS player only for LMS and never an external CAVA process', async () => {
   const view = render(<NowPlaying {...props} status={status} />)
-  await screen.findByText('squeezelite') // resolves player type from the entity list
+  await screen.findByText('LMS player') // resolves player type from the entity list
   expect(screen.queryByText('cava', { exact: true })).not.toBeInTheDocument()
   view.rerender(<NowPlaying {...props} status={{ ...status, active_player_type: 'AirPlay' }} />)
-  expect(screen.queryByText('squeezelite')).not.toBeInTheDocument()
+  expect(screen.queryByText('LMS player')).not.toBeInTheDocument()
   expect(screen.queryByText('cava', { exact: true })).not.toBeInTheDocument()
   expect(screen.getByText('AirPlay', { exact: true })).toBeInTheDocument()
 })
@@ -82,7 +82,7 @@ it('resolves an AirPlay player from configuration when the websocket omits its t
   vi.mocked(getVirtualPlayers).mockResolvedValue([{ id: 'p', type: 'AirPlay' }] as never)
   render(<NowPlaying {...props} status={status} />)
   await screen.findByText('AirPlay', { exact: true })
-  expect(screen.queryByText('squeezelite')).not.toBeInTheDocument()
+  expect(screen.queryByText('LMS player')).not.toBeInTheDocument()
   expect(screen.queryByText('cava', { exact: true })).not.toBeInTheDocument()
 })
 

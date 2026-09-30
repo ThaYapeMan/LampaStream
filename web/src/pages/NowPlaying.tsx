@@ -109,7 +109,7 @@ function SessionDiagnostics({ status, playerType }: {
             </Badge>
           </StatusRow>
           {playerType === 'LMS' && <>
-            <StatusRow label="squeezelite"><ProcessBadge running={status.processes.squeezelite} /></StatusRow>
+            <StatusRow label="LMS player"><ProcessBadge running={status.processes.lms_player} /></StatusRow>
           </>}
           {playerType === 'AirPlay' && (
             <StatusRow label="AirPlay">
@@ -221,7 +221,7 @@ function CouplingSelector({
         </div>
 
         <p className="text-xs text-muted-foreground italic leading-snug">
-          Switching couplings restarts the full session (squeezelite, analysis,
+          Switching couplings restarts the full session (LMS player, analysis,
           DTLS) and resets the BandNormaliser EMA. For a live A/B comparison,
           swap the active coupling's Analyser or Energy Profile instead —
           those update without a session restart.

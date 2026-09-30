@@ -24,7 +24,7 @@ test('player bar geometry and tap/hold controls at 1400px', async ({ page }, tes
     active_coupling_id: 'c', active_player_type: 'LMS', active_zone_id: 'z',
     effect_type: 'spectrum_rgb',
     follow_target_mac: 'aa:bb:cc:dd:ee:ff', follow_target_name: 'Room',
-    processes: { squeezelite: true }, applied_delay_ms: 1100,
+    processes: { lms_player: true }, applied_delay_ms: 1100,
     sync_master: 'aa:bb:cc:dd:ee:ff', sync_master_name: 'Room',
     track: { title: 'Jealous (Extended Mix)', artist: 'Mochakk', position_s: 26, duration_s: 345, playing },
     ...extra,

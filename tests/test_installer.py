@@ -495,83 +495,15 @@ def test_setup_airplay_version_uses_absolute_path() -> None:
             )
 
 
-def test_squeezelite_fork_contains_v1_producer() -> None:
-    """The pinned fork must include the producer and preserve the stock PCM prefix."""
-    import shutil
-    import subprocess
-    import tempfile
-
-    if shutil.which("git") is None:
-        import pytest
-        pytest.skip("git not available")
-
-    # Extract the pinned commit hash from the build script so the two stay
-    # in sync — the checkout follows the build defaults.
-    build_script = (ROOT / "scripts" / "build-squeezelite.sh").read_text()
-    commit_line = next(
-        (
-            line for line in build_script.splitlines()
-            if line.strip().startswith("SQUEEZELITE_COMMIT=")
-        ),
-        None,
-    )
-    assert commit_line is not None, "build-squeezelite.sh must define SQUEEZELITE_COMMIT"
-    # Format: SQUEEZELITE_COMMIT="${SQUEEZELITE_COMMIT:-<hash>}"
-    import re
-    m = re.search(r":-([0-9a-f]{40})", commit_line)
-    assert m is not None, f"Cannot parse pinned commit hash from {commit_line!r}"
-    pinned = m.group(1)
-    repo_match = re.search(r'SQUEEZELITE_REPO="\$\{SQUEEZELITE_REPO:-([^}]+)', build_script)
-    assert repo_match is not None
-    repo = repo_match.group(1)
-    assert repo == "https://github.com/ThaYapeMan/squeezelite.git"
-
-    with tempfile.TemporaryDirectory() as td:
-        clone_dir = Path(td) / "squeezelite"
-        clone = subprocess.run(
-            [
-                "git", "clone", "--quiet", "--depth", "200",
-                repo,
-                str(clone_dir),
-            ],
-            capture_output=True,
-        )
-        if clone.returncode != 0:
-            import pytest
-            pytest.skip(
-                f"cannot reach fork repository: {clone.stderr.decode(errors='replace')}"
-            )
-        checkout = subprocess.run(
-            ["git", "-C", str(clone_dir), "checkout", "--quiet", pinned],
-            capture_output=True,
-        )
-        if checkout.returncode != 0:
-            # Deepen and retry once.
-            subprocess.run(
-                ["git", "-C", str(clone_dir), "fetch", "--quiet", "--unshallow"],
-                capture_output=True,
-            )
-            checkout = subprocess.run(
-                ["git", "-C", str(clone_dir), "checkout", "--quiet", pinned],
-                capture_output=True,
-            )
-        assert checkout.returncode == 0, (
-            f"cannot check out pinned revision {pinned}: "
-            f"{checkout.stderr.decode(errors='replace')}"
-        )
-
-        assert subprocess.check_output(
-            ["git", "-C", str(clone_dir), "rev-parse", "HEAD"], text=True,
-        ).strip() == pinned
-        producer = (clone_dir / "output_vis.c").read_text()
-        header = (clone_dir / "vis_shm_v1.h").read_text()
-        helpers = (clone_dir / "output_vis_v1.c").read_text()
-        assert "VIS_SHM_V1_MAGIC" in header
-        assert "vis_shm_v1_begin_write" in producer
-        assert "vis_shm_v1_begin_write" in helpers
-        layout = producer.split("static struct vis_t {", 1)[1].split("}", 1)[0]
-        assert layout.index("buffer[VIS_BUF_SIZE]") < layout.index("lampastream_v1_ext")
-        assert "output_vis_v1.c" in (clone_dir / "Makefile").read_text()
+def test_yeney_core_pin_and_distribution_notices() -> None:
+    core = ROOT / 'third_party/yeney-core'
+    revision = subprocess.check_output(['git', '-C', str(core), 'rev-parse', 'HEAD'],
+                                       text=True).strip()
+    assert revision == '0c4b3699355b9cefd7f05b8591fe5210952c1409'
+    assert 'ThaYapeMan/yeney-core.git' in (ROOT / '.gitmodules').read_text()
+    for name in ('LICENSE', 'THIRD_PARTY_NOTICES.md'):
+        assert (ROOT / 'distribution/yeney-core' / name).read_bytes() == (core / name).read_bytes()
+    assert not (ROOT / 'scripts/build-squeezelite.sh').exists()
 
 
 def test_validate_script_fd_zero_is_allowed() -> None:

@@ -6,7 +6,7 @@ fail explicitly. This is the supported code path; clean-target execution still
 requires real LXC validation. Do not confuse local tests with a completed deployment.
 
 ```sh
-git clone https://github.com/ThaYapeMan/LampaStream.git
+git clone --recurse-submodules https://github.com/ThaYapeMan/LampaStream.git
 cd LampaStream
 sudo ./scripts/install-lampastream.sh
 ```
@@ -23,9 +23,9 @@ neither requires manual JSON edits.
 |---|---|---|
 | LampaStream | Python venv, build/Hatchling, compiler | Fresh wheel-installed venv; dependencies from pyproject.toml |
 | CAVA Core | GCC, libfftw3-dev | Packaged native library plus FFTW runtime pulled by apt |
-| Squeezelite | GCC/make/patch, ALSA and codec headers | Pinned patched binary at /usr/local/bin/squeezelite; VISEXPORT mandatory |
-| Squeezelite default codecs | FLAC, Vorbis/Ogg, MAD, MPG123, FAAD development packages | Matching shared libraries: PCM/FLAC/Vorbis/MP3/AAC; no optional Opus/FFmpeg/ALAC/resampler flags |
-| External stock consumers | Debian CAVA + same pinned Squeezelite source | Retained for independent consumers; not used by LampaStream analysis |
+| yeney-player | g++, make, libflac-dev | Pinned yeney-core submodule; /usr/local/bin/yeney-player with SHM v1 |
+| LMS native codecs | libFLAC plus bundled minimp3 and Apple ALAC | ALAC/FLAC/MP3/PCM/AIFF; LMS converts other formats |
+| External stock consumers | Debian CAVA + same pinned yeney-player producer | Retained for independent consumers; not used by LampaStream analysis |
 | AirPlay 2 | Autotools, FFmpeg, crypto/plist/Avahi/soxr/systemd development packages | Pinned shairport-sync + nqptp source builds, Avahi, capabilities, managed FIFO |
 | Frontend | Private Node 22.22.2 archive, pinned SHA256; npm ci | Compiled assets in wheel; Node is not a runtime requirement |
 | Services | systemd, polkit | lampastream user/audio group, repository unit, narrow receiver-restart authorization |
@@ -43,7 +43,7 @@ Python dependency set); each fresh release resolves them again.
 1. Verify OS/architecture, systemd and clean tracked Git state; lock installation.
 2. Provision packages/account; archive the selected Git commit into a temporary tree.
 3. Build frontend and native wheel there; install into a fresh release venv.
-4. Build/link pinned Squeezelite; stop existing LampaStream/audio services before replacing
+4. Build/link pinned yeney-player; stop existing LampaStream/audio services before replacing
    binaries. Build pinned AirPlay sources without starting the receiver.
 5. Run explicit persisted-data migration from the candidate environment. Back up exact
    original bytes, validate schema/references, then atomically replace the JSON file.
@@ -104,23 +104,33 @@ that revision explicitly. A source-tree import without generated metadata report
 
 ## Target boundaries
 
-The LXC host must provide paced ALSA devices (normally snd-dummy) for LMS. The installer
-adds audio-group membership, but cannot create host devices or change host mappings.
-Do not substitute an unpaced null sink. AirPlay uses the managed global shairport-sync
-instance; network multicast and timing ports must be available. The installer does not
-change unrelated firewall, host-kernel or container configuration.
+yeney-player paces LMS PCM internally. snd-dummy and `/dev/snd` passthrough are
+no longer required. Existing mappings are harmless; optional host removal steps
+are in [deployment-lxc.md](deployment-lxc.md). AirPlay uses the managed global
+shairport-sync instance; multicast and timing ports must be available. The installer
+does not change unrelated firewall, host-kernel or container configuration.
 
 Native memory stress, live producer continuity, realtime performance and visual A/B
 remain **REQUIRES LXC VALIDATION**. See [deployment checklist](deployment-lxc.md).
 
 ### One producer for both consumers
 
-Canonical LMS and external CAVA both use `/usr/local/bin/squeezelite`, built from
-`ThaYapeMan/squeezelite` at `0e1667ead996834e355fc51f6a8eb2ea7e55f44b` with
-VISEXPORT. PCM remains at byte 80; the v1 extension follows the ring at byte 32848.
-External CAVA maps the stock prefix, while canonical analysis requires the trailing
-v1 extension. The installer builds once and verifies one binary hash against the
-installation manifest. A missing binary is an explicit error.
+Canonical LMS and external CAVA both use `/usr/local/bin/yeney-player`, built from
+`ThaYapeMan/yeney-core` at `0c4b3699355b9cefd7f05b8591fe5210952c1409`.
+Initialize the recursive submodule before installation. The installer archives the
+verified core and ALAC pins separately because Git archives omit submodules.
+PCM remains at byte 80; the v1 extension follows the ring at byte 32848, including
+the legacy lock region. External CAVA maps the stock prefix; canonical analysis
+requires the trailing v1 extension. The installer checks linkage and the `-v` option in `--help`,
+compares installed bytes and records `yeney_core_revision` and `yeney_player_sha256`.
+The compatibility `alsa_device` field is unused: explicit values are accepted and
+ignored by yeney-player. Native decoders cover ALAC, FLAC, MP3 and PCM/AIFF; LMS
+converts other formats. Analysis PCM remains full-scale regardless of LMS volume.
+
+An upgrade removes `/usr/local/bin/squeezelite` only when its SHA256 matches the
+previous installation manifest. Symlinks, packaged and foreign binaries are retained.
+The yeney-core LICENSE and THIRD_PARTY_NOTICES.md ship in the wheel and under
+`/usr/local/share/doc/lampastream/yeney-core/` on an installed target.
 
 For static/unit checks on development hosts, use [testing.md](testing.md).
 `bash scripts/validate.sh` provides supplementary target diagnostics and a synthetic
@@ -140,7 +150,7 @@ Before replacing audio binaries, the installer inspects native systemd and
 SysV-generated services for non-LampaStream Squeezelite executables. It logs each
 conflicting unit, disables it, explicitly stops it, and checks for remaining
 processes. An ineffective stop aborts installation rather than starting a
-competing ALSA consumer. LampaStream's `/usr/local/bin/squeezelite` and
+competing LMS player. The previous LampaStream paths `/usr/local/bin/squeezelite` and
 the former `/usr/local/bin/lampastream-squeezelite-fifo` path are excluded;
 the latter is recognized only for upgrades from older installations.
 

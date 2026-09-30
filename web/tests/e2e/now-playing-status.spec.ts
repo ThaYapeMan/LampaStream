@@ -20,7 +20,7 @@ test('technical session status at 1400px', async ({ page }, testInfo) => {
     ws.send(JSON.stringify({ type: 'status', active_coupling_id: 'c', active_zone_id: 'z',
       active_player_type: 'LMS', effect_type: 'spectrum_rgb',
       sync_master_name: 'Living room', sync_master: 'aa:bb:cc:dd:ee:ff', applied_delay_ms: 1100,
-      processes: { squeezelite: true }, bridge_connected: true }))
+      processes: { lms_player: true }, bridge_connected: true }))
     ws.send(JSON.stringify({ type: 'frame', colour: { r: 32000, g: 9000, b: 22000 },
       channel_colours: [{ r: 32000, g: 9000, b: 22000 }, { r: 5000, g: 18000, b: 32000 }],
       onset: false, mix: .4, loudness_momentary_lufs: -18.4 }))

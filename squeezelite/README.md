@@ -1,45 +1,14 @@
-# Squeezelite producer build and SHM v1
+# SHM v1 ABI
 
-Current producer/source contract. Canonical LMS PCM requires exact SHM v1;
-legacy external CAVA/FIFO is separate. Native live deployment **REQUIRES LXC VALIDATION**.
+This ABI is now implemented by yeney-core's yeney-player, pinned at
+`0c4b3699355b9cefd7f05b8591fe5210952c1409` in `third_party/yeney-core`.
+The `/dev/shm/squeezelite-<mac>` name and legacy lock region remain ABI contracts.
+Canonical PCM and external CAVA use the same internally paced producer; no ALSA
+output device is required. The local C sources and patch are historical provenance
+retained for the earlier seqlock audit tests; they are not built or deployed.
 
-## Automatic build
-
-Pinned shared fork: `ThaYapeMan/squeezelite` at
-`0e1667ead996834e355fc51f6a8eb2ea7e55f44b`.
-
-For a standard installation, from the repository:
-
-```sh
-sudo ./scripts/install-lampastream.sh
-```
-
-The repository installer is the authoritative standard deployment path. It provisions
-all build/runtime dependencies and invokes `scripts/build-squeezelite.sh` automatically.
-The helper remains available for isolated developer builds with dependencies already
-present; it is not a second standard deployment procedure.
-
-The helper clones and verifies the pin, forces VISEXPORT, checks both producer
-objects in the make plan, compiles them and performs the full link. The fork already
-contains the producer; no local sources are copied and no patch is applied.
-The installer copies the result to `/usr/local/bin/squeezelite`, compares bytes and
-records SHA256 provenance. Both external CAVA and canonical PCM use this binary:
-the fork preserves stock offsets and appends the v1 extension after the PCM ring.
-The service PATH selects this binary ahead of any packaged Squeezelite.
-
-The local `vis_shm_v1.h`, `output_vis_v1.c` and `output_vis_v1.patch` are retained,
-unchanged, as historical provenance and for seqlock audit tests. Their earlier layout
-is not the current fork's layout described below.
-
-The standard build enables the default PCM/FLAC/Vorbis/MP3/AAC codecs and VISEXPORT;
-optional Opus/FFmpeg/ALAC/resampler flags are not enabled. AirPlay dependencies and
-CAVA Core's FFTW dependency are provisioned separately by the same top-level installer.
-See [installation](../docs/installation.md) for stages and verification boundaries.
-
-The standard installer stops the previous service before installing binaries;
-newly activated players use the matching executable. For manual developer builds,
-restart the actual running process and verify its executable path. A successful build plan is not an object compile; compiled producer objects
-are not a full link, deployment or live continuity test.
+The repository installer builds yeney-player and records its SHA256 and core revision.
+See [installation](../docs/installation.md) and [testing](../docs/testing.md).
 
 ## ABI layout
 

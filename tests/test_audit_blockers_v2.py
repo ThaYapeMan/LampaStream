@@ -4,8 +4,8 @@ Every test in this file is designed to FAIL on commit
 ``7dc457b9169aa0c5fd08dda1283dc7d208d4fa54`` and PASS after the fixes in
 this branch.  The blockers covered:
 
-  1. Default squeezelite build must enable ``-DVISEXPORT`` and link the
-     v0 + v1 producer objects.
+  1. The current installer must build and check the pinned yeney-player producer.
+     Local producer patch audits below retain historical seqlock regression coverage.
   2. SHM replacement remap must recover through absent/incomplete
      replacements without ever falling back to v0 under require_v1.
   3. Replace-analyser timeout must close the candidate exactly once and
@@ -46,39 +46,20 @@ from lampastream.spectrum_engine import (
 # ---------------------------------------------------------------------------
 
 
-_BUILD_SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "build-squeezelite.sh"
+_INSTALL_SCRIPT = Path(__file__).resolve().parents[1] / "scripts/install-lampastream.sh"
 
 
-def test_build_script_enables_visexport_by_default():
-    """The default build must always compile with ``-DVISEXPORT``.
-
-    Would FAIL on 7dc457b: that script called ``make -j$(nproc)
-    ${OPTS:+"OPTS=$OPTS"}`` — nothing added ``-DVISEXPORT`` unless the
-    caller opted in via OPTS.
-    """
-    body = _BUILD_SCRIPT.read_text()
-    assert "-DVISEXPORT" in body, (
-        "build-squeezelite.sh must inject -DVISEXPORT into OPTS by default"
-    )
-    # Ensure the injection actually happens on the make command line, not
-    # just in a comment somewhere.
-    assert re.search(r"OPTS=.*-DVISEXPORT|-DVISEXPORT.*OPTS=", body) or re.search(
-        r"EXTRA_OPTS.*-DVISEXPORT", body
-    ), "the -DVISEXPORT flag must reach the make invocation via OPTS"
+def test_installer_builds_pinned_shm_producer():
+    body = _INSTALL_SCRIPT.read_text()
+    assert 'YENEY_CORE_REVISION=0c4b3699355b9cefd7f05b8591fe5210952c1409' in body
+    assert '"$WORK/third_party/yeney-core" -j"$(nproc)" yeney-player' in body
+    assert 'rev-parse HEAD' in body
 
 
-def test_build_script_asserts_producer_objects_present():
-    """The build must FAIL rather than silently install a squeezelite
-    binary that omits the visualiser producer objects."""
-    body = _BUILD_SCRIPT.read_text()
-    assert "output_vis.o" in body, (
-        "build script must inspect the build plan for output_vis.o"
-    )
-    assert "output_vis_v1.o" in body, (
-        "build script must inspect the build plan for output_vis_v1.o"
-    )
-    # The script should error out (exit 1) when either object is missing.
-    assert "exit 1" in body
+def test_installer_checks_producer_shm_option():
+    body = _INSTALL_SCRIPT.read_text()
+    assert "yeney-player --help | grep -- '-v'" in body
+    assert 'ldd "$binary"' in body
 
 
 # ---------------------------------------------------------------------------

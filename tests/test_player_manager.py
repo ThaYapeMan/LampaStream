@@ -1,4 +1,4 @@
-"""Tests for PlayerManager shm lifecycle and squeezelite command assembly.
+"""Tests for PlayerManager SHM lifecycle and yeney-player command assembly.
 
 These tests create real files under /dev/shm to verify that teardown and
 startup cleanup actually remove them — the same path the production code
@@ -7,6 +7,7 @@ uses, so there is no seam between test and production behaviour.
 
 import asyncio
 import json
+import subprocess
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -117,8 +118,8 @@ def test_cleanup_orphaned_shm_removes_unknown_mac(tmp_path: Path) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_squeezelite_server_arg_omits_lms_port(tmp_path: Path) -> None:
-    """_start_squeezelite must NOT pass lms_port to squeezelite's -s flag.
+def test_yeney_player_server_arg_omits_lms_port(tmp_path: Path) -> None:
+    """_start_lms_player must NOT pass lms_port to squeezelite's -s flag.
 
     profile.lms_port stores the LMS web/JSON-RPC port (typically 9000, as
     returned by the Discover button and UDP discovery's json_port field).
@@ -139,10 +140,10 @@ def test_squeezelite_server_arg_omits_lms_port(tmp_path: Path) -> None:
     )
     session = ActiveSession(profile)
 
-    with patch("shutil.which", return_value="/usr/bin/squeezelite"), \
+    with patch("shutil.which", return_value="/usr/local/bin/yeney-player"), \
          patch("subprocess.Popen") as mock_popen:
         mock_popen.return_value = MagicMock()
-        manager._start_squeezelite(session, profile)
+        manager._start_lms_player(session, profile)
 
     cmd: list[str] = mock_popen.call_args[0][0]
 
@@ -158,16 +159,16 @@ def test_squeezelite_server_arg_omits_lms_port(tmp_path: Path) -> None:
     )
 
 
-def test_squeezelite_omits_server_flag_when_host_empty(tmp_path: Path) -> None:
+def test_yeney_player_omits_server_flag_when_host_empty(tmp_path: Path) -> None:
     """When lms_host is empty, -s is omitted so squeezelite uses UDP discovery."""
     manager = _make_manager(tmp_path)
     profile = Profile(player_mac="02:ff:00:de:ad:09", lms_host="")
     session = ActiveSession(profile)
 
-    with patch("shutil.which", return_value="/usr/bin/squeezelite"), \
+    with patch("shutil.which", return_value="/usr/local/bin/yeney-player"), \
          patch("subprocess.Popen") as mock_popen:
         mock_popen.return_value = MagicMock()
-        manager._start_squeezelite(session, profile)
+        manager._start_lms_player(session, profile)
 
     cmd: list[str] = mock_popen.call_args[0][0]
     assert "-s" not in cmd, (
@@ -615,8 +616,8 @@ def _make_airplay_storage(tmp_path: Path) -> tuple[Storage, Coupling]:
     return storage, coupling
 
 
-def test_airplay_activation_skips_squeezelite(tmp_path: Path) -> None:
-    """_activate_airplay must not spawn squeezelite; session.squeezelite stays None."""
+def test_airplay_activation_skips_lms_player(tmp_path: Path) -> None:
+    """_activate_airplay must not spawn squeezelite; session.lms_player stays None."""
     from unittest.mock import AsyncMock, MagicMock, patch
 
     storage, coupling = _make_airplay_storage(tmp_path)
@@ -652,7 +653,7 @@ def test_airplay_activation_skips_squeezelite(tmp_path: Path) -> None:
         asyncio.run(manager.activate_coupling(coupling))
 
     assert manager._active is not None
-    assert manager._active.squeezelite is None, (
+    assert manager._active.lms_player is None, (
         "_activate_airplay must not spawn squeezelite"
     )
     from lampastream.pcm_source import TeePcmSource
@@ -861,7 +862,7 @@ def test_lms_pcm_pipeline_path_when_bars_source_pcm_pipeline_v2(tmp_path: Path) 
         patch(f"{_pm}.get_channel_infos", new=AsyncMock(return_value=[])),
         patch(f"{_pm}.HueDriver") as mock_driver_cls,
         patch.object(manager, "_activate_lms_pcm", new=AsyncMock()) as mock_pcm,
-        patch.object(manager, "_start_squeezelite", new=MagicMock()),
+        patch.object(manager, "_start_lms_player", new=MagicMock()),
         patch.object(manager, "_wait_for_shm", new=MagicMock()),
     ):
         mock_driver = MagicMock()
@@ -876,25 +877,25 @@ def test_lms_pcm_pipeline_path_when_bars_source_pcm_pipeline_v2(tmp_path: Path) 
 
 
 def test_installed_producer_matches_ingress_abi(tmp_path):
-    """Canonical PCM uses the unchanged installed fork producer."""
+    """Canonical PCM uses the pinned yeney-core producer."""
     from lampastream.models import Profile
     from lampastream.player_manager import ActiveSession, PlayerManager
     from lampastream.storage import Storage
 
     manager = PlayerManager(Storage(tmp_path / 'config.json'))
-    cases = [('pcm_pipeline', 'squeezelite')]
+    cases = [('pcm_pipeline', 'yeney-player')]
     for mode, expected in cases:
         profile = Profile(player_mac='aa:bb:cc:dd:ee:ff', bars_source=mode)
         session = ActiveSession(profile)
         with patch('shutil.which', return_value='/usr/local/bin/' + expected) as which, \
                 patch('subprocess.Popen') as popen:
-            manager._start_squeezelite(session, profile)
+            manager._start_lms_player(session, profile)
         which.assert_called_once_with(expected)
         assert popen.call_args.args[0][0] == '/usr/local/bin/' + expected
         with patch('shutil.which', return_value=None):
             import pytest
             with pytest.raises(RuntimeError, match='install-lampastream'):
-                manager._start_squeezelite(session, profile)
+                manager._start_lms_player(session, profile)
 
 
 @pytest.mark.parametrize("bars_source", ["pcm_pipeline"])
@@ -914,7 +915,7 @@ def test_sync_group_activation_never_schedules_manual_unsync(tmp_path, bars_sour
         async def idle(_self):
             await asyncio.Event().wait()
 
-        with patch.object(manager, "_start_squeezelite"), \
+        with patch.object(manager, "_start_lms_player"), \
              patch.object(manager, "_activate_lms_pcm", new=AsyncMock()), \
              patch.object(LmsSyncGroupObserver, "_run", idle), \
              patch.object(manager, "_delayed_unsync_and_follow", new=AsyncMock()) as unsync, \
@@ -1041,3 +1042,23 @@ def test_band_colours_reach_all_runtime_profile_paths(tmp_path: Path) -> None:
         asyncio.run(manager.activate_coupling(coupling))
     check(activate.call_args.args[1], high)
     check(activate.call_args.args[3], low)
+
+
+@pytest.mark.parametrize('device', ['', 'hw:CARD=Dummy,DEV=0'])
+def test_exact_yeney_player_command(tmp_path, device):
+    manager = _make_manager(tmp_path)
+    profile = Profile(player_mac='02:ff:00:de:ad:42', player_name='Fallback',
+                      display_name='Analysis', lms_host='192.0.2.10', lms_port=9000,
+                      alsa_device=device)
+    session = ActiveSession(profile)
+    with patch('shutil.which', return_value='/usr/local/bin/yeney-player') as which, \
+            patch('subprocess.Popen') as popen:
+        manager._start_lms_player(session, profile)
+    expected = ['/usr/local/bin/yeney-player', '-n', 'Analysis',
+                '-m', '02:ff:00:de:ad:42', '-v']
+    if device:
+        expected += ['-o', device]
+    expected += ['-s', '192.0.2.10']
+    which.assert_called_once_with('yeney-player')
+    popen.assert_called_once_with(expected, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    assert session.lms_player is popen.return_value

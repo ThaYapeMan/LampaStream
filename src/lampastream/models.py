@@ -181,10 +181,8 @@ class Profile:
     # Falls back to player_name when empty.
     display_name: str = ""
     player_mac: str = ""  # auto-generated on first save if left empty
-    # ALSA output device for the virtual player. Empty means "use the
-    # default" (snd-dummy, see player_manager.DEFAULT_ALSA_DEVICE). Only
-    # set this if you have a reason to point squeezelite somewhere else.
-    alsa_device: str = ""
+    # Compatibility field: yeney-player accepts -o but ignores the device.
+    alsa_device: str = ""  # unused by the internally paced LMS player
 
     # Hue
     bridge_id: str = ""
@@ -373,7 +371,7 @@ class VirtualPlayer:
     # Falls back to player_name when empty (see player_manager).
     display_name: str = ""
     player_mac: str = ""
-    alsa_device: str = ""
+    alsa_device: str = ""  # unused by the internally paced LMS player
     # MAC address of the LMS player to follow for track-mirroring.
     # When set, LampaStream leaves the LMS sync group (preventing drift
     # correction) and instead mirrors track changes via the listen 1

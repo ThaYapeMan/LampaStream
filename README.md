@@ -17,7 +17,7 @@ features. The frozen canonical pipeline is a subsystem within the broader model.
 
 | Entity | Role |
 |---|---|
-| **VirtualPlayer** | The player/audio-source integration boundary. LMS/Squeezelite and AirPlay are implemented. It holds source identity and connection settings, not Spectrum, Beat or Effects logic. |
+| **VirtualPlayer** | The player/audio-source integration boundary. LMS/yeney-player and AirPlay are implemented. It holds source identity and connection settings, not Spectrum, Beat or Effects logic. |
 | **Controller** | The physical lighting controller and its connection credentials. The current runtime output is Philips Hue Bridge; a Controller is separate from a Zone. |
 | **Zone** | A logical group of lights controlled together, currently mapped to a Hue Entertainment Area on its Controller. Formerly **LightProvider**. |
 | **Analyser** | Reusable analysis configuration: Spectrum engine selection, bands/cutoffs and onset algorithm/settings. It is source-independent. Formerly **AnalysisConfig**. |
@@ -65,7 +65,7 @@ with a backup and conflict checks. See [configuration](docs/configuration.md).
 
 ## Player-independent audio architecture
 
-**LMS/Squeezelite and AirPlay are current integrations. Neither defines LampaStream's
+**LMS/yeney-player and AirPlay are current integrations. Neither defines LampaStream's
 architecture. The player-specific boundary ends at canonical audio ingress.**
 Once audio has been canonicalised, downstream analysis and Effects do not need to
 know which player supplied it.
@@ -76,7 +76,7 @@ know which player supplied it.
 
 | Player / source | Status | Ingress | Uses canonical analysis | Notes |
 |---|---|---|---|---|
-| LMS / Squeezelite | IMPLEMENTED | Stereo shared memory from patched Squeezelite SHM v1 | Yes | Shared canonical PCM analysis. |
+| LMS / yeney-player | IMPLEMENTED | Stereo shared memory from yeney-core SHM v1 | Yes | Shared canonical PCM analysis. |
 | AirPlay | IMPLEMENTED | shairport-sync → S16_LE stereo, 44.1 kHz named pipe → `AirPlayPipeStereoSource` | Yes, always | Same canonical pipeline factory and downstream Effects as LMS PCM. |
 | Sonos (dedicated integration) | NOT PRESENT | — | — | Potential future adapter. A Sonos player exposed through a third-party LMS plugin can be followed through the LMS integration; this is not a native Sonos ingress. |
 | Roon | NOT PRESENT | — | — | Potential future adapter; no production Roon player type or ingress. |
@@ -91,7 +91,7 @@ use the shared canonicalizer, including conversion to 48 kHz canonical PCM.
 ### Internal analysis subsystem
 
 ```text
-LMS / Squeezelite ─┐
+LMS / yeney-player ─┐
 AirPlay ───────────┤
 future player ────┤
                   ▼
@@ -232,12 +232,12 @@ The repository installer is the authoritative standard deployment path.
 Supported installer target: **Debian 13 / trixie, x86_64, with systemd**.
 
 ```sh
-git clone https://github.com/ThaYapeMan/LampaStream.git
+git clone --recurse-submodules https://github.com/ThaYapeMan/LampaStream.git
 cd LampaStream
 sudo ./scripts/install-lampastream.sh
 ```
 
-The installer provisions dependencies, builds the patched Squeezelite producer and
+The installer provisions dependencies, builds the pinned yeney-player producer and
 AirPlay 2 receiver, builds the frontend/native wheel, migrates saved configuration,
 verifies the installed artifacts, and starts the repository service. No manual
 package installation, producer patching or JSON migration is part of that workflow.
@@ -246,6 +246,13 @@ Create/pair a Controller through the API, then open `http://<host>:8420` to conf
 the Zone, player, Analyser, Effects/EnergyProfile and Coupling. Host audio-device passthrough remains an LXC
 prerequisite for paced LMS playback; a guest script cannot provision host devices.
 See [installation](docs/installation.md) and [LXC deployment](docs/deployment-lxc.md).
+LMS virtual players use `yeney-player` from the recursive `third_party/yeney-core`
+submodule at `0c4b369`. Initialize it with `git submodule update --init --recursive`.
+It paces PCM internally and preserves full-scale analysis PCM regardless of LMS volume.
+No snd-dummy or `/dev/snd` passthrough is required. Existing host mappings can remain
+harmlessly; optional removal steps are in [LXC deployment](docs/deployment-lxc.md).
+Distribution licence texts are in [third-party notices](THIRD_PARTY_NOTICES.md).
+
 For read-only diagnosis, run `sudo ./scripts/install-lampastream.sh --check`.
 
 ## Validation status
@@ -254,7 +261,7 @@ For read-only diagnosis, run `sudo ./scripts/install-lampastream.sh --check`.
 mean the current binary has been deployed or timed on the target.
 
 **REQUIRES LXC VALIDATION:** native CAVA/FFTW execution and leak stress, full target
-Squeezelite link, live producer/SHM integration, clean wheel installation,
+yeney-player link, live producer/SHM integration, clean wheel installation,
 realtime backlog and visual V2/CAVA comparison. No such validation is claimed
 by this documentation. Earlier benchmark/review documents are historical evidence
 for their stated commits only.
@@ -268,7 +275,7 @@ for their stated commits only.
 - [Installation](docs/installation.md) · [LXC deployment](docs/deployment-lxc.md)
 - [Development](docs/development.md) · [Testing and acceptance](docs/testing.md)
 - [Effects catalog](docs/effects.md) · [Effects and output boundaries](docs/EFFECT_ENGINE.md)
-- [Squeezelite build and SHM ABI](squeezelite/README.md)
+- [SHM v1 ABI](squeezelite/README.md)
 
 Historical prompts/specifications are labelled as historical or stored under
 `docs/archive/`. They do not override these references. `docs/future/` contains

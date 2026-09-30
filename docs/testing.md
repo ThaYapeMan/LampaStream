@@ -30,19 +30,20 @@ must survive in the queue; they need not replace a newer live Spectrum snapshot.
 
 ## Producer checks without deployment
 
-Run the single-build helper with temporary build and installation directories:
+Initialize and build the pinned producer without deployment:
 
 ```sh
-BUILD_DIR=/tmp/lampastream-producer-build INSTALL_DIR=/tmp/lampastream-producer-bin \
-  bash scripts/build-squeezelite.sh
+git submodule update --init --recursive
+make -C third_party/yeney-core yeney-player
+third_party/yeney-core/yeney-player --help
+python3 -m pytest -v -s tests/test_yeney_player.py
 ```
 
-It clones the shared `ThaYapeMan/squeezelite` fork at
-`0e1667ead996834e355fc51f6a8eb2ea7e55f44b`, which already includes the v1 producer
-and preserves the legacy PCM offsets. It inspects `make -n OPTS=-DVISEXPORT`,
-compiles both producer objects, links and installs one binary. The fork integration
-test checks the pinned source for producer markers and the trailing extension.
-A successful build is not live SHM validation on the deployment target.
+Build prerequisites are g++, make and libflac-dev (gcc also compiles ALAC sources).
+The integration test builds an isolated copy, reuses the submodule's `tests/fake_lms.py`,
+and reads real SHM through the unchanged SqueezeliteShmStereoSource(require_v1=True).
+A missing toolchain prints an explicit SKIP line. No real LMS or ALSA device is needed.
+Local continuity evidence does not replace live deployment validation.
 
 ## Offline acceptance
 

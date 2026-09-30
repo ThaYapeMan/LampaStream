@@ -1,6 +1,6 @@
 """LatencyProbe implementations for the LampaStream output delay subsystem.
 
-NoLatencyProbe    — always returns 0; for local squeezelite players.
+NoLatencyProbe    — always returns 0; for local LMS player players.
 FixedLatencyProbe — returns a configured constant; for AirPlay and any other
                     player where the delay is negotiated and stable.
 

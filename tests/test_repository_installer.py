@@ -38,15 +38,13 @@ def test_shell_syntax():
     entry = subprocess.check_output(
         ['git', 'ls-files', '-s', 'scripts/install-lampastream.sh'], cwd=ROOT, text=True)
     assert entry.startswith('100755 '), 'Fresh clones must support the executable installer'
-    subprocess.run(['bash', '-n', str(SCRIPT), str(ROOT / 'scripts/setup-airplay.sh'),
-                    str(ROOT / 'scripts/build-squeezelite.sh')], check=True)
+    subprocess.run(['bash', '-n', str(SCRIPT), str(ROOT / 'scripts/setup-airplay.sh')], check=True)
 
 
 def test_dependency_and_phase_contract():
     text = SCRIPT.read_text()
     packages = (ROOT / "scripts/native-build-packages.txt").read_text()
-    for package in ('libasound2-dev', 'libfftw3-dev', 'libflac-dev', 'libmad0-dev',
-                    'libmpg123-dev', 'libvorbis-dev', 'libfaad-dev', 'libcap2-bin',
+    for package in ('libasound2-dev', 'libfftw3-dev', 'libflac-dev', 'g++', 'make', 'libcap2-bin',
                     'python3-venv', 'pkg-config', 'polkitd', 'avahi-daemon', 'cava'):
         assert package in text + packages
     assert 'npm ci' in text

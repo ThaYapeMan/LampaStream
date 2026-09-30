@@ -45,7 +45,7 @@ def _make_shm_file(
     rate: int = 44100,
     buf_data: bytes | None = None,
 ) -> Path:
-    """Write a synthetic SHM file matching the squeezelite vis_t layout."""
+    """Write a synthetic SHM file matching the legacy SHM prefix also implemented by yeney-core."""
     data = bytearray(_MMAP_SIZE)
     header = struct.pack(
         _HDR_FMT,

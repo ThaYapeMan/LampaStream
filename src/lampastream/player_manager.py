@@ -1,4 +1,4 @@
-"""Process lifecycle: squeezelite, canonical PCM analysis and Hue Entertainment,
+"""Process lifecycle: yeney-player, canonical PCM analysis and Hue Entertainment,
 all tied to the currently active Profile.
 
 Only one profile can be active at a time (a Hue Bridge only supports a
@@ -252,7 +252,7 @@ class ActiveSession:
         self.stopping = False  # source still owned until teardown completes
         self.coupling = coupling
         self.player_type = player_type
-        self.squeezelite: subprocess.Popen | None = None
+        self.lms_player: subprocess.Popen | None = None
         self.sync_engine: SyncEngine | None = None
         self.hue_driver: HueDriver | None = None
         self.task: asyncio.Task | None = None
@@ -415,12 +415,12 @@ class PlayerManager:
     @property
     def process_status(self) -> dict[str, bool]:
         if not self._active:
-            return {"squeezelite": False}
+            return {"lms_player": False}
         if self._active.player_type == VirtualPlayerType.AIRPLAY:
-            return {"squeezelite": False}
-        sl = self._active.squeezelite
+            return {"lms_player": False}
+        player_process = self._active.lms_player
         return {
-            "squeezelite": bool(sl and sl.poll() is None),
+            "lms_player": bool(player_process and player_process.poll() is None),
         }
 
     @property
@@ -681,8 +681,8 @@ class PlayerManager:
         output_config: HueOutputConfig,
         channels: list[ChannelInfo],
     ) -> None:
-        """LMS path: squeezelite + canonical PCM analysis + Hue."""
-        self._start_squeezelite(session, profile)
+        """LMS path: yeney-player + canonical PCM analysis + Hue."""
+        self._start_lms_player(session, profile)
 
         await self._activate_lms_pcm(session, profile, mellow_profile, output_config, channels)
 
@@ -750,7 +750,7 @@ class PlayerManager:
         output_config: HueOutputConfig,
         channels: list[ChannelInfo],
     ) -> None:
-        """LMS pcm_pipeline sub-path: squeezelite + canonical PCM pipeline, no cava/FIFO.
+        """LMS pcm_pipeline sub-path: yeney-player + canonical PCM pipeline, no cava/FIFO.
 
         Uses SqueezeliteShmStereoSource (stereo, SourceReadResult protocol) so the
         shared _make_canonical_pipeline() factory can select v2 or cavacore, identical
@@ -800,7 +800,7 @@ class PlayerManager:
         (AirPlayPipeStereoSource) and the canonical analysis pipeline
         (CanonicalAnalysisPipeline) which performs phase-safe stereo STFT analysis.
 
-        No squeezelite, no cava, no FIFO, no LMS follower.  Exactly one ingress
+        No yeney-player, no cava, no FIFO, no LMS follower.  Exactly one ingress
         reader owns the production AirPlay FIFO — AirPlayPipeStereoSource.
         """
         if self._airplay_tracks is None:
@@ -903,7 +903,7 @@ class PlayerManager:
             except Exception:  # noqa: BLE001 - best-effort teardown
                 log.exception("Error stopping Hue Entertainment session")
 
-        for proc in (session.squeezelite,):
+        for proc in (session.lms_player,):
             if proc and proc.poll() is None:
                 proc.terminate()
                 try:
@@ -911,7 +911,7 @@ class PlayerManager:
                 except subprocess.TimeoutExpired:
                     proc.kill()
 
-        # squeezelite creates /dev/shm/squeezelite-<mac> and never removes it.
+        # yeney-player creates /dev/shm/squeezelite-<mac> and never removes it.
         # Without this, every activate/deactivate cycle leaves an orphaned
         # segment behind — confirmed: 9 segments after a handful of test runs.
         if session.profile.player_mac:
@@ -920,9 +920,9 @@ class PlayerManager:
             )
 
     def cleanup_orphaned_shm(self) -> None:
-        """Remove all squeezelite shm segments left by a previous crashed run.
+        """Remove all yeney-player shm segments left by a previous crashed run.
 
-        Safe to call at startup: squeezelite is only ever started by LampaStream,
+        Safe to call at startup: yeney-player is only ever started by LampaStream,
         and only after the service itself is running.  Any segment present
         when the service starts is therefore stale — including segments from
         pre-fix runs whose random MAC was never persisted to a profile.
@@ -933,7 +933,7 @@ class PlayerManager:
         for seg in shm_dir.glob("squeezelite-*"):
             try:
                 seg.unlink()
-                log.info("Removed orphaned squeezelite shm segment %s", seg.name)
+                log.info("Removed orphaned yeney-player shm segment %s", seg.name)
             except OSError as exc:
                 log.warning("Could not remove %s: %s", seg.name, exc)
 
@@ -1151,7 +1151,7 @@ class PlayerManager:
     async def _delayed_unsync_and_follow(
         self, session: ActiveSession, lms_host: str, player_mac: str
     ) -> None:
-        """Wait for squeezelite to register with LMS, then unsync and start the follower.
+        """Wait for yeney-player to register with LMS, then unsync and start the follower.
 
         The 5-second delay ensures LMS recognises the player before the unsync
         command is sent.  Without it, the command silently no-ops because LMS
@@ -1195,22 +1195,6 @@ class PlayerManager:
             follower_task.add_done_callback(_log_task_failure)
             session.follower_task = follower_task
 
-    # ALSA output device for the virtual player. This is deliberately NOT
-    # "null": ALSA's null plugin discards samples the instant they arrive,
-    # with no clock to pace against, so squeezelite decodes as fast as the
-    # CPU allows - pinning a core at 100% and hammering LMS with stream
-    # requests (a single-threaded Perl server, which then stutters for
-    # every other player too).
-    #
-    # snd-dummy is a real, timer-driven ALSA card, so squeezelite paces at
-    # actual playback speed exactly as it would against a physical DAC.
-    # Measured difference on the same setup: ~100% CPU with null, ~0.2%
-    # with snd-dummy.
-    #
-    # Requires the snd-dummy kernel module on the host (LXCs share the
-    # host kernel) and the resulting /dev/snd nodes passed into the
-    # container - see README.
-    DEFAULT_ALSA_DEVICE = "hw:CARD=Dummy,DEV=0"
     _SHAIRPORT_CONF = Path("/usr/local/etc/shairport-sync.conf")
 
     def _configure_shairport_name(self, name: str) -> bool:
@@ -1276,10 +1260,9 @@ class PlayerManager:
             log.warning("Could not restart shairport-sync: %s", exc)
         return True
 
-    def _start_squeezelite(self, session: ActiveSession, profile: Profile) -> None:
-        # The fork preserves the legacy CAVA layout and appends the v1 extension,
-        # so both ingress routes use the same installed producer.
-        name = "squeezelite"
+    def _start_lms_player(self, session: ActiveSession, profile: Profile) -> None:
+        # yeney-core implements both the legacy CAVA prefix and SHM v1 extension.
+        name = "yeney-player"
         binary = shutil.which(name)
         if not binary:
             raise RuntimeError(f"{name} binary not found; run scripts/install-lampastream.sh")
@@ -1300,24 +1283,26 @@ class PlayerManager:
             binary,
             "-n", profile.display_name or profile.player_name,
             "-m", profile.player_mac,
-            "-o", profile.alsa_device or self.DEFAULT_ALSA_DEVICE,
             "-v",
         ]
-        # Pass only the host address, never a port.  squeezelite's -s flag
+        # Compatibility only: yeney-player accepts and ignores this device.
+        if profile.alsa_device:
+            cmd += ["-o", profile.alsa_device]
+        # Pass only the host address, never a port.  yeney-player's -s flag
         # expects the slimproto port (3483); profile.lms_port is the LMS
         # web/JSON-RPC port (typically 9000) and must not be passed here.
-        # Without an explicit port squeezelite connects to 3483 by default.
+        # Without an explicit port yeney-player connects to 3483 by default.
         # Without -s at all it falls back to UDP broadcast discovery.
         if profile.lms_host:
             cmd += ["-s", profile.lms_host]
-        session.squeezelite = subprocess.Popen(
+        session.lms_player = subprocess.Popen(
             cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
         )
 
     def _wait_for_shm(self, mac: str, timeout: float = 10.0, interval: float = 0.1) -> None:
-        """Wait until squeezelite's shared-memory segment appears in /dev/shm.
+        """Wait until yeney-player's shared-memory segment appears in /dev/shm.
 
-        squeezelite creates /dev/shm/squeezelite-<mac> a moment after it
+        yeney-player creates /dev/shm/squeezelite-<mac> a moment after it
         starts. Wait before opening the canonical PCM reader.
         """
         path = Path(f"/dev/shm/squeezelite-{mac}")
@@ -1325,7 +1310,7 @@ class PlayerManager:
         while not path.exists():
             if time.monotonic() >= deadline:
                 raise RuntimeError(
-                    f"Timed out waiting for squeezelite shared-memory segment {path}"
+                    f"Timed out waiting for yeney-player shared-memory segment {path}"
                 )
             time.sleep(interval)
-        log.debug("squeezelite SHM segment ready: %s", path)
+        log.debug("yeney-player SHM segment ready: %s", path)

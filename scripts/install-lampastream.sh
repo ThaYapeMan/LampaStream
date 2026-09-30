@@ -12,15 +12,13 @@ HUESYNC_SERVICE=/etc/systemd/system/huesync.service
 HUESYNC_RULES=/etc/polkit-1/rules.d/49-huesync-airplay.rules
 # Build tools/headers; -dev packages pull the matching runtime shared libraries.
 mapfile -t NATIVE_BUILD_PACKAGES < "$SCRIPT_DIR/native-build-packages.txt"
-BUILD_PACKAGES=(git ca-certificates "${NATIVE_BUILD_PACKAGES[@]}" pkg-config patch python3-dev python3-venv
-    curl xz-utils libasound2-dev libflac-dev libmad0-dev libmpg123-dev
-    libvorbis-dev libfaad-dev libssl-dev autoconf automake libtool libpopt-dev
+BUILD_PACKAGES=(git ca-certificates "${NATIVE_BUILD_PACKAGES[@]}" g++ make pkg-config patch python3-dev python3-venv
+    curl xz-utils libasound2-dev libflac-dev
+    libssl-dev autoconf automake libtool libpopt-dev
     libconfig-dev systemd-dev libsystemd-dev libavahi-client-dev libavahi-common-dev
     libsoxr-dev libsodium-dev libgcrypt20-dev libplist-dev libplist-utils uuid-dev
     libavutil-dev libavcodec-dev libavformat-dev libswresample-dev)
 RUNTIME_PACKAGES=(python3 systemd util-linux libcap2-bin polkitd avahi-daemon alsa-utils cava xxd)
-# Squeezelite default codecs: PCM, FLAC, Vorbis, MAD/MPG123 MP3, FAAD AAC.
-# No OPUS/FFMPEG/ALAC/RESAMPLE flags are enabled by this standard build.
 log() { printf '\n==> %s\n' "$*"; }
 fail() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 platform() {
@@ -45,14 +43,14 @@ verify() {
     done
     pkg-config --exists alsa fftw3
     local binary linkage
-    for binary in /usr/local/bin/squeezelite /usr/local/bin/shairport-sync /usr/local/bin/nqptp; do
+    for binary in /usr/local/bin/yeney-player /usr/local/bin/shairport-sync /usr/local/bin/nqptp; do
         linkage=$(ldd "$binary")
         [[ "$linkage" != *"not found"* ]] || fail "Unresolved runtime libraries: $binary"
     done
     printf 'ALSA: PASS\nFFTW: PASS\n'
-    [[ -x /usr/local/bin/squeezelite ]] || fail 'LampaStream Squeezelite missing'
-    [[ "$(command -v squeezelite)" == /usr/local/bin/squeezelite ]] || fail 'Wrong Squeezelite PATH'
-    nm /usr/local/bin/squeezelite | grep 'vis_shm_v1_finish_init$' >/dev/null || fail 'SHM v1 producer missing'
+    [[ -x /usr/local/bin/yeney-player ]] || fail 'LampaStream yeney-player missing'
+    [[ "$(command -v yeney-player)" == /usr/local/bin/yeney-player ]] || fail 'Wrong yeney-player PATH'
+    /usr/local/bin/yeney-player --help | grep -- '-v' >/dev/null || fail 'SHM v1 producer option missing'
     [[ -x /usr/local/bin/shairport-sync && -x /usr/local/bin/nqptp ||
        -x /usr/local/bin/shairport-sync && -x /usr/local/sbin/nqptp ]] || fail 'AirPlay binaries missing'
     /usr/local/bin/shairport-sync --version | grep -i 'AirPlay2' >/dev/null || fail 'AirPlay 2 not built'
@@ -69,7 +67,7 @@ verify() {
 # Inspect executable paths, not service display names (SysV generators may rename units).
 squeezelite_conflict_definition() {
     local definition="$1"
-    # Recognize the shared producer and the former FIFO path during upgrades.
+    # Recognize previous LampaStream-owned paths during upgrades.
     definition=${definition//\/usr\/local\/bin\/lampastream-squeezelite-fifo/}
     definition=${definition//\/usr\/local\/bin\/squeezelite/}
     [[ "$definition" =~ /[[:alnum:]_./-]*/squeezelite([[:space:]\"\';]|$) ]]
@@ -287,17 +285,34 @@ RELEASE=$(mktemp -d "$PREFIX/releases/$COMMIT.XXXXXX")
 chmod 0755 "$RELEASE"
 python3 -m venv "$RELEASE/venv"
 "$RELEASE/venv/bin/pip" install "$WORK"/wheels/*.whl
-log '3/7 Build pinned SHM v1 Squeezelite and AirPlay 2'
-# Do not inherit optional flags or upstream overrides from a shell environment.
-env -u OPTS -u SQUEEZELITE_COMMIT -u SQUEEZELITE_REPO BUILD_DIR="$WORK/squeezelite-build" \
-    INSTALL_DIR="$WORK/bin" bash "$WORK/scripts/build-squeezelite.sh"
+log '3/7 Build pinned SHM v1 yeney-player and AirPlay 2'
+YENEY_CORE_REVISION=0c4b3699355b9cefd7f05b8591fe5210952c1409
+# Git archives omit submodule contents. Initialize and verify both immutable pins,
+# then archive their committed sources separately into the isolated build tree.
+git -c safe.directory="$REPO_DIR" \
+    -c safe.directory="$REPO_DIR/third_party/yeney-core" \
+    -c safe.directory="$REPO_DIR/third_party/yeney-core/third_party/alac" \
+    -C "$REPO_DIR" submodule update --init --recursive
+CORE="$REPO_DIR/third_party/yeney-core"
+[[ "$(git -c safe.directory="$CORE" -C "$CORE" rev-parse HEAD)" == "$YENEY_CORE_REVISION" ]] || fail 'Wrong yeney-core revision'
+[[ -z "$(git -c safe.directory="$CORE" -C "$CORE" status --porcelain --untracked-files=no)" ]] || fail 'Dirty yeney-core sources'
+[[ "$(git -c safe.directory="$CORE/third_party/alac" -C "$CORE/third_party/alac" rev-parse HEAD)" == "$(git -c safe.directory="$CORE" -C "$CORE" rev-parse HEAD:third_party/alac)" ]] || fail 'Wrong ALAC revision'
+mkdir -p "$WORK/third_party/yeney-core/third_party/alac"
+git -c safe.directory="$CORE" -C "$CORE" archive HEAD | tar -x -C "$WORK/third_party/yeney-core"
+git -c safe.directory="$CORE/third_party/alac" -C "$CORE/third_party/alac" archive HEAD | tar -x -C "$WORK/third_party/yeney-core/third_party/alac"
+make -C "$WORK/third_party/yeney-core" -j"$(nproc)" yeney-player
+"$WORK/third_party/yeney-core/yeney-player" --help
 # Stop conflicting package services and owned services before replacing binaries.
 squeezelite_conflicts install
 for unit in lampastream shairport-sync nqptp; do
     if systemctl is-active --quiet "$unit"; then systemctl stop "$unit"; fi
 done
-install -m 0755 "$WORK/bin/squeezelite" /usr/local/bin/squeezelite
-cmp "$WORK/bin/squeezelite" /usr/local/bin/squeezelite
+# Read old provenance before writing the new release manifest or switching .venv.
+python3 -B "$WORK/scripts/remove-owned-squeezelite.py" "$PREFIX/.venv/../installation.json"
+install -m 0755 "$WORK/third_party/yeney-core/yeney-player" /usr/local/bin/yeney-player
+cmp "$WORK/third_party/yeney-core/yeney-player" /usr/local/bin/yeney-player
+install -d /usr/local/share/doc/lampastream/yeney-core
+install -m 0644 "$WORK/third_party/yeney-core/LICENSE" "$WORK/third_party/yeney-core/THIRD_PARTY_NOTICES.md" /usr/local/share/doc/lampastream/yeney-core/
 AIRPLAY_BUILD_DIR="$WORK/airplay" LAMPASTREAM_DEFER_START=1 LAMPASTREAM_DEPENDENCIES_READY=1 bash "$WORK/scripts/setup-airplay.sh"
 log '4/7 Migrate persisted configuration before starting current runtime'
 migrate_huesync_layout
@@ -309,7 +324,7 @@ install -m 0644 "$WORK/systemd/lampastream.service" /etc/systemd/system/lampastr
 install -d /etc/polkit-1/rules.d
 install -m 0644 "$WORK/systemd/49-lampastream-airplay.rules" /etc/polkit-1/rules.d/
 systemctl daemon-reload
-"$RELEASE/venv/bin/python" -I -B "$WORK/scripts/write-install-manifest.py" "$COMMIT" "$SHORT" "$RELEASE"
+"$RELEASE/venv/bin/python" -I -B "$WORK/scripts/write-install-manifest.py" "$COMMIT" "$SHORT" "$RELEASE" "$YENEY_CORE_REVISION"
 log '6/7 Verify installed artifacts and current schema before activation'
 verify "$RELEASE/venv"
 # Stable executable path from the existing unit. Venv itself is never relocated.
@@ -326,7 +341,7 @@ verify_services
 cleanup_huesync_layout
 curl --fail --retry 10 --retry-connrefused --retry-delay 1 http://127.0.0.1:8420/api/status >/dev/null
 repo_check
-printf '\nINSTALLATION COMPLETE\nGit commit: %s\nPython: %s\nSqueezelite: /usr/local/bin/squeezelite\n' "$COMMIT" "$RELEASE/venv"
-sha256sum /usr/local/bin/squeezelite
+printf '\nINSTALLATION COMPLETE\nGit commit: %s\nPython: %s\nLMS player: /usr/local/bin/yeney-player\n' "$COMMIT" "$RELEASE/venv"
+sha256sum /usr/local/bin/yeney-player
 printf 'Logs: journalctl -u lampastream -u shairport-sync -u nqptp\nUI: http://<target>:8420\n'
-printf 'LMS pacing requires host-provided /dev/snd devices; LXC host configuration is not modified.\n'
+printf 'LMS pacing is internal to yeney-player; no snd-dummy or /dev/snd passthrough is required.\n'

@@ -53,7 +53,7 @@ from lampastream.sync_engine import (
 )
 
 # ---------------------------------------------------------------------------
-# BLOCKER 4: init sequence must be ODD regardless of prior contents
+# BLOCKER 4: historical producer init must be ODD regardless of prior contents
 # ---------------------------------------------------------------------------
 
 

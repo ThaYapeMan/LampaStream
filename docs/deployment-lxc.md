@@ -6,7 +6,7 @@ cannot establish live deployment behavior.
 ## Before activation
 
 ```sh
-git clone https://github.com/ThaYapeMan/LampaStream.git
+git clone --recurse-submodules https://github.com/ThaYapeMan/LampaStream.git
 cd LampaStream
 sudo ./scripts/install-lampastream.sh
 sudo ./scripts/install-lampastream.sh --check
@@ -20,9 +20,18 @@ installation with systemd running (`/run/systemd/system`). It does not install,
 migrate or modify the host. For development-host checks, see [testing](testing.md).
 Record its commit/binary hashes and run it twice to verify target idempotency.
 
-The host must expose paced snd-dummy/audio devices and appropriate permissions for
-LMS; the guest installer does not alter the host. Select canonical PCM + V2/CAVA Core
-or the intentional external FIFO route in LampaStream. Inspect `journalctl -u lampastream`.
+yeney-player paces LMS PCM internally. snd-dummy and `/dev/snd` passthrough are
+no longer required. Existing host setups can keep them harmlessly. To remove them
+when no other container/application needs them, stop LampaStream, remove the
+`/dev/snd` bind mounts and audio-device cgroup allow entries from the container's
+host configuration, remove the snd-dummy line from `/etc/modules` or the applicable
+`/etc/modules-load.d/` file, and remove any snd-dummy options file under
+`/etc/modprobe.d/`. Unload with `modprobe -r snd-dummy` only when unused, or reboot
+the host during planned maintenance. Restart the container and LampaStream.
+The guest installer does not change host configuration.
+
+Select canonical PCM + V2/CAVA Core or the intentional external FIFO route in
+LampaStream. Inspect `journalctl -u lampastream`.
 
 Do not read a production audio FIFO from a diagnostic second consumer. For SHM,
 inspect metadata or use isolated test fixtures. Unsupported canonical ABI is a
@@ -30,7 +39,7 @@ producer-upgrade error, never permission to use v0/header bytes as PCM.
 
 ## Required target evidence
 
-- Full producer build/link with target ALSA/codec dependencies.
+- Full producer build/link with target g++/make/libFLAC dependencies.
 - Live source continuity across restart, gap, overrun and SHM replacement.
 - Native CAVA loading/execution, repeated close/reset and allocation/leak stress.
 - Wheel build and clean installation in a fresh environment.

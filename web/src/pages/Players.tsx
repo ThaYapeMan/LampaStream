@@ -421,7 +421,7 @@ export function Players({ activeCouplingId = null }: { activeCouplingId?: string
                   <div className="space-y-1">
                     <Label className="text-sm">Player MAC</Label>
                     <p className="text-sm font-mono text-muted-foreground py-1">{editingPlayer.player_mac || '—'}</p>
-                    <p className="text-xs text-muted-foreground">MAC is assigned by squeezelite and cannot be changed.</p>
+                    <p className="text-xs text-muted-foreground">MAC identifies the LMS player and cannot be changed.</p>
                   </div>
                 )}
               </>

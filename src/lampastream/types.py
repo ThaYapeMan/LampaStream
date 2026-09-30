@@ -281,7 +281,7 @@ class LatencyProbe(Protocol):
     loop inside SyncEngine.run().
 
     Implementations:
-        NoLatencyProbe    — returns 0 (local squeezelite, no delay needed)
+        NoLatencyProbe    — returns 0 (local LMS player, no delay needed)
         FixedLatencyProbe — returns a constant (AirPlay, stable negotiated delay)
         UpnpPositionProbe — polls UPnP continuously (Sonos, step 3)
     """

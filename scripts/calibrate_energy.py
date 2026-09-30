@@ -180,7 +180,7 @@ def _print_capture_info(rows, tick_s: float) -> None:
         )
     elif se_n == 0:
         print("  WARNING: no sustained_energy in capture — alignment will fail.")
-        print("  Ensure the capture was made with a PCM source (AirPlay/squeezelite) active.")
+        print("  Ensure the capture was made with a PCM source (AirPlay/yeney-player) active.")
     print(
         f"  Cadence    : {1.0 / tick_s:.1f} Hz"
         f"  (median dt={tick_s:.4f} s,  range {dt_min:.3f}–{dt_max:.3f} s)"

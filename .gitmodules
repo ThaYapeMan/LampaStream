@@ -1,0 +1,3 @@
+[submodule "third_party/yeney-core"]
+	path = third_party/yeney-core
+	url = https://github.com/ThaYapeMan/yeney-core.git

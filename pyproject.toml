@@ -39,10 +39,16 @@ packages = ["src/lampastream"]
 # Native library and commit metadata are generated and force-included by the build hook.
 # webui/ assets are built in the isolated installer source copy before wheel collection.
 
+[tool.hatch.build.targets.wheel.force-include]
+"distribution/yeney-core" = "lampastream/notices/yeney-core"
+"THIRD_PARTY_NOTICES.md" = "lampastream/notices/THIRD_PARTY_NOTICES.md"
+
 [tool.pytest.ini_options]
+testpaths = ["tests"]
 pythonpath = ["src"]
 
 [tool.ruff]
+extend-exclude = ["third_party"]
 line-length = 100
 target-version = "py311"
 src = ["src"]
