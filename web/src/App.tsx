@@ -108,7 +108,7 @@ export default function App() {
             <div className="flex-1 overflow-y-auto">
               <div className={cn('mx-auto px-6 py-6', activeTab === 'now-playing' ? 'max-w-5xl' : 'max-w-3xl')}>
                 {activeTab === 'now-playing' && (
-                  <NowPlaying onOpenEffect={id => { setEffectId(id); setActiveTab('effects') }} expertMode={expertMode} last_energy_input={last_energy_input} onOpenEnergyProfile={id => { setEnergyProfileId(id); setActiveTab('energy-profiles') }} colour={colour} channel_colours={channel_colours} onset={onset} onset_bass={onset_bass} onset_mid={onset_mid} onset_treble={onset_treble} mix={mix} loudness_momentary_lufs={loudness_momentary_lufs} bars={bars} normalised_bars={normalised_bars} status={status} connected={connected} />
+                  <NowPlaying onOpenLatency={() => setActiveTab('latency')} onOpenEffect={id => { setEffectId(id); setActiveTab('effects') }} expertMode={expertMode} last_energy_input={last_energy_input} onOpenEnergyProfile={id => { setEnergyProfileId(id); setActiveTab('energy-profiles') }} colour={colour} channel_colours={channel_colours} onset={onset} onset_bass={onset_bass} onset_mid={onset_mid} onset_treble={onset_treble} mix={mix} loudness_momentary_lufs={loudness_momentary_lufs} bars={bars} normalised_bars={normalised_bars} status={status} connected={connected} />
                 )}
                 {activeTab === 'backup' && <Backup />}
                 {activeTab === 'players' && <Players activeCouplingId={status?.active_coupling_id ?? null} />}

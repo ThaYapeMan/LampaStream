@@ -1,3 +1,4 @@
+import { LightTiming } from '@/components/LightTiming'
 import { LiveEnergySource } from '@/components/LiveEnergySource'
 import { TrackProgress } from '@/components/TrackProgress'
 import { useEffect, useRef, useState } from 'react'
@@ -63,7 +64,7 @@ function StatusRow({ label, children }: { label: string; children: React.ReactNo
   )
 }
 
-function StatusGrid({ status, analyser, playerType }: {
+function StatusGrid({ status, analyser }: {
   status: SocketStatus | null
   analyser?: Analyser
   playerType?: string | null
@@ -80,15 +81,7 @@ function StatusGrid({ status, analyser, playerType }: {
       <StatusRow label="Effect">
         {status?.effect_type ? <code className="text-xs font-mono">{status.effect_type}</code> : unknown}
       </StatusRow>
-      <StatusRow label="Sync master">
-        {playerType === 'AirPlay' ? <span className="text-muted-foreground">n/a</span> : status?.sync_master ? (
-          <div>
-            {status.sync_master_name && <div className="font-medium">{status.sync_master_name}</div>}
-            <code className="text-xs font-mono text-muted-foreground">{status.sync_master}</code>
-          </div>
-        ) : unknown}
-      </StatusRow>
-      <StatusRow label="Delay">{status ? `${status.applied_delay_ms} ms` : unknown}</StatusRow>
+
     </dl>
   )
 }
@@ -237,6 +230,7 @@ function CouplingSelector({
 
 type Props = Pick<PreviewState, 'colour' | 'channel_colours' | 'onset' | 'bars' | 'status'> & {
   expertMode?: boolean
+  onOpenLatency?: () => void
   onOpenEffect?: (id: string) => void
   onOpenEnergyProfile?: (id: string) => void
   last_energy_input?: number
@@ -249,7 +243,7 @@ type Props = Pick<PreviewState, 'colour' | 'channel_colours' | 'onset' | 'bars' 
   connected?: boolean
 }
 
-export function NowPlaying({ expertMode = false, colour, channel_colours, onset, onset_bass = false, onset_mid = false, onset_treble = false, mix = 0, loudness_momentary_lufs = null, bars, normalised_bars, status, connected = true, onOpenEffect, onOpenEnergyProfile, last_energy_input = 0 }: Props) {
+export function NowPlaying({ expertMode = false, colour, channel_colours, onset, onset_bass = false, onset_mid = false, onset_treble = false, mix = 0, loudness_momentary_lufs = null, bars, normalised_bars, status, connected = true, onOpenLatency, onOpenEffect, onOpenEnergyProfile, last_energy_input = 0 }: Props) {
   const couplingId = status?.active_coupling_id ?? null
   const zoneId = status?.active_zone_id ?? null
 
@@ -424,6 +418,8 @@ export function NowPlaying({ expertMode = false, colour, channel_colours, onset,
         transport={playerType === 'LMS' && couplingId && status?.follow_target_mac ? {
           couplingId, targetMac: status.follow_target_mac, targetName: status.follow_target_name || status.follow_target_mac,
         } : undefined} />
+
+      <LightTiming status={status} onOpenLatency={onOpenLatency} />
 
       <Card>
         <CardHeader className="pb-3">

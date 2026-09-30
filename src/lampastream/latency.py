@@ -74,7 +74,7 @@ def latency_status(config, *, state="idle", strategy=None, delay=None, reason=No
             if config.strategy == "auto" else 0),
         "median_residual_ms": None, "player_delay_ms": None,
         "trim_ms": config.trim_ms, "sample_count": 0, "precision_ms": None,
-        "last_sample_time": None, "state": state, "reason": reason,
+        "last_sample_time": None, "samples": [], "state": state, "reason": reason,
     }
 
 
@@ -92,6 +92,7 @@ class AutoLatencyProbe:
         self.clock = clock
         self.cache = preference_cache if preference_cache is not None else {}
         self.samples = deque(maxlen=7)
+        self.sample_times = deque(maxlen=7)
         self.delay = max(0, (config.measured_delay_ms or 0) + config.trim_ms)
         self.player_delay = None
         self.last_sample = None
@@ -130,6 +131,8 @@ class AutoLatencyProbe:
                                 if self.samples else None),
             player_delay_ms=self.player_delay, sample_count=len(self.samples),
             precision_ms=self.precision_ms(), last_sample_time=self.last_sample,
+            samples=[{"residual_ms": round(value * 1000), "timestamp": stamp}
+                     for value, stamp in zip(self.samples, self.sample_times, strict=True)],
         )
         return status
 
@@ -144,6 +147,7 @@ class AutoLatencyProbe:
             new_track = self.context is None or context.track != self.context.track
             self.context = context
             self.samples.clear()
+            self.sample_times.clear()
             if new_track:
                 self.first = True
             self.next_sample = context.changed_at + 5
@@ -163,6 +167,7 @@ class AutoLatencyProbe:
             return False
         self.samples.append(residual)
         self.last_sample = time.time()
+        self.sample_times.append(self.last_sample)
         if len(self.samples) < 3:
             return True
         median = statistics.median(self.samples)
@@ -254,6 +259,7 @@ class AutoLatencyProbe:
             self.realign_track = context.track
             await self._owned_call(self.follower.realign_own_player, context.track)
             self.samples.clear()
+            self.sample_times.clear()
             self.first = True
             self.state = "measuring"
             self.next_sample = self.clock() + 5

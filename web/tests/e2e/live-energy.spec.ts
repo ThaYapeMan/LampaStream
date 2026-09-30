@@ -29,6 +29,7 @@ test('live energy source patching and unchanged preview geometry', async ({ page
   // Expert controls only move the later spectrum card by their added height.
   const controlBox = (await controls.boundingBox())!
   expect(controlBox.height).toBeLessThan(120)
+  const spectrumTop = () => page.getByTestId('spectrum-panel').evaluate(el => el.getBoundingClientRect().top + window.scrollY)
   const spectrumY = [boxes['spectrum-panel'].y]
   expect((await page.getByTestId('energy-parameters').boundingBox())!.height).toBe(28)
   expect(boxes['spectrum-panel'].x).toBe(baseline['spectrum-panel'].x)
@@ -45,7 +46,7 @@ test('live energy source patching and unchanged preview geometry', async ({ page
   await expect(controls.getByRole('spinbutton', {name:'Ceiling', exact:true})).toBeVisible()
   expect(patches).toEqual([{energy_source:'loudness_fixed'}])
   await expect(controls.getByRole('spinbutton')).toHaveCount(2)
-  spectrumY.push((await page.getByTestId('spectrum-panel').boundingBox())!.y)
+  spectrumY.push(await spectrumTop())
   await controls.getByRole('button', {name:'Increase Floor'}).click()
   await expect.poll(() => patches.length).toBe(2)
   expect(patches[1]).toEqual({lufs_floor:-29})
@@ -69,11 +70,11 @@ test('live energy source patching and unchanged preview geometry', async ({ page
   await page.getByRole('radio', {name:'Adaptive loudness'}).click()
   await expect(controls.getByRole('spinbutton')).toHaveCount(1)
   await expect(controls.getByRole('spinbutton', {name:'Adaptation', exact:true})).toBeVisible()
-  spectrumY.push((await page.getByTestId('spectrum-panel').boundingBox())!.y)
+  spectrumY.push(await spectrumTop())
   await page.screenshot({path:info.outputPath('energy-adaptive-1400.png'), fullPage:true})
   await page.getByRole('radio', {name:'Sustained'}).click()
   await expect(controls.getByRole('spinbutton')).toHaveCount(0)
-  spectrumY.push((await page.getByTestId('spectrum-panel').boundingBox())!.y)
+  spectrumY.push(await spectrumTop())
   expect(new Set(spectrumY).size).toBe(1)
   await expect(controls.getByText('No parameters for this source')).toBeVisible()
   const after = await geometry(page) as Boxes

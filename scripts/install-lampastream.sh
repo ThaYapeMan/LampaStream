@@ -29,6 +29,19 @@ platform() {
     [[ "$(uname -m)" == x86_64 ]] || fail 'Supported target: x86_64 only'
     [[ -d /run/systemd/system ]] || fail 'A booted systemd target is required (not a build-only chroot)'
 }
+update_submodules() {
+    # A pulled gitlink is not a local edit: bring every checkout to its pin first.
+    git -c safe.directory="$REPO_DIR" \
+        -c safe.directory="$REPO_DIR/third_party/yeney-core" \
+        -c safe.directory="$REPO_DIR/third_party/yeney-core/third_party/alac" \
+        -C "$REPO_DIR" submodule update --init --recursive
+    git -c safe.directory="$REPO_DIR" \
+        -c safe.directory="$REPO_DIR/third_party/yeney-core" \
+        -c safe.directory="$REPO_DIR/third_party/yeney-core/third_party/alac" \
+        -C "$REPO_DIR" submodule foreach --recursive \
+        'changes=$(git status --porcelain --untracked-files=no) && test -z "$changes"' ||
+        fail 'Tracked submodule changes exist; commit or use a clean checkout before deployment'
+}
 repo_check() {
     COMMIT=$(git -c safe.directory="$REPO_DIR" -C "$REPO_DIR" rev-parse HEAD)
     SHORT=$(git -c safe.directory="$REPO_DIR" -C "$REPO_DIR" rev-parse --short HEAD)
@@ -238,6 +251,9 @@ HELP
 esac
 trap 'printf "ERROR: installation/check failed at line %s: %s\n" "$LINENO" "$BASH_COMMAND" >&2' ERR
 platform
+if [[ "$CHECK" == 0 ]]; then
+    update_submodules
+fi
 repo_check
 if [[ "$CHECK" == 1 ]]; then
     detect_layout
@@ -287,12 +303,9 @@ python3 -m venv "$RELEASE/venv"
 "$RELEASE/venv/bin/pip" install "$WORK"/wheels/*.whl
 log '3/7 Build pinned SHM v1 yeney-player and AirPlay 2'
 YENEY_CORE_REVISION=13e606f452d9a2ae729f9590ec4ea696ab4dbcde
-# Git archives omit submodule contents. Initialize and verify both immutable pins,
+# Git archives omit submodule contents. Submodules were updated before repo_check.
+# Verify both immutable pins,
 # then archive their committed sources separately into the isolated build tree.
-git -c safe.directory="$REPO_DIR" \
-    -c safe.directory="$REPO_DIR/third_party/yeney-core" \
-    -c safe.directory="$REPO_DIR/third_party/yeney-core/third_party/alac" \
-    -C "$REPO_DIR" submodule update --init --recursive
 CORE="$REPO_DIR/third_party/yeney-core"
 [[ "$(git -c safe.directory="$CORE" -C "$CORE" rev-parse HEAD)" == "$YENEY_CORE_REVISION" ]] || fail 'Wrong yeney-core revision'
 [[ -z "$(git -c safe.directory="$CORE" -C "$CORE" status --porcelain --untracked-files=no)" ]] || fail 'Dirty yeney-core sources'

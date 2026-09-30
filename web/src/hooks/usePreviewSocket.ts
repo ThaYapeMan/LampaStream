@@ -1,3 +1,4 @@
+import type { PlayerLatency } from '@/lib/api'
 import { useEffect, useRef, useState } from 'react'
 
 export interface TrackPosition {
@@ -9,6 +10,7 @@ export interface TrackPosition {
 }
 
 export interface SocketStatus {
+  light_timing?: PlayerLatency | null
   follow_target_mac?: string | null
   follow_target_name?: string | null
   track?: TrackPosition | null

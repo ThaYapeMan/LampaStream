@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Light Timing Mockup</title>
+<style>
+/* Layout: LampaStream's own dark shell (sidebar + centred column); the new
+   "Light timing" card sits directly under the track, where timing belongs.
+   Deliberately single-theme: LampaStream is a dark app. */
+:root{
+  --bg:#141519; --panel:#1b1c21; --panel-2:#212228; --line:#2c2d35;
+  --fg:#e9e9ee; --muted:#9a9aa6; --faint:#6c6c78;
+  --accent:#8b6cff; --accent-soft:rgba(139,108,255,.16);
+  --good:#34c77b; --good-soft:rgba(52,199,123,.14);
+  --warn:#f2b64a; --warn-soft:rgba(242,182,74,.14);
+  --info:#5aa8ff; --info-soft:rgba(90,168,255,.14);
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",system-ui,sans-serif;
+  --display:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --r:12px; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:14px/1.45 var(--sans);margin:0}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+
+.topbar{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.brand{font:600 15px var(--display)}
+.topbar .sp{flex:1}
+.ver{font:12px var(--mono);color:var(--faint)}
+.live{background:var(--accent);color:#fff;border-radius:999px;padding:2px 10px;font-size:12px;font-weight:600}
+
+.shell{display:grid;grid-template-columns:180px 1fr;min-height:100%}
+.side{border-right:1px solid var(--line);padding:12px 0}
+.side a{display:block;padding:7px 16px;color:var(--muted);text-decoration:none;font-size:13px}
+.side a.on{background:var(--panel-2);color:var(--fg);font-weight:600}
+main{padding:24px 16px 48px;display:grid;gap:16px;justify-items:center}
+.col{width:100%;max-width:780px;display:grid;gap:16px}
+@media (max-width:760px){.shell{grid-template-columns:1fr}.side{display:none}}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px}
+.eyebrow{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+
+/* Now playing */
+.np{display:grid;gap:10px}
+.np .t{font-weight:600}.np .a{color:var(--muted)}
+.bar{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;font:12px var(--mono);color:var(--muted)}
+.track{height:4px;background:var(--line);border-radius:4px;position:relative}
+.track i{position:absolute;inset:0 38% 0 0;background:var(--fg);border-radius:4px}
+
+/* Light timing card */
+.timing{display:grid;gap:16px}
+.thead{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.thead .sp{flex:1}
+.pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:600}
+.pill svg{width:12px;height:12px}
+.pill.good{background:var(--good-soft);color:var(--good)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.info{background:var(--info-soft);color:var(--info)}
+.pill.idle{background:var(--panel-2);color:var(--muted)}
+.link{color:var(--accent);text-decoration:none;font-size:13px}
+.disc{display:inline-flex;align-items:center;gap:6px;background:none;border:0;padding:4px 6px 4px 2px;margin-left:-2px;cursor:pointer;border-radius:8px}
+.disc:hover{background:var(--panel-2)}
+.chev{width:16px;height:16px;color:var(--muted);transform:rotate(90deg);transition:transform .2s ease}
+.disc[aria-expanded="false"] .chev{transform:rotate(0deg)}
+@media (prefers-reduced-motion:reduce){.chev{transition:none}}
+.peek{font:600 13px var(--mono);color:var(--fg);font-variant-numeric:tabular-nums}
+.timing.closed{gap:0}
+
+.hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:20px;align-items:center}
+@media (max-width:620px){.hero{grid-template-columns:1fr}}
+.figure{display:grid;gap:4px;min-width:0}
+.big{font:600 44px/1 var(--display);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.big small{font-size:20px;color:var(--muted);font-weight:500;margin-left:4px}
+.sub{color:var(--muted);font-size:13px}
+.sub b{color:var(--fg);font-weight:600}
+
+/* Path diagram: what the delay does */
+.path{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;min-width:0}
+.node{display:grid;justify-items:center;gap:4px;font-size:12px;color:var(--muted);text-align:center}
+.node .ic{width:36px;height:36px;border-radius:10px;background:var(--panel-2);border:1px solid var(--line);display:grid;place-items:center}
+.node .ic svg{width:18px;height:18px}
+.wire{position:relative;height:36px}
+.wire::before{content:"";position:absolute;left:0;right:0;top:17px;border-top:2px dashed var(--line)}
+.wire span{position:absolute;left:50%;top:0;transform:translateX(-50%);background:var(--panel);padding:0 8px;font:12px var(--mono);color:var(--fg);white-space:nowrap}
+.wire .dot{position:absolute;top:13px;width:10px;height:10px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px var(--accent-soft);animation:travel 2.24s linear infinite}
+@keyframes travel{from{left:0}to{left:calc(100% - 10px)}}
+@media (prefers-reduced-motion:reduce){.wire .dot{animation:none;left:calc(50% - 5px)}}
+
+/* Confidence + fine-tune row */
+.row2{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:end;border-top:1px solid var(--line);padding-top:14px}
+@media (max-width:620px){.row2{grid-template-columns:1fr}}
+.conf{display:grid;gap:6px;min-width:0}
+.conf .lbl{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.spark{width:100%;height:40px;display:block}
+.tune{display:grid;gap:6px;justify-items:end}
+@media (max-width:620px){.tune{justify-items:start}}
+.stepper{display:inline-flex;align-items:center;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.stepper button{background:none;border:0;padding:7px 12px;cursor:pointer;font-size:13px;color:var(--fg)}
+.stepper button:hover{background:var(--line)}
+.stepper output{min-width:78px;text-align:center;font:600 13px var(--mono);border-inline:1px solid var(--line);padding:7px 6px;font-variant-numeric:tabular-nums}
+.saved{font-size:12px;color:var(--good);min-height:16px}
+
+details{border-top:1px solid var(--line);padding-top:12px}
+summary{cursor:pointer;color:var(--muted);font-size:13px;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"›";display:inline-block;margin-right:6px;transition:transform .15s}
+details[open] summary::before{transform:rotate(90deg)}
+.sum{display:grid;grid-template-columns:1fr auto;gap:6px 16px;margin:12px 0 0;font-size:13px;max-width:360px}
+.sum dt{color:var(--muted)}.sum dd{margin:0;text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+.sum .total{border-top:1px solid var(--line);padding-top:6px;color:var(--fg);font-weight:600}
+.meta{margin-top:10px;font-size:12px;color:var(--faint)}
+
+/* Alternative-state body */
+.alt{display:grid;gap:12px}
+.alt p{margin:0;color:var(--muted);max-width:60ch}
+.btn{background:var(--accent);color:#fff;border:0;border-radius:8px;padding:7px 14px;font-weight:600;cursor:pointer;justify-self:start}
+.ring{display:flex;align-items:center;gap:12px}
+.ring svg{width:44px;height:44px}
+
+/* Status list (existing card, trimmed) */
+.status{display:grid;grid-template-columns:auto 1fr;gap:6px 18px;font-size:13px;max-width:360px}
+.status dt{color:var(--muted)}.status dd{margin:0}
+
+/* Mockup chrome */
+.switch{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;border:1px dashed var(--warn);border-radius:var(--r);padding:10px 12px}
+.switch .note{flex:1 1 260px;min-width:0}
+.seg{display:inline-flex;background:var(--panel-2);border:1px solid var(--line);border-radius:9px;padding:2px;flex-wrap:wrap}
+.seg button{border:0;background:none;padding:5px 12px;border-radius:7px;font-size:12px;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--line);color:var(--fg);font-weight:600}
+.note{font-size:12px;color:var(--faint)}
+.notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.notes div{background:var(--panel-2);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--muted)}
+.notes b{display:block;color:var(--fg);margin-bottom:4px;font-size:13px}
+h2{font:600 17px var(--display);margin:0}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span class="brand">LampaStream</span><span class="sp"></span>
+  <span class="ver">0.2.0+1a7b948</span><span class="live">● Live</span>
+</div>
+<div class="shell">
+  <nav class="side" aria-label="Sections">
+    <a class="on" href="#np">Now Playing</a><a href="#np">Couplings</a><a href="#np">Analysers</a><a href="#np">Effects</a>
+    <a href="#np">Energy Profiles</a><a href="#np">Zones</a><a href="#np">Virtual Players</a><a href="#np">Latency</a><a href="#np">Backup and restore</a>
+  </nav>
+  <main id="np">
+    <div class="col">
+
+      <div class="switch" role="group" aria-label="Mockup state">
+        <span class="note"><b style="color:var(--warn)">Mockup only</b> · not part of LampaStream. LampaStream picks the state itself; these buttons let you preview each one, open or folded.</span>
+        <div class="seg" id="seg">
+          <button type="button" data-s="locked" aria-pressed="true">In sync</button>
+          <button type="button" data-s="measuring" aria-pressed="false">Measuring</button>
+          <button type="button" data-s="fixed" aria-pressed="false">Fixed</button>
+          <button type="button" data-s="group" aria-pressed="false">Sync group</button>
+          <button type="button" data-s="idle" aria-pressed="false">Paused</button>
+        </div>
+      </div>
+
+      <section class="card np" aria-label="Now playing">
+        <div class="eyebrow">Now playing on Study (Sonos)</div>
+        <div><span class="t">Just A Little Bit More (Extended)</span> <span class="a">· Mau P</span></div>
+        <div class="bar"><span>3:56</span><div class="track"><i></i></div><span>6:21</span></div>
+      </section>
+
+      <!-- NEW: Light timing -->
+      <section class="card timing" id="timing" aria-labelledby="tt">
+        <div class="thead">
+          <button type="button" class="disc" id="disc" aria-expanded="true" aria-controls="body">
+            <svg class="chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M5.5 3.5L10 8l-4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <h2 id="tt">Light timing</h2>
+          </button>
+          <span id="pill" class="pill good" role="status"></span>
+          <span id="peek" class="peek" hidden></span>
+          <span class="sp"></span>
+          <a class="link" href="#np">Latency settings</a>
+        </div>
+        <div id="body"></div>
+      </section>
+
+      <section class="card" aria-label="Status">
+        <div class="eyebrow" style="margin-bottom:10px">Status</div>
+        <dl class="status">
+          <dt>Spectrum engine</dt><dd>V2</dd>
+          <dt>Beat detection</dt><dd>Combined</dd>
+          <dt>Effect</dt><dd style="font-family:var(--mono)">spectrum_rgb</dd>
+          <dt>Session</dt><dd>Bridge connected · LMS player running</dd>
+        </dl>
+        <p class="note" style="margin:10px 0 0">“Sync master” and “Delay” move out of this list into Light timing above.</p>
+      </section>
+
+      <section class="card" aria-label="Design notes">
+        <div class="eyebrow" style="margin-bottom:10px">How this follows Apple's Human Interface Guidelines</div>
+        <div class="notes">
+          <div><b>One number first</b>The delay is the answer, so it is the largest thing on the card. Everything else supports it.</div>
+          <div><b>Plain language</b>“Lights wait 2.24 s so they match Study”, not “residual” or “probe”. Technical terms live behind Details.</div>
+          <div><b>Progressive disclosure</b>The breakdown (measured, Player Delay, trim) is one tap away, closed by default.</div>
+          <div><b>Direct manipulation</b>Fine-tune sits beside the number, in the user's words: <i>earlier</i> and <i>later</i>. Changes save at once and say so.</div>
+          <div><b>Status you can read without colour</b>Each state has an icon, a word and a colour, so it works for colour-blind users and screen readers.</div>
+          <div><b>Collapse without losing the answer</b>The arrow folds the card to one line that still shows the state and the delay. It rotates like a Finder disclosure triangle, and the choice is remembered.</div>
+          <div><b>Honest confidence</b>The sparkline and “±” show how steady the measurement is, instead of implying false precision.</div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<script>
+const icons={
+  check:'<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M2.5 6.2l2.2 2.2 4.8-4.9"/></svg>',
+  clock:'<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="6" cy="6" r="4.6"/><path d="M6 3.5V6l1.6 1"/></svg>',
+  lock:'<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="5.2" width="7" height="4.8" rx="1"/><path d="M4 5.2V4a2 2 0 014 0v1.2"/></svg>',
+  info:'<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="6" cy="6" r="4.6"/><path d="M6 5.4V8.4M6 3.6v.1"/></svg>',
+  pause:'<svg viewBox="0 0 12 12" fill="currentColor"><rect x="3" y="2.5" width="2" height="7" rx=".6"/><rect x="7" y="2.5" width="2" height="7" rx=".6"/></svg>',
+  speaker:'<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="1.5" width="10" height="15" rx="2"/><circle cx="9" cy="11" r="2.6"/><circle cx="9" cy="5" r=".8" fill="currentColor"/></svg>',
+  bulb:'<svg viewBox="0 0 18 18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6.5 12.5a5 5 0 115 0V14h-5z"/><path d="M7 16.5h4"/></svg>'
+};
+let trim=0; const measured=2243, playerDelay=0;
+const samples=[2210,2268,2241,2236,2252,2229,2243];
+
+function spark(){
+  const w=300,h=40,min=2150,max=2350;
+  const x=i=>6+i*(w-12)/(samples.length-1), y=v=>h-4-(v-min)/(max-min)*(h-8);
+  const pts=samples.map((v,i)=>`${x(i)},${y(v)}`).join(' ');
+  const band=`M6,${y(2243+48)} H${w-6} V${y(2243-48)} H6 Z`;
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" role="img" aria-label="Last 7 measurements, all within 48 milliseconds of 2.24 seconds">
+    <path d="${band}" fill="rgba(139,108,255,.12)"/>
+    <line x1="6" x2="${w-6}" y1="${y(2243)}" y2="${y(2243)}" stroke="#6c6c78" stroke-dasharray="3 3"/>
+    <polyline points="${pts}" fill="none" stroke="#8b6cff" stroke-width="1.6" vector-effect="non-scaling-stroke"/>
+    <circle cx="${x(samples.length-1)}" cy="${y(samples.at(-1))}" r="3" fill="#8b6cff"/></svg>`;
+}
+const fmt=ms=>(ms/1000).toFixed(2);
+const sign=v=>v===0?'0 ms':(v>0?'+':'−')+Math.abs(v)+' ms';
+
+function locked(){
+  const applied=Math.max(0,measured+playerDelay+trim);
+  return `<div class="hero">
+    <div class="figure">
+      <div class="big" aria-label="${fmt(applied)} seconds">${fmt(applied)}<small>s</small></div>
+      <div class="sub">Lights wait this long so they match what you hear on <b>Study (Sonos)</b>.</div>
+    </div>
+    <div class="path" aria-hidden="true">
+      <div class="node"><div class="ic">${icons.bulb}</div>Lights</div>
+      <div class="wire"><span>+${fmt(applied)} s</span><i class="dot"></i></div>
+      <div class="node"><div class="ic">${icons.speaker}</div>Study</div>
+    </div>
+  </div>
+  <div class="row2">
+    <div class="conf">
+      <div class="lbl"><span>Steady to within ±48 ms</span><span>7 measurements · 19:18:44</span></div>
+      ${spark()}
+    </div>
+    <div class="tune">
+      <label class="note" for="trimv">Fine-tune by ear</label>
+      <div class="stepper">
+        <button type="button" id="earlier" aria-label="Lights 10 milliseconds earlier">◀ Earlier</button>
+        <output id="trimv" aria-live="polite">${sign(trim)}</output>
+        <button type="button" id="later" aria-label="Lights 10 milliseconds later">Later ▶</button>
+      </div>
+      <div class="saved" id="saved"></div>
+    </div>
+  </div>
+  <details>
+    <summary>Details</summary>
+    <dl class="sum">
+      <dt>Measured difference</dt><dd>${measured} ms</dd>
+      <dt>Player Delay (set in LMS)</dt><dd>${playerDelay} ms</dd>
+      <dt>Your fine-tune</dt><dd>${sign(trim)}</dd>
+      <dt class="total">Applied to the lights</dt><dd class="total">${applied} ms</dd>
+    </dl>
+    <div class="meta">Measured automatically by comparing both players' positions in LMS. Rechecked every 15 s and after each track change.</div>
+  </details>`;
+}
+const states={
+  locked:{pill:['good','check','In sync'],body:locked},
+  measuring:{pill:['info','clock','Measuring'],body:()=>`<div class="alt">
+    <div class="ring"><svg viewBox="0 0 44 44" role="img" aria-label="3 of 7 measurements"><circle cx="22" cy="22" r="18" fill="none" stroke="#2c2d35" stroke-width="4"/><circle cx="22" cy="22" r="18" fill="none" stroke="#5aa8ff" stroke-width="4" stroke-linecap="round" stroke-dasharray="${113*3/7} 113" transform="rotate(-90 22 22)"/></svg>
+    <div><div class="big" style="font-size:28px">2.2<small>s so far</small></div><div class="sub">New track. Checking the timing against Study, about 20 seconds to go.</div></div></div>
+    <p>The lights keep the last good delay (2.24 s) until the new measurement is steady.</p></div>`},
+  fixed:{pill:['idle','lock','Fixed'],body:()=>`<div class="alt">
+    <div class="big">1.10<small>s</small></div>
+    <p>A fixed delay you set by hand for <b style="color:var(--fg)">Sonos Port</b>. Switch to Auto to have LampaStream measure it and keep it right when the network changes.</p>
+    <button class="btn" type="button">Measure automatically</button></div>`},
+  group:{pill:['warn','info','Can’t measure'],body:()=>`<div class="alt">
+    <div class="big">2.00<small>s</small></div>
+    <p>The lights player is in a sync group with Study, so LMS reports one shared position and there is nothing to compare. Using your fixed fallback of 2.00 s.</p>
+    <p>To measure automatically, set the virtual player's follow mode to <b style="color:var(--fg)">Manual — fixed player</b>.</p></div>`},
+  idle:{pill:['idle','pause','Paused'],body:()=>`<div class="alt">
+    <div class="big" style="color:var(--muted)">2.24<small>s</small></div>
+    <p>Last measured for Study at 19:18. Measuring resumes when playback starts.</p></div>`}
+};
+const peeks={locked:()=>fmt(Math.max(0,measured+playerDelay+trim))+' s',measuring:()=>'2.24 s',fixed:()=>'1.10 s',group:()=>'2.00 s',idle:()=>'2.24 s'};
+let current='locked', open=true;
+try{ if(localStorage.getItem('lightTimingOpen')==='0') open=false; }catch(e){}
+function applyOpen(){
+  const d=document.getElementById('disc'), b=document.getElementById('body'), k=document.getElementById('peek');
+  d.setAttribute('aria-expanded',open); b.hidden=!open; k.hidden=open;
+  k.textContent=peeks[current]();
+  document.getElementById('timing').classList.toggle('closed',!open);
+}
+document.getElementById('disc').onclick=()=>{
+  open=!open; try{localStorage.setItem('lightTimingOpen',open?'1':'0');}catch(e){}
+  applyOpen();
+};
+function render(s){
+  current=s;
+  const st=states[s], p=document.getElementById('pill');
+  p.className='pill '+st.pill[0]; p.innerHTML=icons[st.pill[1]]+st.pill[2];
+  document.getElementById('body').innerHTML=st.body();
+  if(s==='locked'){
+    const upd=d=>{trim=Math.max(-1000,Math.min(1000,trim+d));render('locked');
+      const sv=document.getElementById('saved'); sv.textContent='Saved · lights '+(trim<0?'earlier':'later')+' by '+Math.abs(trim)+' ms';
+      if(trim===0) sv.textContent='Saved · no fine-tune';};
+    document.getElementById('earlier').onclick=()=>upd(-10);
+    document.getElementById('later').onclick=()=>upd(10);
+  }
+  applyOpen();
+}
+document.querySelectorAll('#seg button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('#seg button').forEach(x=>x.setAttribute('aria-pressed',x===b));
+  render(b.dataset.s);
+});
+render('locked');
+</script>
+</body>
+</html>

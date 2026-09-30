@@ -125,3 +125,25 @@ reads it through the unchanged strict-v1 PCM consumer.
 Another repository may run tests concurrently on the development machine. If the
 CAVA per-hop timing test fails, repeat that test alone and report both results;
 do not weaken its threshold or change DSP to compensate for host contention.
+
+## Light timing and installer pin updates
+
+`web/src/__tests__/LightTiming.test.tsx` covers all seven timing states, automatic
+entry creation and strategy switching, collapse persistence (including unavailable
+storage), trim steps and limits, optimistic updates, confirmations and save errors.
+Now Playing tests assert that Sync master and Delay no longer appear in Status.
+`web/tests/e2e/light-timing.spec.ts` uses the preview websocket fixture to fold,
+reload, retain the folded choice, save Earlier twice as −20 ms and switch Fixed
+to Auto. Build the bundled frontend before running Playwright.
+
+Backend tests check that accepted samples are timestamped, bounded to seven,
+cleared with the estimator window, detached from the estimator and rejected on
+API writes. The estimator and LMS command contracts remain covered by the existing
+latency tests. Rerun timing-sensitive failures alone before diagnosing a regression.
+
+The repository installer test creates real local Git repositories with a recursive
+submodule and a moved parent gitlink while leaving the submodule checkout on its
+old revision. Normal installation must update recursive submodules before checking
+cleanliness. Separate cases must refuse genuine parent, submodule and nested
+submodule edits and preserve them. `--check` remains a read-only verification;
+`scripts/update.sh` pulls and delegates this ordering to the installer.

@@ -1,0 +1,126 @@
+import { useEffect, useId, useRef, useState } from 'react'
+import { Check, ChevronRight, Clock, Info, Lightbulb, Lock, Pause, Speaker } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { createPlayerLatency, updatePlayerLatency, type PlayerLatency } from '@/lib/api'
+import type { SocketStatus } from '@/hooks/usePreviewSocket'
+
+const seconds = (ms: number) => (ms / 1000).toFixed(2)
+const signed = (ms: number) => `${ms > 0 ? '+' : ''}${ms} ms`
+const time = (stamp: number | null | undefined) => stamp ? new Date(stamp * 1000).toLocaleTimeString('en-GB') : '—'
+
+function Sparkline({ status }: { status: NonNullable<PlayerLatency['status']> }) {
+  const samples = status.samples ?? []
+  if (!samples.length) return <p className="text-xs text-muted-foreground">Waiting for measurements.</p>
+  const median = status.median_residual_ms ?? 0, precision = status.precision_ms ?? 0
+  const low = Math.min(median - precision, ...samples.map(s => s.residual_ms)) - 10
+  const high = Math.max(median + precision, ...samples.map(s => s.residual_ms)) + 10
+  const y = (v: number) => 36 - (v - low) / (high - low) * 32
+  const x = (i: number) => samples.length === 1 ? 150 : 6 + i * 288 / (samples.length - 1)
+  return <svg className="h-10 w-full text-primary" viewBox="0 0 300 40" preserveAspectRatio="none" role="img" aria-label={`Last ${samples.length} measurements, median ${median} milliseconds, precision ±${precision} milliseconds`}>
+    <rect x="6" width="288" y={y(median + precision)} height={y(median - precision) - y(median + precision)} fill="currentColor" opacity=".15" />
+    <line x1="6" x2="294" y1={y(median)} y2={y(median)} className="stroke-muted-foreground" strokeDasharray="3 3" />
+    <polyline points={samples.map((s, i) => `${x(i)},${y(s.residual_ms)}`).join(' ')} fill="none" stroke="currentColor" strokeWidth="1.6" vectorEffect="non-scaling-stroke" />
+    {samples.map((s, i) => <circle key={`${s.timestamp}-${i}`} cx={x(i)} cy={y(s.residual_ms)} r="2" fill="currentColor"><title>{`${time(s.timestamp)} · ${s.residual_ms} ms`}</title></circle>)}
+  </svg>
+}
+
+export function LightTiming({ status, onOpenLatency }: { status: SocketStatus | null; onOpenLatency?: () => void }) {
+  const id = useId()
+  const [open, setOpen] = useState(() => { try { return localStorage.getItem('lightTimingOpen') !== '0' } catch { return true } })
+  const mac = status?.follow_target_mac || status?.sync_master
+  const entry = status?.light_timing?.player_mac === mac ? status?.light_timing : null
+  const name = status?.follow_target_name || status?.sync_master_name || entry?.name || mac || 'the followed player'
+  const [override, setOverride] = useState<PlayerLatency | null>(null)
+  const [trim, setTrim] = useState(entry?.trim_ms ?? 0)
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
+  const pending = useRef(false)
+  const desiredTrim = useRef<number | null>(null)
+  useEffect(() => { desiredTrim.current = null; setOverride(null); setTrim(entry?.trim_ms ?? 0) }, [mac])
+  useEffect(() => {
+    if (override && entry?.strategy === override.strategy) setOverride(null)
+    if (desiredTrim.current === entry?.trim_ms) desiredTrim.current = null
+    if (!pending.current && desiredTrim.current === null) setTrim(entry?.trim_ms ?? 0)
+  }, [entry, override])
+  useEffect(() => { if (!message) return; const timer = setTimeout(() => setMessage(''), 4000); return () => clearTimeout(timer) }, [message])
+  const current = override ?? entry
+  const timing = current?.status
+  const group = current?.strategy === 'auto' && (status?.follow_mode === 'sync_group' || timing?.state === 'not measurable (sync group)')
+  const state = !current ? 'missing' : current.strategy === 'none' ? 'none' : group ? 'group' : current.strategy === 'fixed' ? 'fixed' : timing?.state === 'stable' ? 'stable' : timing?.state === 'measuring' ? 'measuring' : 'idle'
+  const states = {
+    stable: [Check, 'In sync', 'text-emerald-400 bg-emerald-400/10'],
+    measuring: [Clock, 'Measuring', 'text-blue-400 bg-blue-400/10'],
+    fixed: [Lock, 'Fixed', 'text-muted-foreground bg-secondary'],
+    group: [Info, 'Can’t measure', 'text-amber-400 bg-amber-400/10'],
+    idle: [Pause, status?.track?.playing === false ? 'Paused' : 'Idle', 'text-muted-foreground bg-secondary'],
+    missing: [Info, 'Not set up', 'text-blue-400 bg-blue-400/10'],
+    none: [Info, 'No delay', 'text-muted-foreground bg-secondary'],
+  } as const
+  const [Icon, label, colour] = states[state]
+  const applied = state === 'idle' ? Math.max(0, (current?.measured_delay_ms ?? 0) + (current?.trim_ms ?? 0)) : status?.applied_delay_ms ?? timing?.applied_delay_ms ?? 0
+  async function measure() {
+    if (!mac || busy) return
+    setBusy(true); setError('')
+    try {
+      const saved = current ? await updatePlayerLatency(mac, { strategy: 'auto' }) : await createPlayerLatency({ player_mac: mac, name, strategy: 'auto' })
+      setOverride({ ...current, ...saved, strategy: 'auto', status: undefined })
+      setMessage('Saved · measuring automatically')
+    } catch (e) { setError(e instanceof Error ? e.message : 'Could not save') }
+    finally { setBusy(false) }
+  }
+  async function fineTune(delta: number) {
+    if (!mac || !current || busy) return
+    const next = Math.max(-1000, Math.min(1000, trim + delta)), previous = trim
+    desiredTrim.current = next; setTrim(next); setBusy(true); pending.current = true; setError('')
+    try {
+      await updatePlayerLatency(mac, { trim_ms: next })
+      setMessage(next === 0 ? 'Saved · no fine-tune' : `Saved · lights ${next < 0 ? 'earlier' : 'later'} by ${Math.abs(next)} ms`)
+    } catch (e) { desiredTrim.current = null; setTrim(previous); setError(e instanceof Error ? e.message : 'Could not save') }
+    finally { pending.current = false; setBusy(false) }
+  }
+  return <Card aria-labelledby={`${id}-title`} data-testid="light-timing">
+    <CardHeader className="flex-row flex-wrap items-center gap-3 space-y-0 py-4">
+      <button className="flex items-center gap-1 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-expanded={open} aria-controls={`${id}-body`} onClick={() => { setOpen(!open); try { localStorage.setItem('lightTimingOpen', open ? '0' : '1') } catch { /* Storage may be unavailable. */ } }}>
+        <ChevronRight aria-hidden="true" className={`h-4 w-4 text-muted-foreground transition-transform motion-reduce:transition-none ${open ? 'rotate-90' : ''}`} /><h2 id={`${id}-title`} className="text-base font-semibold">Light timing</h2>
+      </button>
+      <Badge variant="secondary" className={`gap-1 border-0 ${colour}`}><Icon aria-hidden="true" className="h-3 w-3" />{label}</Badge>
+      {!open && <span className="font-mono text-sm tabular-nums">{state === 'none' ? 'No delay' : `${seconds(applied)} s`}</span>}
+      <a href="#latency" className="ml-auto text-sm text-primary hover:underline" onClick={e => { if (onOpenLatency) { e.preventDefault(); onOpenLatency() } }}>Latency settings</a>
+    </CardHeader>
+    <CardContent id={`${id}-body`} hidden={!open} className="space-y-4">
+      <div className={state === 'stable' ? 'grid gap-5 sm:grid-cols-2 items-center' : 'space-y-3'}>
+        <div>
+          <div className={`text-4xl font-semibold tabular-nums ${state === 'idle' ? 'text-muted-foreground' : ''}`}>
+            {state === 'none' ? 'No delay' : <>{seconds(applied)}<small className="ml-1 text-xl text-muted-foreground">s</small></>}
+          </div>
+          {state === 'stable' && <p className="mt-2 text-sm text-muted-foreground">Lights wait this long so they match what you hear on <b className="text-foreground">{name}</b>.</p>}
+        </div>
+        {state === 'stable' && <div className="flex items-center gap-3 text-xs text-muted-foreground" aria-hidden="true">
+          <span className="grid justify-items-center gap-1"><Lightbulb className="h-9 w-9 rounded-lg border bg-secondary p-2" />Lights</span>
+          <div className="relative flex-1 border-t-2 border-dashed"><span className="absolute -top-6 left-1/2 -translate-x-1/2 whitespace-nowrap font-mono text-foreground">+{seconds(applied)} s →</span><i className="timing-dot" style={{ animationDuration: `${Math.max(.1, applied / 1000)}s` }} /></div>
+          <span className="grid max-w-32 justify-items-center gap-1 text-center"><Speaker className="h-9 w-9 rounded-lg border bg-secondary p-2" />{name}</span>
+        </div>}
+      </div>
+      {state === 'measuring' && <div className="space-y-3 text-sm text-muted-foreground">
+        <div className="flex items-center gap-3"><svg className="h-11 w-11 text-blue-400" viewBox="0 0 44 44" role="img" aria-label={`${timing?.sample_count ?? 0} of 7 measurements`}><circle cx="22" cy="22" r="18" fill="none" className="stroke-secondary" strokeWidth="4" /><circle cx="22" cy="22" r="18" fill="none" stroke="currentColor" strokeWidth="4" strokeDasharray={`${113 * Math.min(7, timing?.sample_count ?? 0) / 7} 113`} transform="rotate(-90 22 22)" /></svg><span>Checking the timing against {name} · {timing?.sample_count ?? 0} of 7 measurements.</span></div>
+        <p>The lights keep the last good delay ({seconds(applied)} s) until the new measurement is steady.</p>
+      </div>}
+      {state === 'fixed' && <p className="text-sm text-muted-foreground">A fixed delay you set by hand for <b className="text-foreground">{name}</b>. Switch to Auto to have LampaStream measure it and keep it right when the network changes.</p>}
+      {state === 'group' && <div className="space-y-3 text-sm text-muted-foreground"><p>The lights player is in a sync group with {name}, so LMS reports one shared position and there is nothing to compare. Using your fixed fallback of {seconds(current?.fixed_delay_ms ?? 0)} s.</p><p>To measure automatically, set the virtual player's follow mode to <b className="text-foreground">Manual — fixed player</b>.</p></div>}
+      {state === 'idle' && <p className="text-sm text-muted-foreground">Last measured for {name} at {time(current?.measured_at)}. Measuring resumes when playback starts.</p>}
+      {state === 'missing' && <p className="text-sm text-muted-foreground">Light timing has not been set up for {name}. Measure automatically to match what you hear.</p>}
+      {state === 'none' && <p className="text-sm text-muted-foreground">The lights run without a delay for {name}. Measure automatically to match what you hear.</p>}
+      {['fixed', 'missing', 'none'].includes(state) && <Button size="sm" disabled={busy || !mac} onClick={measure}>Measure automatically</Button>}
+      {current?.strategy === 'auto' && !group && <div className="grid gap-4 border-t pt-4 sm:grid-cols-[1fr_auto] items-end">
+        <div className="space-y-2">{state === 'stable' && timing && <><div className="flex flex-wrap justify-between gap-2 text-xs text-muted-foreground"><span>Steady to within ±{timing.precision_ms ?? '—'} ms</span><span>{timing.sample_count} measurements · {time(timing.last_sample_time)}</span></div><Sparkline status={timing} /></>}</div>
+        <div className="space-y-1"><label htmlFor={`${id}-trim`} className="block text-xs text-muted-foreground sm:text-right">Fine-tune by ear</label><div className="inline-flex items-center overflow-hidden rounded-lg border bg-secondary"><Button variant="ghost" size="sm" aria-label="Lights 10 milliseconds earlier" disabled={busy || trim <= -1000} onClick={() => fineTune(-10)}>◀ Earlier</Button><output id={`${id}-trim`} aria-live="polite" className="min-w-20 border-x px-2 text-center font-mono text-sm">{signed(trim)}</output><Button variant="ghost" size="sm" aria-label="Lights 10 milliseconds later" disabled={busy || trim >= 1000} onClick={() => fineTune(10)}>Later ▶</Button></div></div>
+      </div>}
+      <p role="status" className="min-h-4 text-xs text-emerald-400">{message}</p>
+      {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+      <details className="border-t pt-3 text-sm"><summary className="cursor-pointer text-muted-foreground">Details</summary><dl className="mt-3 grid max-w-sm grid-cols-[1fr_auto] gap-x-4 gap-y-1 [&_dt]:text-muted-foreground [&_dd]:text-right [&_dd]:font-mono"><dt>Measured difference</dt><dd>{timing?.median_residual_ms ?? '—'} ms</dd><dt>Player Delay (set in LMS)</dt><dd>{timing?.player_delay_ms ?? '—'} ms</dd><dt>Your fine-tune</dt><dd>{signed(trim)}</dd><dt className="border-t pt-2">Applied to the lights</dt><dd className="border-t pt-2">{applied} ms</dd></dl><p className="mt-3 text-xs text-muted-foreground">Measured automatically by comparing both players' positions in LMS. Rechecked every 15 s and after each track change.</p></details>
+    </CardContent>
+  </Card>
+}

@@ -488,3 +488,34 @@ selects `playDelay`;
 subtracts positive delay from the player's scheduled start time and adds it to
 synchronisation play points. `Queries.pm` defaults player preferences to the
 `server` namespace.
+
+## Light timing on Now Playing
+
+The Light timing card sits directly below the track. It names the followed player
+and moves the old Sync master and Delay information out of Live preview's Status
+list. Latency settings opens the Latency page. The disclosure remembers its open
+or folded choice in this browser; folded, it still shows the state and applied
+light delay. Details starts closed and explains the measured difference, LMS
+Player Delay, fine-tune and applied delay.
+
+In sync shows the applied seconds, measurement precision, sample count, last
+sample time and recent measurement chart. Measuring shows progress out of seven
+while retaining the last good delay. Fixed offers Measure automatically; Can't
+measure explains the sync-group fallback and Manual — fixed player follow mode.
+Paused or idle retains the last measured delay until playback resumes. Not set up
+creates an Auto entry for the followed player; No delay switches an existing None
+entry to Auto. Every state includes a readable label and icon as well as colour.
+
+For automatically measured timing, Fine-tune by ear saves `trim_ms` in 10 ms steps between −1000 and +1000 ms.
+Earlier reduces the trim; Later increases it. The signed trim updates immediately
+and successful writes show a short confirmation. The applied delay still follows
+the existing estimator's 50 ms step limit. Fixed, None and sync-group fallback states retain their
+existing delay behaviour and offer no fine-tune stepper. Switch to automatic
+measurement to fine-tune by ear.
+
+Timing snapshots reuse the preview websocket and refresh no faster than every
+2 seconds. The read-only latency status includes `samples`: up to seven accepted
+measurements, each with `residual_ms` and its Unix `timestamp`. The chart shows
+the median and ±precision band. Samples are runtime data, never saved configuration,
+and API create/patch requests reject samples and status fields. Reduced motion
+stops the path animation and disclosure transition.

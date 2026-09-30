@@ -1805,3 +1805,16 @@ def test_auto_latency_config_status_trim_and_readonly_fields(client):
         assert client.patch(f'/api/player-latencies/{mac}', json=payload).status_code == 422
     assert client.patch(f'/api/player-latencies/{mac}', json={'trim_ms': 250}).status_code == 200
     assert client.get('/api/player-latencies').json()[0]['trim_ms'] == 250
+
+
+def test_latency_samples_are_read_only(client):
+    mac = '02:00:00:00:00:02'
+    assert client.post('/api/player-latencies', json={'player_mac': mac}).status_code == 201
+    result = client.get('/api/player-latencies').json()[0]
+    assert result['status']['samples'] == []
+    for fields in ({'samples': []}, {'status': {'samples': []}}):
+        assert client.patch(f'/api/player-latencies/{mac}', json=fields).status_code == 422
+        assert client.post('/api/player-latencies', json={
+            'player_mac': '02:00:00:00:00:03', **fields,
+        }).status_code == 422
+    assert client.get('/api/player-latencies').json()[0] == result

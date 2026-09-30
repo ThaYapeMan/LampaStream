@@ -28,10 +28,10 @@ test('technical session status at 1400px', async ({ page }, testInfo) => {
   await page.goto('/')
   const status = page.getByLabel('Session status')
   await expect(status.locator('dt')).toHaveText([
-    'Spectrum engine', 'Beat detection', 'Effect', 'Sync master', 'Delay',
+    'Spectrum engine', 'Beat detection', 'Effect',
   ])
   await expect(status.locator('dd')).toHaveText([
-    'CAVA Core', 'Combined', 'spectrum_rgb', 'Living roomaa:bb:cc:dd:ee:ff', '1100 ms',
+    'CAVA Core', 'Combined', 'spectrum_rgb',
   ])
   await expect(page.getByLabel('Light floorplan')).toBeVisible()
   const colour = await page.getByTestId('colour-preview-size').boundingBox()

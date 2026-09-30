@@ -362,3 +362,21 @@ def test_inactive_entry_has_zero_applied_delay_but_keeps_saved_start_value(tmp_p
     assert status['state'] == 'idle'
     assert status['applied_delay_ms'] == 0
     assert AutoLatencyProbe(config, None, Mock()).current_delay_ms() == 1000
+
+
+def test_recent_samples_are_bounded_timestamped_and_detached(monkeypatch):
+    probe, _, context, _, _ = fixture_probe()
+    clock = iter(range(100, 111))
+    monkeypatch.setattr('lampastream.latency.time.time', lambda: next(clock))
+    for i in range(10):
+        assert probe.accept(1 + i / 1000, i)
+    before = probe.status()['samples']
+    assert len(before) == 7
+    assert before[0] == {'residual_ms': 1003, 'timestamp': 103}
+    assert before[-1] == {'residual_ms': 1009, 'timestamp': 109}
+    assert not probe.accept(9, 11)
+    assert probe.status()['samples'] == before
+    before[0]['residual_ms'] = 99999
+    assert probe.status()['samples'][0]['residual_ms'] == 1003
+    probe.eligible(context[0], 5)
+    assert probe.status()['samples'] == []

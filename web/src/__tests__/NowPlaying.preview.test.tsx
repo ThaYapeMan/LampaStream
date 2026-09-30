@@ -28,7 +28,7 @@ beforeEach(() => {
   vi.mocked(getVirtualPlayers).mockResolvedValue([{ id: 'p', type: 'LMS' }] as never)
 })
 
-it('resolves the five technical status rows in order, preserving the preview layout', async () => {
+it('resolves the three technical status rows in order, preserving the preview layout', async () => {
   render(<NowPlaying {...props} status={status} />)
   const dl = screen.getByLabelText('Session status')
   await within(dl).findByText('CAVA Core')
@@ -38,11 +38,11 @@ it('resolves the five technical status rows in order, preserving the preview lay
   expect(within(dl).queryByText('Energy Profile')).not.toBeInTheDocument()
   expect(within(dl).queryByText('Canonical analyser')).not.toBeInTheDocument()
   expect([...dl.querySelectorAll('dt')].map(el => el.textContent)).toEqual([
-    'Spectrum engine', 'Beat detection', 'Effect', 'Sync master', 'Delay',
+    'Spectrum engine', 'Beat detection', 'Effect',
   ])
-  expect(within(dl).getByText('Living room')).toBeInTheDocument()
-  expect(within(dl).getByText('aa:bb:cc:dd:ee:ff')).toBeInTheDocument()
-  expect(within(dl).getByText('1100 ms')).toBeInTheDocument()
+  expect(within(dl).queryByText('Sync master')).not.toBeInTheDocument()
+  expect(within(dl).queryByText('Delay')).not.toBeInTheDocument()
+  expect(within(dl).queryByText('1100 ms')).not.toBeInTheDocument()
   expect(screen.queryByText('Onset method')).not.toBeInTheDocument()
   for (const id of ['colour-preview-size', 'floorplan-preview-size']) {
     expect(screen.getByTestId(id)).toHaveClass('aspect-square', 'w-full')
@@ -86,11 +86,11 @@ it('resolves an AirPlay player from configuration when the websocket omits its t
   expect(screen.queryByText('cava', { exact: true })).not.toBeInTheDocument()
 })
 
-it('keeps follower and latency warnings visible outside the five status rows', async () => {
+it('keeps follower and latency warnings visible outside the three status rows', async () => {
   render(<NowPlaying {...props} status={{ ...status, follower_warning: 'Not synced', latency_warning: 'No latency data' }} />)
   await waitFor(() => expect(screen.getByText('Not synced')).toBeInTheDocument())
   expect(screen.getByText('No latency data')).toBeInTheDocument()
-  expect(screen.getByLabelText('Session status').querySelectorAll('dt')).toHaveLength(5)
+  expect(screen.getByLabelText('Session status').querySelectorAll('dt')).toHaveLength(3)
 })
 
 
@@ -119,8 +119,8 @@ it('only exposes transport for LMS with a live follow target; AirPlay sync is n/
   }} />)
   expect(screen.queryByRole('button', { name: 'Previous' })).not.toBeInTheDocument()
   const dl = screen.getByLabelText('Session status')
-  expect(within(dl).getByText('n/a')).toHaveClass('text-muted-foreground')
-  expect(within(dl).getByText('1100 ms')).toBeInTheDocument()
+  expect(within(dl).queryByText('Sync master')).not.toBeInTheDocument()
+  expect(within(dl).queryByText('1100 ms')).not.toBeInTheDocument()
   await within(dl).findByText('CAVA Core')
 })
 

@@ -799,3 +799,63 @@ cleanup_huesync_layout
         "New lampastream rules must survive cleanup (replaced, not just deleted)"
     )
     assert 'subject.user === "lampastream"' in new_rules.read_text()
+
+
+@pytest.mark.parametrize('dirty', [None, 'parent', 'submodule', 'nested'])
+def test_pulled_submodule_pin_is_updated_before_cleanliness_check(tmp_path, dirty):
+    def git(path, *args):
+        return subprocess.check_output(['git', '-C', str(path), *args], text=True).strip()
+
+    def repo(path):
+        path.mkdir()
+        git(path, 'init', '-q')
+        git(path, 'config', 'user.name', 'Test')
+        git(path, 'config', 'user.email', 'test@example.invalid')
+        (path / 'tracked').write_text('initial')
+        git(path, 'add', '.')
+        git(path, 'commit', '-qm', 'initial')
+
+    nested = tmp_path / 'nested-source'
+    repo(nested)
+    core = tmp_path / 'core-source'
+    repo(core)
+    git(core, '-c', 'protocol.file.allow=always', 'submodule', 'add', '-q',
+        str(nested), 'third_party/alac')
+    git(core, 'commit', '-qam', 'nested pin')
+    parent = tmp_path / 'parent'
+    repo(parent)
+    git(parent, '-c', 'protocol.file.allow=always', 'submodule', 'add', '-q',
+        str(core), 'third_party/yeney-core')
+    git(parent, 'commit', '-qam', 'old core pin')
+    checkout = parent / 'third_party/yeney-core'
+    git(parent, '-c', 'protocol.file.allow=always', 'submodule', 'update', '--init', '--recursive')
+    old = git(checkout, 'rev-parse', 'HEAD')
+    (core / 'new-file').write_text('new revision')
+    git(core, 'add', '.')
+    git(core, 'commit', '-qm', 'new core pin')
+    new = git(core, 'rev-parse', 'HEAD')
+    git(checkout, 'fetch', '-q')
+    git(parent, 'update-index', '--cacheinfo', f'160000,{new},third_party/yeney-core')
+    git(parent, 'commit', '-qm', 'pulled updated pin')
+    assert git(checkout, 'rev-parse', 'HEAD') == old
+    assert git(parent, 'status', '--porcelain', '--untracked-files=no')
+    if dirty:
+        target = {'parent': parent, 'submodule': checkout,
+                  'nested': checkout / 'third_party/alac'}[dirty]
+        (target / 'tracked').write_text('local changes')
+    text = SCRIPT.read_text()
+    functions = text[text.index('update_submodules() {'):text.index('verify() {')]
+    result = subprocess.run(['bash', '-c',
+                             'set -Eeuo pipefail\n'
+                             'fail() { echo "$*" >&2; exit 1; }\n'
+                             f'REPO_DIR="{parent}"\n' + functions +
+                             '\nupdate_submodules\nrepo_check\n'],
+                            env={**os.environ, 'GIT_ALLOW_PROTOCOL': 'file'},
+                            capture_output=True, text=True)
+    assert (result.returncode == 0) is (dirty is None), result.stdout + result.stderr
+    if dirty:
+        assert (target / 'tracked').read_text() == 'local changes'
+    else:
+        assert git(checkout, 'rev-parse', 'HEAD') == new
+        assert not git(parent, 'status', '--porcelain', '--untracked-files=no')
+    assert text.index('    update_submodules\n') < text.index('\nrepo_check\n')

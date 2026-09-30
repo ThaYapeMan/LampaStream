@@ -77,6 +77,7 @@ async def ws_preview(websocket: WebSocket):
     await websocket.accept()
     last_status_json: str | None = None
     tick = 0
+    light_timing = None
     try:
         while True:
             colours = player_manager.last_colours
@@ -123,9 +124,16 @@ async def ws_preview(websocket: WebSocket):
                     **({"normalised_bars": normalised_bars} if normalised_bars is not None else {}),
                 })
 
+            if tick % 40 == 0:
+                target = player_manager.follow_target_mac or player_manager.detected_sync_master
+                entry = (websocket.app.state.storage.get_player_latency(target)
+                         if isinstance(target, str) else None)
+                light_timing = (dict(entry.to_dict(), status=player_manager.latency_status(entry))
+                                if entry else None)
             track = player_manager.track_position
             status_dict = {
                 "type": "status",
+                "light_timing": light_timing,
                 "track": dataclasses.asdict(track) if track is not None else None,
                 "version": f"{__version__}+{__git_hash__}",
                 "active_coupling_id": player_manager.active_coupling_id,

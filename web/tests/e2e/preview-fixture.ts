@@ -1,7 +1,7 @@
 import { expect } from '@playwright/test'
 import type { Page, WebSocketRoute } from '@playwright/test'
 
-export async function setupPreview(page: Page) {
+export async function setupPreview(page: Page, timingStatus: () => Record<string, unknown> = () => ({})) {
   await page.setViewportSize({ width: 1400, height: 1100 })
   await page.route('**/api/**', route => {
     const path = new URL(route.request().url()).pathname
@@ -21,7 +21,7 @@ export async function setupPreview(page: Page) {
       active_player_type: 'LMS', follow_mode: 'manual', active_zone_id: 'z', active_bars_source: 'pcm_pipeline',
       effect_type: 'spectrum_rgb', processes: { lms_player: true }, applied_delay_ms: 1100,
       follow_target_mac: 'aa:bb:cc:dd:ee:ff', follow_target_name: 'Room',
-      track: { title: 'Jealous (Extended Mix)', artist: 'Mochakk', position_s: 26, duration_s: 345, playing: true } }))
+      track: { title: 'Jealous (Extended Mix)', artist: 'Mochakk', position_s: 26, duration_s: 345, playing: true }, ...timingStatus() }))
     ws.send(JSON.stringify({ type: 'spectrum', bars: [.6,.6,.2,.2,.2,.2,.4,.4,.4,.4], normalised_bars: Array(10).fill(.33) }))
   })
   await page.goto('/')
@@ -32,9 +32,15 @@ export async function setupPreview(page: Page) {
 export async function geometry(page: Page) {
   const result: Record<string, unknown> = {}
   for (const id of ['track-block', 'colour-preview-size', 'floorplan-preview-size', 'spectrum-panel']) {
-    result[id] = await page.getByTestId(id).boundingBox()
+    result[id] = await page.getByTestId(id).evaluate(documentBox)
   }
-  result.status = await page.getByLabel('Session status').boundingBox()
+  result.status = await page.getByLabel('Session status').evaluate(documentBox)
   return result
 }
 
+
+// Compare document coordinates: controls below the fold can scroll the viewport.
+function documentBox(el: Element) {
+  const { x, y, width, height } = el.getBoundingClientRect()
+  return { x: x + window.scrollX, y: y + window.scrollY, width, height }
+}
