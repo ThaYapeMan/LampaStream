@@ -1,6 +1,7 @@
 """Remove only the previous installer-owned fork, proven by its manifest digest."""
 import hashlib
 import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -17,6 +18,14 @@ def remove_owned_binary(binary: Path, manifest_path: Path) -> bool:
         return False
     digest = manifest.get('squeezelite_sha256')
     if not isinstance(digest, str) or hashlib.sha256(binary.read_bytes()).hexdigest() != digest:
+        return False
+    # Package ownership wins even if a stale manifest happens to match the bytes.
+    try:
+        ownership = subprocess.run(['dpkg-query', '-S', str(binary)],
+                                   capture_output=True, timeout=10, check=False)
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    if ownership.returncode != 1:  # 0 = packaged; other errors are not proof of ownership
         return False
     binary.unlink()
     print(f'Removed previous LampaStream fork: {binary}')

@@ -13,7 +13,7 @@ HUESYNC_RULES=/etc/polkit-1/rules.d/49-huesync-airplay.rules
 # Build tools/headers; -dev packages pull the matching runtime shared libraries.
 mapfile -t NATIVE_BUILD_PACKAGES < "$SCRIPT_DIR/native-build-packages.txt"
 BUILD_PACKAGES=(git ca-certificates "${NATIVE_BUILD_PACKAGES[@]}" g++ make pkg-config patch python3-dev python3-venv
-    curl xz-utils libasound2-dev libflac-dev
+    curl xz-utils libflac-dev
     libssl-dev autoconf automake libtool libpopt-dev
     libconfig-dev systemd-dev libsystemd-dev libavahi-client-dev libavahi-common-dev
     libsoxr-dev libsodium-dev libgcrypt20-dev libplist-dev libplist-utils uuid-dev
@@ -41,13 +41,13 @@ verify() {
         [[ "$(dpkg-query -W -f='${Status}' "$package")" == 'install ok installed' ]] ||
             fail "Missing package: $package"
     done
-    pkg-config --exists alsa fftw3
+    pkg-config --exists fftw3
     local binary linkage
     for binary in /usr/local/bin/yeney-player /usr/local/bin/shairport-sync /usr/local/bin/nqptp; do
         linkage=$(ldd "$binary")
         [[ "$linkage" != *"not found"* ]] || fail "Unresolved runtime libraries: $binary"
     done
-    printf 'ALSA: PASS\nFFTW: PASS\n'
+    printf 'FFTW: PASS\n'
     [[ -x /usr/local/bin/yeney-player ]] || fail 'LampaStream yeney-player missing'
     [[ "$(command -v yeney-player)" == /usr/local/bin/yeney-player ]] || fail 'Wrong yeney-player PATH'
     /usr/local/bin/yeney-player --help | grep -- '-v' >/dev/null || fail 'SHM v1 producer option missing'
@@ -255,7 +255,7 @@ flock -n 9 || fail 'Another installer is running'
 log '1/7 Install system build and runtime dependencies'
 apt-get update
 apt-get install -y -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold --no-install-recommends "${BUILD_PACKAGES[@]}" "${RUNTIME_PACKAGES[@]}"
-pkg-config --exists alsa fftw3
+pkg-config --exists fftw3
 getent group lampastream >/dev/null || groupadd --system lampastream
 id lampastream >/dev/null 2>&1 || useradd --system --gid lampastream --home-dir "$PREFIX" --shell /usr/sbin/nologin lampastream
 usermod -a -G audio lampastream

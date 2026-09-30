@@ -51,15 +51,18 @@ def test_manifest_and_verifier(tmp_path, revision):
 
 
 @pytest.mark.parametrize('case', ['owned', 'foreign', 'packaged', 'missing', 'corrupt',
-                                  'no_digest', 'symlink'])
-def test_remove_only_owned_old_fork(tmp_path, case):
+                                  'no_digest', 'symlink', 'package_query_error'])
+def test_remove_only_owned_old_fork(tmp_path, case, monkeypatch):
     cleanup = load_script('remove-owned-squeezelite.py')
     binary = tmp_path / 'squeezelite'
     manifest = tmp_path / 'installation.json'
     binary.write_bytes(b'old owned fork')
     digest = hashlib.sha256(binary.read_bytes()).hexdigest()
     manifest.write_text(json.dumps({'squeezelite_sha256': digest}))
-    if case in ('foreign', 'packaged'):
+    ownership_code = 0 if case == 'packaged' else 2 if case == 'package_query_error' else 1
+    monkeypatch.setattr(cleanup.subprocess, 'run',
+                        lambda *args, **kw: subprocess.CompletedProcess(args[0], ownership_code))
+    if case == 'foreign':
         binary.write_bytes(case.encode())
     elif case == 'missing':
         manifest.unlink()
@@ -87,23 +90,24 @@ def test_old_manifest_read_before_release_switch():
 
 
 def test_real_yeney_player_shm_v1(tmp_path, monkeypatch):
-    for tool in ('gcc', 'g++', 'make'):
+    for tool in ('gcc', 'g++', 'make', 'ar'):
         if shutil.which(tool) is None:
             reason = f'yeney-player integration: missing {tool}'
             print(f'SKIP {reason}', flush=True)
             pytest.skip(reason)
-    probe = subprocess.run(['g++', '-x', 'c++', '-fsyntax-only', '-'],
-                           input='#include <FLAC/stream_decoder.h>\n',
+    probe = subprocess.run(['g++', '-x', 'c++', '-', '-lFLAC',
+                            '-o', str(tmp_path / 'flac-probe')],
+                           input='#include <FLAC/stream_decoder.h>\nint main() { return 0; }\n',
                            capture_output=True, text=True)
     if probe.returncode:
-        reason = 'yeney-player integration: missing libflac-dev headers'
+        reason = 'yeney-player integration: missing libflac-dev headers or linker library'
         print(f'SKIP {reason}', flush=True)
         pytest.skip(reason)
     assert subprocess.check_output(['git', '-C', str(CORE), 'rev-parse', 'HEAD'],
                                    text=True).strip() == REVISION
     build = tmp_path / 'core'
     # Build outside the submodule; never alter its sources or build state.
-    shutil.copytree(CORE, build, ignore=shutil.ignore_patterns('.git', '*.o', '*.d',
+    shutil.copytree(CORE, build, ignore=shutil.ignore_patterns('.git', 'tests', '*.o', '*.d',
                                                             'libyeneycore.a'))
     result = subprocess.run(['make', '-C', str(build), '-j2', 'yeney-player'],
                             capture_output=True, text=True, timeout=120)

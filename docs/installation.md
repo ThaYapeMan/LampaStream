@@ -128,7 +128,9 @@ ignored by yeney-player. Native decoders cover ALAC, FLAC, MP3 and PCM/AIFF; LMS
 converts other formats. Analysis PCM remains full-scale regardless of LMS volume.
 
 An upgrade removes `/usr/local/bin/squeezelite` only when its SHA256 matches the
-previous installation manifest. Symlinks, packaged and foreign binaries are retained.
+previous installation manifest and dpkg reports no package ownership. Symlinks,
+packaged and foreign binaries are retained; an inconclusive package query preserves
+the binary.
 The yeney-core LICENSE and THIRD_PARTY_NOTICES.md ship in the wheel and under
 `/usr/local/share/doc/lampastream/yeney-core/` on an installed target.
 
