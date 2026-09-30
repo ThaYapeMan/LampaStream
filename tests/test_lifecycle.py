@@ -296,7 +296,7 @@ def test_eos_clears_airplay_remainder():
     After fix: _remainder = b"" before EndOfStream is returned.
     """
     r_fd, w_fd = os.pipe()
-    src = AirPlayPipeStereoSource.__new__(AirPlayPipeStereoSource)
+    src = AirPlayPipeStereoSource()
     src._path = Path("/synthetic/airplay.pcm")
     src._fd = r_fd
     src._last_data_t = None

@@ -40,6 +40,8 @@ def test_manifest_and_verifier(tmp_path, revision):
     manifest = json.loads((tmp_path / 'installation.json').read_text())
     assert manifest == {
         'commit': 'abcdef12', 'short_commit': 'abcdef1', 'yeney_core_revision': REVISION,
+        'shairport_revision': '0b1c4391ffd398e7b145eb4b98416261380adeea',
+        'airplay_delivery_margin_ms': 500,
         'yeney_player_sha256': hashlib.sha256(binary.read_bytes()).hexdigest(),
     }
     verifier.verify_player(manifest, binary)

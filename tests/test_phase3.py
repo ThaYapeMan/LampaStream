@@ -731,7 +731,7 @@ def _make_airplay_stereo_pipe() -> tuple[AirPlayPipeStereoSource, int]:
     fl = fcntl.fcntl(r_fd, fcntl.F_GETFL)
     fcntl.fcntl(r_fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
 
-    src = AirPlayPipeStereoSource.__new__(AirPlayPipeStereoSource)
+    src = AirPlayPipeStereoSource()
     src._path = Path("/synthetic/airplay.pcm")
     src._fd = r_fd
     src._last_data_t = None

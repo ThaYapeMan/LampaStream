@@ -12,7 +12,7 @@ import uuid
 from dataclasses import replace
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -611,6 +611,12 @@ async def lms_list_players(host: str, request: Request):
 # ---------------------------------------------------------------------------
 # Status
 # ---------------------------------------------------------------------------
+
+
+@router.get("/airplay-timing")
+async def get_airplay_timing(request: Request, after: int = Query(default=0, ge=0)):
+    """Copy diagnostic events from the existing readers; never open a FIFO."""
+    return _manager(request).airplay_timing.snapshot(after)
 
 
 @router.get("/status")

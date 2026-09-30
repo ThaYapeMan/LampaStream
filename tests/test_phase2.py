@@ -290,7 +290,7 @@ def _open_airplay_src_on_pipe() -> tuple[AirPlayPipeStereoSource, int]:
     fl = fcntl.fcntl(r_fd, fcntl.F_GETFL)
     fcntl.fcntl(r_fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
 
-    src = AirPlayPipeStereoSource.__new__(AirPlayPipeStereoSource)
+    src = AirPlayPipeStereoSource()
     src._path = Path("/synthetic/pipe")
     src._fd = r_fd
     src._last_data_t = None
@@ -409,7 +409,7 @@ def test_airplay_stereo_samples_immutable():
 
 def test_airplay_stereo_sample_rate():
     """sample_rate property returns 44100."""
-    src = AirPlayPipeStereoSource.__new__(AirPlayPipeStereoSource)
+    src = AirPlayPipeStereoSource()
     src._path = Path("/synthetic")
     src._fd = None
     src._last_data_t = None
@@ -426,7 +426,7 @@ def test_airplay_stereo_source_id_format():
 
 def test_airplay_stereo_fd_none_returns_tnd():
     """read() before open() → TemporarilyNoData."""
-    src = AirPlayPipeStereoSource.__new__(AirPlayPipeStereoSource)
+    src = AirPlayPipeStereoSource()
     src._path = Path("/synthetic")
     src._fd = None
     src._last_data_t = None

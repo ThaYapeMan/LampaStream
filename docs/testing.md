@@ -147,3 +147,32 @@ old revision. Normal installation must update recursive submodules before checki
 cleanliness. Separate cases must refuse genuine parent, submodule and nested
 submodule edits and preserve them. `--check` remains a read-only verification;
 `scripts/update.sh` pulls and delegates this ordering to the installer.
+
+### AirPlay timing
+
+AirPlay timing tests cover read-timestamp provenance, bounded median/MAD
+processing measurements, delay arithmetic/smoothing/persistence, delivery
+cadence and fallback, the diagnostic probe and conservative receiver editing.
+A fake FIFO has exactly one reader; the probe consumes the diagnostic tap.
+Frontend coverage exercises AirPlay states, Details and Latency Auto.
+
+Run the backend with `pytest -v -ra` to include every skip reason. Optional
+FFmpeg round-trip acceptance tests skip when no usable FFmpeg is available;
+this adds four skips to environments that otherwise report four. CAVA and
+soundfile availability and data-dependent reference warm-up skips are reported
+individually. Native timing tests should run with BLAS thread counts limited to
+one; rerun timing-sensitive failures alone before diagnosing a regression.
+The owner probe is documented in [AirPlay timing](airplay-timing.md).
+
+In this WSL environment, the eight skips are:
+
+* `test_calib_audio.py` at collection: `soundfile not installed` (one module skip).
+* `TestCavaRunnerIntegration::test_runner_uses_fifo_method`,
+  `test_runner_produces_frames` and `test_runner_surfaces_stderr_on_error`:
+  `cava binary not installed` (three skips).
+* `test_ffmpeg_decode_roundtrip`, `test_ffmpeg_full_pipeline`,
+  `test_ffmpeg_deterministic_via_file` and `test_ffmpeg_start_duration` in
+  `test_run_acceptance.py`: `ffmpeg not available` (four skips).
+
+The latter four explain the difference from an environment with only the four
+soundfile/CAVA skips. No AirPlay timing test is skipped.

@@ -519,3 +519,15 @@ measurements, each with `residual_ms` and its Unix `timestamp`. The chart shows
 the median and ±precision band. Samples are runtime data, never saved configuration,
 and API create/patch requests reject samples and status fields. Reduced motion
 stops the path animation and disclosure transition.
+
+### AirPlay automatic light timing
+
+AirPlay virtual players can use Auto in Latency. The receiver delivers PCM
+500 ms early; LampaStream subtracts its measured processing time and applies
+your fine-tune. The Light timing card shows processing measurements and the
+M/P breakdown. Unverified receiver settings, uneven delivery or processing
+longer than the margin use the entry's fixed fallback with a visible reason.
+The installer preserves unrelated shairport settings when configuring early
+delivery. See [AirPlay timing](airplay-timing.md) for the source evidence,
+configuration contract and read-only diagnostic probe. Fine-tune accounts for
+physical lamp response, which is not measured by a microphone or sensor.

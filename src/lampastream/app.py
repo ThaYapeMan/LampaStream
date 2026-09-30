@@ -125,7 +125,9 @@ async def ws_preview(websocket: WebSocket):
                 })
 
             if tick % 40 == 0:
-                target = player_manager.follow_target_mac or player_manager.detected_sync_master
+                target = player_manager.timing_player_mac
+                if not isinstance(target, str):
+                    target = player_manager.follow_target_mac or player_manager.detected_sync_master
                 entry = (websocket.app.state.storage.get_player_latency(target)
                          if isinstance(target, str) else None)
                 light_timing = (dict(entry.to_dict(), status=player_manager.latency_status(entry))
@@ -141,6 +143,12 @@ async def ws_preview(websocket: WebSocket):
                 "active_zone_id": player_manager.active_zone_id,
                 "active_energy_profile_id": player_manager.active_energy_profile_id,
                 "active_player_type": player_manager.active_player_type,
+                "timing_player_mac": (player_manager.timing_player_mac
+                                      if isinstance(player_manager.timing_player_mac, str)
+                                      else None),
+                "timing_player_name": (player_manager.timing_player_name
+                                       if isinstance(player_manager.timing_player_name, str)
+                                       else None),
                 "follow_target_mac": player_manager.follow_target_mac,
                 "follow_target_name": player_manager.follow_target_name,
                 "follow_mode": (player_manager.follow_mode

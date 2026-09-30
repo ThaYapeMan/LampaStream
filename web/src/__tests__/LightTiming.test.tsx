@@ -77,3 +77,36 @@ it('reports save errors and restores the previous trim', async () => {
   expect(await screen.findByRole('alert')).toHaveTextContent('Save failed')
   expect(screen.getByLabelText('Fine-tune by ear')).toHaveTextContent('0 ms')
 })
+it.each([
+  ['stable', 'auto', 'In sync', /Lights wait M−P/],
+  ['measuring', 'auto', 'Measuring', /The lights keep the last good delay/],
+  ['idle', 'auto', 'Paused', /Measuring resumes when playback starts/],
+  ['idle', 'fixed', 'Fixed', /A fixed delay/],
+  ['not measurable', 'auto', 'Can’t measure', /Audio delivery stalled/],
+])('shows AirPlay %s/%s and processing breakdown', (state, strategy, label, wording) => {
+  const airplay = { ...entry, strategy, status: { ...entry.status!, state, source: 'airplay' as const,
+    early_delivery_ms: 500, median_processing_ms: 125, reason: 'Audio delivery stalled',
+    samples: [120, 125, 130].map((processing_ms, i) => ({ processing_ms, timestamp: 98 + i })) } }
+  render(<LightTiming status={{ ...status(airplay), active_player_type: 'AirPlay',
+    timing_player_mac: 'aa', timing_player_name: 'AirPlay receiver', follow_target_mac: null }} />)
+  expect(screen.getByText(label).querySelector('svg')).toBeInTheDocument()
+  expect(screen.getByText(wording)).toBeVisible()
+  fireEvent.click(screen.getByText('Details'))
+  expect(screen.getByText('Early delivery (M)')).toBeInTheDocument()
+  expect(screen.getByText('Processing (P)')).toBeInTheDocument()
+  expect(screen.queryByText('Player Delay (set in LMS)')).not.toBeInTheDocument()
+  if (state === 'stable') expect(screen.getByRole('img', { name: /Last 3 measurements, median 125/ })).toBeVisible()
+})
+it('fine-tunes the AirPlay virtual player and switches Fixed to Auto', async () => {
+  const e = { ...entry, player_mac: 'airplay', status: { ...entry.status!, source: 'airplay' as const } }
+  const view = render(<LightTiming status={{ ...status(e), active_player_type: 'AirPlay',
+    timing_player_mac: 'airplay', timing_player_name: 'AirPlay receiver' }} />)
+  fireEvent.click(screen.getByRole('button', { name: 'Lights 10 milliseconds earlier' }))
+  await screen.findByText('Saved · lights earlier by 10 ms')
+  expect(updatePlayerLatency).toHaveBeenCalledWith('airplay', { trim_ms: -10 })
+  view.rerender(<LightTiming status={{ ...status({ ...e, strategy: 'fixed' }), active_player_type: 'AirPlay',
+    timing_player_mac: 'airplay', timing_player_name: 'AirPlay receiver' }} />)
+  fireEvent.click(screen.getByRole('button', { name: 'Measure automatically' }))
+  await screen.findByText('Saved · measuring automatically')
+  expect(updatePlayerLatency).toHaveBeenCalledWith('airplay', { strategy: 'auto' })
+})

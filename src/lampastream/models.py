@@ -130,7 +130,7 @@ class BridgeConfig:
 
 @dataclass
 class PlayerLatency:
-    """Per-player latency configuration, keyed by the LMS sync-master MAC.
+    """Per-player latency configuration, keyed by listening or AirPlay player MAC.
 
     Stored globally (not per-profile) because the delay belongs to the
     listening player, not to the LampaStream light target.
@@ -139,9 +139,9 @@ class PlayerLatency:
     player_mac: str
     name: str | None = None      # human-readable label, e.g. "Sonos Living Room"
     strategy: str = "fixed"      # "none" | "fixed" | "auto"
-    fixed_delay_ms: int = 2000   # also the sync-group fallback
+    fixed_delay_ms: int = 2000   # also the automatic-measurement fallback
     trim_ms: int = 0
-    measured_delay_ms: int | None = None  # residual + Player Delay, before trim
+    measured_delay_ms: int | None = None  # untrimmed LMS or AirPlay timing estimate
     measured_at: float | None = None  # Unix seconds
 
     def __post_init__(self) -> None:

@@ -17,6 +17,8 @@ import tempfile
 import time
 from pathlib import Path
 
+from .airplay_config import installed_delivery_margin, rename_receiver
+from .airplay_timing import AirPlayAutoLatencyProbe, TimingDiagnostics
 from .hue_bridge import list_entertainment_areas
 from .hue_output import ChannelInfo, HueDriver, HueOutputConfig, get_channel_infos
 from .latency import AutoLatencyProbe, FixedLatencyProbe, NoLatencyProbe, latency_status
@@ -270,6 +272,7 @@ class ActiveSession:
 class PlayerManager:
     def __init__(self, storage: Storage):
         self.storage = storage
+        self.airplay_timing = TimingDiagnostics()
         self._active: ActiveSession | None = None
         # Shairport's FIFO is an event stream, not a replayable snapshot. Keep
         # one reader across Stop/Go so events during inactive sessions aren't lost.
@@ -805,21 +808,23 @@ class PlayerManager:
         No yeney-player, no cava, no FIFO, no LMS follower.  Exactly one ingress
         reader owns the production AirPlay FIFO — AirPlayPipeStereoSource.
         """
+        self.airplay_timing.reset()
         if self._airplay_tracks is None:
-            self._airplay_tracks = AirPlayTrackPositionSource()
+            self._airplay_tracks = AirPlayTrackPositionSource(timing=self.airplay_timing)
         session.track_source = self._airplay_tracks
         session.track_source.open()
         if self._configure_shairport_name(profile.display_name or profile.player_name):
             self._airplay_tracks.invalidate()
 
-        pipe_source = TeePcmSource(AirPlayPipeStereoSource())
+        await self._apply_airplay_probe(session)
+        pipe_source = TeePcmSource(AirPlayPipeStereoSource(timing=self.airplay_timing))
         pipe_source.open()
         session.shm_source = pipe_source
 
         pcm_analyser = _make_canonical_pipeline(pipe_source, profile)
 
         engine = SyncEngine(
-            None, profile, probe=session.probe,
+            None, profile, probe=session.probe, timing=self.airplay_timing,
             mellow_profile=mellow_profile, analyser=pcm_analyser,
         )
         session.sync_engine = engine
@@ -1022,7 +1027,10 @@ class PlayerManager:
         """
         if self._active is None:
             return
-        await self._apply_probe_for_master(self._active, self._detected_sync_master)
+        if self._active.player_type == VirtualPlayerType.AIRPLAY:
+            await self._apply_airplay_probe(self._active)
+        else:
+            await self._apply_probe_for_master(self._active, self._detected_sync_master)
 
     @property
     def follow_mode(self) -> str | None:
@@ -1033,17 +1041,68 @@ class PlayerManager:
 
     def latency_status(self, config) -> dict:
         session = self._active
+        airplay = any(player.type == VirtualPlayerType.AIRPLAY
+                      and player.player_mac == config.player_mac
+                      for player in self.storage.list_virtual_players())
         if session is None or session.latency_mac != config.player_mac:
-            return latency_status(config, delay=0)
-        if isinstance(session.probe, AutoLatencyProbe):
+            result = latency_status(config, delay=0)
+        elif isinstance(session.probe, (AutoLatencyProbe, AirPlayAutoLatencyProbe)):
             return session.probe.status()
-        fallback = config.strategy == "auto" and isinstance(session.follower, LmsSyncGroupObserver)
-        return latency_status(
-            config, state="not measurable (sync group)" if fallback else "idle",
-            strategy="fixed" if fallback else config.strategy,
-            delay=session.probe.current_delay_ms(),
-            reason="LMS reports a shared group position; using Fixed delay" if fallback else None,
-        )
+        else:
+            fallback = (config.strategy == "auto"
+                        and isinstance(session.follower, LmsSyncGroupObserver))
+            result = latency_status(
+                config, state="not measurable (sync group)" if fallback else "idle",
+                strategy="fixed" if fallback else config.strategy,
+                delay=session.probe.current_delay_ms(),
+                reason=("LMS reports a shared group position; using Fixed delay"
+                        if fallback else None),
+            )
+            airplay = airplay or session.player_type == VirtualPlayerType.AIRPLAY
+        if airplay:
+            result.update(source='airplay',
+                          early_delivery_ms=installed_delivery_margin(self._SHAIRPORT_CONF),
+                          median_processing_ms=None)
+        return result
+
+    @property
+    def timing_player_mac(self):
+        if self._active and self._active.player_type == VirtualPlayerType.AIRPLAY:
+            return self._active.profile.player_mac
+        return self.follow_target_mac or self.detected_sync_master
+
+    @property
+    def timing_player_name(self):
+        if self._active and self._active.player_type == VirtualPlayerType.AIRPLAY:
+            return self._active.profile.display_name or self._active.profile.player_name
+        return self.follow_target_name or self.detected_sync_master_name
+
+    async def _apply_airplay_probe(self, session):
+        mac = session.profile.player_mac
+        config = self.storage.get_player_latency(mac)
+        if config and config.strategy == 'auto':
+            if isinstance(session.probe, AirPlayAutoLatencyProbe):
+                session.probe.config = config
+                return
+            def persist(measured, timestamp):
+                current = self.storage.get_player_latency(mac)
+                if current and current.strategy == 'auto':
+                    current.measured_delay_ms = measured
+                    current.measured_at = timestamp
+                    self.storage.save_player_latency(current)
+            probe = AirPlayAutoLatencyProbe(
+                config, self.airplay_timing,
+                installed_delivery_margin(self._SHAIRPORT_CONF), persist)
+        elif config and config.strategy == 'fixed':
+            probe = FixedLatencyProbe(config.fixed_delay_ms)
+        else:
+            probe = NoLatencyProbe()
+        await session.probe.stop()
+        await probe.start()
+        session.probe = probe
+        session.latency_mac = mac
+        if session.sync_engine:
+            session.sync_engine.update_probe(probe)
 
     async def _apply_probe_for_master(
         self, session: ActiveSession, master: str | None
@@ -1249,26 +1308,18 @@ class PlayerManager:
 
         Return True if a receiver restart was attempted, invalidating metadata.
 
-        Computes the desired managed config deterministically and compares it to
-        the existing file.  If identical, returns immediately — no write, no
-        restart.  If different (name changed, file absent, or content differs),
-        writes the file and restarts the service exactly once.
-
-        shairport-sync reads its name only at startup, so SIGHUP is not enough —
-        a full service restart is required when the config changes.  Failures are
-        logged as warnings so that activation can proceed even if systemctl is
-        unavailable (e.g. tests).
-
-        TECHNICAL DEBT: LampaStream currently owns and manages the global
-        shairport-sync configuration file as a single managed unit tied to the
-        active VirtualPlayer's advertised name.  Reconsidering the semantics of
-        one global shairport-sync instance versus per-VirtualPlayer AirPlay
-        receivers is deferred to a later phase.
+        Existing operator settings are preserved. Only the receiver name changes,
+        through a validated update; missing files receive defaults. The service owns
+        the file, but does not have permission to replace its parent directory.
+        shairport-sync reads its name at startup, so a restart is required.
         """
         conf = (
             'general = {\n'
             f'  name = "{name}";\n'
             '  output_backend = "pipe";\n'
+            '  audio_backend_latency_offset_in_seconds = -0.5;\n'
+            '  audio_backend_buffer_desired_length_in_seconds = 0.0;\n'
+            '  audio_backend_buffer_interpolation_threshold_in_seconds = 0.0;\n'
             '  // Analysis-only receiver: full-scale PCM regardless of source volume.\n'
             '  ignore_volume_control = "yes";\n'
             '}\n'
@@ -1289,6 +1340,12 @@ class PlayerManager:
             existing = self._SHAIRPORT_CONF.read_text()
         except OSError:
             existing = None
+        if existing is not None:
+            try:
+                conf = rename_receiver(existing, name)
+            except ValueError as exc:
+                log.warning("Could not safely update receiver name: %s", exc)
+                return False
         if existing == conf:
             log.debug("shairport-sync config unchanged for name %r — skipping restart", name)
             return False

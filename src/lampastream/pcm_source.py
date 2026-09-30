@@ -1054,8 +1054,9 @@ class AirPlayPipeStereoSource:
     so that L/R alignment is always preserved across read boundaries.
     """
 
-    def __init__(self, path: Path = AIRPLAY_PIPE) -> None:
+    def __init__(self, path: Path = AIRPLAY_PIPE, *, timing=None) -> None:
         self._path = path
+        self._timing = timing
         self._fd: int | None = None
         self._last_data_t: float | None = None
         self._remainder: bytes = b""
@@ -1099,12 +1100,15 @@ class AirPlayPipeStereoSource:
 
         try:
             raw = os.read(self._fd, 65536)
+            received = time.monotonic()
         except OSError as exc:
             if exc.errno == errno.EAGAIN:
                 return TemporarilyNoData()
             raise
 
         if not raw:
+            if self._timing is not None:
+                self._timing.ended()
             # EOF: the write-end was closed (iOS disconnected from shairport-sync).
             # Discard any partial-byte carry: it belongs to the just-ended stream
             # and must not prefix the next reconnect's audio.
@@ -1119,7 +1123,9 @@ class AirPlayPipeStereoSource:
             return TemporarilyNoData()
 
         self._remainder = combined[n_frames * AIRPLAY_BYTES_PER_FRAME :]
-        self._last_data_t = time.monotonic()
+        self._last_data_t = received
+        if self._timing is not None:
+            self._timing.arrival(n_frames, received)
 
         s16 = np.frombuffer(combined[: n_frames * AIRPLAY_BYTES_PER_FRAME], dtype=np.int16)
         # Interleaved stereo S16_LE: even indices = L, odd = R.
@@ -1145,6 +1151,7 @@ class AirPlayPipeStereoSource:
             source_sample_pos=None,
             over_range=over_range,
             wall_ns=wall_ns,
+            received_monotonic=received,
         )
         return DataResult(frame=frame)
 

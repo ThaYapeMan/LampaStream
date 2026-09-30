@@ -115,8 +115,9 @@ export default function App() {
                 {activeTab === 'zones' && <Zones activeCouplingId={status?.active_coupling_id ?? null} />}
                 {activeTab === 'latency' && (
                   <Latency
-                    syncMaster={status?.sync_master ?? null}
-                    syncMasterName={status?.sync_master_name ?? null}
+                    airplay={status?.active_player_type === 'AirPlay'}
+                    syncMaster={status?.timing_player_mac ?? status?.sync_master ?? null}
+                    syncMasterName={status?.timing_player_name ?? status?.sync_master_name ?? null}
                     followMode={status?.follow_mode ?? null}
                   />
                 )}

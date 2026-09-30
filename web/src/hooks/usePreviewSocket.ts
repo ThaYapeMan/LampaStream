@@ -10,6 +10,8 @@ export interface TrackPosition {
 }
 
 export interface SocketStatus {
+  timing_player_mac?: string | null
+  timing_player_name?: string | null
   light_timing?: PlayerLatency | null
   follow_target_mac?: string | null
   follow_target_name?: string | null

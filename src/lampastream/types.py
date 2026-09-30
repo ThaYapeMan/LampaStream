@@ -198,6 +198,9 @@ class AudioFeatures:
     loudness_momentary_lufs: float | None = None
     loudness_short_term_lufs: float | None = None
 
+    # Source-read provenance only; does not alter any DSP calculation.
+    received_monotonic: float | None = None
+
 
 # ---------------------------------------------------------------------------
 # Renderer — contract between the colour engine and the analysis layer

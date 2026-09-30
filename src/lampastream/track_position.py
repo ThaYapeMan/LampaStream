@@ -162,8 +162,9 @@ class AirPlayTrackPositionSource:
     """
     MAX_ITEM = 65536
 
-    def __init__(self, path: str = '/run/lampastream/airplay.metadata'):
+    def __init__(self, path: str = '/run/lampastream/airplay.metadata', *, timing=None):
         self._path = Path(path)
+        self._timing = timing
         self._task: asyncio.Task | None = None
         self._snapshot: TrackPosition | None = None
         self._buffer = b''
@@ -262,6 +263,8 @@ class AirPlayTrackPositionSource:
         self._snapshot = replace(self._snapshot, **changes)
 
     def _item(self, kind: str, code: str, data: str) -> None:
+        if kind == 'ssnc' and self._timing is not None:
+            self._timing.metadata(code, data)
         if kind == 'core' and code in ('minm', 'asar'):
             changes = {'title' if code == 'minm' else 'artist': data or None}
             if self._batch is not None:

@@ -13,6 +13,7 @@ from pathlib import Path
 import numpy as np
 
 import lampastream
+from lampastream.airplay_config import DELIVERY_MARGIN_MS, delivery_margin
 from lampastream.cavacore import CavaCoreBackend
 from lampastream.migration import migrate_file
 
@@ -20,6 +21,11 @@ from lampastream.migration import migrate_file
 def verify_player(manifest: dict, binary: Path = Path('/usr/local/bin/yeney-player')) -> None:
     assert manifest['yeney_core_revision'] == '13e606f452d9a2ae729f9590ec4ea696ab4dbcde'
     assert hashlib.sha256(binary.read_bytes()).hexdigest() == manifest['yeney_player_sha256']
+
+
+def verify_airplay(manifest: dict, receiver_config: str) -> None:
+    assert delivery_margin(receiver_config, manifest) == DELIVERY_MARGIN_MS, (
+        'AirPlay timing contract unverified')
 
 
 def main() -> None:
@@ -37,6 +43,7 @@ def main() -> None:
     for setting in ('output_backend = "pipe"', '/run/lampastream/airplay.pcm',
                     'output_rate = 44100', 'output_format = "S16_LE"', 'output_channels = 2'):
         assert setting in receiver_config, f'Incompatible receiver configuration: {setting}'
+    verify_airplay(manifest, receiver_config)
     assert (package / 'webui/index.html').is_file()
     assert list((package / 'webui/assets').glob('*.js')), 'Frontend assets missing'
     os.environ['LAMPASTREAM_CONFIG'] = config
@@ -51,7 +58,8 @@ def main() -> None:
         backend.close()
     for item in ('Git commit', 'Python environment', 'Installed LampaStream import',
                  'Current persisted schema', 'CAVA native initialization/execution',
-                 'Frontend assets', 'yeney-player binary provenance'):
+                 'Frontend assets', 'yeney-player binary provenance',
+                 'AirPlay early delivery (500 ms)'):
         print(f'{item}: PASS')
 
 

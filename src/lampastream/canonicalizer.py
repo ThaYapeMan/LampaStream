@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import math
 import uuid
+from collections import deque
 from dataclasses import dataclass
 from enum import Enum
 from typing import ClassVar
@@ -57,6 +58,7 @@ class DecodedSourceFrame:
     source_sample_pos: int | None  # source-native position; None when unavailable
     over_range: bool  # any |sample| >= 1.0; diagnostic only — not audible distortion
     wall_ns: int | None  # wall-clock ns at frame capture; informational only
+    received_monotonic: float | None = None  # read capture, independent of wall time
 
     def __post_init__(self) -> None:
         arr = np.asarray(self.samples)
@@ -150,6 +152,8 @@ class AnalysisPcmFrame:
     epoch_id: str  # opaque identifier; changes on every epoch boundary
     source_id: str  # preserved from DecodedSourceFrame
     over_range: bool  # source over_range OR resampler overshoot produced |value| >= 1.0
+
+    received_monotonic: float | None = None
 
     SAMPLE_RATE: ClassVar[int] = 48000
     CHANNELS: ClassVar[int] = 2
@@ -387,6 +391,8 @@ class AudioCanonicalizer:
         self._sample_pos: int = 0
         # Accumulated source over_range from DataResults since the last output.
         self._over_range_acc: bool = False
+        self._arrival_spans = deque(maxlen=4096)
+        self._timing_source_frames = 0
 
     # ------------------------------------------------------------------
     # Public API
@@ -429,6 +435,8 @@ class AudioCanonicalizer:
         self._epoch_id = None
         self._sample_pos = 0
         self._over_range_acc = False
+        self._arrival_spans.clear()
+        self._timing_source_frames = 0
 
     def _start_epoch(self, source_rate: int, source_id: str) -> None:
         """Initialise resampler and pending epoch identity for a new epoch."""
@@ -467,6 +475,12 @@ class AudioCanonicalizer:
         # Expand mono → stereo (L=R); stereo preserved unchanged.
         stereo = _to_stereo(frame.samples)
 
+        if frame.received_monotonic is not None:
+            start = self._timing_source_frames * self.TARGET_RATE / frame.sample_rate
+            self._timing_source_frames += len(stereo)
+            end = self._timing_source_frames * self.TARGET_RATE / frame.sample_rate
+            self._arrival_spans.append((start, end, frame.received_monotonic))
+
         # Feed to soxr.  Output may be empty if the filter hasn't filled yet.
         canonical: np.ndarray = self._stream.resample_chunk(stereo, last=False)
 
@@ -498,10 +512,20 @@ class AudioCanonicalizer:
             epoch_id=self._epoch_id,
             source_id=self._current_source_id,
             over_range=over_range,
+            received_monotonic=self._received_at(self._sample_pos),
         )
         self._sample_pos += len(canonical)
         results.append(CanonicalData(frame=af))
         return results
+
+    def _received_at(self, sample_pos):
+        while len(self._arrival_spans) > 1 and self._arrival_spans[0][1] <= sample_pos:
+            self._arrival_spans.popleft()
+        if self._arrival_spans:
+            start, end, stamp = self._arrival_spans[0]
+            if start <= sample_pos < end:
+                return stamp
+        return None
 
     def _drain_and_end(self) -> list[CanonicalReadResult]:
         """Flush valid resampler tail, then emit EndOfStream."""
@@ -528,6 +552,7 @@ class AudioCanonicalizer:
                     epoch_id=self._epoch_id,
                     source_id=self._current_source_id,
                     over_range=over_range,
+                    received_monotonic=self._received_at(self._sample_pos),
                 )
                 self._sample_pos += len(tail)
                 results.append(CanonicalData(frame=drain_f))

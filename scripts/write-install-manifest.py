@@ -11,6 +11,8 @@ def write_manifest(commit: str, short: str, release: Path, revision: str,
     manifest = {
         'commit': commit, 'short_commit': short,
         'yeney_core_revision': revision,
+        'shairport_revision': '0b1c4391ffd398e7b145eb4b98416261380adeea',
+        'airplay_delivery_margin_ms': 500,
         'yeney_player_sha256': hashlib.sha256(binary.read_bytes()).hexdigest(),
     }
     (release / 'installation.json').write_text(json.dumps(manifest, indent=2) + '\n')

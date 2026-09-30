@@ -37,6 +37,7 @@ import {
 interface Props {
   syncMaster: string | null
   syncMasterName: string | null
+  airplay?: boolean
   followMode?: "manual" | "sync_group" | null
 }
 
@@ -59,6 +60,7 @@ function defaultForm(prefill?: Partial<EntryForm>): EntryForm {
 }
 
 interface EditorDialogProps {
+  airplay?: boolean
   open: boolean
   entry?: PlayerLatency
   onClose: () => void
@@ -66,7 +68,7 @@ interface EditorDialogProps {
   prefill?: Partial<EntryForm>
 }
 
-function EditorDialog({ open, entry, onClose, onSave, prefill }: EditorDialogProps) {
+function EditorDialog({ open, entry, onClose, onSave, prefill, airplay }: EditorDialogProps) {
   const isEditing = !!entry
   const [form, setForm] = useState<EntryForm>(() =>
     defaultForm(entry ? { ...entry, name: entry.name ?? '' } : prefill)
@@ -151,7 +153,7 @@ function EditorDialog({ open, entry, onClose, onSave, prefill }: EditorDialogPro
           </div>
           {(form.strategy === 'fixed' || form.strategy === 'auto') && (
             <SliderField
-              label={form.strategy === 'auto' ? 'Fixed delay (sync-group fallback)' : 'Fixed delay'}
+              label={form.strategy === 'auto' ? airplay ? 'Fixed delay (fallback)' : 'Fixed delay (sync-group fallback)' : 'Fixed delay'}
               value={form.fixed_delay_ms}
               min={0}
               max={3000}
@@ -176,7 +178,7 @@ function EditorDialog({ open, entry, onClose, onSave, prefill }: EditorDialogPro
   )
 }
 
-export function Latency({ syncMaster, syncMasterName, followMode }: Props) {
+export function Latency({ syncMaster, syncMasterName, followMode, airplay }: Props) {
   const [latencies, setLatencies] = useState<PlayerLatency[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -238,7 +240,7 @@ export function Latency({ syncMaster, syncMasterName, followMode }: Props) {
       {syncMaster && (
         <div className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-sm">
           <span>
-            {followMode === 'manual' ? 'Followed player:' : 'Sync master detected:'}{' '}
+            {airplay ? 'AirPlay virtual player:' : followMode === 'manual' ? 'Followed player:' : 'Sync master detected:'}{' '}
             <span className="font-medium">{syncMasterName ?? syncMaster}</span>{' '}
             <code className="text-xs font-mono text-muted-foreground">({syncMaster})</code>
           </span>
@@ -282,7 +284,7 @@ export function Latency({ syncMaster, syncMasterName, followMode }: Props) {
                     <div className="space-y-1" aria-label="Auto latency status">
                       <p>{l.status?.state ?? 'idle'} · {l.status?.applied_delay_ms ?? Math.max(0, (l.measured_delay_ms ?? 0) + l.trim_ms)} ms</p>
                       <p>Strategy in effect: {l.status?.strategy ?? 'auto'}</p>
-                      <p>Residual: {l.status?.median_residual_ms ?? '—'} ms · Player Delay: {l.status?.player_delay_ms ?? '—'} ms</p>
+                      {l.status?.source === 'airplay' ? <p>Early delivery: {l.status.early_delivery_ms ?? '—'} ms · Processing: {l.status.median_processing_ms ?? '—'} ms</p> : <p>Residual: {l.status?.median_residual_ms ?? '—'} ms · Player Delay: {l.status?.player_delay_ms ?? '—'} ms</p>}
                       <p>Trim: {l.trim_ms} ms · Samples: {l.status?.sample_count ?? 0} · Precision: ±{l.status?.precision_ms ?? '—'} ms</p>
                       <p>Last sample: {l.status?.last_sample_time ? new Date(l.status.last_sample_time * 1000).toLocaleTimeString() : '—'}</p>
                       {l.status?.reason && <p>{l.status.reason}</p>}
@@ -311,6 +313,7 @@ export function Latency({ syncMaster, syncMasterName, followMode }: Props) {
       )}
 
       <EditorDialog
+        airplay={airplay || editingEntry?.status?.source === 'airplay'}
         open={editorOpen}
         entry={editingEntry}
         prefill={editorPrefill}

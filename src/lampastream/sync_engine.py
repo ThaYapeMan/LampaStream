@@ -1044,6 +1044,7 @@ class CanonicalAnalysisPipeline:
         self._current_epoch_id: str | None = None
         # All record state commits under _pub_lock. Sequence/queue track delivery;
         # _latest_pub tracks the freshest audio interval for live Effects.
+        self._arrival_spans = deque(maxlen=4096)
         self._latest_pub: PublicationRecord | None = None
         self._preview_spectrum: tuple[str | None, list[float], list[float] | None] = (
             None, [], None)
@@ -1245,6 +1246,10 @@ class CanonicalAnalysisPipeline:
         carried_spectrum_interval: tuple[int, int] | None = None,
     ) -> PublicationRecord:
         """Build a PublicationRecord and atomically commit it to publication state."""
+        received = next((stamp for epoch, start, end, stamp in reversed(self._arrival_spans)
+                         if epoch == epoch_id and start <= sample_start < end), None)
+        if received is not None:
+            features = replace(features, received_monotonic=received)
         with self._pub_lock:
             self._pub_seq += 1
             seq = self._pub_seq
@@ -1388,9 +1393,13 @@ class CanonicalAnalysisPipeline:
                 self._latest_loudness_pub = None
                 self._latest_hpss_pub = None
             self._current_epoch_id = epoch_id
+            self._arrival_spans.clear()
             self._epoch_start_sample_pos = frame.sample_pos
             self._stft_frame_count = 0
 
+        if frame.received_monotonic is not None:
+            self._arrival_spans.append((epoch_id, frame.sample_pos,
+                                        frame.sample_pos + len(samples), frame.received_monotonic))
         mag_frames = self._bar_stft.push(samples)
         hop = self._bar_stft.hop
         # Chunk-independent hop positions: each STFT frame N starts at
@@ -2650,6 +2659,7 @@ class SyncEngine:
         probe: LatencyProbe | None = None,
         mellow_profile: Profile | None = None,
         analyser: AudioPipeline | None = None,
+        timing=None,
     ) -> None:
         self.profile = profile
         if analyser is not None:
@@ -2666,6 +2676,8 @@ class SyncEngine:
             raise ValueError("Either fifo_path or analyser must be provided")
         effective_mellow = mellow_profile if mellow_profile is not None else profile
         self._effect: LayerMixer = LayerMixer(profile, effective_mellow)
+        self._timing = timing
+        self._scene_timing = deque()
         self._probe: LatencyProbe = probe if probe is not None else NoLatencyProbe()
         self._delay_buffer: deque[Scene | None] = deque()
         self._last_onset: bool = False
@@ -3039,6 +3051,10 @@ class SyncEngine:
                 scene: Scene = self._effect.render(features, t)
                 self._last_mix = self._effect.mix
                 self._last_energy = features.full
+                self._scene_timing.append(
+                    (features.received_monotonic, time.monotonic())
+                    if self._timing is not None and features.received_monotonic is not None
+                    else None)
                 self._delay_buffer.append(scene)
                 self._diag_frame += 1
                 if self._diag_frame % 60 == 0:
@@ -3074,13 +3090,18 @@ class SyncEngine:
                 # None slot: advances the buffer in time without sending,
                 # so the delay stays consistent even during silent passages.
                 self._delay_buffer.append(None)
+                self._scene_timing.append(None)
 
             delay_frames = max(
                 0, round(self._probe.current_delay_ms() / 1000.0 / SEND_INTERVAL_S)
             )
             while len(self._delay_buffer) > delay_frames:
                 entry = self._delay_buffer.popleft()
+                provenance = self._scene_timing.popleft() if self._scene_timing else None
                 if entry is not None:
-                    output.send(entry, time.monotonic())
+                    sent = time.monotonic()
+                    output.send(entry, sent)
+                    if provenance is not None and self._timing is not None:
+                        self._timing.processing(*provenance, sent)
 
             await asyncio.sleep(SEND_INTERVAL_S)

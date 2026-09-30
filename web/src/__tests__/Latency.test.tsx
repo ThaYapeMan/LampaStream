@@ -60,3 +60,15 @@ it('has no obsolete ALSA control in the LMS editor', async () => {
   expect(screen.queryByText('ALSA device')).not.toBeInTheDocument()
   expect(screen.getByText('Player name')).toBeVisible()
 })
+it('offers AirPlay Auto and displays processing status rather than LMS timing', async () => {
+  vi.mocked(api.getPlayerLatencies).mockResolvedValue([{ ...entry,
+    status: { ...entry.status!, source: 'airplay', early_delivery_ms: 500, median_processing_ms: 125 } }])
+  render(<Latency syncMaster={entry.player_mac} syncMasterName="AirPlay receiver" airplay />)
+  expect(await screen.findByText('AirPlay virtual player:')).toBeVisible()
+  expect(screen.getByText('Early delivery: 500 ms · Processing: 125 ms')).toBeVisible()
+  expect(screen.queryByText(/Residual:/)).not.toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: 'Edit' }))
+  fireEvent.keyDown(within(screen.getByRole('dialog')).getByRole('combobox'), { key: 'ArrowDown' })
+  expect(screen.getByRole('option', { name: 'Auto' })).toBeVisible()
+  expect(screen.getByText('Fixed delay (fallback)')).toBeVisible()
+})
