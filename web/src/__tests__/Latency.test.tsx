@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { Latency } from '../pages/Latency'
+import { LatencyEditorDialog } from '../pages/Latency'
 import { Players } from '../pages/Players'
 import * as api from '../lib/api'
 vi.mock('../lib/api', async (original) => ({
@@ -21,13 +21,8 @@ beforeEach(() => {
   Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {configurable:true, value:vi.fn()})
   vi.clearAllMocks(); vi.mocked(api.getPlayerLatencies).mockResolvedValue([entry]) })
 afterEach(() => {cleanup(); Reflect.deleteProperty(HTMLElement.prototype, "scrollIntoView")})
-it('shows Auto live status and saves manual trim', async () => {
-  render(<Latency syncMaster={entry.player_mac} syncMasterName="Room" followMode="manual" />)
-  expect(await screen.findByText('Followed player:')).toBeVisible()
-  expect(screen.getByText('stable · 1050 ms')).toBeVisible()
-  expect(screen.getByText('Residual: 900 ms · Player Delay: 100 ms')).toBeVisible()
-  expect(screen.getByText('Trim: 50 ms · Samples: 7 · Precision: ±15 ms')).toBeVisible()
-  await userEvent.click(screen.getByRole('button', {name:'Edit'}))
+it('edits Auto timing and saves manual trim', async () => {
+  render(<LatencyEditorDialog open entry={entry} onClose={() => {}} onSave={() => {}} />)
   const dialog = screen.getByRole('dialog')
   expect(within(dialog).getByText('Manual trim')).toBeVisible()
   fireEvent.keyDown(within(dialog).getAllByRole('slider')[1], {key:'ArrowRight'})
@@ -35,19 +30,8 @@ it('shows Auto live status and saves manual trim', async () => {
   expect(api.updatePlayerLatency).toHaveBeenCalledWith(entry.player_mac,
     {name:'Room', strategy:'auto', fixed_delay_ms:500, trim_ms:60})
 })
-it('shows sync-group fallback and retains the sync-master label', async () => {
-  vi.mocked(api.getPlayerLatencies).mockResolvedValue([{...entry,
-    status:{...entry.status!, strategy:'fixed', state:'not measurable (sync group)',
-      applied_delay_ms:500, reason:'LMS reports a shared group position; using Fixed delay'}}])
-  render(<Latency syncMaster={entry.player_mac} syncMasterName="Room" followMode="sync_group" />)
-  expect(await screen.findByText('Sync master detected:')).toBeVisible()
-  expect(screen.getByText('Strategy in effect: fixed')).toBeVisible()
-  expect(screen.getByText('LMS reports a shared group position; using Fixed delay')).toBeVisible()
-})
 it('offers None, Fixed and Auto', async () => {
-  render(<Latency syncMaster={null} syncMasterName={null} />)
-  await screen.findByText('stable · 1050 ms')
-  await userEvent.click(screen.getByRole('button', {name:'Add entry', exact:true}))
+  render(<LatencyEditorDialog open onClose={() => {}} onSave={() => {}} />)
   fireEvent.keyDown(within(screen.getByRole('dialog')).getByRole('combobox'), {key:'ArrowDown'})
   expect(screen.getByRole('option', {name:'None'})).toBeVisible()
   expect(screen.getByRole('option', {name:'Fixed'})).toBeVisible()
@@ -56,18 +40,14 @@ it('offers None, Fixed and Auto', async () => {
 })
 it('has no obsolete ALSA control in the LMS editor', async () => {
   render(<Players />)
-  await userEvent.click(await screen.findByRole('button', {name:'New virtual player', exact:true}))
+  await userEvent.click(await screen.findByRole('button', {name:'Add player', exact:true}))
   expect(screen.queryByText('ALSA device')).not.toBeInTheDocument()
   expect(screen.getByText('Player name')).toBeVisible()
 })
-it('offers AirPlay Auto and displays processing status rather than LMS timing', async () => {
+it('offers AirPlay Auto with its fixed fallback', async () => {
   vi.mocked(api.getPlayerLatencies).mockResolvedValue([{ ...entry,
     status: { ...entry.status!, source: 'airplay', early_delivery_ms: 500, median_processing_ms: 125 } }])
-  render(<Latency syncMaster={entry.player_mac} syncMasterName="AirPlay receiver" airplay />)
-  expect(await screen.findByText('AirPlay virtual player:')).toBeVisible()
-  expect(screen.getByText('Early delivery: 500 ms · Processing: 125 ms')).toBeVisible()
-  expect(screen.queryByText(/Residual:/)).not.toBeInTheDocument()
-  await userEvent.click(screen.getByRole('button', { name: 'Edit' }))
+  render(<LatencyEditorDialog open entry={entry} airplay onClose={() => {}} onSave={() => {}} />)
   fireEvent.keyDown(within(screen.getByRole('dialog')).getByRole('combobox'), { key: 'ArrowDown' })
   expect(screen.getByRole('option', { name: 'Auto' })).toBeVisible()
   expect(screen.getByText('Fixed delay (fallback)')).toBeVisible()

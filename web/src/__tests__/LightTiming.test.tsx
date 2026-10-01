@@ -38,7 +38,8 @@ it('persists collapse, keeps applied delay visible and opens settings', () => {
   expect(localStorage.getItem('lightTimingOpen')).toBe('0')
   view.unmount(); render(<LightTiming status={status()} onOpenLatency={onOpenLatency} />)
   expect(screen.getByRole('button', { name: 'Light timing' })).toHaveAttribute('aria-expanded', 'false')
-  fireEvent.click(screen.getByRole('link', { name: 'Latency settings' })); expect(onOpenLatency).toHaveBeenCalled()
+  expect(screen.getByRole('link', { name: 'Player settings' })).toHaveAttribute('href', '/players?player=aa')
+  fireEvent.click(screen.getByRole('link', { name: 'Player settings' })); expect(onOpenLatency).toHaveBeenCalled()
 })
 it('defaults open when storage throws and tolerates writing failure', () => {
   const get = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw Error('blocked') })

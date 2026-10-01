@@ -1,8 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { usePreviewSocket } from '@/hooks/usePreviewSocket'
 import { NowPlaying } from '@/pages/NowPlaying'
 import { Backup } from '@/pages/Backup'
-import { Latency } from '@/pages/Latency'
 import { Players } from '@/pages/Players'
 import { Analysers } from '@/pages/Analysers'
 import { Effects } from '@/pages/Effects'
@@ -12,7 +11,7 @@ import { Couplings } from '@/pages/Couplings'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 
-type Tab = 'now-playing' | 'players' | 'analysers' | 'effects' | 'energy-profiles' | 'zones' | 'couplings' | 'latency' | 'backup'
+type Tab = 'now-playing' | 'players' | 'analysers' | 'effects' | 'energy-profiles' | 'zones' | 'couplings' | 'backup'
 
 const NAV_ITEMS: { value: Tab; label: string }[] = [
   { value: 'now-playing',     label: 'Now Playing' },
@@ -21,10 +20,20 @@ const NAV_ITEMS: { value: Tab; label: string }[] = [
   { value: 'effects',         label: 'Effects' },
   { value: 'energy-profiles', label: 'Energy Profiles' },
   { value: 'zones',           label: 'Zones' },
-  { value: 'players',         label: 'Virtual Players' },
-  { value: 'latency',         label: 'Latency' },
+  { value: 'players',         label: 'Players' },
   { value: 'backup',          label: 'Backup and restore' },
 ]
+
+export function readRoute() {
+  const url = new URL(window.location.href)
+  const legacy = ['latency', 'virtual-players'].includes(url.pathname.slice(1)) || ['latency', 'virtual-players'].includes(url.hash.slice(1).split('?')[0])
+  const name = legacy ? 'players' : (url.hash.slice(1).split('?')[0] || url.pathname.slice(1))
+  const tab = NAV_ITEMS.find(item => item.value === name)?.value || 'now-playing'
+  const hashQuery = new URLSearchParams(url.hash.split('?')[1] || '')
+  const player = url.searchParams.get('player') || hashQuery.get('player')
+  if (legacy) window.history.replaceState(null, '', `/players${player ? `?player=${encodeURIComponent(player)}` : ''}`)
+  return { tab, player }
+}
 
 function ConnectionBadge({ connected, attempt }: { connected: boolean; attempt: number }) {
   if (connected) {
@@ -49,7 +58,19 @@ export default function App() {
   }
   const [effectId, setEffectId] = useState<string | null>(null)
   const [energyProfileId, setEnergyProfileId] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState<Tab>('now-playing')
+  const [activeTab, setActiveTab] = useState<Tab>(() => readRoute().tab)
+  const [selectedPlayer, setSelectedPlayer] = useState<string | null>(() => readRoute().player)
+  function navigate(tab: Tab, player?: string | null) {
+    window.history.pushState(null, '', `/${tab}${player ? `?player=${encodeURIComponent(player)}` : ''}`)
+    setActiveTab(tab)
+    setSelectedPlayer(player || null)
+  }
+  useEffect(() => {
+    const update = () => { const route = readRoute(); setActiveTab(route.tab); setSelectedPlayer(route.player) }
+    window.addEventListener('popstate', update)
+    window.addEventListener('hashchange', update)
+    return () => { window.removeEventListener('popstate', update); window.removeEventListener('hashchange', update) }
+  }, [])
   const { colour, channel_colours, onset, onset_bass, onset_mid, onset_treble, mix, last_energy_input, loudness_momentary_lufs, bars, normalised_bars, status, connected, reconnectAttempt } = usePreviewSocket()
 
   return (
@@ -73,13 +94,13 @@ export default function App() {
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        <nav className="w-44 border-r border-border shrink-0 pt-2">
+        <nav className="w-28 sm:w-44 border-r border-border shrink-0 pt-2">
           {NAV_ITEMS.map((item) => (
             <button
               key={item.value}
-              onClick={() => setActiveTab(item.value)}
+              onClick={() => navigate(item.value)}
               className={cn(
-                'w-full text-left px-4 py-2.5 text-sm transition-colors',
+                'w-full text-left px-2 sm:px-4 py-2.5 text-xs sm:text-sm transition-colors',
                 activeTab === item.value
                   ? 'bg-muted font-medium text-foreground'
                   : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
@@ -106,21 +127,14 @@ export default function App() {
             <Analysers activeCouplingId={status?.active_coupling_id ?? null} />
           ) : (
             <div className="flex-1 overflow-y-auto">
-              <div className={cn('mx-auto px-6 py-6', activeTab === 'now-playing' ? 'max-w-5xl' : 'max-w-3xl')}>
+              <div className={cn('mx-auto w-full min-w-0 px-3 sm:px-6 py-6', activeTab === 'players' ? 'max-w-6xl' : activeTab === 'now-playing' ? 'max-w-5xl' : 'max-w-3xl')}>
                 {activeTab === 'now-playing' && (
-                  <NowPlaying onOpenLatency={() => setActiveTab('latency')} onOpenEffect={id => { setEffectId(id); setActiveTab('effects') }} expertMode={expertMode} last_energy_input={last_energy_input} onOpenEnergyProfile={id => { setEnergyProfileId(id); setActiveTab('energy-profiles') }} colour={colour} channel_colours={channel_colours} onset={onset} onset_bass={onset_bass} onset_mid={onset_mid} onset_treble={onset_treble} mix={mix} loudness_momentary_lufs={loudness_momentary_lufs} bars={bars} normalised_bars={normalised_bars} status={status} connected={connected} />
+                  <NowPlaying onOpenLatency={() => navigate('players', status?.timing_player_mac || status?.follow_target_mac || status?.sync_master)} onOpenEffect={id => { setEffectId(id); setActiveTab('effects') }} expertMode={expertMode} last_energy_input={last_energy_input} onOpenEnergyProfile={id => { setEnergyProfileId(id); setActiveTab('energy-profiles') }} colour={colour} channel_colours={channel_colours} onset={onset} onset_bass={onset_bass} onset_mid={onset_mid} onset_treble={onset_treble} mix={mix} loudness_momentary_lufs={loudness_momentary_lufs} bars={bars} normalised_bars={normalised_bars} status={status} connected={connected} />
                 )}
                 {activeTab === 'backup' && <Backup />}
-                {activeTab === 'players' && <Players activeCouplingId={status?.active_coupling_id ?? null} />}
+                {activeTab === 'players' && <Players activeCouplingId={status?.active_coupling_id ?? null} status={status} selectedPlayer={selectedPlayer} onSelect={id => navigate('players', id)} onNowPlaying={() => navigate('now-playing')} />}
                 {activeTab === 'zones' && <Zones activeCouplingId={status?.active_coupling_id ?? null} />}
-                {activeTab === 'latency' && (
-                  <Latency
-                    airplay={status?.active_player_type === 'AirPlay'}
-                    syncMaster={status?.timing_player_mac ?? status?.sync_master ?? null}
-                    syncMasterName={status?.timing_player_name ?? status?.sync_master_name ?? null}
-                    followMode={status?.follow_mode ?? null}
-                  />
-                )}
+
               </div>
             </div>
           )}

@@ -10,21 +10,15 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
-import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { PlayersDetail, buildPlayerRows } from '@/components/PlayersDetail'
+import type { SocketStatus } from '@/hooks/usePreviewSocket'
+import { getPlayerLatencies, type PlayerLatency } from '@/lib/api'
 import {
   type VirtualPlayer,
   type LmsPlayer,
@@ -69,7 +63,9 @@ function FormRow({ label, children }: { label: string; children: React.ReactNode
   )
 }
 
-export function Players({ activeCouplingId = null }: { activeCouplingId?: string | null }) {
+export function Players({ activeCouplingId = null, status = null, selectedPlayer, onSelect, onNowPlaying }: { activeCouplingId?: string | null; status?: SocketStatus | null; selectedPlayer?: string | null; onSelect?: (id: string) => void; onNowPlaying?: () => void }) {
+  const [latencies, setLatencies] = useState<PlayerLatency[]>([])
+  const [selection, setSelection] = useState(() => { try { return localStorage.getItem('lampastream.selectedPlayer') || '' } catch { return '' } })
   const [couplings, setCouplings] = useState<Coupling[]>([])
   const activeCoupling = couplings.find(c => c.id === activeCouplingId)
   const [players, setPlayers] = useState<VirtualPlayer[]>([])
@@ -87,7 +83,8 @@ export function Players({ activeCouplingId = null }: { activeCouplingId?: string
 
   async function load() {
     try {
-      const [data, cs] = await Promise.all([getVirtualPlayers(), getCouplings()])
+      const [data, cs, ls] = await Promise.all([getVirtualPlayers(), getCouplings(), getPlayerLatencies()])
+      setLatencies(ls)
       setCouplings(cs)
       setPlayers(data)
       setError(null)
@@ -100,6 +97,8 @@ export function Players({ activeCouplingId = null }: { activeCouplingId?: string
 
   useEffect(() => {
     load()
+    const timer = window.setInterval(load, 2000)
+    return () => window.clearInterval(timer)
   }, [])
 
   function openNew() {
@@ -201,72 +200,28 @@ export function Players({ activeCouplingId = null }: { activeCouplingId?: string
     followOptions.unshift({ playerid: form.follow_player_mac, name: form.follow_player_mac })
   }
 
-  if (loading) {
-    return <p className="text-sm text-muted-foreground">Loading…</p>
+  const rows = buildPlayerRows(players, latencies, status, activeCoupling?.player_id)
+  const selected = rows.find(r => r.id === (selectedPlayer || selection) || (!!selectedPlayer && (r.mac === selectedPlayer || r.player?.player_mac === selectedPlayer))) || rows[0]
+  useEffect(() => {
+    if (!selected) return
+    setSelection(selected.id)
+    try { localStorage.setItem('lampastream.selectedPlayer', selected.id) }
+    catch { /* Storage may be unavailable. */ }
+  }, [selected?.id])
+  function select(id: string) {
+    setSelection(id)
+    try { localStorage.setItem('lampastream.selectedPlayer', id) } catch { /* Storage may be unavailable. */ }
+    onSelect?.(id)
   }
-
-  if (error) {
-    return <p className="text-destructive text-sm">{error}</p>
-  }
-
+  if (loading) return <p className="text-sm text-muted-foreground">Loading…</p>
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold">Virtual Players</h2>
-        <Button size="sm" onClick={openNew}>
-          New virtual player
-        </Button>
+    <div className="space-y-6 min-w-0">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div><h2 className="text-2xl font-semibold">Players</h2><p className="mt-1 text-sm text-muted-foreground">The players LampaStream listens through, and how their lights are timed.</p></div>
+        <Button size="sm" onClick={openNew}>Add player</Button>
       </div>
-
-      {players.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No virtual players yet. Create one to get started.</p>
-      ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Type</TableHead>
-              <TableHead>LMS Host</TableHead>
-              <TableHead>Player Name</TableHead>
-              <TableHead>Advertised As</TableHead>
-              <TableHead>MAC</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {players.map((p) => (
-              <TableRow key={p.id}>
-                <TableCell className="font-medium">{p.type}</TableCell>
-                <TableCell className="font-mono text-sm text-muted-foreground">{p.lms_host}</TableCell>
-                <TableCell className="text-sm">
-                  <div className="flex items-center gap-2">
-                    <span>{p.player_name}</span>
-                    {p.id === activeCoupling?.player_id && <span aria-label="In use by active coupling" className="shrink-0 text-[10px] text-green-400">●</span>}
-                  </div>
-                </TableCell>
-                <TableCell className="text-sm text-muted-foreground">{p.display_name || p.player_name}</TableCell>
-                <TableCell className="font-mono text-xs text-muted-foreground">{p.player_mac || '—'}</TableCell>
-                <TableCell className="text-right">
-                  <div className="flex items-center justify-end gap-1">
-                    <Button size="sm" variant="ghost" onClick={() => openEdit(p)}>
-                      Edit
-                    </Button>
-                    <ConfirmDialog
-                      trigger={
-                        <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive">
-                          Delete
-                        </Button>
-                      }
-                      title="Delete virtual player"
-                      description={`Delete virtual player "${p.player_name}" (${p.lms_host})? This cannot be undone.`}
-                      onConfirm={() => handleDelete(p.id)}
-                    />
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
+      {error && <p role="alert" className="text-destructive text-sm">{error}</p>}
+      <PlayersDetail rows={rows} selected={selected} onSelect={select} onEdit={openEdit} onDelete={handleDelete} onReload={load} onNowPlaying={onNowPlaying} status={status} activePlayerId={activeCoupling?.player_id} />
 
       <Dialog open={editorOpen} onOpenChange={(o) => { if (!o) setEditorOpen(false) }}>
         <DialogContent className="max-w-md">
@@ -323,7 +278,7 @@ export function Players({ activeCouplingId = null }: { activeCouplingId?: string
                     <strong className="text-foreground">Silent AirPlay destination for analysis.</strong>
                   </p>
                   <p>
-                    Select this player alongside your real speaker in Control Center to keep audio
+                    Select this player alongside your real speaker in Control Centre to keep audio
                     playing through your speaker while LampaStream analyses the stream.
                   </p>
                 </div>

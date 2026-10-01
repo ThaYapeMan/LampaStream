@@ -212,7 +212,7 @@ Open **`http://<host>:8420`** after installation. The current UI provides:
 
 - **Now Playing:** live color/bar/onset preview, blend and connection status.
 - **Couplings:** configure entity bindings and activate/deactivate sessions.
-- **Virtual Players / Zones:** configure LMS and AirPlay players, and select existing
+- **Players / Zones:** configure LMS and AirPlay players and their light timing, and select existing
   Controllers and Hue Entertainment Areas for Zones.
 - **Analysers / Effects / Energy Profiles:** edit analysis settings, visual algorithms
   and high/low-energy blends.

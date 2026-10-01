@@ -12,6 +12,7 @@ vi.mock('../lib/api', async (importOriginal) => ({
     follow_player_mac: 'aa:bb:cc:dd:ee:02',
   }]),
   updateVirtualPlayer: vi.fn().mockResolvedValue(undefined),
+  getPlayerLatencies: vi.fn().mockResolvedValue([]),
   getCouplings: vi.fn().mockResolvedValue([]),
   listLmsPlayers: vi.fn().mockResolvedValue([
     { playerid: '11:22:33:44:55:66', name: 'Sonos Living Room' },

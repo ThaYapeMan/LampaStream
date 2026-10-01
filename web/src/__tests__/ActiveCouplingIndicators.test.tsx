@@ -17,6 +17,7 @@ vi.mock('../lib/api', async (importOriginal) => ({
     { id: 'c2', player_id: 'p2', zone_id: 'z2', analyser_id: 'a2', energy_profile_id: 'ep2' },
     { id: 'missing', energy_profile_id: 'absent' },
   ]),
+  getPlayerLatencies: vi.fn().mockResolvedValue([]),
   getVirtualPlayers: vi.fn().mockResolvedValue([1, 2].map(i => ({
     id: `p${i}`, player_name: `Player ${i}`, type: 'LMS', lms_host: 'localhost',
   }))),
@@ -41,7 +42,6 @@ const label = 'In use by active coupling'
 describe('active Coupling references on list pages', () => {
   it.each([
     [Analysers, 'Analyser', '[data-testid^="analyser-item-"]'],
-    [Players, 'Player', 'tr'],
     [Zones, 'Zone', 'tr'],
     [EnergyProfiles, 'Energy', 'tr'],
   ] as const)('%s follows activation changes and clears on deactivation', async (Page, name, rowSelector) => {
@@ -57,6 +57,16 @@ describe('active Coupling references on list pages', () => {
     rerender(<Page activeCouplingId={null} />)
     expect(screen.queryByLabelText(label)).not.toBeInTheDocument()
     rerender(<Page activeCouplingId="unknown" />)
+    expect(screen.queryByLabelText(label)).not.toBeInTheDocument()
+  })
+
+  it('Players moves its active indicator with the coupling', async () => {
+    const { rerender } = render(<Players activeCouplingId="c1" />)
+    await screen.findByRole('option', { name: /Player 1/ })
+    expect(screen.getByLabelText(label)).toBeVisible()
+    rerender(<Players activeCouplingId="c2" />)
+    expect(screen.queryByLabelText(label)).not.toBeInTheDocument()
+    rerender(<Players activeCouplingId={null} />)
     expect(screen.queryByLabelText(label)).not.toBeInTheDocument()
   })
 

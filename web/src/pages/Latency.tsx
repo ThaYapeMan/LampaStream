@@ -18,28 +18,10 @@ import {
 } from '@/components/ui/dialog'
 import { SliderField } from '@/components/SliderField'
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import { ConfirmDialog } from '@/components/ConfirmDialog'
-import {
   type PlayerLatency,
-  getPlayerLatencies,
   createPlayerLatency,
   updatePlayerLatency,
-  deletePlayerLatency,
 } from '@/lib/api'
-
-interface Props {
-  syncMaster: string | null
-  syncMasterName: string | null
-  airplay?: boolean
-  followMode?: "manual" | "sync_group" | null
-}
 
 interface EntryForm {
   player_mac: string
@@ -68,7 +50,7 @@ interface EditorDialogProps {
   prefill?: Partial<EntryForm>
 }
 
-function EditorDialog({ open, entry, onClose, onSave, prefill, airplay }: EditorDialogProps) {
+export function LatencyEditorDialog({ open, entry, onClose, onSave, prefill, airplay }: EditorDialogProps) {
   const isEditing = !!entry
   const [form, setForm] = useState<EntryForm>(() =>
     defaultForm(entry ? { ...entry, name: entry.name ?? '' } : prefill)
@@ -175,151 +157,5 @@ function EditorDialog({ open, entry, onClose, onSave, prefill, airplay }: Editor
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
-}
-
-export function Latency({ syncMaster, syncMasterName, followMode, airplay }: Props) {
-  const [latencies, setLatencies] = useState<PlayerLatency[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [editorOpen, setEditorOpen] = useState(false)
-  const [editingEntry, setEditingEntry] = useState<PlayerLatency | undefined>(undefined)
-  const [editorPrefill, setEditorPrefill] = useState<Partial<EntryForm> | undefined>(undefined)
-
-  async function load() {
-    try {
-      const data = await getPlayerLatencies()
-      setLatencies(data)
-      setError(null)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    load()
-    const timer = window.setInterval(load, 2000)
-    return () => window.clearInterval(timer)
-  }, [])
-
-  async function handleDelete(mac: string) {
-    await deletePlayerLatency(mac)
-    await load()
-  }
-
-  function openNew(prefill?: Partial<EntryForm>) {
-    setEditingEntry(undefined)
-    setEditorPrefill(prefill)
-    setEditorOpen(true)
-  }
-
-  function openEdit(entry: PlayerLatency) {
-    setEditingEntry(entry)
-    setEditorPrefill(undefined)
-    setEditorOpen(true)
-  }
-
-  async function handleSave() {
-    setEditorOpen(false)
-    await load()
-  }
-
-  const masterInList = syncMaster ? latencies.some((l) => l.player_mac === syncMaster) : false
-
-  if (loading) return <p className="text-sm text-muted-foreground">Loading…</p>
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold">Player latency</h2>
-        <Button size="sm" onClick={() => openNew()}>Add entry</Button>
-      </div>
-
-      {syncMaster && (
-        <div className="flex items-center justify-between rounded-md border border-border px-3 py-2 text-sm">
-          <span>
-            {airplay ? 'AirPlay virtual player:' : followMode === 'manual' ? 'Followed player:' : 'Sync master detected:'}{' '}
-            <span className="font-medium">{syncMasterName ?? syncMaster}</span>{' '}
-            <code className="text-xs font-mono text-muted-foreground">({syncMaster})</code>
-          </span>
-          {!masterInList && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() =>
-                openNew({ player_mac: syncMaster, name: syncMasterName ?? '' })
-              }
-            >
-              Add entry
-            </Button>
-          )}
-        </div>
-      )}
-
-      {error && <p className="text-destructive text-sm">{error}</p>}
-
-      {latencies.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No latency entries configured.</p>
-      ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>MAC</TableHead>
-              <TableHead>Strategy</TableHead>
-              <TableHead>Delay</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {latencies.map((l) => (
-              <TableRow key={l.player_mac}>
-                <TableCell>{l.name ?? <span className="text-muted-foreground">—</span>}</TableCell>
-                <TableCell className="font-mono text-xs text-muted-foreground">{l.player_mac}</TableCell>
-                <TableCell className="text-sm">{l.strategy}</TableCell>
-                <TableCell className="text-sm">
-                  {l.strategy === 'fixed' ? `${l.fixed_delay_ms} ms` : l.strategy === 'auto' ? (
-                    <div className="space-y-1" aria-label="Auto latency status">
-                      <p>{l.status?.state ?? 'idle'} · {l.status?.applied_delay_ms ?? Math.max(0, (l.measured_delay_ms ?? 0) + l.trim_ms)} ms</p>
-                      <p>Strategy in effect: {l.status?.strategy ?? 'auto'}</p>
-                      {l.status?.source === 'airplay' ? <p>Early delivery: {l.status.early_delivery_ms ?? '—'} ms · Processing: {l.status.median_processing_ms ?? '—'} ms</p> : <p>Residual: {l.status?.median_residual_ms ?? '—'} ms · Player Delay: {l.status?.player_delay_ms ?? '—'} ms</p>}
-                      <p>Trim: {l.trim_ms} ms · Samples: {l.status?.sample_count ?? 0} · Precision: ±{l.status?.precision_ms ?? '—'} ms</p>
-                      <p>Last sample: {l.status?.last_sample_time ? new Date(l.status.last_sample_time * 1000).toLocaleTimeString() : '—'}</p>
-                      {l.status?.reason && <p>{l.status.reason}</p>}
-                    </div>
-                  ) : '—'}
-                </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex items-center justify-end gap-1">
-                    <Button size="sm" variant="ghost" onClick={() => openEdit(l)}>Edit</Button>
-                    <ConfirmDialog
-                      trigger={
-                        <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive">
-                          Delete
-                        </Button>
-                      }
-                      title="Remove latency entry"
-                      description={`Remove entry for ${l.name ?? l.player_mac}?`}
-                      onConfirm={() => handleDelete(l.player_mac)}
-                    />
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
-
-      <EditorDialog
-        airplay={airplay || editingEntry?.status?.source === 'airplay'}
-        open={editorOpen}
-        entry={editingEntry}
-        prefill={editorPrefill}
-        onClose={() => setEditorOpen(false)}
-        onSave={handleSave}
-      />
-    </div>
   )
 }

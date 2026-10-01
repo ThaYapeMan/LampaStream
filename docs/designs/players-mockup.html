@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Players Page Mockup</title>
+<style>
+/* Layout: LampaStream's dark shell; one "Players" sidebar item replaces
+   "Virtual Players" and "Latency". List–detail: players grouped by role on
+   the left, the selected player's settings and its light timing on the right. */
+:root{
+  --bg:#141519; --panel:#1b1c21; --panel-2:#212228; --line:#2c2d35; --sel:#2a2540;
+  --fg:#e9e9ee; --muted:#9a9aa6; --faint:#6c6c78;
+  --accent:#8b6cff; --accent-soft:rgba(139,108,255,.16);
+  --good:#34c77b; --good-soft:rgba(52,199,123,.14);
+  --info:#5aa8ff; --info-soft:rgba(90,168,255,.14);
+  --danger:#ff6b6b;
+  --sans:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",system-ui,sans-serif;
+  --display:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --r:12px; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:14px/1.45 var(--sans);margin:0}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+.topbar{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.brand{font:600 15px var(--display)}.topbar .sp{flex:1}
+.ver{font:12px var(--mono);color:var(--faint)}
+.live{background:var(--accent);color:#fff;border-radius:999px;padding:2px 10px;font-size:12px;font-weight:600}
+.shell{display:grid;grid-template-columns:180px 1fr}
+.side{border-right:1px solid var(--line);padding:12px 0}
+.side a{display:flex;align-items:center;gap:8px;padding:7px 16px;color:var(--muted);text-decoration:none;font-size:13px}
+.side a.on{background:var(--panel-2);color:var(--fg);font-weight:600}
+.side .new{margin-left:auto;font-size:10px;color:var(--accent);border:1px solid var(--accent);border-radius:999px;padding:0 6px}
+main{padding:24px 16px 48px}
+.wrap{max-width:1040px;margin:0 auto;display:grid;gap:16px}
+@media (max-width:760px){.shell{grid-template-columns:1fr}.side{display:none}}
+.head{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+h1{font:600 22px var(--display);margin:0}
+.head .sp{flex:1}
+.btn{background:var(--accent);color:#fff;border:0;border-radius:8px;padding:7px 14px;font-weight:600;cursor:pointer}
+.btn.ghost{background:var(--panel-2);color:var(--fg);border:1px solid var(--line)}
+.btn.danger{background:none;color:var(--danger);border:1px solid var(--line)}
+.sub{color:var(--muted);font-size:13px;margin:0}
+
+.split{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:820px){.split{grid-template-columns:1fr}}
+
+/* List */
+.list{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:8px}
+.group{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600;padding:10px 10px 6px}
+.row{display:grid;grid-template-columns:32px minmax(0,1fr) auto;gap:10px;align-items:center;width:100%;text-align:left;background:none;border:0;border-radius:10px;padding:9px 10px;cursor:pointer}
+.row:hover{background:var(--panel-2)}
+.row[aria-selected="true"]{background:var(--sel)}
+.ic{width:32px;height:32px;border-radius:9px;background:var(--panel-2);border:1px solid var(--line);display:grid;place-items:center;color:var(--muted)}
+.ic svg{width:17px;height:17px}
+.ic .logo{width:17px;height:17px;display:block}
+.dhead .ic .logo{width:22px;height:22px}
+.row .t{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .s{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chip{font:600 12px var(--mono);font-variant-numeric:tabular-nums;color:var(--muted);display:flex;align-items:center;gap:6px}
+.dot{width:8px;height:8px;border-radius:50%}
+.dot.good{background:var(--good)}.dot.idle{background:var(--faint)}.dot.info{background:var(--info)}
+
+/* Detail */
+.detail{display:grid;gap:16px;min-width:0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;display:grid;gap:14px}
+.dhead{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.dhead .ic{width:44px;height:44px;border-radius:12px}.dhead .ic svg{width:22px;height:22px}
+h2{font:600 18px var(--display);margin:0}
+.badge{font-size:12px;border-radius:999px;padding:2px 9px;background:var(--panel-2);border:1px solid var(--line);color:var(--muted)}
+.pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:600}
+.pill.good{background:var(--good-soft);color:var(--good)}
+.pill.idle{background:var(--panel-2);color:var(--muted)}
+.pill.info{background:var(--info-soft);color:var(--info)}
+.eyebrow{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.kv{display:grid;grid-template-columns:150px minmax(0,1fr);gap:8px 16px;font-size:13px}
+@media (max-width:520px){.kv{grid-template-columns:1fr}}
+.kv dt{color:var(--muted)}.kv dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.mono{font-family:var(--mono)}
+.timing{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center}
+@media (max-width:620px){.timing{grid-template-columns:1fr}}
+.big{font:600 40px/1 var(--display);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.big small{font-size:18px;color:var(--muted);font-weight:500;margin-left:4px}
+.seg{display:inline-flex;background:var(--panel-2);border:1px solid var(--line);border-radius:9px;padding:2px}
+.seg button{border:0;background:none;padding:5px 12px;border-radius:7px;font-size:12px;color:var(--muted);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--line);color:var(--fg);font-weight:600}
+.controls{display:grid;gap:10px;justify-items:end}
+@media (max-width:620px){.controls{justify-items:start}}
+.stepper{display:inline-flex;align-items:center;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.stepper button{background:none;border:0;padding:6px 11px;cursor:pointer;font-size:13px}
+.stepper output{min-width:70px;text-align:center;font:600 13px var(--mono);border-inline:1px solid var(--line);padding:6px}
+.link{color:var(--accent);text-decoration:none;font-size:13px}
+.foot{display:flex;gap:8px;flex-wrap:wrap;justify-content:space-between;border-top:1px solid var(--line);padding-top:14px}
+.relation{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.relation b{color:var(--fg)}
+.arrow{color:var(--faint)}
+
+.notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.notes div{background:var(--panel-2);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--muted)}
+.notes b{display:block;color:var(--fg);margin-bottom:4px}
+</style>
+</head>
+<body>
+
+<div class="topbar"><span class="brand">LampaStream</span><span class="sp"></span><span class="ver">0.2.0+145d0bc</span><span class="live">● Live</span></div>
+<div class="shell">
+  <nav class="side" aria-label="Sections">
+    <a href="#p">Now Playing</a><a href="#p">Couplings</a><a href="#p">Analysers</a><a href="#p">Effects</a>
+    <a href="#p">Energy Profiles</a><a href="#p">Zones</a>
+    <a class="on" href="#p" aria-current="page">Players <span class="new">new</span></a>
+    <a href="#p">Backup and restore</a>
+  </nav>
+  <main id="p">
+    <div class="wrap">
+      <div class="head">
+        <div><h1>Players</h1><p class="sub">The players LampaStream listens through, and how their lights are timed.</p></div>
+        <span class="sp"></span>
+        <button class="btn" type="button">Add player</button>
+      </div>
+
+      <div class="split">
+        <div class="list" role="listbox" aria-label="Players" id="list"></div>
+        <div class="detail" id="detail" aria-live="polite"></div>
+      </div>
+
+      <section class="card" aria-label="Design notes">
+        <div class="eyebrow">Why it is organised this way (Apple HIG)</div>
+        <div class="notes">
+          <div><b>One place for one idea</b>A virtual player and the light timing of the player it follows belong together. One sidebar item, “Players”, replaces two.</div>
+          <div><b>List and detail</b>The familiar Mail/Settings pattern: pick a player on the left, see and change everything about it on the right. On a phone the two stack.</div>
+          <div><b>Grouped by role</b>“LampaStream players” are the ones you created. “Other timings” keeps saved timings for speakers no player follows right now, so nothing is lost.</div>
+          <div><b>Status at a glance</b>Each row shows its timing state and delay, with a coloured dot plus text, so you rarely need to open it.</div>
+          <div><b>Relationship made visible</b>“LampaStream LMS → follows → Study (Sonos)” explains why the timing card belongs to Study, in plain words.</div>
+          <div><b>Destructive actions apart</b>Delete sits alone at the bottom left, away from Edit, as Apple recommends.</div>
+        </div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<script>
+const I={
+  lms:'<img src="data:image/png;base64,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" alt="" class="logo">',
+  air:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 14a6.5 6.5 0 1110 0"/><path d="M7.5 12a3.5 3.5 0 115 0"/><path d="M10 13l3.5 4h-7z" fill="currentColor"/></svg>',
+  spk:'<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="2" width="10" height="16" rx="2"/><circle cx="10" cy="12" r="2.6"/><circle cx="10" cy="6" r=".8" fill="currentColor"/></svg>'
+};
+const players=[
+ {id:'lms',group:'LampaStream players',icon:'lms',name:'LampaStream LMS',type:'LMS · yeney-player',sub:'Follows Study (Sonos)',state:'good',stateText:'In sync',delay:2243,
+  follows:'Study (Sonos)',followMode:'Manual — fixed player',strategy:'Auto',trim:0,
+  facts:[['Player name in LMS','LampaStream LMS'],['LMS server','192.168.178.23 : 9000'],['Player MAC','02:59:db:e3:7f:28'],['Engine','yeney-player · running']]},
+ {id:'air',group:'LampaStream players',icon:'air',name:'LampaStream',type:'AirPlay 2 receiver',sub:'Joins your AirPlay groups',state:'good',stateText:'In sync',delay:380,
+  follows:'the AirPlay group',followMode:'AirPlay group timing',strategy:'Auto',trim:0,
+  facts:[['AirPlay name','LampaStream'],['Early delivery','0.50 s'],['Player MAC','02:ca:48:d3:b8:56'],['Receiver','shairport-sync · ready']]},
+ {id:'port',group:'Other timings',icon:'spk',name:'Sonos Port',type:'Saved timing',sub:'Not followed right now',state:'idle',stateText:'Fixed',delay:1100,
+  follows:null,strategy:'Fixed',trim:0,
+  facts:[['Player MAC','48:a6:b8:20:39:64'],['Used when','a LampaStream player follows Sonos Port']]}
+];
+let selected='lms';
+const sec=ms=>(ms/1000).toFixed(2);
+function list(){
+  const el=document.getElementById('list'); let html='', g='';
+  for(const p of players){
+    if(p.group!==g){g=p.group; html+=`<div class="group">${g}</div>`;}
+    html+=`<button type="button" class="row" role="option" aria-selected="${p.id===selected}" data-id="${p.id}">
+      <span class="ic">${I[p.icon]}</span>
+      <span style="min-width:0"><div class="t">${p.name}</div><div class="s">${p.sub}</div></span>
+      <span class="chip"><span class="dot ${p.state}"></span>${sec(p.delay)} s</span></button>`;
+  }
+  el.innerHTML=html;
+  el.querySelectorAll('.row').forEach(b=>b.onclick=()=>{selected=b.dataset.id;render();});
+}
+function detail(){
+  const p=players.find(x=>x.id===selected);
+  const target=p.follows?`for ${p.follows}`:'';
+  const relation=p.follows?`<div class="relation"><b>${p.name}</b><span class="arrow">→ follows →</span><b>${p.follows}</b><span>· ${p.followMode}</span></div>`
+    :`<div class="relation">No LampaStream player follows ${p.name} at the moment. This timing is kept for when one does.</div>`;
+  const seg=['Auto','Fixed','None'].map(s=>`<button type="button" aria-pressed="${s===p.strategy}" data-s="${s}">${s}</button>`).join('');
+  const tune=p.strategy==='Auto'?`<div class="stepper"><button type="button" data-t="-10" aria-label="Lights 10 milliseconds earlier">◀ Earlier</button><output>${p.trim===0?'0 ms':(p.trim>0?'+':'−')+Math.abs(p.trim)+' ms'}</output><button type="button" data-t="10" aria-label="Lights 10 milliseconds later">Later ▶</button></div>`:'';
+  const pillCls=p.strategy==='Auto'?'good':'idle', pillTxt=p.strategy==='Auto'?'✓ In sync':(p.strategy==='Fixed'?'Fixed':'No delay');
+  document.getElementById('detail').innerHTML=`
+  <section class="card" aria-label="${p.name}">
+    <div class="dhead"><span class="ic">${I[p.icon]}</span>
+      <div style="min-width:0"><h2>${p.name}</h2><div class="sub">${p.type}</div></div></div>
+    ${relation}
+  </section>
+  <section class="card" aria-label="Light timing">
+    <div class="dhead"><span class="eyebrow">Light timing ${target}</span><span class="pill ${pillCls}" role="status">${pillTxt}</span></div>
+    <div class="timing">
+      <div><div class="big">${p.strategy==='None'?'0.00':sec(Math.max(0,p.delay+p.trim))}<small>s</small></div>
+        <p class="sub">${p.strategy==='Auto'?'Measured automatically and kept up to date.':p.strategy==='Fixed'?'A fixed delay you set by hand.':'The lights are not delayed.'}</p></div>
+      <div class="controls"><div class="seg" role="group" aria-label="Timing method">${seg}</div>${tune}</div>
+    </div>
+    <a class="link" href="#p">Show on Now Playing</a>
+  </section>
+  <section class="card" aria-label="Details">
+    <div class="eyebrow">Details</div>
+    <dl class="kv">${p.facts.map(f=>`<dt>${f[0]}</dt><dd class="${/MAC|server|delivery/.test(f[0])?'mono':''}">${f[1]}</dd>`).join('')}</dl>
+    <div class="foot"><button class="btn danger" type="button">Delete…</button><button class="btn ghost" type="button">Edit</button></div>
+  </section>`;
+  const d=document.getElementById('detail');
+  d.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{p.strategy=b.dataset.s;p.state=p.strategy==='Auto'?'good':'idle';render();});
+  d.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{p.trim=Math.max(-1000,Math.min(1000,p.trim+Number(b.dataset.t)));render();});
+}
+function render(){list();detail();}
+render();
+</script>
+</body>
+</html>

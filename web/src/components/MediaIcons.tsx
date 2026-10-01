@@ -13,3 +13,12 @@ export function PauseIcon(props: SVGProps<SVGSVGElement>) {
 export function ForwardIcon(props: SVGProps<SVGSVGElement>) {
   return <svg viewBox="0 0 56 56" fill="currentColor" {...props}><path d="M 2.9281 44.4947 C 3.7618 44.4947 4.4531 44.2304 5.2665 43.7424 L 25.9869 31.5420 C 27.1053 30.8913 27.7153 30.1592 27.9389 29.3052 L 27.9389 41.0176 C 27.9389 43.2747 29.2810 44.4947 30.8671 44.4947 C 31.7007 44.4947 32.3921 44.2304 33.2055 43.7424 L 53.9461 31.5420 C 55.3695 30.6879 56 29.6916 56 28.5122 C 56 27.3531 55.3695 26.3568 53.9461 25.5028 L 33.2055 13.3023 C 32.3921 12.8143 31.7007 12.5500 30.8671 12.5500 C 29.2810 12.5500 27.9389 13.7700 27.9389 16.0271 L 27.9389 27.7395 C 27.7153 26.8855 27.1053 26.1535 25.9869 25.5028 L 5.2665 13.3023 C 4.4328 12.8143 3.7618 12.5500 2.9281 12.5500 C 1.3420 12.5500 0 13.7700 0 16.0271 L 0 41.0176 C 0 43.2747 1.3420 44.4947 2.9281 44.4947 Z" /></svg>
 }
+
+// Line-style AirPlay receiver glyph from the approved Players mockup.
+export function AirPlayReceiverIcon(props: SVGProps<SVGSVGElement>) {
+  return <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" {...props}>
+    <path d="M5 14a6.5 6.5 0 1110 0" />
+    <path d="M7.5 12a3.5 3.5 0 115 0" />
+    <path d="M10 13l3.5 4h-7z" fill="currentColor" />
+  </svg>
+}

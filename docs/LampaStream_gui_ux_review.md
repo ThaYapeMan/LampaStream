@@ -49,7 +49,7 @@ Mijn hoofdadvies is daarom:
 
 > Maak van LampaStream geen CRUD-interface voor zeven entiteiten, maar een **live audiovisuele control surface** met een visueel signaalpad, directe preview, grafische Energy Profiles, visuele Effect-cards en een ruimtelijke Zone-weergave.
 
-De huidige pagina's `Effects`, `Energy Profiles`, `Analysers`, `Zones`, `Virtual Players` en `Couplings` mogen als beheerniveau blijven bestaan, maar moeten secundair worden. De primaire ervaring moet draaien om **Live**, **Shows/Couplings** en een grafische **Designer**.
+De huidige pagina's `Effects`, `Energy Profiles`, `Analysers`, `Zones`, `Players` en `Couplings` mogen als beheerniveau blijven bestaan, maar moeten secundair worden. De primaire ervaring moet draaien om **Live**, **Shows/Couplings** en een grafische **Designer**.
 
 ---
 
@@ -133,7 +133,7 @@ Analysers
 Effects
 Energy Profiles
 Zones
-Virtual Players
+Players
 Latency
 ```
 
@@ -990,7 +990,7 @@ Analysers
 Effects
 Energy Profiles
 Zones
-Virtual Players
+Players
 Latency
 ```
 

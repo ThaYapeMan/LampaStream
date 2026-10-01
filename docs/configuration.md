@@ -296,7 +296,7 @@ VirtualPlayers have a `follow_mode` setting:
   and every five seconds. It never sends playback commands or changes group
   membership in this mode.
 
-The Virtual Player editor exposes both modes and retains the manual MAC when
+The Players editor exposes both modes and retains the manual MAC when
 switching to automatic mode. Changing modes deactivates an active owning session;
 activate the Coupling again to use the new setting.
 
@@ -413,7 +413,7 @@ Expert mode while keeping source configuration out of Standard mode.
 
 ## Automatic followed-player latency
 
-The Latency page offers **None**, **Fixed** and **Auto**, independently for each
+The Players page offers **None**, **Fixed** and **Auto**, independently for each
 listening player's MAC. Auto works in **Manual — fixed player** follow mode using
 standard LMS CLI positions, without UPnP or player-specific protocols. It requires
 both players to be playing the same mirrored URL. The page labels this target
@@ -493,7 +493,7 @@ synchronisation play points. `Queries.pm` defaults player preferences to the
 
 The Light timing card sits directly below the track. It names the followed player
 and moves the old Sync master and Delay information out of Live preview's Status
-list. Latency settings opens the Latency page. The disclosure remembers its open
+list. Player settings opens Players with the relevant player selected. The disclosure remembers its open
 or folded choice in this browser; folded, it still shows the state and applied
 light delay. Details starts closed and explains the measured difference, LMS
 Player Delay, fine-tune and applied delay.
@@ -522,7 +522,7 @@ stops the path animation and disclosure transition.
 
 ### AirPlay automatic light timing
 
-AirPlay virtual players can use Auto in Latency. The receiver delivers PCM
+AirPlay virtual players can use Auto in Players. The receiver delivers PCM
 500 ms early; LampaStream subtracts its measured processing time and applies
 your fine-tune. The Light timing card shows processing measurements and the
 M/P breakdown. Unverified receiver settings, uneven delivery or processing
@@ -531,3 +531,30 @@ The installer preserves unrelated shairport settings when configuring early
 delivery. See [AirPlay timing](airplay-timing.md) for the source evidence,
 configuration contract and read-only diagnostic probe. Fine-tune accounts for
 physical lamp response, which is not measured by a microphone or sensor.
+
+## Players
+
+Players combines player identity, connection details and light timing in a list–detail view.
+LampaStream players lists every LMS yeney-player and AirPlay receiver. Other timings
+lists saved timings whose listening-player MAC is not currently followed by a virtual
+player (AirPlay uses the receiver MAC). Active LMS sync-group targets come from the
+preview status; inactive groups have no observable current target. Timings are retained
+when deleting a virtual player and appear under Other timings. Deleting a saved timing
+removes only that entry. Both actions ask for confirmation in the page.
+
+Select a row with the mouse or Up/Down keys; this browser remembers the selection.
+Auto, Fixed and None change the existing timing entry. Auto offers Earlier/Later in
+10 ms steps, limited to ±1000 ms; Measure automatically creates an entry if needed.
+Add player and Edit use the existing player editor. Saved timings use the timing editor.
+The list stacks above the details on phones. Configuration refreshes every two seconds;
+active timing and engine/receiver status reuse the preview websocket.
+
+`/players?player=<virtual-player-id-or-listening-player-MAC>` selects a player.
+Old `/virtual-players`, `/latency`, `#players`, `#virtual-players` and `#latency`
+bookmarks open Players; legacy page names redirect to `/players`, retaining a `player`
+query parameter. Show on Now Playing opens the current active session; selecting a
+player in settings does not change the active coupling or start playback.
+
+![Players on desktop](designs/players-desktop.png)
+
+![Players on a phone](designs/players-phone.png)

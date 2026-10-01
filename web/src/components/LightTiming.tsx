@@ -26,7 +26,15 @@ function Sparkline({ status }: { status: NonNullable<PlayerLatency['status']> })
   </svg>
 }
 
-export function LightTiming({ status, onOpenLatency }: { status: SocketStatus | null; onOpenLatency?: () => void }) {
+export function lightTimingState(current: PlayerLatency | null | undefined, status: SocketStatus | null, airplay = false) {
+  const timing = current?.status
+  const group = !airplay && current?.strategy === 'auto' && (status?.follow_mode === 'sync_group' || timing?.state === 'not measurable (sync group)')
+  const state = !current ? 'missing' : current.strategy === 'none' ? 'none' : group ? 'group' : timing?.state === 'not measurable' ? 'unavailable' : current.strategy === 'fixed' ? 'fixed' : timing?.state === 'stable' ? 'stable' : timing?.state === 'measuring' ? 'measuring' : 'idle'
+  const applied = state === 'idle' ? Math.max(0, (current?.measured_delay_ms ?? 0) + (current?.trim_ms ?? 0)) : status?.applied_delay_ms ?? timing?.applied_delay_ms ?? 0
+  return { state, applied } as const
+}
+
+export function LightTiming({ status, onOpenLatency, playersView = false, controls, footer }: { status: SocketStatus | null; onOpenLatency?: () => void; playersView?: boolean; controls?: React.ReactNode; footer?: React.ReactNode }) {
   const id = useId()
   const [open, setOpen] = useState(() => { try { return localStorage.getItem('lightTimingOpen') !== '0' } catch { return true } })
   const airplay = status?.active_player_type === 'AirPlay' || status?.light_timing?.status?.source === 'airplay'
@@ -49,8 +57,8 @@ export function LightTiming({ status, onOpenLatency }: { status: SocketStatus | 
   useEffect(() => { if (!message) return; const timer = setTimeout(() => setMessage(''), 4000); return () => clearTimeout(timer) }, [message])
   const current = override ?? entry
   const timing = current?.status
-  const group = !airplay && current?.strategy === 'auto' && (status?.follow_mode === 'sync_group' || timing?.state === 'not measurable (sync group)')
-  const state = !current ? 'missing' : current.strategy === 'none' ? 'none' : group ? 'group' : timing?.state === 'not measurable' ? 'unavailable' : current.strategy === 'fixed' ? 'fixed' : timing?.state === 'stable' ? 'stable' : timing?.state === 'measuring' ? 'measuring' : 'idle'
+  const { state, applied } = lightTimingState(current, status, airplay)
+  const group = state === 'group'
   const states = {
     stable: [Check, 'In sync', 'text-emerald-400 bg-emerald-400/10'],
     measuring: [Clock, 'Measuring', 'text-blue-400 bg-blue-400/10'],
@@ -62,7 +70,6 @@ export function LightTiming({ status, onOpenLatency }: { status: SocketStatus | 
     none: [Info, 'No delay', 'text-muted-foreground bg-secondary'],
   } as const
   const [Icon, label, colour] = states[state]
-  const applied = state === 'idle' ? Math.max(0, (current?.measured_delay_ms ?? 0) + (current?.trim_ms ?? 0)) : status?.applied_delay_ms ?? timing?.applied_delay_ms ?? 0
   async function measure() {
     if (!mac || busy) return
     setBusy(true); setError('')
@@ -83,6 +90,41 @@ export function LightTiming({ status, onOpenLatency }: { status: SocketStatus | 
     } catch (e) { desiredTrim.current = null; setTrim(previous); setError(e instanceof Error ? e.message : 'Could not save') }
     finally { pending.current = false; setBusy(false) }
   }
+  if (playersView) {
+    const explanation = state === 'stable' ? 'Measured automatically and kept up to date.'
+      : state === 'fixed' ? 'A fixed delay you set by hand.'
+      : state === 'none' ? 'The lights are not delayed.'
+      : state === 'measuring' ? `Checking the timing · ${timing?.sample_count ?? 0} of 7 measurements.`
+      : state === 'group' ? `LMS reports one shared position. Using your fixed fallback of ${seconds(current?.fixed_delay_ms ?? 0)} s.`
+      : state === 'unavailable' ? `${timing?.reason || 'Timing is unavailable'}. Using your fixed fallback.`
+      : state === 'missing' ? `Light timing has not been set up for ${name}.`
+      : 'Measuring resumes when playback starts.'
+    return <Card aria-labelledby={`${id}-title`} data-testid="light-timing">
+      <CardHeader className="flex-row flex-wrap items-center gap-3 space-y-0 py-4">
+        <h2 id={`${id}-title`} className="text-sm font-semibold">Light timing for {name}</h2>
+        <Badge variant="secondary" className={`gap-1 border-0 ${colour}`}><Icon aria-hidden="true" className="h-3 w-3" />{label}</Badge>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid items-center gap-4 sm:grid-cols-[minmax(0,1fr)_auto]">
+          <div><div className={`text-4xl font-semibold tabular-nums ${state === 'idle' ? 'text-muted-foreground' : ''}`}>{seconds(applied)}<small className="ml-1 text-xl text-muted-foreground">s</small></div><p className="mt-2 text-sm text-muted-foreground">{explanation}</p></div>
+          <div className="space-y-3 sm:text-right">{controls}
+            {current?.strategy === 'auto' && <div className="space-y-1">
+              <label htmlFor={`${id}-trim`} className="block text-xs text-muted-foreground">Fine-tune by ear</label>
+              <div className="inline-flex max-w-full items-center overflow-hidden rounded-lg border bg-secondary">
+                <Button variant="ghost" size="sm" className="px-2" aria-label="Lights 10 milliseconds earlier" disabled={busy || trim <= -1000} onClick={() => fineTune(-10)}>◀ Earlier</Button>
+                <output id={`${id}-trim`} aria-live="polite" className="min-w-14 border-x px-1 text-center font-mono text-xs">{signed(trim)}</output>
+                <Button variant="ghost" size="sm" className="px-2" aria-label="Lights 10 milliseconds later" disabled={busy || trim >= 1000} onClick={() => fineTune(10)}>Later ▶</Button>
+              </div>
+            </div>}
+            {!current && <Button size="sm" disabled={busy || !mac} onClick={measure}>Measure automatically</Button>}
+          </div>
+        </div>
+        {footer}
+        {message && <p role="status" className="text-xs text-emerald-400">{message}</p>}
+        {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+      </CardContent>
+    </Card>
+  }
   return <Card aria-labelledby={`${id}-title`} data-testid="light-timing">
     <CardHeader className="flex-row flex-wrap items-center gap-3 space-y-0 py-4">
       <button className="flex items-center gap-1 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-expanded={open} aria-controls={`${id}-body`} onClick={() => { setOpen(!open); try { localStorage.setItem('lightTimingOpen', open ? '0' : '1') } catch { /* Storage may be unavailable. */ } }}>
@@ -90,7 +132,7 @@ export function LightTiming({ status, onOpenLatency }: { status: SocketStatus | 
       </button>
       <Badge variant="secondary" className={`gap-1 border-0 ${colour}`}><Icon aria-hidden="true" className="h-3 w-3" />{label}</Badge>
       {!open && <span className="font-mono text-sm tabular-nums">{state === 'none' ? 'No delay' : `${seconds(applied)} s`}</span>}
-      <a href="#latency" className="ml-auto text-sm text-primary hover:underline" onClick={e => { if (onOpenLatency) { e.preventDefault(); onOpenLatency() } }}>Latency settings</a>
+      <a href={`/players?player=${encodeURIComponent(mac ?? '')}`} className="ml-auto text-sm text-primary hover:underline" onClick={e => { if (onOpenLatency) { e.preventDefault(); onOpenLatency() } }}>Player settings</a>
     </CardHeader>
     <CardContent id={`${id}-body`} hidden={!open} className="space-y-4">
       <div className={state === 'stable' ? 'grid gap-5 sm:grid-cols-2 items-center' : 'space-y-3'}>
