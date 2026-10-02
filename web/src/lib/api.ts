@@ -247,6 +247,8 @@ export interface Analyser {
 }
 
 export interface Effect {
+  palette_id?: string
+  palette_rotation_cps?: number
   id: string
   name: string
   effect_type: string
@@ -285,6 +287,8 @@ export interface EnergyProfile {
 }
 
 export interface Coupling {
+  manual_palette_id?: string
+  manual_energy_profile_id?: string
   id: string
   name: string
   player_id: string
@@ -379,3 +383,38 @@ export const ENERGY_SOURCE_OPTIONS = [
   { value: 'peak_envelope', label: 'Peak envelope', description: 'Self-calibrating RMS peak tracking; follows level variation on heavily mastered tracks.' },
   { value: 'off', label: 'Off', description: 'No energy input — always shows the High-energy Effect.' },
 ] as const
+
+export interface PaletteStop { colour: string; position: number }
+export interface Palette { id: string; name: string; stops: PaletteStop[] }
+export interface GenreRule { id: string; genre: string; palette_id: string; energy_profile_id: string }
+export interface MusicSettings {
+  lastfm_enabled: boolean
+  api_key_configured: boolean
+  genre_mapping: Record<string, string>
+  transition_mode: string
+  transition_duration_s: number
+  genres: string[]
+  rules: GenreRule[]
+}
+export interface MusicStatus {
+  genre: string; raw_tags: string[]; source: string; palette_id: string
+  energy_profile_id: string; manual: boolean; album_art_available?: boolean
+}
+export const getPalettes = () => request<Palette[]>('/api/palettes')
+export const savePalette = (palette: Palette) => request<Palette>(
+  `/api/palettes${palette.id ? `/${palette.id}` : ''}`,
+  json(palette.id ? 'PUT' : 'POST', { name: palette.name, stops: palette.stops }))
+export const duplicatePalette = (id: string) => request<Palette>(`/api/palettes/${id}/clone`, json('POST', {}))
+export const deletePalette = (id: string) => request<void>(`/api/palettes/${id}`, { method: 'DELETE' })
+export const previewPalette = (palette: Palette, positions: number[]) =>
+  request<Array<{ r: number; g: number; b: number }>>('/api/palettes/preview',
+    json('POST', { name: palette.name, stops: palette.stops, positions }))
+export const getMusicSettings = () => request<MusicSettings>('/api/music-settings')
+export const updateMusicSettings = (body: Partial<Omit<MusicSettings, 'rules' | 'genres'>> & { lastfm_api_key?: string }) =>
+  request<MusicSettings>('/api/music-settings', json('PATCH', body))
+export const saveGenreRule = (body: Omit<GenreRule, 'id'>) => request<GenreRule>('/api/genre-rules', json('POST', body))
+export const deleteGenreRule = (id: string) => request<void>(`/api/genre-rules/${id}`, { method: 'DELETE' })
+export const setMusicOverride = (palette_id: string, energy_profile_id: string) =>
+  request('/api/music/override', json('PUT', { palette_id, energy_profile_id }))
+
+export const updateGenreRule = (id: string, body: Omit<GenreRule, 'id'>) => request<GenreRule>(`/api/genre-rules/${id}`, json('PUT', body))

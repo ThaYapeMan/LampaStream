@@ -195,6 +195,11 @@ class Profile:
 
     # Colour mapping / effect selection
     effect_type: str = "spectrum_rgb"
+    palette_id: str = ""
+    palette_rotation_cps: float = 0.0
+    palette_stops: list[dict] = field(default_factory=list)
+    transition_mode: str = "crossfade"
+    transition_duration_s: float = .7
     gradient_palette: str = "sunset"
     band_colours: list[str] = field(default_factory=lambda: ["#F42525", "#25F425", "#2525F4"])
     band_playback: str = "static"
@@ -519,6 +524,8 @@ class Effect:
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     name: str = "Default Effect"
     effect_type: str = "spectrum_rgb"
+    palette_id: str = ""
+    palette_rotation_cps: float = 0.0
     gradient_palette: str = "sunset"
     band_colours: list[str] = field(default_factory=lambda: ["#F42525", "#25F425", "#2525F4"])
     band_playback: str = "static"
@@ -538,6 +545,8 @@ class Effect:
             "id": self.id,
             "name": self.name,
             "effect_type": self.effect_type,
+            "palette_id": self.palette_id,
+            "palette_rotation_cps": self.palette_rotation_cps,
             "gradient_palette": self.gradient_palette,
             "band_colours": self.band_colours,
             "band_playback": self.band_playback,
@@ -641,6 +650,8 @@ class Coupling:
     analyser_id: str = ""
     zone_id: str = ""
     energy_profile_id: str = ""
+    manual_palette_id: str = ""
+    manual_energy_profile_id: str = ""
     enabled: bool = True
 
     def to_dict(self) -> dict:
@@ -651,9 +662,71 @@ class Coupling:
             "analyser_id": self.analyser_id,
             "zone_id": self.zone_id,
             "energy_profile_id": self.energy_profile_id,
+            "manual_palette_id": self.manual_palette_id,
+            "manual_energy_profile_id": self.manual_energy_profile_id,
             "enabled": self.enabled,
         }
 
     @classmethod
     def from_dict(cls, d: dict) -> Coupling:
         return cls(**d)
+
+
+@dataclass
+class MusicSettings:
+    id: str = "music"
+    lastfm_enabled: bool = False
+    lastfm_api_key: str = ""
+    genre_mapping: dict[str, str] = field(default_factory=lambda: _genre_mapping())
+    transition_mode: str = "crossfade"
+    transition_duration_s: float = .7
+
+    def __post_init__(self):
+        from .genres import GENRES
+        if (self.transition_mode not in ("crossfade", "through-black", "through-white")
+                or not 0 <= self.transition_duration_s <= 2):
+            raise ValueError("Choose a transition and a duration between 0 and 2 seconds")
+        if (not isinstance(self.genre_mapping, dict) or len(self.genre_mapping) > 512
+                or any(not isinstance(k, str) or not k.strip() or v not in GENRES
+                       for k, v in self.genre_mapping.items())):
+            raise ValueError("Tag mapping must map raw tags to supported genres")
+        self.genre_mapping = {k.strip().casefold(): v for k, v in self.genre_mapping.items()}
+
+    def to_dict(self):
+        from dataclasses import asdict
+        return asdict(self)
+
+    def to_safe_dict(self):
+        data = self.to_dict()
+        data["api_key_configured"] = bool(data.pop("lastfm_api_key"))
+        return data
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(**data)
+
+
+def _genre_mapping():
+    from .genres import DEFAULT_MAPPING
+    return DEFAULT_MAPPING.copy()
+
+
+@dataclass
+class GenreRule:
+    id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    genre: str = "other"
+    palette_id: str = ""
+    energy_profile_id: str = ""
+
+    def __post_init__(self):
+        from .genres import GENRES
+        if self.genre not in GENRES:
+            raise ValueError("Choose a supported genre")
+
+    def to_dict(self):
+        from dataclasses import asdict
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(**data)

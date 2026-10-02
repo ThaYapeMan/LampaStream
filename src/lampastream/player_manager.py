@@ -95,6 +95,21 @@ def _controller_to_bridge(controller: Controller) -> BridgeConfig:
     )
 
 
+def _palette_fields(effect, coupling, storage):
+    identity = coupling.manual_palette_id or effect.palette_id
+    palette = storage.get_palette(identity)
+    if palette is None:
+        from .palettes import palette_from_colours, starter_palettes
+        palette = (next((p for p in starter_palettes() if p.id == effect.gradient_palette), None)
+                   if effect.effect_type == "gradient" else None)
+        palette = palette or palette_from_colours(effect.name + " colours", effect.band_colours)
+    settings = storage.music_settings()
+    return dict(palette_id=identity, palette_stops=palette.stops if palette else [],
+                palette_rotation_cps=effect.palette_rotation_cps,
+                transition_mode=settings.transition_mode,
+                transition_duration_s=settings.transition_duration_s)
+
+
 def _build_engine_profile(coupling: Coupling, storage: Storage) -> Profile | None:
     """Build a Profile from a Coupling's linked entities.
 
@@ -123,6 +138,7 @@ def _build_engine_profile(coupling: Coupling, storage: Storage) -> Profile | Non
         entertainment_area_name=zone.entertainment_area_name,
         light_count=zone.light_count,
         effect_type=effect.effect_type,
+        **_palette_fields(effect, coupling, storage),
         gradient_palette=effect.gradient_palette,
         band_colours=effect.band_colours.copy(),
         band_playback=effect.band_playback,
@@ -199,6 +215,7 @@ def _build_mellow_profile(coupling: Coupling, storage: Storage) -> Profile | Non
         entertainment_area_name=zone.entertainment_area_name,
         light_count=zone.light_count,
         effect_type=mellow_effect.effect_type,
+        **_palette_fields(mellow_effect, coupling, storage),
         gradient_palette=mellow_effect.gradient_palette,
         band_colours=mellow_effect.band_colours.copy(),
         band_playback=mellow_effect.band_playback,
@@ -269,6 +286,8 @@ class ActiveSession:
         self.latency_preferences: dict[str, int] = {}
         self.latency_mac: str | None = None
         self.poller_task: asyncio.Task | None = None
+        self.music_task: asyncio.Task | None = None
+        self.music = None
         self.shm_source: TeePcmSource | None = None
         self.follower: LmsFollower | None = None
         self.follower_task: asyncio.Task | None = None
@@ -291,6 +310,43 @@ class PlayerManager:
         self._detected_sync_master: str | None = None
         self._detected_sync_master_name: str | None = None
         _RUN_DIR.mkdir(parents=True, exist_ok=True)
+
+    @property
+    def music_status(self):
+        if self._active and self._active.music:
+            return self._active.music.status.copy()
+        return None
+
+    def _start_music(self, session):
+        from .music import MusicDirector
+        if session.coupling is None:
+            return
+        def apply(coupling, palette, album):
+            if self._active is not session or session.stopping:
+                return
+            profile = _build_engine_profile(coupling, self.storage)
+            mellow = _build_mellow_profile(coupling, self.storage)
+            if profile is None:
+                return
+            for candidate in (profile, mellow):
+                if candidate is None:
+                    continue
+                selected = palette or (album if candidate.palette_id == "album-art" else None)
+                if selected:
+                    candidate.palette_stops = selected.stops
+                elif candidate.palette_id == "album-art":
+                    candidate.palette_stops = session.sync_engine.profile.palette_stops
+            session.profile = profile
+            session.sync_engine.update_render(profile, mellow)
+        session.music = MusicDirector(self.storage, apply, lambda: self.track_position)
+        session.music_task = asyncio.create_task(session.music.run(session.coupling),
+                                                name="music-colours")
+        session.music_task.add_done_callback(_log_task_failure)
+
+    def refresh_music(self):
+        if self._active and self._active.music:
+            self._active.music.last_key = None
+            self._active.music.applied = None
 
     @property
     def track_position(self) -> TrackPosition | None:
@@ -518,6 +574,8 @@ class PlayerManager:
     @property
     def active_energy_profile_id(self) -> str | None:
         if self._active and self._active.coupling:
+            if self._active.music and self._active.music.status.get("energy_profile_id"):
+                return self._active.music.status["energy_profile_id"]
             return self._active.coupling.energy_profile_id
         return None
 
@@ -632,7 +690,8 @@ class PlayerManager:
             entertainment_area_name=zone.entertainment_area_name,
             light_count=zone.light_count,
             effect_type=effect.effect_type,
-            gradient_palette=effect.gradient_palette,
+            **_palette_fields(effect, coupling, self.storage),
+        gradient_palette=effect.gradient_palette,
             band_colours=effect.band_colours.copy(),
             band_playback=effect.band_playback,
             band_advance=effect.band_advance,
@@ -807,6 +866,7 @@ class PlayerManager:
 
         session.task = asyncio.create_task(engine.run(hue_driver))
         session.task.add_done_callback(_log_task_failure)
+        self._start_music(session)
         session.poller_task = asyncio.create_task(self._poll_sync_master(session))
         session.poller_task.add_done_callback(_log_task_failure)
         log.info(
@@ -862,6 +922,7 @@ class PlayerManager:
 
         session.task = asyncio.create_task(engine.run(hue_driver))
         session.task.add_done_callback(_log_task_failure)
+        self._start_music(session)
         log.info(
             "AirPlay coupling %s active — backend=%r pipe: /run/lampastream/airplay.pcm",
             session.coupling and session.coupling.name,
@@ -903,7 +964,7 @@ class PlayerManager:
             if session.track_source is self._airplay_tracks:
                 self._airplay_tracks = None
             session.track_source = None
-        for attribute in ("unsync_task", "safety_task", "poller_task", "task"):
+        for attribute in ("unsync_task", "safety_task", "music_task", "poller_task", "task"):
             task = getattr(session, attribute)
             if task:
                 task.cancel()
@@ -995,6 +1056,7 @@ class PlayerManager:
         if self._active and self._active.sync_engine:
             self._active.profile = profile
             self._active.sync_engine.update_render(profile, mellow_profile)
+            self.refresh_music()
 
     def replace_pcm_analyser(self, profile: Profile) -> None:
         """Transactionally swap the active spectrum engine.
@@ -1449,7 +1511,7 @@ class PlayerManager:
             '}\n'
             'metadata = {\n'
             '  enabled = "yes";\n'
-            '  include_cover_art = "no";\n'
+            '  include_cover_art = "yes";\n'
             '  pipe_name = "/run/lampastream/airplay.metadata";\n'
             '  progress_interval = 10.0;\n'
             '}\n'

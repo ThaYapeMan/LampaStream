@@ -229,6 +229,8 @@ class EffectCreateBody(BaseModel):
 
     name: str = "Default Effect"
     effect_type: str = "spectrum_rgb"
+    palette_id: str = ""
+    palette_rotation_cps: float = Field(default=0., ge=-2, le=2)
     gradient_palette: str = "sunset"
     band_colours: list[str] = Field(default_factory=lambda: ["#F42525", "#25F425", "#2525F4"])
     band_playback: str = "static"
@@ -248,6 +250,8 @@ class EffectPatchBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
     name: str | None = None
     effect_type: str | None = None
+    palette_id: str | None = None
+    palette_rotation_cps: float | None = Field(default=None, ge=-2, le=2)
     gradient_palette: str | None = None
     band_colours: list[str] | None = None
     band_playback: str | None = None
@@ -1055,6 +1059,8 @@ async def create_effect_route(request: Request, body: EffectCreateBody):
         )
     effect = Effect(
         name=body.name,
+        palette_id=body.palette_id,
+        palette_rotation_cps=body.palette_rotation_cps,
         gradient_palette=body.gradient_palette,
         band_colours=body.band_colours,
         band_playback=body.band_playback,
@@ -1075,6 +1081,7 @@ async def create_effect_route(request: Request, body: EffectCreateBody):
                                effect.band_advance, effect.band_advance_interval_s)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    await _prepare_effect_palette(storage, effect, body.model_dump(exclude_unset=True))
     storage.save_effect(effect)
     return JSONResponse(content=effect.to_dict(), status_code=201)
 
@@ -1117,6 +1124,7 @@ async def patch_effect_route(effect_id: str, request: Request, body: EffectPatch
                                effect.band_advance, effect.band_advance_interval_s)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+    await _prepare_effect_palette(storage, effect, body.model_dump(exclude_unset=True))
     storage.save_effect(effect)
     # Trigger render/pcm update if the active coupling uses this Effect
     # (via either of its energy_profile's Effect references).
@@ -1619,3 +1627,210 @@ async def import_config(request: Request):
         'safety_backup_created': True,
         'message': 'Configuration restored. Activate a restored Coupling when ready.',
     })
+
+# Shared colour library and metadata settings (render-only, no receiver operations).
+class PaletteBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    name: str = Field(min_length=1, max_length=100)
+    stops: list[dict]
+
+
+class PalettePreviewBody(PaletteBody):
+    positions: list[float] = Field(default_factory=list, max_length=100)
+
+
+class MusicSettingsBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    lastfm_enabled: bool | None = None
+    lastfm_api_key: str | None = Field(default=None, max_length=200)
+    genre_mapping: dict[str, str] | None = None
+    transition_mode: str | None = None
+    transition_duration_s: float | None = Field(default=None, ge=0, le=2)
+
+
+class GenreRuleBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    genre: str
+    palette_id: str = ""
+    energy_profile_id: str = ""
+
+
+class MusicOverrideBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    palette_id: str = ""
+    energy_profile_id: str = ""
+
+
+def _check_music_refs(storage, palette_id="", energy_profile_id=""):
+    if palette_id and palette_id != "album-art" and not storage.get_palette(palette_id):
+        raise HTTPException(422, "Choose an existing palette")
+    if energy_profile_id and not storage.get_energy_profile(energy_profile_id):
+        raise HTTPException(422, "Choose an existing Energy Profile")
+
+
+def _refresh_music(request):
+    _manager(request).refresh_music()
+
+
+@router.get("/palettes")
+async def list_palettes(request: Request):
+    return [p.to_dict() for p in _storage(request).list_palettes()]
+
+
+@router.post("/palettes/preview")
+async def preview_palette(body: PalettePreviewBody):
+    from .palettes import Palette
+    def preview():
+        palette = Palette(name=body.name, stops=body.stops)
+        return [{"r": c.r, "g": c.g, "b": c.b}
+                for p in body.positions for c in (palette.sample(p),)]
+    try:
+        return await asyncio.to_thread(preview)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+@router.post("/palettes", status_code=201)
+async def create_palette(request: Request, body: PaletteBody):
+    from .palettes import Palette
+    try:
+        palette = await asyncio.to_thread(Palette, name=body.name, stops=body.stops)
+        _storage(request).save_palette(palette)
+        return palette.to_dict()
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+@router.put("/palettes/{identity}")
+async def update_palette(identity: str, request: Request, body: PaletteBody):
+    from .palettes import Palette
+    if not _storage(request).get_palette(identity):
+        raise HTTPException(404, "Palette not found")
+    try:
+        palette = await asyncio.to_thread(Palette, id=identity, name=body.name, stops=body.stops)
+        _storage(request).save_palette(palette)
+        _refresh_music(request)
+        await _refresh_active_render(request)
+        return palette.to_dict()
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+@router.post("/palettes/{identity}/clone", status_code=201)
+async def duplicate_palette(identity: str, request: Request):
+    palette = _storage(request).get_palette(identity)
+    if not palette:
+        raise HTTPException(404, "Palette not found")
+    duplicate = replace(palette, id=str(uuid.uuid4()), name=palette.name + " copy")
+    _storage(request).save_palette(duplicate)
+    return duplicate.to_dict()
+
+
+@router.delete("/palettes/{identity}", status_code=204)
+async def delete_palette(identity: str, request: Request):
+    _storage(request).delete_palette(identity)
+
+
+@router.get("/music-settings")
+async def music_settings(request: Request):
+    from .genres import GENRES
+    settings = _storage(request).music_settings().to_safe_dict()
+    return dict(settings, genres=list(GENRES),
+                rules=[r.to_dict() for r in _storage(request).list_genre_rules()])
+
+
+@router.patch("/music-settings")
+async def update_music_settings(request: Request, body: MusicSettingsBody):
+    from .models import MusicSettings
+    try:
+        settings = MusicSettings(**dict(_storage(request).music_settings().to_dict(),
+                                       **body.model_dump(exclude_none=True)))
+        _storage(request).save_music_settings(settings)
+        _refresh_music(request)
+        await _refresh_active_render(request)
+        return settings.to_safe_dict()
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+@router.post("/genre-rules", status_code=201)
+async def create_genre_rule(request: Request, body: GenreRuleBody):
+    from .models import GenreRule
+    storage = _storage(request)
+    _check_music_refs(storage, body.palette_id, body.energy_profile_id)
+    try:
+        old = next((r for r in storage.list_genre_rules() if r.genre == body.genre), None)
+        rule = GenreRule(**body.model_dump(), **({"id": old.id} if old else {}))
+        storage.save_genre_rule(rule)
+        _refresh_music(request)
+        return rule.to_dict()
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+@router.delete("/genre-rules/{identity}", status_code=204)
+async def delete_genre_rule(identity: str, request: Request):
+    _storage(request).delete_genre_rule(identity)
+    _refresh_music(request)
+
+
+@router.put("/music/override")
+async def set_music_override(request: Request, body: MusicOverrideBody):
+    storage, manager = _storage(request), _manager(request)
+    coupling = storage.get_coupling(manager.active_coupling_id)
+    if coupling is None:
+        raise HTTPException(409, "Activate a coupling first")
+    _check_music_refs(storage, body.palette_id, body.energy_profile_id)
+    storage.save_coupling(replace(coupling, manual_palette_id=body.palette_id,
+                                 manual_energy_profile_id=body.energy_profile_id))
+    manager.refresh_music()
+    return {"palette_id": body.palette_id, "energy_profile_id": body.energy_profile_id}
+
+
+async def _refresh_active_render(request):
+    storage, manager = _storage(request), _manager(request)
+    identity = manager.active_coupling_id
+    if not isinstance(identity, str):
+        return
+    coupling = storage.get_coupling(identity)
+    if coupling:
+        profile = _build_engine_profile(coupling, storage)
+        if profile:
+            manager.update_render(profile, _build_mellow_profile(coupling, storage))
+
+
+async def _prepare_effect_palette(storage, effect, updates):
+    from .palettes import palette_from_colours
+    if updates.get("palette_id"):
+        _check_music_refs(storage, updates["palette_id"])
+        palette = storage.get_palette(updates["palette_id"])
+        if palette:
+            colours = [stop["colour"] for stop in palette.stops]
+            effect.band_colours = colours if len(colours) >= 3 else [colours[0], *colours]
+        return
+    if effect.palette_id and not ({"band_colours", "gradient_palette"} & updates.keys()):
+        return
+    if effect.effect_type == "gradient":
+        effect.palette_id = effect.gradient_palette
+    else:
+        identity = str(uuid.uuid5(uuid.NAMESPACE_URL, "lampastream:palette:" + effect.id))
+        palette = await asyncio.to_thread(palette_from_colours, effect.name + " colours",
+                                         effect.band_colours, identity)
+        storage.save_palette(palette)
+        effect.palette_id = identity
+
+
+@router.put("/genre-rules/{identity}")
+async def update_genre_rule(identity: str, request: Request, body: GenreRuleBody):
+    from .models import GenreRule
+    storage = _storage(request)
+    if not any(r.id == identity for r in storage.list_genre_rules()):
+        raise HTTPException(404, "Genre rule not found")
+    _check_music_refs(storage, body.palette_id, body.energy_profile_id)
+    try:
+        rule = GenreRule(id=identity, **body.model_dump())
+        storage.save_genre_rule(rule)
+        _refresh_music(request)
+        return rule.to_dict()
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc

@@ -95,7 +95,7 @@ def test_loudness_publication_preview_eos_and_epoch_reset():
         record = records[-1]
         assert 'loudness_analyzer' in record.effective_processor_ids
         assert record.features.loudness_momentary_lufs == pytest.approx(-23, abs=.1)
-        assert record.features.sustained_energy is None
+        assert record.features.sustained_energy is not None
         assert engine.last_loudness == cap.latest_loudness()
         # A newer CAVA-like spectrum interval must not erase the meter preview
         # or be replaced by a delayed loudness record in the Effects snapshot.

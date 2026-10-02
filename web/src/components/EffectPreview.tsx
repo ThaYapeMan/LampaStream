@@ -15,6 +15,7 @@
 
 interface Props {
   effectType: string
+  paletteColours?: string[]
   bandColours?: string[]
   gradientPalette?: string
   energy?: number  // 0–1; defaults to 0.7
@@ -297,8 +298,12 @@ const GLOW_SCALE: Record<string, number> = { sm: 0.32, md: 0.62, lg: 1.0 }
 
 // ── component ─────────────────────────────────────────────────────────────────
 
-export function EffectPreview({ effectType, gradientPalette = 'sunset', bandColours = ['#F42525', '#25F425', '#2525F4'], energy = 0.7, count = 8, size = 'md' }: Props) {
+export function EffectPreview({ effectType, paletteColours, gradientPalette = 'sunset', bandColours = ['#F42525', '#25F425', '#2525F4'], energy = 0.7, count = 8, size = 'md' }: Props) {
   const dots = buildDots(effectType, energy, count, gradientPalette, bandColours)
+  if (paletteColours?.length && effectType !== 'none') dots.forEach((dot, i) => {
+    const hex = paletteColours[Math.round(i / Math.max(1, dots.length - 1) * (paletteColours.length - 1))]
+    dot.base = [1, 3, 5].map(n => parseInt(hex.slice(n, n + 2), 16)) as [number, number, number]
+  })
   const dotClass = DOT_CLASS[size] ?? DOT_CLASS.md
   const gapClass = GAP_CLASS[size] ?? GAP_CLASS.md
   const maxY = MAX_Y[size] ?? MAX_Y.md

@@ -76,7 +76,7 @@ def test_lms_subscription_tracks_dynamic_target_without_playback_commands():
             assert source.read() is None
             await until(lambda: source.read() is not None)
             assert source.read().title == target[0]
-            assert commands == [f'{mac} status - 1 tags:ad subscribe:10'
+            assert commands == [f'{mac} status - 1 tags:adglcK subscribe:10'
                                 for mac in (first, target[0])]
             target[0] = None
             assert source.read() is None

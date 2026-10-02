@@ -22,10 +22,13 @@ from .models import (
     Coupling,
     Effect,
     EnergyProfile,
+    GenreRule,
+    MusicSettings,
     PlayerLatency,
     VirtualPlayer,
     Zone,
 )
+from .palettes import Palette, starter_palettes
 from .schema import REFERENCES, empty_config, validate_current
 
 _lock = threading.Lock()
@@ -40,7 +43,9 @@ class Storage:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         if not self.path.exists():
-            self._write(empty_config())
+            initial = empty_config()
+            initial["palettes"] = [p.to_dict() for p in starter_palettes()]
+            self._write(initial)
         # Deployment migration must run before current runtime opens old data.
         self._read()
 
@@ -82,6 +87,49 @@ class Storage:
                     "Cannot delete: referenced by " + "; ".join(blockers)
                     + ". Reassign or remove these references first.")
             data[collection] = [row for row in data[collection] if row['id'] != identity]
+            self._write(data)
+
+    def list_palettes(self):
+        return [Palette.from_dict(row) for row in self.read_configuration()["palettes"]]
+
+    def get_palette(self, identity):
+        return next((p for p in self.list_palettes() if p.id == identity), None)
+
+    def save_palette(self, palette):
+        self._save_music_entity("palettes", palette)
+
+    def delete_palette(self, identity):
+        with _lock:
+            data = self._read()
+            if any(row.get(field) == identity for collection, field in (
+                    ("effects", "palette_id"), ("couplings", "manual_palette_id"),
+                    ("genre_rules", "palette_id")) for row in data[collection]):
+                raise ReferencedEntityError("Reassign this palette before deleting it")
+            data["palettes"] = [p for p in data["palettes"] if p["id"] != identity]
+            self._write(data)
+
+    def music_settings(self):
+        rows = self.read_configuration()["music_settings"]
+        return MusicSettings.from_dict(rows[0]) if rows else MusicSettings()
+
+    def save_music_settings(self, settings):
+        self._save_music_entity("music_settings", settings)
+
+    def list_genre_rules(self):
+        return [GenreRule.from_dict(row) for row in self.read_configuration()["genre_rules"]]
+
+    def save_genre_rule(self, rule):
+        self._save_music_entity("genre_rules", rule)
+
+    def delete_genre_rule(self, identity):
+        self._delete_entity("genre_rules", identity)
+
+    def _save_music_entity(self, collection, entity):
+        with _lock:
+            data = self._read()
+            data[collection] = [row for row in data[collection] if row["id"] != entity.id]
+            data[collection].append(entity.to_dict())
+            validate_current(data)
             self._write(data)
 
     # -- Player latencies ---------------------------------------------------

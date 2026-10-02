@@ -661,7 +661,8 @@ def test_huesync_display_name_migration_idempotent(tmp_path: Path) -> None:
     }
     config.write_text(json.dumps(data))
     needed = migrate_file(config)
-    assert not needed, "Already-migrated config must require no migration"
+    assert needed  # schema 1 gains the shared palette library
+    assert not migrate_file(config)
 
 
 def test_non_huesync_names_untouched(tmp_path: Path) -> None:
@@ -685,4 +686,6 @@ def test_non_huesync_names_untouched(tmp_path: Path) -> None:
     }
     config.write_text(json.dumps(data))
     needed = migrate_file(config)
-    assert not needed
+    assert needed  # schema upgrade preserves operator names
+    assert json.loads(config.read_text())["virtual_players"] == data["virtual_players"]
+    assert not migrate_file(config)

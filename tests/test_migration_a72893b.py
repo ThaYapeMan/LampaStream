@@ -25,6 +25,11 @@ ROOT = Path(__file__).resolve().parents[1]
 FIXTURE = Path(__file__).parent / 'fixtures/a72893b-config.json'
 
 
+def assert_without_palette(actual, expected):
+    assert [{k: v for k, v in row.items() if k != 'palette_id'} for row in actual] == expected
+    assert all(row.get('palette_id') for row in actual)
+
+
 def historical():
     return json.loads(FIXTURE.read_text())
 
@@ -60,7 +65,7 @@ def test_exact_a72893b_upgrade_preserves_every_current_field():
     for key in ('controllers', 'virtual_players', 'zones', 'analysers',
                 'couplings', 'player_latencies', 'active_coupling_id'):
         assert current[key] == expected_current_rows(old, key)
-    assert current['effects'] == old['scenes']
+    assert_without_palette(current['effects'], old['scenes'])
     assert current['energy_profiles'] == old['crossfaders']
     validate_current(current, references=True)
     assert convert(current) == current
@@ -222,7 +227,7 @@ def test_installer_migration_command_in_isolated_environment(tmp_path, edited_co
     command = [str(python), '-I', '-B', '-m', 'lampastream.migration', str(config)]
     result = subprocess.run(command, capture_output=True, text=True, env=env)
     assert result.returncode == 0, result.stderr
-    assert 'Schema 1: valid' in result.stdout
+    assert f'Schema {SCHEMA_VERSION}: valid' in result.stdout
     assert subprocess.run(command + ['--check'], capture_output=True).returncode == 0
     assert next(tmp_path.glob('*.bak')).read_bytes() == original
     assert json.loads(config.read_bytes())['couplings'] == data['couplings']
@@ -271,7 +276,7 @@ def test_retained_profile_does_not_override_current_coupling_metadata(tmp_path, 
     for key in ('controllers', 'virtual_players', 'zones', 'analysers',
                 'couplings', 'player_latencies', 'active_coupling_id'):
         assert result[key] == expected_current_rows(data, key)
-    assert result['effects'] == data['scenes']
+    assert_without_palette(result['effects'], data['scenes'])
     assert result['energy_profiles'] == data['crossfaders']
     assert set(result) == set(empty_config())
     validate_current(result, references=True)
@@ -325,7 +330,7 @@ def test_independently_mutated_entity_wins_over_snapshot(collection, field, valu
     for key in ('controllers', 'virtual_players', 'zones', 'analysers',
                 'couplings', 'player_latencies', 'active_coupling_id'):
         assert result[key] == expected_current_rows(expected, key)
-    assert result['effects'] == expected['scenes']
+    assert_without_palette(result['effects'], expected['scenes'])
     assert result['energy_profiles'] == expected['crossfaders']
     validate_current(result, references=True)
     assert convert(result) == result

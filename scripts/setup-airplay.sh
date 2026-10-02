@@ -245,7 +245,7 @@ pipe = {
 }
 metadata = {
   enabled = "yes";
-  include_cover_art = "no";
+  include_cover_art = "yes";
   pipe_name = "/run/lampastream/airplay.metadata";
   progress_interval = 10.0;
 }
@@ -322,6 +322,28 @@ if settings:
 else:
     start = end = pipe.end(1)
     value = '  ' + value + '\n'
+updated = updated[:start] + value + updated[end:]
+# Cover art uses the existing single metadata reader. Installer-only edit.
+structure = re.sub(r'"(?:\\.|[^"\\])*"|//[^\n]*|/\*[\s\S]*?\*/|\#[^\n]*',
+                   lambda m: ' ' * len(m[0]), updated)
+metadata = list(re.finditer(r'\bmetadata\s*=\s*\{([^{}]*)\}', structure))
+if not metadata:
+    updated += '\nmetadata = { enabled = "yes"; pipe_name = "/run/lampastream/airplay.metadata"; };\n'
+    metadata = list(re.finditer(r'\bmetadata\s*=\s*\{([^{}]*)\}', updated))
+if len(metadata) != 1:
+    sys.exit('Cannot safely enable cover art: expected one metadata section')
+section = metadata[0]
+body = re.sub(r'//[^\n]*|/\*[\s\S]*?\*/|\#[^\n]*',
+              lambda m: " " * len(m[0]), updated[section.start(1):section.end(1)])
+cover = list(re.finditer(r'\binclude_cover_art\s*=\s*"(?:yes|no)"\s*;', body))
+if len(cover) > 1 or body.count('include_cover_art') != len(cover):
+    sys.exit('Cannot safely enable cover art: ambiguous setting')
+if cover:
+    start, end = (section.start(1) + pos for pos in cover[0].span())
+    value = 'include_cover_art = "yes";'
+else:
+    start = end = section.end(1)
+    value = '\n  include_cover_art = "yes";\n'
 updated = updated[:start] + value + updated[end:]
 if updated != original:
     stat = path.stat()

@@ -60,10 +60,12 @@ process creation and every possible operational failure.
 
 ## Persisted schema boundary
 
-Current schema version: `schema_version: 1`. Collections: `controllers`,
+Current schema version: `schema_version: 2`. Collections: `controllers`,
 `virtual_players`, `zones`, `analysers`, `effects`, `energy_profiles`, `couplings`,
-`player_latencies`, plus `active_coupling_id`. Coupling has only the current
-`player_id`, `zone_id`, `analyser_id`, `energy_profile_id` references.
+`player_latencies`, `palettes`, `genre_rules`, `music_settings`, plus
+`active_coupling_id`. Coupling has the current
+`player_id`, `zone_id`, `analyser_id`, `energy_profile_id` references and optional
+manual palette/Energy Profile overrides.
 Normal model/storage deserialization rejects unknown keys; it does not translate
 historical names. Only the explicit installer migration knows those names.
 See [migration and backups](installation.md#migration).
@@ -71,6 +73,7 @@ See [migration and backups](installation.md#migration).
 ## Backup and restore
 
 **Full backups are sensitive.** They include Hue Bridge pairing credentials and
+the optional Last.fm API key, and
 must not be published, logged or stored in a public location. Ordinary Controller
 API responses still hide credentials; the explicit full-backup endpoint includes them.
 LampaStream currently has no authentication. Restrict UI/API access to a trusted network;
@@ -109,7 +112,7 @@ the standard deployment defaults. There is no additional persisted browser setti
 ### Format and validation
 
 JSON envelope: `format="lampastream-config-backup"`, `backup_version=1`,
-`schema_version=1`, UTC `created_at`, `lampastream_version`, `lampastream_commit`,
+`schema_version=2`, UTC `created_at`, `lampastream_version`, `lampastream_commit`,
 `contains_secrets=true`, and `configuration` (current persisted schema).
 Backup format version and configuration schema version are distinct and both checked.
 Unsupported versions, unknown fields/collections, partial entities, duplicate JSON keys,
@@ -325,11 +328,11 @@ The Standard editor hides energy-source settings entirely; select Expert in the
 header or profile editor to configure them. This browser preference persists across
 Energy Profiles and Now Playing through local storage (or for the current session
 when storage is blocked). Existing profiles retain their selected input and blend
-response. The `sustained` source with a PCM tap uses SustainedEnergyTracker; **canonical sessions
-currently publish `sustained_energy=None` and therefore use raw `full`**. A low
-canonical blend on steady music is not evidence that the dual-timescale tracker
-decayed: that tracker is not its input. Optional colour band normalisation does
-not change this fallback or any raw-derived aggregate.
+response. The `sustained` source uses a session-owned SustainedEnergyTracker in the canonical
+PCM pipeline. Its short/long EMA ratio follows section loudness and holds through
+silence. Now Playing shows the live value beside the blend. Raw `full` remains
+only a fallback for callers without a sustained measurement. Optional colour band
+normalisation does not alter this raw-PCM measurement.
 
 Now Playing labels the profile **Energy Trigger**, with **Open trigger** linking
 to its editor. Low- and High-energy Effect links are always visible in Standard
@@ -598,3 +601,21 @@ predecessor. All other release directories, including failed-run leftovers, are
 removed. The active pointer is resolved and rechecked before each deletion.
 An unresolved or unmanaged pointer refuses pruning. A legacy checkout-local
 venv is still archived by the existing migration; it is never pruned in place.
+
+## Music colours
+
+[Music colours and transitions](music-colours.md) describes the shared palette
+library, album-art extraction, genre privacy and manual choices. Open **Palettes**
+to edit colour stops and preview the active zone. Effects can select a stored
+palette or **Album art**, with rotation measured in cycles per second. Legacy
+band colours and gradient choices are retained by the schema-2 migration.
+
+**Music settings** groups optional Last.fm lookup, the editable genre mapping,
+genre rules and smooth-transition controls. Last.fm is off by default and needs
+your API key. A recognised track genre takes priority over lookup. API keys are
+redacted from normal settings responses but included in sensitive backups.
+
+Now Playing shows measured sustained energy next to the blend, plus raw genre
+tags, the mapped genre and manual palette/Energy Profile choices. Manual choices
+win over rules until cleared. Transitions last 0.7 seconds by default and can be
+crossfade, through black or through white, with a duration from 0 to 2 seconds.

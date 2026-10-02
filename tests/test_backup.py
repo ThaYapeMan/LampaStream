@@ -36,6 +36,8 @@ from lampastream.models import (
     Coupling,
     Effect,
     EnergyProfile,
+    GenreRule,
+    MusicSettings,
     PlayerLatency,
     VirtualPlayer,
     VirtualPlayerType,
@@ -110,6 +112,10 @@ def configured(tmp_path):
             player_mac="speaker-mac", name="Speaker", fixed_delay_ms=1234, trim_ms=123
         )
     )
+    storage.save_music_settings(MusicSettings(lastfm_api_key="private-lastfm-key"))
+    storage.save_genre_rule(
+        GenreRule(genre="house", palette_id="sunset", energy_profile_id="energy")
+    )
     return storage
 
 
@@ -126,7 +132,8 @@ def test_all_fields_credentials_and_round_trip(configured, tmp_path, caplog):
     assert backup["configuration"] == original  # only active-session state omitted
     for key, model in COLLECTIONS.items():
         rows = backup["configuration"][key]
-        assert rows
+        if key not in ("genre_rules", "music_settings"):
+            assert rows
         for row in rows:
             assert set(row) == set(
                 model.from_dict(row).to_dict()
@@ -162,7 +169,7 @@ def test_export_rejects_invalid_references(configured):
         lambda b: b.update(format="wrong"),
         lambda b: b.update(backup_version=2),
         lambda b: b.update(backup_version=True),
-        lambda b: b.update(schema_version=2),
+        lambda b: b.update(schema_version=SCHEMA_VERSION + 1),
         lambda b: b.update(contains_secrets=False),
         lambda b: b.update(created_at="not a timestamp"),
         lambda b: b.update(unexpected="private-app-key-never-log"),

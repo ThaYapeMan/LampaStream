@@ -14,14 +14,20 @@ from .models import (
     Coupling,
     Effect,
     EnergyProfile,
+    GenreRule,
+    MusicSettings,
     PlayerLatency,
     VirtualPlayer,
     Zone,
     _validate_band_colours,
 )
+from .palettes import Palette
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 COLLECTIONS = {
+    "palettes": Palette,
+    "genre_rules": GenreRule,
+    "music_settings": MusicSettings,
     "controllers": Controller,
     "virtual_players": VirtualPlayer,
     "zones": Zone,
@@ -34,6 +40,8 @@ COLLECTIONS = {
 
 
 REFERENCES = (
+    ("genre_rules", "energy_profile_id", "energy_profiles"),
+    ("couplings", "manual_energy_profile_id", "energy_profiles"),
     ("zones", "controller_id", "controllers"),
     ("energy_profiles", "high_energy_effect_id", "effects"),
     ("energy_profiles", "low_energy_effect_id", "effects"),
@@ -81,6 +89,11 @@ def validate_current(data: dict, *, references: bool = False) -> None:
                 _validate_band_colours(entity.band_colours, entity.band_playback,
                                        entity.band_advance, entity.band_advance_interval_s)
             for field, value in row.items():
+                if field not in _FIELD_TYPES[key]:
+                    raise ValueError(f"{key}/{identity}: unknown field {field}")
+                if (key == "palettes" and field == "stops"
+                        or key == "music_settings" and field == "genre_mapping"):
+                    continue  # nested contents are validated by the model constructor
                 expected = _FIELD_TYPES[key][field]
                 choices = (get_args(expected) if get_origin(expected) is types.UnionType
                            else (expected,))
@@ -103,7 +116,17 @@ def validate_current(data: dict, *, references: bool = False) -> None:
         ids[key] = seen
     if data["active_coupling_id"] is not None and not isinstance(data["active_coupling_id"], str):
         raise ValueError("active_coupling_id must be a string or null")
+    if len(data["music_settings"]) > 1 or any(r["id"] != "music" for r in data["music_settings"]):
+        raise ValueError("Music settings must have one identity: music")
+    if len({r["genre"] for r in data["genre_rules"]}) != len(data["genre_rules"]):
+        raise ValueError("Only one rule per genre is allowed")
     if references:
+        for collection, field in (("effects", "palette_id"), ("genre_rules", "palette_id"),
+                                  ("couplings", "manual_palette_id")):
+            for row in data[collection]:
+                value = row.get(field, "")
+                if value and value != "album-art" and value not in ids["palettes"]:
+                    raise ValueError(f"{collection}/{row['id']}: dangling {field}")
         for collection, field, target in REFERENCES:
             for row in data[collection]:
                 value = row.get(field, "")

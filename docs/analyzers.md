@@ -85,5 +85,6 @@ produce about 0.33 before sensitivity.
 Switching live does not restart the session. The next fresh spectrum seeds the
 EMA; carried historical bars are not processed again. Preview and Effects receive
 the same normalised `bars`. Raw-derived scalar aggregates remain unchanged,
-including `full`: canonical assembly currently supplies `sustained_energy=None`,
-so the default blend uses that raw `full` fallback, not SustainedEnergyTracker.
+including `full`. SustainedEnergyTracker now receives each canonical PCM block
+per session and publishes `sustained_energy` independently of colour normalisation.
+The default blend therefore follows section loudness and holds through silence.

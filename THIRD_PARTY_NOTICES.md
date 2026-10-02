@@ -12,3 +12,11 @@ Complete distribution texts:
 
 These exact upstream copies are included in LampaStream wheels and installed
 alongside yeney-player by the repository installer.
+
+Music colour support uses Pillow for median-cut image quantisation (MIT-CMU in
+current releases; historical releases use the permissive HPND licence) and HTTPX
+for artwork requests (BSD-3-Clause). They are installed as separate dependencies
+with their own distribution licence texts. OKLab's published mathematics are
+credited to Björn Ottosson: https://bottosson.github.io/posts/oklab/ (public
+domain/MIT). No LedFx or aubio source or package is included or required by this
+feature.

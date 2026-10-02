@@ -1,3 +1,4 @@
+import { MusicChoices } from '@/components/MusicChoices'
 import { LightTiming } from '@/components/LightTiming'
 import { LiveEnergySource } from '@/components/LiveEnergySource'
 import { TrackProgress } from '@/components/TrackProgress'
@@ -238,12 +239,13 @@ type Props = Pick<PreviewState, 'colour' | 'channel_colours' | 'onset' | 'bars' 
   onset_bass?: boolean
   onset_mid?: boolean
   onset_treble?: boolean
+  sustained_energy?: number | null
   mix?: number
   loudness_momentary_lufs?: number | null
   connected?: boolean
 }
 
-export function NowPlaying({ expertMode = false, colour, channel_colours, onset, onset_bass = false, onset_mid = false, onset_treble = false, mix = 0, loudness_momentary_lufs = null, bars, normalised_bars, status, connected = true, onOpenLatency, onOpenEffect, onOpenEnergyProfile, last_energy_input = 0 }: Props) {
+export function NowPlaying({ expertMode = false, colour, channel_colours, onset, onset_bass = false, onset_mid = false, onset_treble = false, mix = 0, sustained_energy = null, loudness_momentary_lufs = null, bars, normalised_bars, status, connected = true, onOpenLatency, onOpenEffect, onOpenEnergyProfile, last_energy_input = 0 }: Props) {
   const couplingId = status?.active_coupling_id ?? null
   const zoneId = status?.active_zone_id ?? null
 
@@ -459,6 +461,7 @@ export function NowPlaying({ expertMode = false, colour, channel_colours, onset,
             <div className="flex items-center justify-between mb-1">
               <span className="text-xs text-muted-foreground">
                 Energy blend
+                <span className="ml-3 inline-block font-mono" data-testid="sustained-energy">Sustained {connected && sustained_energy !== null ? sustained_energy.toFixed(2) : '—'}</span>
                 <span className="ml-3 font-mono" title="K-weighted momentary loudness (400 ms); independent of energy blend" data-testid="momentary-loudness">
                   {connected && loudness_momentary_lufs !== null && Number.isFinite(loudness_momentary_lufs)
                     ? `${loudness_momentary_lufs.toFixed(1)} LUFS`
@@ -485,6 +488,8 @@ export function NowPlaying({ expertMode = false, colour, channel_colours, onset,
           <SessionDiagnostics status={status} playerType={playerType} />
         </CardContent>
       </Card>
+
+      {status?.music && <MusicChoices music={status.music} coupling={activeCoupling} profiles={energyProfiles} />}
 
       <Card data-testid="spectrum-panel">
         <CardHeader className="pb-3 flex-row items-center justify-between">

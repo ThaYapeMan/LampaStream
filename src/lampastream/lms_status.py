@@ -33,6 +33,10 @@ class LmsPlayerStatus:
     time: float | None = None
     player_name: str | None = None      # display name of the queried player
     sync_master: str | None = None      # MAC of the sync-group master, None if standalone
+    genre: str | None = None
+    album: str | None = None
+    coverid: str | None = None
+    artwork_url: str | None = None
     sync_slaves: list[str] = field(default_factory=list)   # MACs of sync slaves
 
 
@@ -65,7 +69,7 @@ def query_lms_status(host: str, mac: str, port: int = DEFAULT_PORT) -> LmsPlayer
             "LMS host is not configured in this profile. "
             "Open the profile editor and enter the LMS server IP or hostname."
         )
-    command = f"{mac} status - 1 tags:ad\n"
+    command = f"{mac} status - 1 tags:adglcK\n"
     log.debug("LMS query: %s:%d player=%s", host, port, mac)
     with socket.create_connection((host, port), timeout=_SOCKET_TIMEOUT_S) as sock:
         sock.sendall(command.encode("utf-8"))
@@ -134,7 +138,7 @@ def _parse_status(text: str) -> LmsPlayerStatus:
                 pass
         elif key == "current_title":
             current_title = value or None
-        elif key in ("title", "artist", "mode"):
+        elif key in ("title", "artist", "mode", "genre", "album", "coverid", "artwork_url"):
             setattr(result, key, value or None)
         elif key == "duration":
             try:

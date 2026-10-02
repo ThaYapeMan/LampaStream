@@ -1,3 +1,4 @@
+import { PalettePicker } from '@/components/PalettePicker'
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -57,6 +58,8 @@ const s2dec  = (v: number) => Math.round((0.01 + v * 0.98) * 100) / 100
 // ── Form state ────────────────────────────────────────────────────────────────
 
 interface FormState {
+  palette_id: string
+  palette_rotation_cps: string
   name: string
   effect_type: string
   gradient_palette: string
@@ -76,6 +79,8 @@ interface FormState {
 
 function defaultForm(cfg?: Effect): FormState {
   return {
+    palette_id: cfg?.palette_id ?? '',
+    palette_rotation_cps: String(cfg?.palette_rotation_cps ?? 0),
     band_colours: [...(cfg?.band_colours ?? EFFECT_DEFAULTS.band_colours)],
     band_playback: cfg?.band_playback ?? EFFECT_DEFAULTS.band_playback,
     band_advance: cfg?.band_advance ?? EFFECT_DEFAULTS.band_advance,
@@ -405,6 +410,8 @@ export function Effects({ activeCouplingId = null, initialEffectId }: { activeCo
       const body = {
         name:                  form.name,
         effect_type:           form.effect_type,
+        palette_id: form.palette_id,
+        palette_rotation_cps: parseFloat(form.palette_rotation_cps) || 0,
         gradient_palette:      form.gradient_palette,
         band_colours: form.band_colours,
         band_playback: form.band_playback,
@@ -487,7 +494,7 @@ export function Effects({ activeCouplingId = null, initialEffectId }: { activeCo
               <div className="py-10 px-6 flex flex-col items-center gap-4">
                 <EffectPreview
                   effectType={form.effect_type}
-                  gradientPalette={form.gradient_palette} bandColours={form.band_colours}
+                  gradientPalette={form.gradient_palette} bandColours={form.band_colours} paletteColours={form.palette_id ? form.band_colours : undefined}
                   energy={displayEnergy}
                   count={8}
                   size="lg"
@@ -613,7 +620,8 @@ export function Effects({ activeCouplingId = null, initialEffectId }: { activeCo
                     )}
                   </FieldRow>
 
-                  {selectedMeta?.hasPalette && (
+                  {form.effect_type !== 'none' && <PalettePicker value={form.palette_id} rotation={Number(form.palette_rotation_cps)} onChange={(value, palette) => setForm(prev => ({ ...prev, palette_id: value, ...(palette ? { band_colours: palette.stops.length === 2 ? [...palette.stops.map(s => s.colour), palette.stops[0].colour] : palette.stops.map(s => s.colour) } : {}) }))} onRotation={value => set('palette_rotation_cps', String(value))} />}
+                  {selectedMeta?.hasPalette && !form.palette_id && (
                     <label className="block space-y-1.5 text-xs text-muted-foreground">
                       Palette
                       <select data-testid="field-gradient-palette" value={form.gradient_palette}

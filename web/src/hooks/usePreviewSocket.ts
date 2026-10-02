@@ -10,6 +10,7 @@ export interface TrackPosition {
 }
 
 export interface SocketStatus {
+  music?: import('@/lib/api').MusicStatus | null
   timing_player_mac?: string | null
   timing_player_name?: string | null
   light_timing?: PlayerLatency | null
@@ -49,6 +50,7 @@ export interface PreviewState {
   onset_treble: boolean
   mix: number
   energy: number
+  sustained_energy?: number | null
   last_energy_input?: number
   loudness_momentary_lufs: number | null
   loudness_short_term_lufs: number | null
@@ -143,6 +145,7 @@ export function usePreviewSocket(): PreviewState {
             onset_treble: onset_treble || s.onset_treble,
             mix,
             energy,
+            sustained_energy: (msg.sustained_energy as number | null) ?? null,
             last_energy_input: (msg.last_energy_input as number) ?? 0,
             loudness_momentary_lufs: (msg.loudness_momentary_lufs as number | null) ?? null,
             loudness_short_term_lufs: (msg.loudness_short_term_lufs as number | null) ?? null,

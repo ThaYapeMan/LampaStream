@@ -650,14 +650,15 @@ def test_v2_produces_audiofeatures_shape():
     assert isinstance(features.relative_exertion, float)
 
 
-def test_v2_sustained_energy_is_none():
-    """Phase 3 AirPlay path does not provide sustained_energy (Phase 4 work)."""
+def test_v2_sustained_energy_is_published():
+    """The canonical path supplies section loudness to the default energy source."""
     p = _make_pipeline()
     sig = _sine_stereo(440, 440, 0.5, 0.5, n=3 * _CANONICAL_RATE)
     _feed_pipeline(p, sig, epoch_id="ep-1")
     features = p.latest()
     assert features is not None
-    assert features.sustained_energy is None
+    assert features.sustained_energy is not None
+    assert abs(features.sustained_energy - .5) < .02
 
 
 def test_v2_hpss_inactive():

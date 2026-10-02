@@ -11,6 +11,8 @@ dependencies = [
     "uvicorn[standard]>=0.30",
     "hue-entertainment>=0.1.2",
     "numpy>=1.26",
+    "Pillow>=10.4",
+    "httpx>=0.27",
     "soxr>=1.0",
 ]
 

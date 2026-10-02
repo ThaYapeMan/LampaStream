@@ -1041,6 +1041,8 @@ class CanonicalAnalysisPipeline:
         )
         self._bar_stft = StereoMagStft(_CAP_SAMPLE_RATE)
         self._canonicalizer = AudioCanonicalizer()
+        self._sustained_tracker = SustainedEnergyTracker()
+        self._sustained_energy = None
         self._current_epoch_id: str | None = None
         # All record state commits under _pub_lock. Sequence/queue track delivery;
         # _latest_pub tracks the freshest audio interval for live Effects.
@@ -1362,7 +1364,7 @@ class CanonicalAnalysisPipeline:
             onset_bass_strength=onset_bass_str,
             onset_mid_strength=onset_mid_str,
             onset_treble_strength=onset_treble_str,
-            sustained_energy=None,
+            sustained_energy=self._sustained_energy,
             hpss_active=percussive is not None,
             percussive_energy=percussive if percussive is not None else 0.0,
             harmonic_energy=harmonic if harmonic is not None else 0.0,
@@ -1403,6 +1405,9 @@ class CanonicalAnalysisPipeline:
             self._play_spans.clear()
             self._epoch_start_sample_pos = frame.sample_pos
             self._stft_frame_count = 0
+
+        self._sustained_energy = self._sustained_tracker.push(
+            samples.reshape(-1), len(samples) / _CAP_SAMPLE_RATE)
 
         if frame.received_monotonic is not None:
             self._arrival_spans.append((epoch_id, frame.sample_pos,
@@ -2064,6 +2069,13 @@ class _BandColoursRenderer(_EffectRenderer):
                          profile.band_advance, profile.band_advance_interval_s)
         table = [Colour(*(int(c[i:i + 2], 16) / 255 for i in (1, 3, 5)))
                  for c in profile.band_colours]
+        if profile.palette_stops:
+            from .palettes import Palette
+            palette = Palette(stops=profile.palette_stops)
+            table = [palette.sample(i / (len(profile.band_colours) - 1), t,
+                                    profile.palette_rotation_cps)
+                     for i in range(len(profile.band_colours))]
+            configuration += (palette.key,)
         if configuration != self._configuration:
             self._configuration = configuration
             self._colours = table.copy()
@@ -2071,6 +2083,15 @@ class _BandColoursRenderer(_EffectRenderer):
             self._last_advance_t = t
             self._shuffle_queue = []
             self._last_offset = 0
+        if profile.palette_stops and profile.palette_rotation_cps:
+            previous = getattr(self, "_previous_palette_table", table)
+            self._colours = [table[min(range(len(previous)), key=lambda i:
+                                     sum((a - b) ** 2 for a, b in zip(
+                                         (colour.r, colour.g, colour.b),
+                                         (previous[i].r, previous[i].g, previous[i].b),
+                                         strict=True)))]
+                             for colour in self._colours]
+        self._previous_palette_table = table.copy()
         if self._last_advance_t is None or t < self._last_advance_t:
             self._last_advance_t = t
         advance = (onset and not self._prev_onset if profile.band_advance == "beat"
@@ -2090,8 +2111,10 @@ class _BandColoursRenderer(_EffectRenderer):
                 self._last_offset = offset
                 self._colours = self._colours[-offset:] + self._colours[:-offset]
             elif profile.band_playback == "random":
-                self._colours = [Colour(*colorsys.hls_to_rgb(self._rng.random(), .55, .85))
-                                 for _ in table]
+                self._colours = ([self._rng.choice(table) for _ in table]
+                                 if profile.palette_stops else
+                                 [Colour(*colorsys.hls_to_rgb(self._rng.random(), .55, .85))
+                                  for _ in table])
             elif profile.band_playback == "mix":
                 self._colours = [self._rng.choice(table) for _ in table]
         return self._colours
@@ -2463,8 +2486,7 @@ class _SolidRenderer(_EffectRenderer):
 class _GradientRenderer(_EffectRenderer):
     """Centroid selects a curated colour; overall energy controls brightness.
 
-    Inspired by LedFx gradients; see the historical analysis in
-    docs/archive/LampaStream_colour_v2_ledfx_lessons.md.
+    Shared palette colours are applied by ColourModeEffect.
     """
 
     def render(self, profile: Profile, features: AudioFeatures, t: float) -> Scene:  # noqa: ARG002
@@ -2533,6 +2555,40 @@ def _make_renderer(effect: str) -> _EffectRenderer:
 # ---------------------------------------------------------------------------
 
 
+class PaletteScene:
+    """Recolour the existing brightness field without changing its rhythm or geometry."""
+    def __init__(self, scene, palette, profile, features):
+        self.scene, self.palette, self.profile, self.features = scene, palette, profile, features
+
+    def color_at(self, position, t):
+        old = self.scene.color_at(position, t)
+        effect = self.profile.effect_type
+        if effect in ("spectrum_rgb", "spectrum_rgb_spatial"):
+            # Independent low/mid/high energy weights, retained from the original scene.
+            weights = (old.r, old.g, old.b)
+            colours = [self.palette.sample(i / 2, t, self.profile.palette_rotation_cps)
+                       for i in range(3)]
+            total = sum(weights)
+            if total == 0:
+                return Colour.BLACK
+            return Colour(*(sum(getattr(c, axis) * w for c, w in zip(colours, weights, strict=True))
+                            / total * max(weights) for axis in ("r", "g", "b")))
+        if effect in ("swirl", "wave", "splotches", "fireworks"):
+            value = (position.x + 1) / 2 + .1 * (position.y + position.z)
+            if effect == "fireworks":
+                value = math.sqrt((position.x ** 2 + position.y ** 2 + position.z ** 2) / 3)
+            if effect == "swirl":
+                value = (math.atan2(position.y, position.x) / (2 * math.pi)
+                         + position.z * .1 + .5) % 1
+        elif effect in ("pulses", "flashes"):
+            value = colorsys.rgb_to_hsv(old.r, old.g, old.b)[0]
+        else:
+            value = self.features.centroid
+        colour = self.palette.sample(value, t, self.profile.palette_rotation_cps)
+        brightness = max(old.r, old.g, old.b)
+        return Colour(colour.r * brightness, colour.g * brightness, colour.b * brightness)
+
+
 class ColourModeEffect:
     """Dispatches to one of the _EffectRenderer implementations based on profile.effect_type.
 
@@ -2547,9 +2603,15 @@ class ColourModeEffect:
     def __init__(self, profile: Profile) -> None:
         self.profile = profile
         self._renderer = _make_renderer(profile.effect_type)
+        from .palettes import Palette
+        self._palette = Palette(stops=profile.palette_stops) if profile.palette_stops else None
 
     def render(self, features: AudioFeatures, t: float) -> Scene:
-        return self._renderer.render(self.profile, features, t)
+        scene = self._renderer.render(self.profile, features, t)
+        if self._palette and self.profile.effect_type not in (
+                "band_colours", "band_colours_spatial", "none"):
+            return PaletteScene(scene, self._palette, self.profile, features)
+        return scene
 
 
 # ---------------------------------------------------------------------------
@@ -2632,6 +2694,25 @@ class LayerMixer:
         return LerpScene(mellow_scene, active_scene, self._mix)
 
 
+class SmoothLayerMixer(LayerMixer):
+    def __init__(self, active, mellow, previous, baseline):
+        super().__init__(active, mellow)
+        from .transitions import TransitionPhase
+        interrupted = isinstance(previous, SmoothLayerMixer) and not previous.phase.completed
+        self.phase = TransitionPhase(active.transition_mode, active.transition_duration_s,
+                                     baseline if interrupted else None)
+        self.previous = previous
+
+    def render(self, features, t):
+        from .transitions import TransitionScene
+        new = super().render(features, t)
+        if self.phase.completed:
+            self.previous = None
+            return new
+        old = self.previous.render(features, t)
+        return TransitionScene(old, new, self.phase)
+
+
 # ---------------------------------------------------------------------------
 # SyncEngine — orchestrates AudioPipeline + Renderer + Output at 30 Hz
 # ---------------------------------------------------------------------------
@@ -2686,6 +2767,8 @@ class SyncEngine:
             raise ValueError("Either fifo_path or analyser must be provided")
         effective_mellow = mellow_profile if mellow_profile is not None else profile
         self._effect: LayerMixer = LayerMixer(profile, effective_mellow)
+        self._shown_scene = None
+        self._shown_t = 0.
         self._timing = timing
         self._scene_timing = deque()
         self._probe: LatencyProbe = probe if probe is not None else NoLatencyProbe()
@@ -2719,7 +2802,8 @@ class SyncEngine:
         """Rebuild the effect with a new profile. Call after saving band/cutoff changes."""
         self.profile = profile
         effective_mellow = mellow_profile if mellow_profile is not None else profile
-        self._effect = LayerMixer(profile, effective_mellow)
+        self._effect = SmoothLayerMixer(profile, effective_mellow, self._effect,
+                                         lambda: (self._shown_scene, self._shown_t))
 
     def update_onset_pipeline(self, profile: Profile) -> None:
         """Rebuild canonical onset/HPSS processing without restarting the session.
@@ -2753,7 +2837,8 @@ class SyncEngine:
         """
         self.profile = profile
         effective_mellow = mellow_profile if mellow_profile is not None else profile
-        self._effect = LayerMixer(profile, effective_mellow)
+        self._effect = SmoothLayerMixer(profile, effective_mellow, self._effect,
+                                         lambda: (self._shown_scene, self._shown_t))
         if isinstance(self._analyser, CanonicalAnalysisPipeline):
             self._analyser.update_band_normalisation(profile.band_normalise, profile.exertion_clip)
         normaliser = getattr(self._analyser, "normaliser", None)
@@ -3066,6 +3151,7 @@ class SyncEngine:
                         ready = time.monotonic()
                         self._last_bars, self._last_onset = f.bars, f.onset
                         self._last_mix, self._last_energy = self._effect.mix, f.full
+                        self._last_sustained_energy = f.sustained_energy
                         schedule.add(scene, f.play_monotonic, ready, f.timing_generation, trim,
                                      (f.received_monotonic, ready))
                     due = schedule.due(time.monotonic(), self._timing.tap_generation)
@@ -3073,6 +3159,7 @@ class SyncEngine:
                         scene, provenance = due
                         sent = time.monotonic()
                         output.send(scene, sent)
+                        self._shown_scene, self._shown_t = scene, sent
                         if provenance[0] is not None:
                             self._timing.processing(*provenance, sent)
                     self._delay_buffer.clear()
@@ -3099,6 +3186,7 @@ class SyncEngine:
                 scene: Scene = self._effect.render(features, t)
                 self._last_mix = self._effect.mix
                 self._last_energy = features.full
+                self._last_sustained_energy = features.sustained_energy
                 self._scene_timing.append(
                     (features.received_monotonic, time.monotonic())
                     if self._timing is not None and features.received_monotonic is not None
@@ -3149,6 +3237,7 @@ class SyncEngine:
                 if entry is not None:
                     sent = time.monotonic()
                     output.send(entry, sent)
+                    self._shown_scene, self._shown_t = entry, sent
                     if provenance is not None and self._timing is not None:
                         self._timing.processing(*provenance, sent)
 

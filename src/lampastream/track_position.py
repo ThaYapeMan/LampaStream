@@ -16,7 +16,7 @@ from collections.abc import Callable
 from dataclasses import asdict, dataclass, replace
 from pathlib import Path
 from typing import Protocol
-from urllib.parse import unquote
+from urllib.parse import quote, unquote
 
 from .lms_status import LmsPlayerStatus, _parse_status
 
@@ -29,6 +29,11 @@ class TrackPosition:
     duration_s: float | None = None
     playing: bool = False
     observed_at: float = 0.0
+    genre: str | None = None
+    album: str | None = None
+    artwork_url: str | None = None
+    artwork_data: bytes | None = None
+    artwork_hash: str | None = None
 
     def position_now(self) -> float | None:
         if self.position_s is None:
@@ -41,7 +46,9 @@ class TrackPosition:
         result = asdict(self)
         result['position_s'] = self.position_now()
         del result['observed_at']
-        return result
+        result.pop('artwork_data', None)
+        return {k: v for k, v in result.items()
+                if k not in ('genre', 'album', 'artwork_url', 'artwork_hash') or v is not None}
 
 
 class TrackPositionSource(Protocol):
@@ -92,7 +99,14 @@ class LmsTrackPositionSource:
         self._snapshot = (TrackPosition(
             status.title, status.artist, status.time, status.duration,
             status.mode == 'play' and not status.waiting_to_play, observed_at,
+            **self._details(status),
         ) if status.mode in ('play', 'pause', 'stop') else None)
+
+    def _details(self, status):
+        host = f"[{self._host}]" if ":" in self._host else self._host
+        url = (f"http://{host}:9000/music/{quote(status.coverid, safe='')}/cover.jpg"
+               if status.coverid else status.artwork_url)
+        return dict(genre=status.genre, album=status.album, artwork_url=url)
 
     async def close(self) -> None:
         if self._task is not None:
@@ -116,7 +130,7 @@ class LmsTrackPositionSource:
                 if target:
                     reader, writer = await asyncio.wait_for(
                         asyncio.open_connection(self._host, self._port, limit=65536), 3)
-                    writer.write(f'{target} status - 1 tags:ad subscribe:10\n'.encode())
+                    writer.write(f'{target} status - 1 tags:adglcK subscribe:10\n'.encode())
                     await writer.drain()
                     last_received = time.monotonic()
                     while target == self._target():
@@ -138,7 +152,8 @@ class LmsTrackPositionSource:
                             continue
                         self._snapshot = TrackPosition(
                             status.title, status.artist, status.time, status.duration,
-                            status.mode == 'play' and not status.waiting_to_play, time.monotonic())
+                            status.mode == 'play' and not status.waiting_to_play, time.monotonic(),
+                            **self._details(status))
             except (OSError, ValueError, TimeoutError):
                 pass  # metadata unavailability must not interrupt audio delivery
             finally:
@@ -158,9 +173,9 @@ class AirPlayTrackPositionSource:
     prgr is start/current/end in wrapping 32-bit RTP frames at 44100 Hz.
     phbt (configured every ten seconds) corrects the current RTP position.
     Pause/resume/end events are supplied by the pinned Shairport implementation.
-    No cover art is requested; framing is bounded even for malformed input.
+    Cover art shares this sole reader; framing remains bounded.
     """
-    MAX_ITEM = 65536
+    MAX_ITEM = 12 * 1024 * 1024  # up to 8 MB artwork plus base64/XML framing
 
     def __init__(self, path: str = '/run/lampastream/airplay.metadata', *, timing=None):
         self._path = Path(path)
@@ -170,6 +185,7 @@ class AirPlayTrackPositionSource:
         self._buffer = b''
         self._start: int | None = None
         self._batch: dict | None = None
+        self._generation = 0
 
     def open(self) -> None:
         if not self.running:
@@ -183,6 +199,7 @@ class AirPlayTrackPositionSource:
         return self._snapshot
 
     def _clear(self) -> None:
+        self._generation += 1
         self._snapshot, self._start, self._batch, self._buffer = None, None, None, b''
 
     def invalidate(self) -> None:
@@ -226,7 +243,7 @@ class AirPlayTrackPositionSource:
                         await asyncio.sleep(0.1)
                         loop.add_reader(fd, ready.set)
                         continue
-                    self.feed(chunk)
+                    await self.feed_async(chunk)
             except (OSError, ValueError):
                 pass  # missing/unavailable metadata does not stop audio
             finally:
@@ -236,7 +253,7 @@ class AirPlayTrackPositionSource:
                 self._clear()
             await asyncio.sleep(1)
 
-    def feed(self, chunk: bytes) -> None:
+    def _records(self, chunk: bytes):
         """Incremental bounded parser; also exercised directly with captured wire shapes."""
         self._buffer += chunk
         while True:
@@ -253,16 +270,60 @@ class AirPlayTrackPositionSource:
             item, self._buffer = self._buffer[:end + 7], self._buffer[end + 7:]
             if len(item) > self.MAX_ITEM:
                 continue
-            try:
-                root = ET.fromstring(item)
-                kind = bytes.fromhex(root.findtext('type', '')).decode('ascii')
-                code = bytes.fromhex(root.findtext('code', '')).decode('ascii')
-                data = base64.b64decode(''.join(root.findtext('data', '').split()), validate=True)
-                if int(root.findtext('length', '-1')) != len(data):
-                    continue
+            yield item
+
+    @staticmethod
+    def _decode_record(item):
+        try:
+            root = ET.fromstring(item)
+            kind = bytes.fromhex(root.findtext('type', '')).decode('ascii')
+            code = bytes.fromhex(root.findtext('code', '')).decode('ascii')
+            data = base64.b64decode(''.join(root.findtext('data', '').split()), validate=True)
+            if int(root.findtext('length', '-1')) != len(data):
+                return None
+            return kind, code, data
+        except (ValueError, ET.ParseError, binascii.Error):
+            return None
+
+    def _accept_record(self, record):
+        if record is None:
+            return
+        kind, code, data = record
+        try:
+            if kind == 'ssnc' and code == 'PICT':
+                import hashlib
+                if len(data) <= 8 * 1024 * 1024:
+                    changes = dict(artwork_data=data,
+                                   artwork_hash=hashlib.sha256(data).hexdigest())
+                    if self._batch is not None:
+                        self._batch.update(changes)
+                    else:
+                        self._update(**changes)
+            elif kind == 'core' and code == 'gnre' and len(data) == 2:
+                genres = {7: 'hip-hop', 8: 'jazz', 9: 'metal', 13: 'pop', 14: 'r&b',
+                          15: 'rap', 17: 'rock', 18: 'techno', 26: 'ambient',
+                          31: 'trance', 32: 'classical', 35: 'house', 42: 'soul',
+                          52: 'electronic', 124: 'house'}
+                # DMAP numeric genres are one-based ID3 genre indices.
+                self._item(kind, 'asgn', genres.get(int.from_bytes(data, 'big') - 1,
+                                                  f'ID3 genre {int.from_bytes(data, "big") - 1}'))
+            else:
                 self._item(kind, code, data.decode('utf-8', errors='replace'))
-            except (ValueError, ET.ParseError, binascii.Error):
-                continue
+        except (ValueError, OverflowError):
+            return
+
+    def feed(self, chunk: bytes) -> None:
+        """Synchronous fixture entry; production decoding is off the light loop."""
+        for item in self._records(chunk):
+            self._accept_record(self._decode_record(item))
+
+    async def feed_async(self, chunk: bytes) -> None:
+        generation = self._generation
+        for item in self._records(chunk):
+            record = await asyncio.to_thread(self._decode_record, item)
+            if generation != self._generation:
+                return
+            self._accept_record(record)
 
     def _update(self, **changes) -> None:
         old = self._snapshot or TrackPosition()
@@ -272,19 +333,21 @@ class AirPlayTrackPositionSource:
     def _item(self, kind: str, code: str, data: str) -> None:
         if kind == 'ssnc' and self._timing is not None:
             self._timing.metadata(code, data)
-        if kind == 'core' and code in ('minm', 'asar'):
-            changes = {'title' if code == 'minm' else 'artist': data or None}
+        if kind == 'core' and code in ('minm', 'asar', 'asgn', 'asal'):
+            field = dict(minm='title', asar='artist', asgn='genre', asal='album')[code]
+            changes = {field: data or None}
             if self._batch is not None:
                 self._batch.update(changes)
             else:
                 self._update(**changes)
         elif kind == 'ssnc':
             if code == 'mdst':
-                self._batch = {'title': None, 'artist': None}
+                self._batch = {'title': None, 'artist': None, 'genre': None, 'album': None}
             elif code == 'mden' and self._batch is not None:
                 if self._snapshot and self._snapshot.title != self._batch["title"]:
                     self._start = None
-                    self._update(position_s=None, duration_s=None)
+                    self._update(position_s=None, duration_s=None,
+                                 artwork_data=None, artwork_hash=None)
                 self._update(**self._batch)
                 self._batch = None
             elif code == 'prgr':

@@ -51,3 +51,21 @@
 @media (prefers-reduced-motion: reduce) {
   .timing-dot { animation: none; left: calc(50% - 4px); }
 }
+
+/* Follow the system appearance; the same semantic tokens serve both themes. */
+@media (prefers-color-scheme: light) {
+  :root {
+    --background: 220 20% 97%;
+    --foreground: 222 13% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 13% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 13% 10%;
+    --secondary: 220 16% 93%;
+    --secondary-foreground: 222 13% 10%;
+    --muted: 220 16% 93%;
+    --muted-foreground: 220 10% 40%;
+    --border: 220 14% 86%;
+    --input: 220 14% 86%;
+  }
+}

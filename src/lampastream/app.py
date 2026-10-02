@@ -136,7 +136,10 @@ async def ws_preview(websocket: WebSocket):
             status_dict = {
                 "type": "status",
                 "light_timing": light_timing,
-                "track": dataclasses.asdict(track) if track is not None else None,
+                "track": ({k: v for k, v in dataclasses.asdict(track).items()
+                           if k != "artwork_data"} if track is not None else None),
+                "music": (player_manager.music_status
+                          if isinstance(player_manager.music_status, dict) else None),
                 "version": f"{__version__}+{__git_hash__}",
                 "active_coupling_id": player_manager.active_coupling_id,
                 "active_coupling_name": player_manager.active_coupling_name,

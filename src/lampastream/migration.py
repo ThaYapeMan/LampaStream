@@ -224,6 +224,25 @@ def _migrate_player_latency(data: dict) -> None:
         row.setdefault("measured_at", None)
 
 
+def _migrate_palettes(data):
+    from .palettes import palette_from_colours, starter_palettes
+    if not data["palettes"]:
+        data["palettes"] = [palette.to_dict() for palette in starter_palettes()]
+    for effect in data["effects"]:
+        if effect.get("palette_id"):
+            continue
+        if effect.get("effect_type") == "gradient":
+            effect["palette_id"] = effect.get("gradient_palette", "sunset")
+        else:
+            colours = effect.get("band_colours", ["#F42525", "#25F425", "#2525F4"])
+            identity = str(uuid.uuid5(uuid.NAMESPACE_URL, "lampastream:palette:" + effect["id"]))
+            palette = palette_from_colours(effect.get("name", "Effect") + " colours", colours,
+                                           identity)
+            data["palettes"].append(palette.to_dict())
+            effect["palette_id"] = identity
+        # Legacy fields intentionally remain byte-for-byte JSON values for old clients/export.
+
+
 def convert(original: dict) -> dict:
     if not isinstance(original, dict):
         raise ValueError("Configuration must be a JSON object")
@@ -233,6 +252,16 @@ def convert(original: dict) -> dict:
         data = copy.deepcopy(original)
         _migrate_bars_source(data)
         _migrate_player_latency(data)
+        validate_current(data, references=True)
+        return data
+    if original.get("schema_version") == 1:
+        data = copy.deepcopy(original)
+        for key in ("palettes", "genre_rules", "music_settings"):
+            data.setdefault(key, [])
+        data["schema_version"] = SCHEMA_VERSION
+        _migrate_bars_source(data)
+        _migrate_player_latency(data)
+        _migrate_palettes(data)
         validate_current(data, references=True)
         return data
     if original.get("schema_version", 0) != 0:
@@ -315,6 +344,7 @@ def convert(original: dict) -> dict:
     _migrate_bars_source(data)
     _migrate_player_latency(data)
     _migrate_flat_residue(data)
+    _migrate_palettes(data)
     validate_current(data, references=True)
     return data
 

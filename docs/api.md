@@ -252,3 +252,32 @@ The WebSocket `frame` message also includes `last_energy_input`: the selected
 blend. The Energy Profile editor uses `last_energy_input` for its live marker.
 Energy Profile REST schemas expose `energy_source`, `lufs_floor`,
 `lufs_ceiling`, and `adaptation_tau_s`; see [configuration](configuration.md).
+
+## Music colour API
+
+| Method | Path | Behaviour |
+| --- | --- | --- |
+| GET | `/api/palettes` | Palette library, including ordered colour stops |
+| POST | `/api/palettes` | Create a palette |
+| PUT | `/api/palettes/{identity}` | Edit a palette and refresh active rendering |
+| DELETE | `/api/palettes/{identity}` | Delete an unused palette; referenced palettes are protected |
+| POST | `/api/palettes/{identity}/clone` | Duplicate a palette |
+| POST | `/api/palettes/preview` | Sample the shared OKLab/gamut lookup without sending to lamps |
+| GET | `/api/music-settings` | Settings, genre names and rules; API key redacted |
+| PATCH | `/api/music-settings` | Save privacy, API key, mapping or transition settings |
+| POST | `/api/genre-rules` | Create/upsert a rule for a genre |
+| PUT | `/api/genre-rules/{identity}` | Edit an existing rule |
+| DELETE | `/api/genre-rules/{identity}` | Remove a rule |
+| PUT | `/api/music/override` | Save or clear manual palette/Energy Profile choices for the active coupling |
+
+`frame.sustained_energy` is the live section-loudness value (or null before the
+first measurement). `status.music` contains the mapped `genre`, `raw_tags`,
+metadata `source`, effective rule/manual palette and Energy Profile IDs, the
+`manual` flag and `album_art_available`. Artwork bytes and API keys are never
+included in preview messages. Track metadata adds genre, album, artwork URL and
+image hash when available; artwork remains owned by the single metadata reader.
+
+Effect responses retain legacy `band_colours` and `gradient_palette` fields and
+add `palette_id` and `palette_rotation_cps`. An empty palette ID retains the legacy
+colour choice; `album-art` selects the session's extracted artwork palette.
+See [music colours](music-colours.md) for sampling, privacy and migration details.

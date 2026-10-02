@@ -60,10 +60,9 @@ SILENCE_LUFS = -np.inf          # reported when below the absolute gate
 class _Biquad:
     """Direct-form II transposed biquad with persistent state, one per channel.
 
-    Processes a whole block in a single vectorised pass: the recursive part
-    is unavoidable sample-by-sample, but it is done in float64 on a compact
-    loop over the block rather than a Python loop over every sample of a
-    whole file, which is what makes this cheap enough for a 10 ms hop.
+    Processes each channel in float64 scalar arithmetic with unchanged
+    coefficients and operation order. The recursive sample-by-sample loop
+    avoids tiny intermediate NumPy arrays and preserves state between blocks.
     """
 
     __slots__ = ("_b", "_a", "_z1", "_z2")
@@ -85,14 +84,17 @@ class _Biquad:
         b0, b1, b2 = self._b
         a1, a2 = self._a
         y = np.empty_like(x)
-        z1, z2 = self._z1, self._z2
-        for i in range(x.shape[0]):
-            xi = x[i]
-            yi = b0 * xi + z1
-            z1 = b1 * xi - a1 * yi + z2
-            z2 = b2 * xi - a2 * yi
-            y[i] = yi
-        self._z1, self._z2 = z1, z2
+        # The identical direct-form-II recurrence, per channel. Scalar floats
+        # avoid thousands of tiny NumPy array allocations for a stereo hop.
+        for channel in range(x.shape[1]):
+            z1, z2 = float(self._z1[channel]), float(self._z2[channel])
+            for i in range(x.shape[0]):
+                xi = float(x[i, channel])
+                yi = b0 * xi + z1
+                z1 = b1 * xi - a1 * yi + z2
+                z2 = b2 * xi - a2 * yi
+                y[i, channel] = yi
+            self._z1[channel], self._z2[channel] = z1, z2
         return y
 
 

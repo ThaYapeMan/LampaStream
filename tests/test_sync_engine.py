@@ -885,7 +885,8 @@ def test_sync_engine_update_profile_takes_effect():
     colour_before = effect.render(features, 0.0).color_at(_ORIGIN, 0.0)
 
     # Update to a very low bass_hz so those bars shift into mid (green).
-    profile_b = Profile(effect_type="spectrum_rgb", bars=30, bass_hz=60)
+    profile_b = Profile(effect_type="spectrum_rgb", bars=30, bass_hz=60,
+                        transition_duration_s=0)
     engine.update_profile(profile_b)
 
     new_effect = engine._effect  # type: ignore[union-attr]
