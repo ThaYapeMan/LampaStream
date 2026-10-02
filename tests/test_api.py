@@ -1818,3 +1818,16 @@ def test_latency_samples_are_read_only(client):
             'player_mac': '02:00:00:00:00:03', **fields,
         }).status_code == 422
     assert client.get('/api/player-latencies').json()[0] == result
+
+
+def test_status_reports_output_failure_and_recovery(client: TestClient):
+    for state, reason in [('reconnecting', 'Light connection dropped'),
+                          ('failed', 'Could not reconnect the lights; retrying'),
+                          ('streaming', None)]:
+        type(client._manager).output_status = PropertyMock(
+            return_value={'state': state, 'reason': reason})
+        type(client._manager).bridge_connected = PropertyMock(return_value=state == 'streaming')
+        response = client.get('/api/status')
+        assert response.status_code == 200
+        assert response.json()['output_status'] == {'state': state, 'reason': reason}
+        assert response.json()['bridge_connected'] == (state == 'streaming')

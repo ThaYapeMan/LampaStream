@@ -160,29 +160,103 @@ Write/restart failure reports a recovery failure without claiming success or
 retrying. A stopped, paused, healthy or default-offset session never triggers
 recovery. No physical receiver was accessed during development.
 
-## Coupling switching
+## Activation regressions observed on 2 October 2026
 
-Go previously skipped the restart when the AirPlay name was unchanged, retained
-metadata across sessions, and cancelled engine/poller/unsync tasks without
-awaiting completion. Editing a receiver name did invoke the receiver restart.
-The pinned pipe backend retains its write descriptor on stop, has no flush
-callback, and can leave queued PCM behind while the LMS coupling owns output.
-That combination allowed pending tasks and receiver/FIFO state to outlive the
-coupling, explaining why an edit-triggered restart could restore playback.
+The owner's production evidence after 9ba8354 showed every AirPlay activation
+at 14:12:44, 14:14:30, 14:17:21, 14:18:13 and 14:19:54 ending Hue Entertainment
+exactly ten seconds after startup without a LampaStream deactivation. The first
+LMS activation at 14:10:45, with Auto delay 3094 ms, did the same. Now Playing
+continued showing analysed audio after light output died. A later LMS activation
+with zero delay and music already playing kept streaming until deactivation.
+The session library's default ten-second idle monitor had permanently stopped
+DTLS before delayed audio or the first sender arrived; later sends were no-ops.
 
-Switches are serialised. Teardown waits for all session tasks, closes the
-metadata reader, stops analysis before releasing PCM, stops the probe, closes
-Hue DTLS and reaps the yeney-player process, including after a forced kill.
-A failed Hue stop still closes DTLS and blocks replacement until cleanup succeeds.
-AirPlay activation opens its sole FIFO reader first, restarts the receiver even
-when the name is unchanged (refusing activation if restart fails), discards bounded queued PCM before starting
-analysis, and opens fresh metadata/timing state. Restarting the receiver ends
-its previous sender connection; the sender may need to reconnect or resume.
-It is a deliberate clean receiver reset, not a claim of uninterrupted audio
-handover. LMS commands, LMS measurement, yeney-core and DSP algorithms are
-unchanged. Each successful Go logs `coupling switch: <from> → <to>: source
-opened / receiver ready / DTLS connected`. For LMS, receiver readiness means
-the new yeney-player process has published its SHM source.
+The same logs showed an unchanged receiver restarted on every AirPlay Go.
+shairport-sync exited on SIGTERM and terminated the live iPhone player at
+14:17:12 and 14:19:45. The iPhone reconnected only 50–90 seconds later. A forced
+restart therefore caused, rather than repaired, a long ingress gap.
+
+## Hue output ownership and recovery
+
+HueDriver constructs `EntertainmentSession(..., idle_timeout=0)` and owns the
+stream until explicit coupling teardown. The installed, unmodified
+`hue-entertainment` **0.1.2** was inspected: its session.py constructor accepts
+this keyword, zero disables the idle monitor, and its dtls.py sender resends
+the last message when its queue times out at **five seconds**. The source files
+match their installed wheel RECORD hashes. This is the minimum already allowed
+by pyproject.toml, so the lower bound remains `>=0.1.2`; `is_streaming` and
+`remote_status()` are also present in that version.
+
+A black frame is queued immediately after connecting. Without this seed, the
+sender has no last message to resend before the first audio frame. Thereafter
+its five-second keepalive supplies frames to prevent bridge inactivity even
+when analysis produces nothing or the delay buffer is filling. Gaps up to ten
+seconds retain their previous visual behaviour. Longer silence or pauses hold
+the last displayed frame as well; there is no silence-triggered teardown or
+3–8 second re-handshake. Effects do not share a reliable silent-state API for
+missing analyser output, so no synthetic DSP input or new effect algorithm is
+introduced. Explicit Stop retains the existing shutdown behaviour.
+
+Output health is independent of audio: local `session.is_streaming` is checked
+**every two seconds**. Bridge `remote_status()` is checked **every ten seconds**,
+with a five-second HTTP timeout. The active-streamer auth RID captured immediately
+after our own activation is the baseline; a changed RID detects another
+controller taking over, and an inactive remote status detects bridge teardown.
+An active coupling reclaims its configured area on recovery.
+
+Local failure or remote teardown/takeover logs a WARNING and starts one owned
+recovery task. Retry waits are **1, 2, 5, 10 seconds, capped at 10**. Recovery
+stops the failed connection, starts it again and immediately restores the latest
+frame (or the black seed). Failed attempts remain visible and retry; success
+logs INFO. A remote HTTP failure alone does not prove DTLS failed: it marks
+verification as failed and retries verification without tearing down a possibly
+healthy stream. This avoids reconnecting during a temporary REST outage.
+
+`output_status` in `/api/status` and the existing preview websocket contains
+`state` (`streaming`, `reconnecting`, `failed`) and `reason`. `bridge_connected`
+now reflects output health rather than the mere presence of a driver. A local
+connection failure is reflected immediately when status is read, even before
+the next two-second check. Remote-only failures are bounded by remote polling
+and request time. Now Playing displays a short warning line in both editor
+modes until output recovers. Analysis/preview can continue during reconnection,
+but are never presented as evidence of healthy light output.
+
+Health, remote-check and recovery tasks are cancelled and awaited on teardown.
+An in-flight library handshake/disconnect executor is also awaited before a
+replacement stream is allowed. Reconnection is for output failure, never for
+silence. Tests use fake sessions and clocks; no physical bridge was accessed.
+
+## Coupling switching without interrupting the sender
+
+Every switch still closes the old metadata reader, awaits session tasks, stops
+analysis before releasing PCM, stops the latency probe, closes Hue DTLS and
+reaps yeney-player. The new AirPlay activation opens its sole FIFO reader,
+checks the receiver service, invalidates track metadata, discards bounded queued
+PCM and resets timing, regardless of whether the configuration changed.
+These are LampaStream-side resets and do not touch the iPhone session.
+
+The pinned pipe backend retains its writer descriptor and writes to the same
+FIFO. A newly attached reader allows that writer to deliver again. The existing
+reader-side EOF handling keeps metadata attached while a writer reconnects;
+no receiver restart is needed to repair this state. Discarding pending bytes
+happens before the analysis worker starts, through the sole production reader.
+Track details may await fresh metadata, but PCM does not depend on receiving it.
+
+An unchanged, active service logs “AirPlay receiver kept running (configuration
+unchanged)” and runs no start/restart command. `systemctl is-active shairport-sync`
+is read-only. A stopped service is started; a changed rendered configuration
+restarts a running service exactly once. That restart logs a WARNING that any
+connected sender will be interrupted. The existing polkit rule now permits only
+`start` and `restart` on this same service for the LampaStream account, with no
+broader service-management permission. The early-delivery safety rollback retains
+its one restart because it changes the configuration.
+Service preparation failures refuse activation rather than reporting a ready
+receiver; service commands are not retried within that activation.
+
+The switch log remains `coupling switch: <from> → <to>: source opened / receiver
+ready / DTLS connected`. “Receiver ready” means running and available to the
+reader, not restarted. LMS commands, measurement, yeney-core and DSP algorithms
+remain unchanged.
 
 ## Processing measurements
 

@@ -559,3 +559,18 @@ player in settings does not change the active coupling or start playback.
 ![Players on desktop](designs/players-desktop.png)
 
 ![Players on a phone](designs/players-phone.png)
+
+### Light output health
+
+An active coupling keeps its Hue stream open through silence, pauses and initial
+audio delay. Before the first audio frame, output is black; afterwards gaps hold
+the last displayed colour. Now Playing warns when light output is reconnecting
+or unavailable, even if analysed audio remains visible. Local health is checked
+every two seconds and bridge status every ten seconds. Reconnection retries use
+1, 2, 5 and then 10 second waits until recovered or the coupling is stopped.
+
+Selecting an AirPlay coupling leaves an unchanged, running shairport-sync service
+alone. Only a changed receiver name restarts it; an inactive service is started.
+The receiver restart caused by an early-delivery safety rollback is retained.
+See [AirPlay timing](airplay-timing.md) for the production evidence and lifecycle
+decisions.

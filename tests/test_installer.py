@@ -153,10 +153,17 @@ def test_shairport_no_restart_on_identical_config(tmp_path: Path) -> None:
     manager._SHAIRPORT_CONF = tmp_path / "shairport-sync.conf"
 
     with patch("subprocess.run") as mock_run:
+        mock_run.return_value.returncode = 0
         manager._configure_shairport_name("LampaStream")
-        assert mock_run.call_count == 1, "First call (config absent) must restart"
+        assert [c.args[0] for c in mock_run.call_args_list] == [
+            ["systemctl", "is-active", "shairport-sync"],
+            ["systemctl", "restart", "shairport-sync"],
+        ]
+        mock_run.reset_mock()
         manager._configure_shairport_name("LampaStream")
-        assert mock_run.call_count == 1, "Identical config must not restart"
+        mock_run.assert_called_once_with(
+            ["systemctl", "is-active", "shairport-sync"],
+            timeout=10, capture_output=True, text=True)
 
 
 def test_shairport_restart_on_advertised_name_change(tmp_path: Path) -> None:
@@ -169,14 +176,16 @@ def test_shairport_restart_on_advertised_name_change(tmp_path: Path) -> None:
     manager._SHAIRPORT_CONF = tmp_path / "shairport-sync.conf"
 
     with patch("subprocess.run") as mock_run:
+        mock_run.return_value.returncode = 0
         manager._configure_shairport_name("LampaStream")
-        assert mock_run.call_count == 1
+        assert sum(c.args[0][1] == "restart" for c in mock_run.call_args_list) == 1
 
         manager._configure_shairport_name("Living Room")  # name changed
-        assert mock_run.call_count == 2, "Name change must trigger one restart"
+        assert sum(c.args[0][1] == "restart" for c in mock_run.call_args_list) == 2
 
         manager._configure_shairport_name("Living Room")  # same name repeated
-        assert mock_run.call_count == 2, "Repeated same name must not restart again"
+        assert sum(c.args[0][1] == "restart" for c in mock_run.call_args_list) == 2
+        assert sum(c.args[0][1] == "is-active" for c in mock_run.call_args_list) == 3
 
 
 def test_shairport_no_file_rewrite_on_identical_config(tmp_path: Path) -> None:
@@ -205,8 +214,8 @@ def test_shairport_no_file_rewrite_on_identical_config(tmp_path: Path) -> None:
     )
 
 
-def test_shairport_systemctl_failure_graceful_no_retry(tmp_path: Path) -> None:
-    """systemctl failure logs a warning and does not retry; no exception raised."""
+def test_shairport_systemctl_failure_refuses_activation_without_retry(tmp_path: Path) -> None:
+    """A failed restart must refuse activation, with no repeated service command."""
     import subprocess as _sp
 
     from lampastream.player_manager import PlayerManager
@@ -221,12 +230,15 @@ def test_shairport_systemctl_failure_graceful_no_retry(tmp_path: Path) -> None:
     def failing_run(cmd, **kwargs):
         nonlocal call_count
         call_count += 1
+        if cmd[1] == "is-active":
+            return _sp.CompletedProcess(cmd, 0)
         raise _sp.CalledProcessError(1, cmd)
 
     with patch("subprocess.run", side_effect=failing_run):
-        manager._configure_shairport_name("LampaStream")  # must not raise
+        with pytest.raises(RuntimeError, match="Cannot prepare the AirPlay receiver"):
+            manager._configure_shairport_name("LampaStream")
 
-    assert call_count == 1, "systemctl must be called exactly once, not retried"
+    assert call_count == 2, "One status check and one failed restart, without retry"
 
 
 def test_shairport_pcm_contract_preserved_after_idempotent_skip(tmp_path: Path) -> None:
@@ -266,13 +278,15 @@ def test_shairport_coupling_reactivation_no_restart(tmp_path: Path) -> None:
     manager._SHAIRPORT_CONF = tmp_path / "shairport-sync.conf"
 
     with patch("subprocess.run") as mock_run:
+        mock_run.return_value.returncode = 0
         manager._configure_shairport_name("LampaStream")  # first activation
-        assert mock_run.call_count == 1
+        assert sum(c.args[0][1] == "restart" for c in mock_run.call_args_list) == 1
+        mock_run.reset_mock()
 
         manager._configure_shairport_name("LampaStream")  # re-activation, same name
-        assert mock_run.call_count == 1, (
-            "Re-activating AirPlay coupling with unchanged name must not restart shairport"
-        )
+        mock_run.assert_called_once_with(
+            ["systemctl", "is-active", "shairport-sync"],
+            timeout=10, capture_output=True, text=True)
 
 
 def test_shairport_configure_is_synchronous_asyncio_safe() -> None:

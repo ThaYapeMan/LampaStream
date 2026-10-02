@@ -153,3 +153,15 @@ it('fetches both effect links and displays a naturally converged Off blend as 10
   expect(screen.getByRole('link', { name: 'Low glow' })).toBeVisible()
   expect(within(screen.getByTestId('energy-blend')).getByText('100%')).toBeVisible()
 })
+
+it.each(['reconnecting', 'failed'] as const)('warns about %s output and clears on recovery', async state => {
+  const view = render(<NowPlaying {...props} status={{ ...status, bridge_connected: false,
+    output_status: { state, reason: 'Light connection dropped' } }} />)
+  expect(screen.getByTestId('output-warning')).toHaveTextContent(
+    state === 'reconnecting' ? 'Reconnecting the lights' : 'Light output unavailable')
+  expect(screen.getByTestId('output-warning')).toHaveTextContent('Light connection dropped')
+  view.rerender(<NowPlaying {...props} status={{ ...status,
+    output_status: { state: 'streaming', reason: null } }} />)
+  expect(screen.queryByTestId('output-warning')).not.toBeInTheDocument()
+  await screen.findByText('CAVA Core')
+})

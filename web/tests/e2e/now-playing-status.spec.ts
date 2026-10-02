@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test'
+import { setupPreview } from './preview-fixture'
 
 test('technical session status at 1400px', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1400, height: 1100 })
@@ -40,4 +41,17 @@ test('technical session status at 1400px', async ({ page }, testInfo) => {
   expect(Math.abs(colour!.y - floorplan!.y)).toBeLessThanOrEqual(1)
   expect(Math.abs(colour!.y - heading!.y)).toBeLessThanOrEqual(1)
   await page.screenshot({ path: testInfo.outputPath('now-playing-technical-status-1400.png'), fullPage: true })
+})
+
+test('output warning follows failure and recovery in standard mode', async ({ page }) => {
+  const socket = await setupPreview(page)
+  const update = (state: string, reason: string | null) => socket().send(JSON.stringify({ type: 'status',
+    active_coupling_id: 'c', active_player_type: 'LMS', processes: { lms_player: true },
+    bridge_connected: state === 'streaming', output_status: { state, reason } }))
+  update('reconnecting', 'Light connection dropped')
+  await expect(page.getByTestId('output-warning')).toHaveText('Reconnecting the lights · Light connection dropped')
+  update('failed', 'Could not reconnect the lights; retrying')
+  await expect(page.getByTestId('output-warning')).toContainText('Light output unavailable')
+  update('streaming', null)
+  await expect(page.getByTestId('output-warning')).toHaveCount(0)
 })

@@ -459,8 +459,15 @@ class PlayerManager:
         return self._active.probe.current_delay_ms()
 
     @property
+    def output_status(self) -> dict | None:
+        if self._active and self._active.hue_driver:
+            result = self._active.hue_driver.output_status
+            return result if isinstance(result, dict) else None
+        return None
+
+    @property
     def bridge_connected(self) -> bool:
-        return bool(self._active and self._active.hue_driver)
+        return bool(self.output_status and self.output_status["state"] == "streaming")
 
     @property
     def preview_spectrum(self) -> tuple[list[float], list[float] | None]:
@@ -825,7 +832,6 @@ class PlayerManager:
         No yeney-player, no cava, no FIFO, no LMS follower.  Exactly one ingress
         reader owns the production AirPlay FIFO — AirPlayPipeStereoSource.
         """
-        self.airplay_timing.reset()
         self.latency_warning = self._airplay_safety_message
         if self._airplay_tracks is None:
             self._airplay_tracks = AirPlayTrackPositionSource(timing=self.airplay_timing)
@@ -835,11 +841,11 @@ class PlayerManager:
         pipe_source = TeePcmSource(ingress)
         pipe_source.open()
         session.shm_source = pipe_source
-        if await self._receiver_operation(
-                self._configure_shairport_name, profile.display_name or profile.player_name,
-                force_restart=True):
-            self._airplay_tracks.invalidate()
-            ingress.discard_pending()
+        await self._receiver_operation(
+            self._configure_shairport_name, profile.display_name or profile.player_name)
+        self._airplay_tracks.invalidate()
+        ingress.discard_pending()
+        self.airplay_timing.reset()
         await self._apply_airplay_probe(session)
         session.safety_task = asyncio.create_task(self._watch_airplay_delivery(session))
 
@@ -1412,10 +1418,10 @@ class PlayerManager:
         if cancelled:
             raise asyncio.CancelledError
 
-    def _configure_shairport_name(self, name: str, *, force_restart=False) -> bool:
+    def _configure_shairport_name(self, name: str) -> bool:
         """Ensure shairport-sync is configured with the given advertised name.
 
-        Return True after a restart attempt; forced activation refuses restart failure.
+        Return True only when configuration changed; unchanged receivers keep running.
 
         Existing operator settings are preserved. Only the receiver name changes,
         through a validated update; missing files receive defaults. The service owns
@@ -1452,31 +1458,30 @@ class PlayerManager:
                 conf = rename_receiver(existing, name)
             except ValueError as exc:
                 log.warning("Could not safely update receiver name: %s", exc)
-                if force_restart:
-                    raise RuntimeError("Cannot safely configure the AirPlay receiver") from exc
-                return False
-        if existing == conf and not force_restart:
-            log.debug("shairport-sync config unchanged for name %r — skipping restart", name)
-            return False
+                raise RuntimeError("Cannot safely configure the AirPlay receiver") from exc
+        changed = existing != conf
         try:
-            if existing != conf:
+            if changed:
                 self._SHAIRPORT_CONF.write_text(conf)
-        except OSError as exc:
-            log.warning("Could not write shairport-sync config: %s", exc)
-            if force_restart:
-                raise RuntimeError("Cannot configure the AirPlay receiver") from exc
-            return False
-        try:
-            subprocess.run(
-                ["systemctl", "restart", "shairport-sync"],
-                check=True, timeout=10, capture_output=True,
-            )
-            log.info("shairport-sync restarted with name %r", name)
-        except Exception as exc:  # noqa: BLE001
-            log.warning("Could not restart shairport-sync: %s", exc)
-            if force_restart:
-                raise RuntimeError("AirPlay receiver restart failed") from exc
-        return True
+            active = subprocess.run(
+                ["systemctl", "is-active", "shairport-sync"],
+                timeout=10, capture_output=True, text=True,
+            ).returncode == 0
+            if not active:
+                subprocess.run(["systemctl", "start", "shairport-sync"],
+                               check=True, timeout=10, capture_output=True)
+                log.info("AirPlay receiver started (service was inactive)")
+            elif changed:
+                log.warning("AirPlay receiver name changed; "
+                            "any connected sender will be interrupted")
+                subprocess.run(["systemctl", "restart", "shairport-sync"],
+                               check=True, timeout=10, capture_output=True)
+                log.info("shairport-sync restarted with name %r", name)
+            else:
+                log.info("AirPlay receiver kept running (configuration unchanged)")
+        except (OSError, subprocess.SubprocessError) as exc:
+            raise RuntimeError("Cannot prepare the AirPlay receiver") from exc
+        return changed
 
     def _start_lms_player(self, session: ActiveSession, profile: Profile) -> None:
         # yeney-core implements both the legacy CAVA prefix and SHM v1 extension.

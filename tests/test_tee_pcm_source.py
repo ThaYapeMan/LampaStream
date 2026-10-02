@@ -163,6 +163,7 @@ def test_manager_activation_swap_and_teardown_reuse_tee(tmp_path, monkeypatch, i
     import lampastream.player_manager as pm
 
     source = Source([TemporarilyNoData()])
+    source.discard_pending = MagicMock()
     source_factory = MagicMock(return_value=source)
     monkeypatch.setattr(pm, 'SqueezeliteShmStereoSource', source_factory)
     monkeypatch.setattr(pm, 'AirPlayPipeStereoSource', source_factory)

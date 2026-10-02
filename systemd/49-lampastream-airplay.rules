@@ -1,9 +1,9 @@
-// LampaStream may restart only its managed receiver when the advertised name changes.
+// LampaStream may start or restart only its managed receiver.
 polkit.addRule(function(action, subject) {
     if (subject.user === "lampastream" &&
         action.id === "org.freedesktop.systemd1.manage-units" &&
         action.lookup("unit") === "shairport-sync.service" &&
-        action.lookup("verb") === "restart") {
+        (action.lookup("verb") === "restart" || action.lookup("verb") === "start")) {
         return polkit.Result.YES;
     }
 });

@@ -677,16 +677,26 @@ def test_safety_playback_evidence_ignores_paused_progress_and_old_heartbeats():
     assert diagnostics.snapshot()['stalled_for_s'] == 0
 
 
-def test_same_name_activation_restarts_and_refuses_restart_failure(tmp_path, monkeypatch):
+@pytest.mark.parametrize('changed, active, command', [
+    (False, True, None), (True, True, 'restart'), (False, False, 'start'),
+    (True, False, 'start'),
+])
+def test_receiver_only_changes_service_when_needed(tmp_path, monkeypatch, caplog,
+                                                   changed, active, command):
     manager = PlayerManager(Storage(tmp_path / 'config.json'))
     manager._SHAIRPORT_CONF = tmp_path / 'receiver.conf'
     original = 'general = { name = "Receiver"; custom = "keep"; }'
     manager._SHAIRPORT_CONF.write_text(original)
-    restart = Mock(side_effect=subprocess.CalledProcessError(1, 'systemctl'))
-    monkeypatch.setattr('lampastream.player_manager.subprocess.run', restart)
-    assert not manager._configure_shairport_name('Receiver')
-    restart.assert_not_called()
-    with pytest.raises(RuntimeError, match='restart failed'):
-        manager._configure_shairport_name('Receiver', force_restart=True)
-    restart.assert_called_once()
-    assert manager._SHAIRPORT_CONF.read_text() == original
+    run = Mock(side_effect=[subprocess.CompletedProcess([], 0 if active else 3),
+                            subprocess.CompletedProcess([], 0)])
+    monkeypatch.setattr('lampastream.player_manager.subprocess.run', run)
+    caplog.set_level('INFO')
+    assert manager._configure_shairport_name('New' if changed else 'Receiver') == changed
+    calls = [call.args[0] for call in run.call_args_list]
+    assert calls == [['systemctl', 'is-active', 'shairport-sync']] + (
+        [['systemctl', command, 'shairport-sync']] if command else [])
+    assert 'custom = "keep"' in manager._SHAIRPORT_CONF.read_text()
+    if not changed and active:
+        assert 'AirPlay receiver kept running (configuration unchanged)' in caplog.text
+    if changed and active:
+        assert 'any connected sender will be interrupted' in caplog.text

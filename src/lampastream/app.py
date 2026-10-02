@@ -159,6 +159,8 @@ async def ws_preview(websocket: WebSocket):
                 "latency_warning": player_manager.latency_warning,
                 "processes": player_manager.process_status,
                 "bridge_connected": player_manager.bridge_connected,
+                "output_status": (player_manager.output_status
+                                  if isinstance(player_manager.output_status, dict) else None),
                 "effect_type": player_manager.active_effect,
                 "follower_warning": player_manager.follower_warning,
                 "onset_method": player_manager.active_onset_method,

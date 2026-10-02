@@ -1125,15 +1125,17 @@ def test_lms_airplay_switches_release_every_session(tmp_path, monkeypatch, caplo
 
     monkeypatch.setattr(manager, '_start_lms_player', start_player)
 
-    def receiver(name, *, force_restart=False):
-        assert force_restart
-        # The sole production reader is already open at restart.
+    manager._SHAIRPORT_CONF = tmp_path / 'shairport-sync.conf'
+    manager._SHAIRPORT_CONF.write_text('general = { name = "LampaStream-AP"; }')
+    service_calls = []
+    def receiver_command(command, **kwargs):
+        service_calls.append(command)
+        # The sole production reader is open before checking receiver readiness.
         writer = os.open(fifo, os.O_WRONLY | os.O_NONBLOCK)
         os.close(writer)
-        restarts.append(name)
-        return True
+        return subprocess.CompletedProcess(command, 0)
 
-    monkeypatch.setattr(manager, '_configure_shairport_name', receiver)
+    monkeypatch.setattr(pm.subprocess, 'run', receiver_command)
 
     def engine_factory(*args, **kwargs):
         engine = MagicMock(retirement_pending=False)
@@ -1198,7 +1200,8 @@ def test_lms_airplay_switches_release_every_session(tmp_path, monkeypatch, caplo
         assert manager._active is None
         assert manager._airplay_tracks is None
         assert len(tasks_finished) == 4
-        assert len(restarts) == 2
+        assert restarts == []
+        assert service_calls == [["systemctl", "is-active", "shairport-sync"]] * 2
         for source in sources:
             source.open.assert_called_once()
             source.close.assert_called_once()

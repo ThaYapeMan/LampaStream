@@ -641,6 +641,8 @@ async def get_status(request: Request):
         "latency_warning": manager.latency_warning,
         "processes": manager.process_status,
         "bridge_connected": manager.bridge_connected,
+        "output_status": (manager.output_status
+                          if isinstance(manager.output_status, dict) else None),
         "active_effect": manager.active_effect,
         "onset_method": manager.active_onset_method,
         "airplay_receiving": manager.airplay_receiving,

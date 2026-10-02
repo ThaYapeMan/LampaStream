@@ -419,6 +419,12 @@ export function NowPlaying({ expertMode = false, colour, channel_colours, onset,
           couplingId, targetMac: status.follow_target_mac, targetName: status.follow_target_name || status.follow_target_mac,
         } : undefined} />
 
+      {status?.active_coupling_id && status.output_status && status.output_status.state !== 'streaming' &&
+        <p role="status" className="text-sm text-amber-400" data-testid="output-warning">
+          {status.output_status.state === 'reconnecting' ? 'Reconnecting the lights' : 'Light output unavailable'}
+          {status.output_status.reason && ` · ${status.output_status.reason}`}
+        </p>}
+
       <LightTiming status={status} onOpenLatency={onOpenLatency} />
 
       <Card>
