@@ -94,6 +94,10 @@ export interface PlayerLatency {
     source?: 'airplay'
     lag_ms?: number | null
     safety_message?: string | null
+    audio_source?: string
+    lead_p5_ms?: number | null
+    lead_p50_ms?: number | null
+    tap_drop_count?: number
     early_delivery_ms?: number | null
     median_processing_ms?: number | null
     samples?: Array<{ residual_ms?: number; processing_ms?: number; timestamp: number }>

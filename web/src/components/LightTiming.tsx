@@ -62,7 +62,7 @@ export function LightTiming({ status, onOpenLatency, playersView = false, contro
   const group = state === 'group'
   const states = {
     lagging: [Clock, 'Lights behind', 'text-amber-400 bg-amber-400/10'],
-    stable: [Check, 'In sync', 'text-emerald-400 bg-emerald-400/10'],
+    stable: [Check, airplay && timing?.audio_source === 'early tap' ? 'Lights on time' : 'In sync', 'text-emerald-400 bg-emerald-400/10'],
     measuring: [Clock, 'Measuring', 'text-blue-400 bg-blue-400/10'],
     fixed: [Lock, 'Fixed', 'text-muted-foreground bg-secondary'],
     unavailable: [Info, 'Can’t measure', 'text-amber-400 bg-amber-400/10'],
@@ -82,7 +82,10 @@ export function LightTiming({ status, onOpenLatency, playersView = false, contro
     } catch (e) { setError(e instanceof Error ? e.message : 'Could not save') }
     finally { setBusy(false) }
   }
-  const minimumTrim = airplay && timing?.early_delivery_ms === 0 ? 0 : -1000
+  const measuredHeadroom = Math.max(0, (timing?.lead_p5_ms ?? 0) - (timing?.median_processing_ms ?? 0))
+  const minimumTrim = airplay && timing?.audio_source ? -Math.floor(Math.min(1000, measuredHeadroom) / 10) * 10 : airplay && timing?.early_delivery_ms === 0 ? 0 : -1000
+  const lagText = timing?.audio_source ? `Lights about ${timing.lag_ms ?? Math.round(timing.median_processing_ms ?? 0)} ms behind` : `Lights are about ${timing?.lag_ms ?? Math.round(timing?.median_processing_ms ?? 0)} ms behind the sound`
+  const tapDetails = airplay && timing?.audio_source ? <><p className="mt-2 text-xs text-muted-foreground">{timing.audio_source === 'early tap' ? `Audio arrives about ${Math.round(timing.lead_p50_ms ?? 0)} ms early (p5 ${Math.round(timing.lead_p5_ms ?? 0)} ms)` : 'Audio arrives at playout time'}</p><p className="text-xs text-muted-foreground">Source: {timing.audio_source} · Tap dropped records: {timing.tap_drop_count ?? 0}</p></> : null
   async function fineTune(delta: number) {
     if (!mac || !current || busy) return
     const next = Math.max(minimumTrim, Math.min(1000, trim + delta)), previous = trim
@@ -94,8 +97,8 @@ export function LightTiming({ status, onOpenLatency, playersView = false, contro
     finally { pending.current = false; setBusy(false) }
   }
   if (playersView) {
-    const explanation = state === 'lagging' ? `Lights are about ${timing?.lag_ms ?? Math.round(timing?.median_processing_ms ?? 0)} ms behind the sound`
-      : state === 'stable' ? 'Measured automatically and kept up to date.'
+    const explanation = state === 'lagging' ? lagText
+      : state === 'stable' ? airplay && timing?.audio_source === 'early tap' ? 'Lights on time' : 'Measured automatically and kept up to date.'
       : state === 'fixed' ? 'A fixed delay you set by hand.'
       : state === 'none' ? 'The lights are not delayed.'
       : state === 'measuring' ? `Checking the timing · ${timing?.sample_count ?? 0} of 7 measurements.`
@@ -110,7 +113,7 @@ export function LightTiming({ status, onOpenLatency, playersView = false, contro
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid items-center gap-4 sm:grid-cols-[minmax(0,1fr)_auto]">
-          <div><div className={`text-4xl font-semibold tabular-nums ${state === 'idle' ? 'text-muted-foreground' : ''}`}>{seconds(applied)}<small className="ml-1 text-xl text-muted-foreground">s</small></div><p className="mt-2 text-sm text-muted-foreground">{explanation}</p></div>
+          <div><div className={`text-4xl font-semibold tabular-nums ${state === 'idle' ? 'text-muted-foreground' : ''}`}>{seconds(applied)}<small className="ml-1 text-xl text-muted-foreground">s</small></div><p className="mt-2 text-sm text-muted-foreground">{explanation}</p>{tapDetails}</div>
           <div className="space-y-3 sm:text-right">{controls}
             {current?.strategy === 'auto' && <div className="space-y-1">
               <label htmlFor={`${id}-trim`} className="block text-xs text-muted-foreground">Fine-tune by ear</label>
@@ -145,7 +148,7 @@ export function LightTiming({ status, onOpenLatency, playersView = false, contro
           <div className={`text-4xl font-semibold tabular-nums ${state === 'idle' ? 'text-muted-foreground' : ''}`}>
             {state === 'none' ? 'No delay' : <>{seconds(applied)}<small className="ml-1 text-xl text-muted-foreground">s</small></>}
           </div>
-          {state === 'stable' && <p className="mt-2 text-sm text-muted-foreground">{airplay ? <>Lights wait M−P so they land on the beat for the AirPlay group.</> : <>Lights wait this long so they match what you hear on <b className="text-foreground">{name}</b>.</>}</p>}
+          {state === 'stable' && <p className="mt-2 text-sm text-muted-foreground">{airplay ? <>Lights follow measured audio play times for the AirPlay group.</> : <>Lights wait this long so they match what you hear on <b className="text-foreground">{name}</b>.</>}</p>}
         </div>
         {state === 'stable' && <div className="flex items-center gap-3 text-xs text-muted-foreground" aria-hidden="true">
           <span className="grid justify-items-center gap-1"><Lightbulb className="h-9 w-9 rounded-lg border bg-secondary p-2" />Lights</span>
@@ -153,7 +156,7 @@ export function LightTiming({ status, onOpenLatency, playersView = false, contro
           <span className="grid max-w-32 justify-items-center gap-1 text-center"><Speaker className="h-9 w-9 rounded-lg border bg-secondary p-2" />{name}</span>
         </div>}
       </div>
-      {state === 'lagging' && <p className="text-sm text-muted-foreground">Lights are about {timing?.lag_ms ?? Math.round(timing?.median_processing_ms ?? 0)} ms behind the sound</p>}
+      {state === 'lagging' && <p className="text-sm text-muted-foreground">{lagText}</p>}
       {safetyMessage && <p role="status" className="text-sm text-amber-400">{safetyMessage}</p>}
       {state === 'measuring' && <div className="space-y-3 text-sm text-muted-foreground">
         <div className="flex items-center gap-3"><svg className="h-11 w-11 text-blue-400" viewBox="0 0 44 44" role="img" aria-label={`${timing?.sample_count ?? 0} of 7 measurements`}><circle cx="22" cy="22" r="18" fill="none" className="stroke-secondary" strokeWidth="4" /><circle cx="22" cy="22" r="18" fill="none" stroke="currentColor" strokeWidth="4" strokeDasharray={`${113 * Math.min(7, timing?.sample_count ?? 0) / 7} 113`} transform="rotate(-90 22 22)" /></svg><span>Checking the timing against {name} · {timing?.sample_count ?? 0} of 7 measurements.</span></div>
@@ -172,7 +175,7 @@ export function LightTiming({ status, onOpenLatency, playersView = false, contro
       </div>}
       <p role="status" className="min-h-4 text-xs text-emerald-400">{message}</p>
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-      <details className="border-t pt-3 text-sm"><summary className="cursor-pointer text-muted-foreground">Details</summary><dl className="mt-3 grid max-w-sm grid-cols-[1fr_auto] gap-x-4 gap-y-1 [&_dt]:text-muted-foreground [&_dd]:text-right [&_dd]:font-mono">{airplay ? <><dt>Early delivery (M)</dt><dd>{timing?.early_delivery_ms ?? '—'} ms</dd><dt>Processing (P)</dt><dd>{timing?.median_processing_ms ?? '—'} ms</dd></> : <><dt>Measured difference</dt><dd>{timing?.median_residual_ms ?? '—'} ms</dd><dt>Player Delay (set in LMS)</dt><dd>{timing?.player_delay_ms ?? '—'} ms</dd></>}<dt>Your fine-tune</dt><dd>{signed(trim)}</dd><dt className="border-t pt-2">Applied to the lights</dt><dd className="border-t pt-2">{applied} ms</dd></dl><p className="mt-3 text-xs text-muted-foreground">{airplay ? 'Measured from the pipe read to Hue output, excluding the deliberate wait. Fine-tune covers the lamps’ physical response.' : "Measured automatically by comparing both players' positions in LMS. Rechecked every 15 s and after each track change."}</p></details>
+      <details className="border-t pt-3 text-sm"><summary className="cursor-pointer text-muted-foreground">Details</summary><dl className="mt-3 grid max-w-sm grid-cols-[1fr_auto] gap-x-4 gap-y-1 [&_dt]:text-muted-foreground [&_dd]:text-right [&_dd]:font-mono">{airplay ? <><dt>Measured early arrival (p5)</dt><dd>{timing?.lead_p5_ms ?? timing?.early_delivery_ms ?? '—'} ms</dd><dt>Processing (P)</dt><dd>{timing?.median_processing_ms ?? '—'} ms</dd></> : <><dt>Measured difference</dt><dd>{timing?.median_residual_ms ?? '—'} ms</dd><dt>Player Delay (set in LMS)</dt><dd>{timing?.player_delay_ms ?? '—'} ms</dd></>}<dt>Your fine-tune</dt><dd>{signed(trim)}</dd><dt className="border-t pt-2">Applied to the lights</dt><dd className="border-t pt-2">{applied} ms</dd></dl>{tapDetails}<p className="mt-3 text-xs text-muted-foreground">{airplay ? 'Measured from audio receipt to Hue output, excluding the deliberate wait. Fine-tune covers the lamps’ physical response.' : "Measured automatically by comparing both players' positions in LMS. Rechecked every 15 s and after each track change."}</p></details>
     </CardContent>
   </Card>
 }

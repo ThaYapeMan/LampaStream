@@ -50,6 +50,10 @@ def main() -> None:
                     'output_rate = 44100', 'output_format = "S16_LE"', 'output_channels = 2'):
         assert setting in receiver_config, f'Incompatible receiver configuration: {setting}'
     verify_airplay(manifest, receiver_config)
+    assert manifest.get('airplay_early_tap_version') == 1, 'Early-tap build provenance missing'
+    assert 'early_tap_name = "/run/lampastream/airplay-early.pcm";' in receiver_config
+    assert Path('/run/lampastream/airplay-early.pcm').is_fifo(), 'Early-tap FIFO missing'
+    assert manifest.get('shairport_early_tap_patch_sha256'), 'Early-tap patch provenance missing'
     assert (package / 'webui/index.html').is_file()
     assert list((package / 'webui/assets').glob('*.js')), 'Frontend assets missing'
     os.environ['LAMPASTREAM_CONFIG'] = config

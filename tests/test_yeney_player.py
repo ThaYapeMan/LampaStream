@@ -43,6 +43,10 @@ def test_manifest_and_verifier(tmp_path, revision):
         'shairport_revision': '0b1c4391ffd398e7b145eb4b98416261380adeea',
         'airplay_delivery_margin_ms': 0,
         'airplay_timing_policy': 'receiver-defaults',
+        'airplay_early_tap_version': 1,
+        'shairport_early_tap_patch_sha256': hashlib.sha256(
+            (ROOT / 'scripts/patches/shairport-sync-0002-early-tap.patch').read_bytes()
+        ).hexdigest(),
         'yeney_player_sha256': hashlib.sha256(binary.read_bytes()).hexdigest(),
     }
     verifier.verify_player(manifest, binary)

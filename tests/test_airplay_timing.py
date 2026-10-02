@@ -281,7 +281,8 @@ def test_installer_timing_edit_preserves_and_verifies(tmp_path, offset):
     subprocess.run([sys.executable, "-", str(config)], input=updater, text=True, check=True)
     updated = config.read_text()
     assert 'custom = "keep";' in updated
-    assert 'pipe = { name = "fifo"; }' in updated
+    assert 'name = "fifo";' in updated
+    assert 'early_tap_name = "/run/lampastream/airplay-early.pcm";' in updated
     manifest = dict(airplay_delivery_margin_ms=0, airplay_timing_policy="receiver-defaults",
                     shairport_revision=SHAIRPORT_REVISION)
     assert delivery_margin(updated, manifest) == (None if "0.2" in offset else 0)
@@ -644,7 +645,8 @@ def test_installer_preserves_different_operator_buffer_values(tmp_path, buffer):
     config = tmp_path / 'receiver.conf'
     original = (f'general = {{ name = "Custom"; audio_backend_latency_offset_in_seconds = -0.2; '
                 f'audio_backend_buffer_desired_length_in_seconds = {buffer}; '
-                f'audio_backend_buffer_interpolation_threshold_in_seconds = {buffer}; }}')
+                f'audio_backend_buffer_interpolation_threshold_in_seconds = {buffer}; }}\n'
+                'pipe = { name = "fifo"; }')
     config.write_text(original)
     updater = ((ROOT / 'scripts/setup-airplay.sh').read_text()
                .split("<< 'PY_VOLUME'\n")[1].split('\nPY_VOLUME')[0])

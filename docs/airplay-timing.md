@@ -102,33 +102,162 @@ own default desired buffer remains one second, as upstream defines it; this
 is not a certified advance against what a particular group audibly plays.
 LampaStream adds no early-delivery offset and makes no assertion that an
 arbitrary sender has spare runway. Operator timing overrides are unverified.
-With steady Auto measurements, no deliberate delay and processing P, the card
+On the regular-pipe fallback, with steady Auto measurements, no deliberate delay and processing P, the card
 says “Lights are about P ms behind the sound”, with a “Lights behind” pill.
 Positive fine-tune adds to this reported lag. Earlier is disabled at zero;
 negative saved trim cannot advance the output. A previous 500 ms measurement
 is never reused as a delay when M is zero.
 
-## Early-delivery headroom: unavailable
+## Timestamped early PCM tap
 
-The pinned [player.c startup selection](https://github.com/mikebrady/shairport-sync/blob/0b1c4391ffd398e7b145eb4b98416261380adeea/player.c#L1119)
-reports accepted/dropped packet lead times at debug level 2 and buffer checks
-at level 3. These are startup and packet-selection diagnostics, including
-already shifted timestamps and rejected packets, not an unbiased continuous
-sample of network arrival headroom during normal playback. Normal metadata
-`prgr`, `pffr`, `phb0` and `phbt` report progress or scheduled playback; none
-reports the sender packet's arrival time and usable unshifted runway. Comparing
-`phbt` to its delivery timestamp also includes FIFO blocking and metadata
-scheduling, so it cannot prove an offset safe. Reading more debug logs does
-not fix that sampling problem.
+Normal pinned logs and metadata do not expose continuous arrival headroom.
+Startup “Lead time for first frame” values of 0.26–1.97 seconds from Apple Music
+are not steady-state evidence. The new tap copies audio that has already been
+decoded; it neither advances receiver playout nor requests packets earlier.
+`audio_backend_latency_offset_in_seconds` is not used or changed by this feature.
+The history of the −0.5 second failure above remains relevant to that separate
+receiver setting.
 
-No reliable lead-time source is available through the pinned normal logs or
-metadata. Consequently the safe ceiling is **M = 0**, and there is no headroom
-action or offer to apply early delivery. This is the conservative branch of
-the design, rather than enabling an unproven opt-in. A future implementation
-would need validated unshifted arrival samples across each stream type and
-sender, sufficient coverage, a lower-tail percentile minus a safety margin,
-and a ceiling no greater than measured processing P. It must also retain the
-rollback below. Processing or pacing measurements alone cannot authorise M.
+The installer applies `shairport-sync-0002-early-tap.patch` after 0001, at the
+same exact pin, with forward and reverse checks. The installer alone enables
+`pipe.early_tap_name = "/run/lampastream/airplay-early.pcm";` through the existing
+validated, atomic configuration update. It provisions a second 0600 FIFO owned
+by lampastream. Name changes preserve this key; activation never edits it or
+restarts an unchanged receiver. The installation manifest records wire version
+1 and the patch SHA256; verification checks the key and FIFO.
+
+### Earliest decoded audio and clock references
+
+Line numbers below refer to the unpatched pin:
+
+- **Realtime**, including AirPlay 2 realtime and AirPlay 1:
+  `player_put_packet()` in player.c:463–565. The tap follows successful
+  `audio_packet_decode()` at lines 539–547, where `abuf->data`, `datalen` and
+  `actual_timestamp` are all available, before the player buffer waits for
+  playout. Resent and out-of-order packets are marked, rather than reordered.
+- **AirPlay 2 buffered AAC**: `rtp_buffered_audio_processor()` in
+  rtp.c:2223–3020. After `swr_convert()` and the existing delayed-flush truncation,
+  immediately before the PCM-buffer copy at lines 2978–2982, `pcm_audio`,
+  `dst_bufsize` and `expected_timestamp` identify the decoded audio and RTP frame.
+  This precedes the buffer's playout gate at lines 2537–2670. The later
+  `player_put_packet(original_format=0)` is deliberately not tapped again.
+- `frame_to_local_time()` in rtp.c:3034–3042 dispatches to
+  `frame_to_ptp_local_time()` (1467–1485) or
+  `frame_to_ntp_local_time()` (1120–1145). The tap uses these existing anchor
+  conversions without a new timing calculation or latency adjustment.
+- `get_absolute_time_in_ns()` in common.c:1458–1470 uses
+  `CLOCK_MONOTONIC_RAW` on Linux. The writer takes that clock and then
+  `CLOCK_MONOTONIC` back to back for every record. Python maps the scheduled
+  time as `mono_write + (play_raw - raw_write)`. It never subtracts unrelated
+  clock domains or assumes a constant offset across sessions.
+
+The observational tap accepts 44,100 Hz, 16-bit stereo. Other decoded formats
+are dropped and use the existing pipe conversion/fallback. The original pipe
+backend and its volume, format conversion and timing remain unchanged.
+
+### Record format and bounded writer
+
+Wire version 1 uses a **52-byte little-endian header**:
+
+| Offset | Field | Bytes |
+| --- | --- | --- |
+| 0 | Magic `LSET` | 4 |
+| 4 | Version `1` | 2 |
+| 6 | Flags: flush=1, pause=2, resume=4, discontinuity=8, out-of-order=16 | 2 |
+| 8 | Wrapping RTP frame number | 4 |
+| 12 | Stereo-frame count, 0 for a control marker | 4 |
+| 16 | Wrapping generation number | 4 |
+| 20 | Scheduled play time, shairport clock nanoseconds | 8 |
+| 28 | Write time, shairport clock nanoseconds | 8 |
+| 36 | Paired CLOCK_MONOTONIC nanoseconds | 8 |
+| 44 | Cumulative dropped-record count | 8 |
+
+PCM follows in S16_LE stereo, four bytes per frame. Larger decoded blocks are
+split into at most 1,000 frames, so each write is at most 4,052 bytes: below
+Linux PIPE_BUF=4,096. Each non-blocking write is therefore atomic, including
+when a reader is slower than real time. No reader, a full FIFO or a contended
+tap lock drops the record; it never waits for the consumer. SIGPIPE is already
+ignored by pinned shairport-sync. Failed writes advance the generation, so a
+lost control marker cannot silently join two later audio timelines. The counter
+is carried in records and logged at most once every 30 seconds while events
+are arriving; this does not increase receiver debug verbosity.
+
+Flush, pause and resume hooks are `do_flush()`, `player_play()`, `player_stop()`,
+`handle_flushbuffered()` and `handle_setrateanchori()`. RTP gaps and anchor
+jumps exceeding 50 ms mark discontinuity. A record retains the generation of
+its write operation; an old generation cannot undo a later flush. Marked
+out-of-order records and duplicates are ignored by the reader, with signed
+wrapping RTP comparison. Existing production metadata lifecycle events also
+invalidate pending scenes independently. Buffered delayed flushes conservatively
+invalidate the entire pending light timeline, rather than displaying audio
+that the sender may have cancelled.
+
+### One reader, one analysis path, automatic fallback
+
+One `EarlyAirPlaySource` owns both FIFO descriptors. While the tap is healthy,
+regular PCM is drained and discarded through its sole reader, keeping the
+unchanged blocking pipe writer flowing. Only tap PCM enters the canonical
+analysis pipeline. Diagnostic consumers use the existing in-memory tee; they
+never attach another reader to either production FIFO.
+
+Missing tap data, a malformed record, or more than one second without fresh
+PCM switches to **pipe fallback**, without touching the receiver. Records that
+have already spent over one second in the FIFO are stale too. Source transitions
+log once, invalidate DSP provenance and discard pending scenes. The reader keeps
+watching the tap and returns automatically when valid, fresh records arrive.
+A missing FIFO is retried once per second. Memory is bounded; partial records,
+queued tap records and scenes do not grow with playback duration.
+
+### Measured lead, scheduling and the existing card
+
+Lead is the mapped play time minus **reader receipt**, so FIFO residence and a
+slow consumer reduce the measured lead. The session keeps rolling p5 and p50
+percentiles over the latest 1,024 records, resetting on lifecycle/source changes.
+No startup log, saved measurement or guessed sender margin supplies this lead.
+
+PCM is analysed on arrival through the existing canonical pipeline. Play time
+and generation propagate through resampling and publication intervals; processor
+and DSP algorithms are unchanged. The existing 30 Hz output loop renders newly
+published intervals and queues their scenes at play time plus fine-tune. At each
+tick it sends the newest due scene, not a burst of stale output. The queue holds
+at most 1,000 scenes. Already-past targets send immediately. Spatial effects use
+the effective display time so an Earlier trim cannot create a negative-age,
+black scene, and a late scene is not artificially faded before its first send.
+
+Auto uses the measured lead. Earlier is limited to `max(0, p5 lead − P)`, with
+the existing ±1,000 ms outer bound and 10 ms UI steps; the scheduler enforces the
+bound again if lead decreases. Fixed adds its chosen delay to the scheduled
+play time; None adds no intentional delay. Pipe fallback keeps the existing
+non-negative delay behaviour. Processing P excludes the intentional queue wait.
+Flush, pause, discontinuity and source changes discard scheduled scenes.
+Hue ownership, five-second keepalive, idle_timeout=0 and output recovery from
+78b9c84 are unchanged; no silence-triggered handshake is introduced.
+
+The existing Light timing card says **“Lights on time”** when p5 lead ≥ P,
+otherwise **“Lights about N ms behind”**, where N = max(0, P − p5 lead).
+Details show “Audio arrives about X ms early (p5 Y ms)”, the active source and
+tap drop counter. Pipe fallback says that audio arrives at playout time. Lead
+never includes a presumed early-delivery offset or the sender's startup runway.
+
+### Local verification and build limitation
+
+`python3 scripts/check-airplay-patches.py <upstream-clone>` checks both patches
+against the exact pin in order, then checks both already-applied paths. These
+checks passed locally. The actual new C writer is compiled with
+`cc -std=gnu11 -Wall -Wextra -Werror -pthread` in the framing tests, with only
+configuration/clock stubs; real FIFOs verify no-reader and full-FIFO dropping.
+Python fixtures cover the clock-domain offset, four lead regimes, control events,
+wrapping/out-of-order RTP, malformed/stale data, fallback/recovery, bounded slow
+consumers, native publication timestamps and the production 30 Hz output loop.
+
+A complete receiver build could not run in this development environment:
+`autoreconf` and the libconfig, FFmpeg, plist, Avahi and gcrypt development
+packages are absent, and `sudo -n true` requires interactive authentication.
+The documented substitute is sequential `git apply --check`, reverse checks,
+and the compiled actual writer/framing test. No receiver was installed or
+started, and no LXC was accessed. The owner must run the normal installer build
+on their system before exercising live senders; synthetic leads are not a claim
+about measured headroom on the owner's iPhone.
 
 The installer sets neither `-v` nor `diagnostics.log_verbosity` nor the deprecated
 `general.log_verbosity`. The [pinned default](https://github.com/mikebrady/shairport-sync/blob/0b1c4391ffd398e7b145eb4b98416261380adeea/shairport.c#L396)
@@ -231,8 +360,8 @@ silence. Tests use fake sessions and clocks; no physical bridge was accessed.
 Every switch still closes the old metadata reader, awaits session tasks, stops
 analysis before releasing PCM, stops the latency probe, closes Hue DTLS and
 reaps yeney-player. The new AirPlay activation opens its sole FIFO reader,
-checks the receiver service, invalidates track metadata, discards bounded queued
-PCM and resets timing, regardless of whether the configuration changed.
+checks the receiver service, invalidates track metadata, resets timing and
+discards bounded queued PCM, regardless of whether the configuration changed.
 These are LampaStream-side resets and do not touch the iPhone session.
 
 The pinned pipe backend retains its writer descriptor and writes to the same

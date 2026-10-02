@@ -574,3 +574,27 @@ alone. Only a changed receiver name restarts it; an inactive service is started.
 The receiver restart caused by an early-delivery safety rollback is retained.
 See [AirPlay timing](airplay-timing.md) for the production evidence and lifecycle
 decisions.
+
+### Timestamped AirPlay ingress
+
+The managed receiver now copies decoded audio into an installer-enabled early
+FIFO, with RTP frame positions and mapped play times. The existing Light timing
+card shows measured p5/p50 arrival lead, processing, source and dropped records.
+Earlier fine-tune is available only within measured processing headroom. An
+unavailable, stale or malformed tap falls back to the regular pipe automatically,
+without a receiver restart. See [AirPlay timing](airplay-timing.md) for the wire
+contract, limitations and the history of the unsafe −0.5 second receiver offset.
+
+### Installer release retention
+
+The installer checks for at least 1.5 GB (1,500,000,000 bytes) of free space before
+building and before creating a release. A low-space failure names the inactive
+and failed-run releases that successful cleanup would remove; it does not delete
+the running environment to make room. Free space and rerun the installer.
+
+After the new environment passes verification and the service health check,
+cleanup keeps the release selected by `/opt/lampastream/.venv` and its immediate
+predecessor. All other release directories, including failed-run leftovers, are
+removed. The active pointer is resolved and rechecked before each deletion.
+An unresolved or unmanaged pointer refuses pruning. A legacy checkout-local
+venv is still archived by the existing migration; it is never pruned in place.

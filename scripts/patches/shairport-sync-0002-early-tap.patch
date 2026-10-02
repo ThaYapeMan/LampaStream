@@ -1,0 +1,290 @@
+diff --git a/Makefile.am b/Makefile.am
+index 298f59be..aa3200c0 100644
+--- a/Makefile.am
++++ b/Makefile.am
+@@ -18,7 +18,7 @@ noinst_LIBRARIES =
+ 
+ # See below for the flags for the test client program
+ 
+-shairport_sync_SOURCES = shairport.c rtsp.c mdns.c common.c rtp.c player.c alac.c audio.c loudness.c activity_monitor.c
++shairport_sync_SOURCES = early_tap.c early_tap.h shairport.c rtsp.c mdns.c common.c rtp.c player.c alac.c audio.c loudness.c activity_monitor.c
+ 
+ if BUILD_FOR_DARWIN
+   AM_CXXFLAGS = -I/usr/local/include -Wno-multichar -Wall -Wextra -Wno-deprecated-declarations -pthread -DSYSCONFDIR=\"$(sysconfdir)\"
+diff --git a/audio_pipe.c b/audio_pipe.c
+index e76c7300..602e6f19 100644
+--- a/audio_pipe.c
++++ b/audio_pipe.c
+@@ -30,6 +30,7 @@
+ 
+ #include "audio.h"
+ #include "common.h"
++#include "early_tap.h"
+ #include <errno.h>
+ #include <fcntl.h>
+ #include <memory.h>
+@@ -108,6 +109,8 @@ static int init(int argc, char **argv) {
+   if (config.cfg != NULL) {
+     /* Get the Output Pipename. */
+     const char *str;
++    if (config_lookup_string(config.cfg, "pipe.early_tap_name", &str))
++      config.early_tap_pipe = (char *)str;
+     if (config_lookup_string(config.cfg, "pipe.name", &str)) {
+       pipename = (char *)str;
+     }
+diff --git a/common.h b/common.h
+index 6a341f7b..1169458d 100644
+--- a/common.h
++++ b/common.h
+@@ -151,6 +151,7 @@ typedef struct {
+   char *pw_node_name; // defaults to the application's name, usually "shairport-sync".
+   char *pw_sink_target; // leave this unset if you don't want to change the sink_target.
+ #endif
++  char *early_tap_pipe; // installer-managed optional observation FIFO
+ #ifdef CONFIG_METADATA
+   int metadata_enabled;
+   char *metadata_pipename;
+diff --git a/early_tap.c b/early_tap.c
+new file mode 100644
+index 00000000..1f51cc38
+--- /dev/null
++++ b/early_tap.c
+@@ -0,0 +1,119 @@
++/* Timestamped S16_LE stereo copy, bounded atomic non-blocking FIFO writes.
++ * Wire v1: 52-byte little-endian header, followed by frames * 4 bytes.
++ * The regular output backend and its timing are deliberately untouched.
++ */
++#include "early_tap.h"
++#include "rtp.h"
++#include <errno.h>
++#include <fcntl.h>
++#include <pthread.h>
++#include <stdatomic.h>
++#include <string.h>
++#include <time.h>
++#include <sys/stat.h>
++#include <unistd.h>
++static pthread_mutex_t tap_lock = PTHREAD_MUTEX_INITIALIZER;
++static atomic_uint generation = 1;
++static atomic_ullong drops;
++static atomic_int paused;
++static int fd = -1, connection = -1, have_expected;
++static uint32_t expected;
++static uint64_t last_log, last_play;
++static uint32_t last_frames;
++static void le(unsigned char *p, uint64_t value, int bytes) {
++  for (int i = 0; i < bytes; ++i) p[i] = value >> (8 * i);
++}
++void early_tap(rtsp_conn_info *conn, const void *pcm, uint32_t frames,
++               uint32_t rtp, uint16_t flags) {
++  if (!config.early_tap_pipe) return;
++  if (flags & (TAP_FLUSH | TAP_PAUSE | TAP_RESUME | TAP_DISCONTINUITY))
++    atomic_fetch_add(&generation, 1);
++  if (flags & TAP_PAUSE) atomic_store(&paused, 1);
++  if (flags & TAP_RESUME) atomic_store(&paused, 0);
++  uint32_t record_generation = atomic_load(&generation);
++  if (pthread_mutex_trylock(&tap_lock) != 0) {
++    atomic_fetch_add(&drops, 1);
++    atomic_fetch_add(&generation, 1);
++    return;
++  }
++  if (connection != conn->connection_number) {
++    connection = conn->connection_number;
++    have_expected = 0;
++    atomic_store(&paused, 0);
++    atomic_fetch_add(&generation, 1);
++    flags |= TAP_DISCONTINUITY;
++    record_generation = atomic_load(&generation);
++  }
++  if (flags & (TAP_FLUSH | TAP_PAUSE | TAP_RESUME | TAP_DISCONTINUITY))
++    have_expected = 0;
++  if (frames && atomic_load(&paused)) goto done;
++  if (frames && (conn->input_rate != 44100 || conn->input_bit_depth != 16 ||
++                 conn->input_bytes_per_frame != 4)) goto drop;
++  uint64_t play = 0;
++  if (frames && frame_to_local_time(rtp, &play, conn) != 0) goto drop;
++  if (frames && have_expected) {
++    int32_t distance = (int32_t)(rtp - expected);
++    if (distance < 0) flags |= TAP_OUT_OF_ORDER;
++    else if (distance > 0) {
++      flags |= TAP_DISCONTINUITY;
++      record_generation = atomic_fetch_add(&generation, 1) + 1;
++    } else {
++      int64_t shift = play - (last_play + (uint64_t)last_frames * 1000000000 / 44100);
++      if (shift > 50000000 || shift < -50000000) {
++        flags |= TAP_DISCONTINUITY;
++        record_generation = atomic_fetch_add(&generation, 1) + 1;
++      }
++    }
++  }
++  if (frames && !(flags & TAP_OUT_OF_ORDER)) {
++    expected = rtp + frames;
++    last_play = play; last_frames = frames;
++    have_expected = 1;
++  }
++  if (fd < 0) fd = open(config.early_tap_pipe, O_WRONLY | O_NONBLOCK | O_CLOEXEC);
++  if (fd < 0) goto drop;
++  struct stat status;
++  if (fstat(fd, &status) != 0 || !S_ISFIFO(status.st_mode)) {
++    close(fd); fd = -1; goto drop;
++  }
++  uint32_t offset = 0;
++  do {
++    uint32_t count = frames - offset;
++    if (count > 1000) count = 1000;
++    unsigned char record[4052]; /* below Linux PIPE_BUF=4096, all-or-nothing */
++    struct timespec mono;
++    uint64_t raw = get_absolute_time_in_ns();
++    clock_gettime(CLOCK_MONOTONIC, &mono); /* paired, not an assumed clock offset */
++    uint64_t monotonic = (uint64_t)mono.tv_sec * 1000000000 + mono.tv_nsec;
++    memcpy(record, "LSET", 4);
++    le(record + 4, 1, 2); le(record + 6, flags, 2);
++    le(record + 8, rtp + offset, 4); le(record + 12, count, 4);
++    le(record + 16, record_generation, 4);
++    le(record + 20, play + (uint64_t)offset * 1000000000 / 44100, 8);
++    le(record + 28, raw, 8); le(record + 36, monotonic, 8);
++    le(record + 44, atomic_load(&drops), 8);
++    /* Integer samples are host-native; serialise explicitly as S16_LE. */
++    for (uint32_t i = 0; i < count * 2; ++i) {
++      uint16_t sample;
++      memcpy(&sample, (const unsigned char *)pcm + offset * 4 + i * 2, 2);
++      le(record + 52 + i * 2, sample, 2);
++    }
++    if (write(fd, record, 52 + count * 4) != (ssize_t)(52 + count * 4)) {
++      if (errno == EPIPE || errno == EBADF) { close(fd); fd = -1; }
++      goto drop;
++    }
++    offset += count;
++    flags &= ~TAP_DISCONTINUITY;
++  } while (offset < frames);
++  goto done;
++drop:
++  atomic_fetch_add(&drops, 1);
++  atomic_fetch_add(&generation, 1); /* even a lost marker is visible next time */
++done:;
++  uint64_t now = get_absolute_time_in_ns();
++  if (now - last_log >= 30000000000ULL) {
++    last_log = now;
++    inform("LampaStream early tap: dropped records=%llu", (unsigned long long)atomic_load(&drops));
++  }
++  pthread_mutex_unlock(&tap_lock);
++}
+diff --git a/early_tap.h b/early_tap.h
+new file mode 100644
+index 00000000..3855365c
+--- /dev/null
++++ b/early_tap.h
+@@ -0,0 +1,12 @@
++/* LampaStream observational tap: never changes receiver playout. */
++#ifndef EARLY_TAP_H
++#define EARLY_TAP_H
++#include "common.h"
++#define TAP_FLUSH 1
++#define TAP_PAUSE 2
++#define TAP_RESUME 4
++#define TAP_DISCONTINUITY 8
++#define TAP_OUT_OF_ORDER 16
++void early_tap(rtsp_conn_info *conn, const void *pcm, uint32_t frames,
++               uint32_t rtp, uint16_t flags);
++#endif
+diff --git a/player.c b/player.c
+index ccfa09f5..df3f9a21 100644
+--- a/player.c
++++ b/player.c
+@@ -81,6 +81,7 @@
+ #endif
+ 
+ #include "common.h"
++#include "early_tap.h"
+ #include "mdns.h"
+ #include "player.h"
+ #include "rtp.h"
+@@ -541,6 +542,7 @@ void player_put_packet(int original_format, seq_t seqno, uint32_t actual_timesta
+         abuf->ready = 1;
+         abuf->status = 0; // signifying that it was received
+         abuf->length = datalen;
++        early_tap(conn, abuf->data, datalen, actual_timestamp, 0);
+         abuf->given_timestamp = actual_timestamp;
+         abuf->sequence_number = seqno;
+       } else if (original_format == 0) {
+@@ -3554,6 +3556,7 @@ void player_volume(double airplay_volume, rtsp_conn_info *conn) {
+ 
+ void do_flush(uint32_t timestamp, rtsp_conn_info *conn) {
+ 
++  early_tap(conn, NULL, 0, timestamp, TAP_FLUSH);
+   debug(3, "do_flush: flush to %u.", timestamp);
+   debug_mutex_lock(&conn->flush_mutex, 1000, 1);
+   conn->flush_requested = 1;
+@@ -3629,6 +3632,7 @@ int player_prepare_to_play(rtsp_conn_info *conn) {
+ }
+ 
+ int player_play(rtsp_conn_info *conn) {
++  early_tap(conn, NULL, 0, 0, TAP_RESUME);
+   debug(2, "Connection %d: player_play.", conn->connection_number);
+   pthread_cleanup_debug_mutex_lock(&conn->player_create_delete_mutex, 5000, 1);
+   if (conn->player_thread == NULL) {
+@@ -3652,6 +3656,7 @@ int player_play(rtsp_conn_info *conn) {
+ 
+ int player_stop(rtsp_conn_info *conn) {
+   // note -- this may be called from another connection thread.
++  early_tap(conn, NULL, 0, 0, TAP_PAUSE);
+   debug(2, "Connection %d: player_stop.", conn->connection_number);
+   int response = 0; // okay
+   pthread_cleanup_debug_mutex_lock(&conn->player_create_delete_mutex, 5000, 1);
+diff --git a/rtp.c b/rtp.c
+index 8a7f0e0e..fc6b63d8 100644
+--- a/rtp.c
++++ b/rtp.c
+@@ -27,6 +27,7 @@
+ 
+ #include "rtp.h"
+ #include "common.h"
++#include "early_tap.h"
+ #include "player.h"
+ #include "rtsp.h"
+ #include <arpa/inet.h>
+@@ -2976,6 +2977,8 @@ void *rtp_buffered_audio_processor(void *arg) {
+                               debug(1, "fatal error! pcm buffer too small at %d bytes.",
+                                     pcm_buffer_size);
+                             } else {
++                              early_tap(conn, pcm_audio, dst_bufsize / conn->input_bytes_per_frame,
++                                        expected_timestamp, 0);
+                               memcpy(pcm_buffer + pcm_buffer_occupancy, pcm_audio, dst_bufsize);
+                               expected_timestamp += (dst_bufsize / conn->input_bytes_per_frame);
+                               expected_timesamp_is_reasonable = 1;
+diff --git a/rtsp.c b/rtsp.c
+index 572cade4..23fdead3 100644
+--- a/rtsp.c
++++ b/rtsp.c
+@@ -68,6 +68,7 @@
+ #endif
+ 
+ #include "common.h"
++#include "early_tap.h"
+ #include "player.h"
+ #include "rtp.h"
+ #include "rtsp.h"
+@@ -1836,6 +1837,7 @@ void handle_get_info(__attribute((unused)) rtsp_conn_info *conn, rtsp_message *r
+ }
+ 
+ void handle_flushbuffered(rtsp_conn_info *conn, rtsp_message *req, rtsp_message *resp) {
++  early_tap(conn, NULL, 0, 0, TAP_FLUSH);
+   debug(3, "Connection %d: FLUSHBUFFERED %s : Content-Length %d", conn->connection_number,
+         req->path, req->contentlength);
+   debug_log_rtsp_message(2, "FLUSHBUFFERED request", req);
+@@ -2013,6 +2015,7 @@ void handle_setrateanchori(rtsp_conn_info *conn, rtsp_message *req, rtsp_message
+       pthread_cleanup_push(mutex_unlock, &conn->flush_mutex);
+       conn->ap2_rate = rate;
+       if ((rate & 1) != 0) {
++        early_tap(conn, NULL, 0, 0, TAP_RESUME);
+         ptp_send_control_message_string(
+             "B"); // signify clock dependability period is "B"eginning (or resuming)
+         debug(2, "Connection %d: Start playing, with anchor clock %" PRIx64 ".",
+@@ -2026,6 +2029,7 @@ void handle_setrateanchori(rtsp_conn_info *conn, rtsp_message *req, rtsp_message
+       } else {
+         ptp_send_control_message_string("P"); // signify play is "P"ausing
+         debug(2, "Connection %d: Pause playing.", conn->connection_number);
++        early_tap(conn, NULL, 0, 0, TAP_PAUSE);
+         conn->ap2_play_enabled = 0;
+         activity_monitor_signify_activity(0);
+         reset_anchor_info(conn);

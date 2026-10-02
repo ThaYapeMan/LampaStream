@@ -200,6 +200,8 @@ class AudioFeatures:
 
     # Source-read provenance only; does not alter any DSP calculation.
     received_monotonic: float | None = None
+    play_monotonic: float | None = None
+    timing_generation: int | None = None
 
 
 # ---------------------------------------------------------------------------

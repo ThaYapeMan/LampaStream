@@ -59,6 +59,8 @@ class DecodedSourceFrame:
     over_range: bool  # any |sample| >= 1.0; diagnostic only — not audible distortion
     wall_ns: int | None  # wall-clock ns at frame capture; informational only
     received_monotonic: float | None = None  # read capture, independent of wall time
+    play_monotonic: float | None = None
+    timing_generation: int | None = None
 
     def __post_init__(self) -> None:
         arr = np.asarray(self.samples)
@@ -154,6 +156,8 @@ class AnalysisPcmFrame:
     over_range: bool  # source over_range OR resampler overshoot produced |value| >= 1.0
 
     received_monotonic: float | None = None
+    play_monotonic: float | None = None
+    timing_generation: int | None = None
 
     SAMPLE_RATE: ClassVar[int] = 48000
     CHANNELS: ClassVar[int] = 2
@@ -479,7 +483,8 @@ class AudioCanonicalizer:
             start = self._timing_source_frames * self.TARGET_RATE / frame.sample_rate
             self._timing_source_frames += len(stereo)
             end = self._timing_source_frames * self.TARGET_RATE / frame.sample_rate
-            self._arrival_spans.append((start, end, frame.received_monotonic))
+            self._arrival_spans.append((start, end, frame.received_monotonic,
+                                        frame.play_monotonic, frame.timing_generation))
 
         # Feed to soxr.  Output may be empty if the filter hasn't filled yet.
         canonical: np.ndarray = self._stream.resample_chunk(stereo, last=False)
@@ -513,6 +518,8 @@ class AudioCanonicalizer:
             source_id=self._current_source_id,
             over_range=over_range,
             received_monotonic=self._received_at(self._sample_pos),
+            play_monotonic=self._play_at(self._sample_pos)[0],
+            timing_generation=self._play_at(self._sample_pos)[1],
         )
         self._sample_pos += len(canonical)
         results.append(CanonicalData(frame=af))
@@ -522,10 +529,18 @@ class AudioCanonicalizer:
         while len(self._arrival_spans) > 1 and self._arrival_spans[0][1] <= sample_pos:
             self._arrival_spans.popleft()
         if self._arrival_spans:
-            start, end, stamp = self._arrival_spans[0]
+            start, end, stamp, _, _ = self._arrival_spans[0]
             if start <= sample_pos < end:
                 return stamp
         return None
+
+    def _play_at(self, sample_pos):
+        self._received_at(sample_pos)  # discard spans that precede this output
+        if self._arrival_spans:
+            start, end, _, play, generation = self._arrival_spans[0]
+            if play is not None and start <= sample_pos < end:
+                return play + (sample_pos - start) / self.TARGET_RATE, generation
+        return None, None
 
     def _drain_and_end(self) -> list[CanonicalReadResult]:
         """Flush valid resampler tail, then emit EndOfStream."""
@@ -553,6 +568,8 @@ class AudioCanonicalizer:
                     source_id=self._current_source_id,
                     over_range=over_range,
                     received_monotonic=self._received_at(self._sample_pos),
+                    play_monotonic=self._play_at(self._sample_pos)[0],
+                    timing_generation=self._play_at(self._sample_pos)[1],
                 )
                 self._sample_pos += len(tail)
                 results.append(CanonicalData(frame=drain_f))

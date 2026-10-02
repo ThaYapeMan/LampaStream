@@ -268,6 +268,7 @@ fi
 # No concurrent installs/migrations; check mode acquires no file lock and writes nothing.
 exec 9>/run/lock/lampastream-install.lock
 flock -n 9 || fail 'Another installer is running'
+python3 -B "$REPO_DIR/scripts/manage-releases.py" check "$PREFIX"
 log '1/7 Install system build and runtime dependencies'
 apt-get update
 apt-get install -y -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold --no-install-recommends "${BUILD_PACKAGES[@]}" "${RUNTIME_PACKAGES[@]}"
@@ -280,6 +281,8 @@ install -d -m 0750 -o lampastream -g lampastream /etc/lampastream
 # An earlier checkout-local venv is archived only after the new candidate verifies.
 [[ ! -e "$PREFIX/.venv" || -L "$PREFIX/.venv" || -f "$PREFIX/.venv/pyvenv.cfg" ]] ||
     fail '/opt/lampastream/.venv exists but is not a recognizable virtual environment'
+python3 -B "$REPO_DIR/scripts/manage-releases.py" check "$PREFIX"
+PREVIOUS_RELEASE=$(python3 -B "$REPO_DIR/scripts/manage-releases.py" previous "$PREFIX")
 log '2/7 Isolate committed sources and build the frontend/wheel'
 WORK=$(mktemp -d /var/tmp/lampastream-install.XXXXXX)
 cleanup() { rm -rf -- "$WORK"; }
@@ -297,6 +300,7 @@ tar -xJf "$WORK/node.tar.xz" --strip-components=1 -C "$WORK/node"
 python3 -m venv "$WORK/build-env"
 "$WORK/build-env/bin/pip" install build
 LAMPASTREAM_BUILD_COMMIT="$SHORT" "$WORK/build-env/bin/python" -m build --wheel --outdir "$WORK/wheels" "$WORK"
+python3 -B "$WORK/scripts/manage-releases.py" check "$PREFIX"
 RELEASE=$(mktemp -d "$PREFIX/releases/$COMMIT.XXXXXX")
 chmod 0755 "$RELEASE"
 python3 -m venv "$RELEASE/venv"
@@ -353,6 +357,11 @@ systemctl restart avahi-daemon nqptp shairport-sync lampastream
 verify_services
 cleanup_huesync_layout
 curl --fail --retry 10 --retry-connrefused --retry-delay 1 http://127.0.0.1:8420/api/status >/dev/null
+if [[ -n "$PREVIOUS_RELEASE" ]]; then
+    python3 -B "$WORK/scripts/manage-releases.py" prune "$PREFIX" --previous "$PREVIOUS_RELEASE"
+else
+    python3 -B "$WORK/scripts/manage-releases.py" prune "$PREFIX"
+fi
 repo_check
 printf '\nINSTALLATION COMPLETE\nGit commit: %s\nPython: %s\nLMS player: /usr/local/bin/yeney-player\n' "$COMMIT" "$RELEASE/venv"
 sha256sum /usr/local/bin/yeney-player

@@ -1045,6 +1045,7 @@ class CanonicalAnalysisPipeline:
         # All record state commits under _pub_lock. Sequence/queue track delivery;
         # _latest_pub tracks the freshest audio interval for live Effects.
         self._arrival_spans = deque(maxlen=4096)
+        self._play_spans = deque(maxlen=4096)
         self._latest_pub: PublicationRecord | None = None
         self._preview_spectrum: tuple[str | None, list[float], list[float] | None] = (
             None, [], None)
@@ -1250,6 +1251,11 @@ class CanonicalAnalysisPipeline:
                          if epoch == epoch_id and start <= sample_start < end), None)
         if received is not None:
             features = replace(features, received_monotonic=received)
+        play = next(((stamp + (sample_start - start) / 48000, generation)
+                     for epoch, start, end, stamp, generation in reversed(self._play_spans)
+                     if epoch == epoch_id and start <= sample_start < end), None)
+        if play is not None:
+            features = replace(features, play_monotonic=play[0], timing_generation=play[1])
         with self._pub_lock:
             self._pub_seq += 1
             seq = self._pub_seq
@@ -1394,12 +1400,16 @@ class CanonicalAnalysisPipeline:
                 self._latest_hpss_pub = None
             self._current_epoch_id = epoch_id
             self._arrival_spans.clear()
+            self._play_spans.clear()
             self._epoch_start_sample_pos = frame.sample_pos
             self._stft_frame_count = 0
 
         if frame.received_monotonic is not None:
             self._arrival_spans.append((epoch_id, frame.sample_pos,
                                         frame.sample_pos + len(samples), frame.received_monotonic))
+        if frame.play_monotonic is not None:
+            self._play_spans.append((epoch_id, frame.sample_pos, frame.sample_pos + len(samples),
+                                     frame.play_monotonic, frame.timing_generation))
         mag_frames = self._bar_stft.push(samples)
         hop = self._bar_stft.hop
         # Chunk-independent hop positions: each STFT frame N starts at
@@ -3031,7 +3041,45 @@ class SyncEngine:
         timestamp is taken at send time so spatial effects that use t for
         animation stay consistent with the real display moment.
         """
+        from .airplay_early import SceneSchedule
+        schedule = SceneSchedule()
         while True:
+            if self._timing is not None:
+                schedule.reset(self._timing.tap_generation)
+                if (self._timing.tap_source == "early tap"
+                        and isinstance(self._analyser, CanonicalAnalysisPipeline)):
+                    self._probe.current_delay_ms()
+                    config = getattr(self._probe, "config", None)
+                    trim = config.trim_ms if config is not None else self._probe.current_delay_ms()
+                    if config is not None:
+                        data = self._timing.snapshot(after=self._timing.sequence)
+                        available = max(0, (data["lead_p5_ms"] or 0)
+                                        - (data["median_processing_ms"] or 0))
+                        trim = max(-available, trim)
+                    for record in self._analyser.drain_publications():
+                        f = record.features
+                        if (f.play_monotonic is None
+                                or f.timing_generation != self._timing.tap_generation):
+                            continue
+                        scene = self._effect.render(f, max(time.monotonic(),
+                                                          f.play_monotonic + trim / 1000))
+                        ready = time.monotonic()
+                        self._last_bars, self._last_onset = f.bars, f.onset
+                        self._last_mix, self._last_energy = self._effect.mix, f.full
+                        schedule.add(scene, f.play_monotonic, ready, f.timing_generation, trim,
+                                     (f.received_monotonic, ready))
+                    due = schedule.due(time.monotonic(), self._timing.tap_generation)
+                    if due is not None:
+                        scene, provenance = due
+                        sent = time.monotonic()
+                        output.send(scene, sent)
+                        if provenance[0] is not None:
+                            self._timing.processing(*provenance, sent)
+                    self._delay_buffer.clear()
+                    self._scene_timing.clear()
+                    await asyncio.sleep(SEND_INTERVAL_S)
+                    continue
+                schedule.queue.clear()
             features = self._analyser.latest()
             t = time.monotonic()
 

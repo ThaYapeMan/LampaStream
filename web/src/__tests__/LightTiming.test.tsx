@@ -79,7 +79,7 @@ it('reports save errors and restores the previous trim', async () => {
   expect(screen.getByLabelText('Fine-tune by ear')).toHaveTextContent('0 ms')
 })
 it.each([
-  ['stable', 'auto', 'In sync', /Lights wait M−P/],
+  ['stable', 'auto', 'In sync', /Lights follow measured audio play times/],
   ['measuring', 'auto', 'Measuring', /The lights keep the last good delay/],
   ['idle', 'auto', 'Paused', /Measuring resumes when playback starts/],
   ['idle', 'fixed', 'Fixed', /A fixed delay/],
@@ -93,7 +93,7 @@ it.each([
   expect(screen.getByText(label).querySelector('svg')).toBeInTheDocument()
   expect(screen.getByText(wording)).toBeVisible()
   fireEvent.click(screen.getByText('Details'))
-  expect(screen.getByText('Early delivery (M)')).toBeInTheDocument()
+  expect(screen.getByText('Measured early arrival (p5)')).toBeInTheDocument()
   expect(screen.getByText('Processing (P)')).toBeInTheDocument()
   expect(screen.queryByText('Player Delay (set in LMS)')).not.toBeInTheDocument()
   if (state === 'stable') expect(screen.getByRole('img', { name: /Last 3 measurements, median 125/ })).toBeVisible()
@@ -129,4 +129,24 @@ it('shows the recovery message even before a latency entry exists', () => {
   render(<LightTiming status={{ ...status(null), active_player_type: 'AirPlay',
     latency_warning: 'Early delivery was too much for this sender and has been switched off' }} />)
   expect(screen.getByText('Early delivery was too much for this sender and has been switched off')).toBeVisible()
+})
+
+it.each([
+  ['early tap', 'stable', 500, 0, 'Lights on time'],
+  ['early tap', 'lagging', 20, 78, 'Lights about 78 ms behind'],
+  ['pipe fallback', 'lagging', 0, 98, 'Lights about 98 ms behind'],
+] as const)('shows measured %s timing and Details', (source, state, lead, lag, wording) => {
+  render(<LightTiming status={{ ...status(), active_player_type: 'AirPlay', light_timing: {
+    ...entry, status: { ...entry.status!, source: 'airplay', audio_source: source, state,
+      early_delivery_ms: lead, lead_p5_ms: lead, lead_p50_ms: lead + 10,
+      median_processing_ms: 98, lag_ms: lag, tap_drop_count: 7 },
+  } }} />)
+  expect(screen.getByText(wording)).toBeVisible()
+  fireEvent.click(screen.getByText('Details'))
+  expect(screen.getByText(`Source: ${source} · Tap dropped records: 7`)).toBeVisible()
+  if (source === 'early tap') expect(screen.getByText(`Audio arrives about ${lead + 10} ms early (p5 ${lead} ms)`)).toBeVisible()
+  else expect(screen.getByText('Audio arrives at playout time')).toBeVisible()
+  const earlier = screen.getByRole('button', { name: 'Lights 10 milliseconds earlier' })
+  if (lead <= 98) expect(earlier).toBeDisabled()
+  else expect(earlier).toBeEnabled()
 })

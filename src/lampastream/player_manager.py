@@ -24,6 +24,7 @@ from .airplay_config import (
     rename_receiver,
     timing_settings,
 )
+from .airplay_early import EarlyAirPlaySource
 from .airplay_timing import AirPlayAutoLatencyProbe, TimingDiagnostics
 from .hue_bridge import list_entertainment_areas
 from .hue_output import ChannelInfo, HueDriver, HueOutputConfig, get_channel_infos
@@ -823,29 +824,26 @@ class PlayerManager:
         output_config: HueOutputConfig,
         channels: list[ChannelInfo],
     ) -> None:
-        """AirPlay path: stereo pipe source + AudioCanonicalizer + CanonicalAnalysisPipeline + Hue.
+        """One owner per AirPlay FIFO; one canonical stereo analysis path.
 
-        Phase 3 native AirPlay path.  Uses the stereo decoded-source adapter
-        (AirPlayPipeStereoSource) and the canonical analysis pipeline
-        (CanonicalAnalysisPipeline) which performs phase-safe stereo STFT analysis.
-
-        No yeney-player, no cava, no FIFO, no LMS follower.  Exactly one ingress
-        reader owns the production AirPlay FIFO — AirPlayPipeStereoSource.
+        EarlyAirPlaySource chooses timestamped decoded PCM or the regular pipe
+        fallback. It drains the unused pipe and never restarts the receiver.
         """
         self.latency_warning = self._airplay_safety_message
         if self._airplay_tracks is None:
             self._airplay_tracks = AirPlayTrackPositionSource(timing=self.airplay_timing)
         session.track_source = self._airplay_tracks
         session.track_source.open()
-        ingress = AirPlayPipeStereoSource(timing=self.airplay_timing)
+        ingress = EarlyAirPlaySource(timing=self.airplay_timing,
+                                     pipe=AirPlayPipeStereoSource(timing=self.airplay_timing))
         pipe_source = TeePcmSource(ingress)
         pipe_source.open()
         session.shm_source = pipe_source
         await self._receiver_operation(
             self._configure_shairport_name, profile.display_name or profile.player_name)
         self._airplay_tracks.invalidate()
-        ingress.discard_pending()
         self.airplay_timing.reset()
+        ingress.discard_pending()
         await self._apply_airplay_probe(session)
         session.safety_task = asyncio.create_task(self._watch_airplay_delivery(session))
 
@@ -1106,6 +1104,14 @@ class PlayerManager:
                           early_delivery_ms=installed_delivery_margin(self._SHAIRPORT_CONF),
                           median_processing_ms=None)
         if airplay:
+            if (session is not None and session.latency_mac == config.player_mac
+                    and session.player_type == VirtualPlayerType.AIRPLAY):
+                data = self.airplay_timing.snapshot()
+                result.update(audio_source=data["tap_source"],
+                              lead_p5_ms=data["lead_p5_ms"],
+                              lead_p50_ms=data["lead_p50_ms"],
+                              tap_drop_count=data["tap_drop_count"],
+                              median_processing_ms=data["median_processing_ms"])
             result["safety_message"] = self._airplay_safety_message
         return result
 

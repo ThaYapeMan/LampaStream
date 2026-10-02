@@ -159,6 +159,11 @@ class TimingDiagnostics:
         self.cadence = CadenceCheck()
         self.processing_window = ProcessingWindow()
         self.processing_sequence = 0
+        self.tap_generation = 0
+        self.tap_paused = False
+        self.tap_source = "pipe fallback"
+        self.tap_leads = deque(maxlen=1024)
+        self.tap_drops = 0
 
     def _record(self, kind, now, **values):
         self.sequence += 1
@@ -175,6 +180,10 @@ class TimingDiagnostics:
     def reset(self, reason="session"):
         with self.lock:
             self.generation += 1
+            self.tap_generation += 1
+            self.tap_source = "pipe fallback"
+            self.tap_paused = False
+            self.tap_leads.clear()
             self.active = False
             self.playback_since = None
             self.playback_paused = False
@@ -182,6 +191,19 @@ class TimingDiagnostics:
             self.cadence.reset()
             self.processing_window = ProcessingWindow()
             self._record("reset", self.clock(), reason=reason)
+
+    def tap_reset(self):
+        with self.lock:
+            self.tap_generation += 1
+            self.tap_leads.clear()
+            self.cadence.reset()
+            self.processing_window = ProcessingWindow()
+            self.active = False
+
+    def tap_arrival(self, lead, drops):
+        with self.lock:
+            self.tap_leads.append(lead * 1000)
+            self.tap_drops = drops
 
     def arrival(self, frames, now):
         with self.lock:
@@ -211,6 +233,7 @@ class TimingDiagnostics:
         with self.lock:
             last = self.cadence.previous
             if code in {"pbeg", "pres", "prsm"}:
+                self.tap_paused = False
                 self.playback_since = now
                 self.playback_paused = False
             elif (code in {"phb0", "phbt"} and not self.playback_paused
@@ -221,6 +244,13 @@ class TimingDiagnostics:
                 self.playback_paused = True
             if code in {"pbeg", "phb0", "pres", "paus", "pfls", "pend", "aend"}:
                 self.generation += 1
+                if code in {"paus", "pfls", "pend", "aend"}:
+                    self.tap_generation += 1
+                    self.tap_leads.clear()
+                    if code != "pfls":
+                        self.tap_paused = True
+                elif code in {"pbeg", "pres"}:
+                    self.tap_paused = False
                 self.cadence.reset()
                 self.processing_window = ProcessingWindow()
                 self.active = code in {"pbeg", "phb0", "pres"}
@@ -270,6 +300,11 @@ class TimingDiagnostics:
             events = [dict(e) for e in self.events if e["sequence"] > after]
             samples = list(self.processing_window.samples)
             return {
+                "tap_source": self.tap_source,
+                "tap_generation": self.tap_generation,
+                "lead_p5_ms": percentile(self.tap_leads, .05),
+                "lead_p50_ms": percentile(self.tap_leads, .5),
+                "tap_drop_count": self.tap_drops,
                 "sequence": self.sequence,
                 "generation": self.generation,
                 "active": self.active,
@@ -325,6 +360,15 @@ class AirPlayAutoLatencyProbe:
     def current_delay_ms(self):
         data = self.diagnostics.snapshot(after=self.diagnostics.sequence)
         self.reason = None
+        if data["tap_source"] == "early tap":
+            if not data["active"]:
+                self.state = "idle"
+                return 0
+            p, lead = data["median_processing_ms"], data["lead_p5_ms"]
+            self.state = ("measuring" if p is None or lead is None
+                          else "stable" if lead >= p else "lagging")
+            self.delay = max(0, round((lead or 0) - (p or 0) + self.config.trim_ms))
+            return self.delay
         if not data["active"]:
             self.state = "idle"
         elif self.margin is None:
@@ -373,7 +417,11 @@ class AirPlayAutoLatencyProbe:
                 if self.margin == 0 and data["median_processing_ms"] is not None
                 else None
             ),
-            early_delivery_ms=self.margin,
+            early_delivery_ms=(max(0, data["lead_p5_ms"] or 0)
+                               if data["tap_source"] == "early tap" else self.margin),
+            audio_source=data["tap_source"],
+            lead_p5_ms=data["lead_p5_ms"], lead_p50_ms=data["lead_p50_ms"],
+            tap_drop_count=data["tap_drop_count"],
             median_processing_ms=data["median_processing_ms"],
             sample_count=data["sample_count"],
             precision_ms=data["precision_ms"],
@@ -381,4 +429,7 @@ class AirPlayAutoLatencyProbe:
             last_sample_time=data["samples"][-1]["timestamp"] if data["samples"] else None,
             pacing=data["pacing"],
         )
+        if data["tap_source"] == "early tap" and data["median_processing_ms"] is not None:
+            result["lag_ms"] = max(0, round(data["median_processing_ms"]
+                                          - (data["lead_p5_ms"] or 0)))
         return result

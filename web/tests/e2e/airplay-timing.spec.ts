@@ -24,9 +24,9 @@ test('AirPlay timing states, fine-tune, Auto and Latency processing status', asy
   send()
   const card = page.getByTestId('light-timing')
   await expect(card.getByText('In sync', { exact: true })).toBeVisible()
-  await expect(card.getByText('Lights wait M−P so they land on the beat for the AirPlay group.')).toBeVisible()
+  await expect(card.getByText('Lights follow measured audio play times for the AirPlay group.')).toBeVisible()
   await card.getByText('Details', { exact: true }).click()
-  await expect(card.getByText('Early delivery (M)')).toBeVisible()
+  await expect(card.getByText('Measured early arrival (p5)')).toBeVisible()
   await expect(card.getByText('Processing (P)')).toBeVisible()
   await card.getByRole('button', { name: 'Lights 10 milliseconds earlier' }).click()
   await expect(card.getByText('Saved · lights earlier by 10 ms')).toBeVisible()
@@ -116,3 +116,31 @@ for (const stopBetween of [false, true]) {
     expect(activations).toEqual(['ap', 'c', 'ap'])
   })
 }
+
+test('early tap timing, measured lead, fallback and recovery use the existing card', async ({ page }) => {
+  const socket = await setupPreview(page)
+  const send = (source: string, lead: number, state: string) => socket().send(JSON.stringify({
+    type: 'status', active_coupling_id: 'c', active_player_type: 'AirPlay', processes: {},
+    timing_player_mac: 'airplay', timing_player_name: 'Room', applied_delay_ms: Math.max(0, lead - 98),
+    light_timing: { player_mac: 'airplay', name: 'Room', strategy: 'auto', trim_ms: 0,
+      fixed_delay_ms: 0, status: { source: 'airplay', audio_source: source, strategy: 'auto', state,
+        applied_delay_ms: Math.max(0, lead - 98), early_delivery_ms: lead, lead_p5_ms: lead,
+        lead_p50_ms: lead + 10, median_processing_ms: 98, lag_ms: Math.max(0, 98 - lead),
+        tap_drop_count: 3, sample_count: 7, precision_ms: 2, samples: [] } },
+  }))
+  const card = page.getByTestId('light-timing')
+  send('early tap', 150, 'stable')
+  await expect(card.getByText('Lights on time', { exact: true })).toBeVisible()
+  await card.getByText('Details', { exact: true }).click()
+  await expect(card.getByText('Audio arrives about 160 ms early (p5 150 ms)')).toBeVisible()
+  await expect(card.getByText('Source: early tap · Tap dropped records: 3')).toBeVisible()
+  await expect(card.getByRole('button', { name: 'Lights 10 milliseconds earlier' })).toBeEnabled()
+  send('early tap', 20, 'lagging')
+  await expect(card.getByText('Lights about 78 ms behind')).toBeVisible()
+  await expect(card.getByRole('button', { name: 'Lights 10 milliseconds earlier' })).toBeDisabled()
+  send('pipe fallback', 0, 'lagging')
+  await expect(card.getByText('Lights about 98 ms behind')).toBeVisible()
+  await expect(card.getByText('Source: pipe fallback · Tap dropped records: 3')).toBeVisible()
+  send('early tap', 500, 'stable')
+  await expect(card.getByText('Lights on time', { exact: true })).toBeVisible()
+})

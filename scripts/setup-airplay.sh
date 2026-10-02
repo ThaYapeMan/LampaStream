@@ -168,19 +168,18 @@ EOF
 echo "==> [3/6] Building shairport-sync (AirPlay 2)..."
 checkout_pinned shairport-sync "$SHAIRPORT_COMMIT"
 
-echo "==> Applying LampaStream patch: re-enable SETPEERS timing-peer forwarding..."
-if ! git -C "$SRC/shairport-sync" apply --check "$PATCH_FILE" 2>/dev/null; then
-    if git -C "$SRC/shairport-sync" apply --check --reverse "$PATCH_FILE" 2>/dev/null; then
+for PATCH_FILE in "${PATCH_FILE%/*}"/shairport-sync-0001-setpeers.patch "${PATCH_FILE%/*}"/shairport-sync-0002-early-tap.patch; do
+    echo "==> Applying LampaStream patch: ${PATCH_FILE##*/}..."
+    if git -C "$SRC/shairport-sync" apply --check "$PATCH_FILE" 2>/dev/null; then
+        git -C "$SRC/shairport-sync" apply "$PATCH_FILE"
+    elif git -C "$SRC/shairport-sync" apply --check --reverse "$PATCH_FILE" 2>/dev/null; then
         echo "  Patch already applied (source tree matches post-patch state) — skipping."
     else
-        echo "error: shairport-sync-0001-setpeers.patch no longer applies cleanly." >&2
-        echo "       The pinned commit may have changed underneath this patch." >&2
-        echo "       See docs/airplay-grouping-setpeers-patch.md and re-verify by hand." >&2
+        echo "error: ${PATCH_FILE##*/} no longer applies cleanly." >&2
+        echo "       See docs/airplay-timing.md and re-verify the pinned sources." >&2
         exit 1
     fi
-else
-    git -C "$SRC/shairport-sync" apply "$PATCH_FILE"
-fi
+done
 
 cd "$SRC/shairport-sync"
 autoreconf -fi
@@ -218,7 +217,7 @@ make SHELL=/bin/bash install
 # /run/lampastream is solely for the AirPlay pipe.
 # ---------------------------------------------------------------------------
 echo "==> [4/6] Configuring runtime directory and AirPlay FIFO..."
-printf 'd /run/lampastream             0755 lampastream lampastream -\np /run/lampastream/airplay.pcm 0600 lampastream lampastream -\np /run/lampastream/airplay.metadata 0600 lampastream lampastream -\n' \
+printf 'd /run/lampastream             0755 lampastream lampastream -\np /run/lampastream/airplay.pcm 0600 lampastream lampastream -\np /run/lampastream/airplay-early.pcm 0600 lampastream lampastream -\np /run/lampastream/airplay.metadata 0600 lampastream lampastream -\n' \
     > /etc/tmpfiles.d/lampastream-run.conf
 systemd-tmpfiles --create /etc/tmpfiles.d/lampastream-run.conf
 
@@ -239,6 +238,7 @@ general = {
 
 pipe = {
   name = "/run/lampastream/airplay.pcm";
+  early_tap_name = "/run/lampastream/airplay-early.pcm";
   output_rate = 44100;
   output_format = "S16_LE";
   output_channels = 2;
@@ -306,6 +306,23 @@ for key, value in (
     if matches and float(matches[0][0].split('=')[1].strip(' ;')) == float(value):
         start, end = (general.start(1) + pos for pos in matches[0].span())
         updated = updated[:start] + updated[end:]
+visible_updated = re.sub(
+    r'"(?:\\.|[^"\\])*"|//[^\n]*|/\*[\s\S]*?\*/|\#[^\n]*',
+    lambda m: m[0] if m[0].startswith('"') else ' ' * len(m[0]), updated)
+pipes = list(re.finditer(r'\bpipe\s*=\s*\{([^{}]*)\}', visible_updated))
+if len(pipes) != 1:
+    sys.exit('Cannot safely enable AirPlay early tap: expected one simple pipe section')
+pipe = pipes[0]
+settings = list(re.finditer(r'\bearly_tap_name\s*=\s*"(?:\\.|[^"\\])*"\s*;', pipe[1]))
+if len(settings) > 1 or pipe[1].count('early_tap_name') != len(settings):
+    sys.exit('Cannot safely enable AirPlay early tap: ambiguous setting')
+value = 'early_tap_name = "/run/lampastream/airplay-early.pcm";'
+if settings:
+    start, end = (pipe.start(1) + pos for pos in settings[0].span())
+else:
+    start = end = pipe.end(1)
+    value = '  ' + value + '\n'
+updated = updated[:start] + value + updated[end:]
 if updated != original:
     stat = path.stat()
     fd, temporary = tempfile.mkstemp(prefix='.shairport-volume-', dir=path.parent)
@@ -343,7 +360,7 @@ EOF
 
 # Standard installer starts services only after artifact/schema verification.
 /usr/local/bin/shairport-sync --version
-[[ -p /run/lampastream/airplay.pcm && -p /run/lampastream/airplay.metadata ]]
+[[ -p /run/lampastream/airplay.pcm && -p /run/lampastream/airplay-early.pcm && -p /run/lampastream/airplay.metadata ]]
 /usr/local/bin/shairport-sync --version | grep -i metadata >/dev/null
 if [[ "$DEFER_START" != 1 ]]; then
     systemctl daemon-reload

@@ -350,7 +350,8 @@ def test_airplay_volume_upgrade_preserves_config(tmp_path: Path, setting: str) -
     subprocess.run([sys.executable, "-", str(config)], input=updater, text=True, check=True)
     updated = config.read_text()
     assert updated.startswith(prefix)
-    assert updated.endswith(suffix)
+    assert 'name = "/run/lampastream/airplay.pcm";' in updated
+    assert 'early_tap_name = "/run/lampastream/airplay-early.pcm";' in updated
     assert updated.count('ignore_volume_control = "yes";') == 1
     assert "Analysis-only receiver" in updated
     assert config.stat().st_mode & 0o777 == 0o640
