@@ -7,6 +7,7 @@ API copies numbers/events, never PCM, and never attaches a second FIFO reader.
 from __future__ import annotations
 
 import math
+import re
 import statistics
 import threading
 import time
@@ -152,6 +153,9 @@ class TimingDiagnostics:
         self.sequence = 0
         self.generation = 0
         self.active = False
+        self.playback_since = None
+        self.playback_paused = False
+        self.last_arrival = None
         self.cadence = CadenceCheck()
         self.processing_window = ProcessingWindow()
         self.processing_sequence = 0
@@ -172,6 +176,9 @@ class TimingDiagnostics:
         with self.lock:
             self.generation += 1
             self.active = False
+            self.playback_since = None
+            self.playback_paused = False
+            self.last_arrival = None
             self.cadence.reset()
             self.processing_window = ProcessingWindow()
             self._record("reset", self.clock(), reason=reason)
@@ -179,6 +186,7 @@ class TimingDiagnostics:
     def arrival(self, frames, now):
         with self.lock:
             self.active = True
+            self.last_arrival = now
             self.cadence.observe(frames, now)
             self._record("arrival", now, frames=frames)
 
@@ -202,6 +210,15 @@ class TimingDiagnostics:
         now = self.clock()
         with self.lock:
             last = self.cadence.previous
+            if code in {"pbeg", "pres", "prsm"}:
+                self.playback_since = now
+                self.playback_paused = False
+            elif (code in {"phb0", "phbt"} and not self.playback_paused
+                  and self.playback_since is None and re.fullmatch(r"\d+/\d+", payload)):
+                self.playback_since = now
+            elif code in {"paus", "pfls", "pend", "aend"}:
+                self.playback_since = None
+                self.playback_paused = True
             if code in {"pbeg", "phb0", "pres", "paus", "pfls", "pend", "aend"}:
                 self.generation += 1
                 self.cadence.reset()
@@ -256,6 +273,17 @@ class TimingDiagnostics:
                 "sequence": self.sequence,
                 "generation": self.generation,
                 "active": self.active,
+                "playback_since": self.playback_since,
+                "last_arrival": self.last_arrival,
+                "stalled_for_s": (
+                    max(
+                        0,
+                        self.clock()
+                        - max(self.playback_since, self.last_arrival or self.playback_since),
+                    )
+                    if self.playback_since is not None
+                    else 0
+                ),
                 "pacing": self.cadence.status(self.clock()),
                 "median_processing_ms": (
                     round(self.processing_window.median(), 3) if samples else None
@@ -278,12 +306,14 @@ class AirPlayAutoLatencyProbe:
             if config.measured_delay_ms is not None
             else config.fixed_delay_ms
         )
+        if margin == 0:
+            self.delay = max(0, config.trim_ms)
         self.first = True
         self.last_sequence = -1
         self.persisted_at = None
         self.state = "measuring"
         self.reason = None
-        self.last_good = config.measured_delay_ms
+        self.last_good = 0 if margin == 0 else config.measured_delay_ms
 
     async def start(self):
         pass
@@ -303,16 +333,16 @@ class AirPlayAutoLatencyProbe:
             self.state, self.reason = "not measurable", data["pacing"]["reason"]
         elif data["pacing"]["state"] != "steady" or data["sample_count"] < 3:
             self.state = "measuring"
-        elif data["median_processing_ms"] > self.margin:
+        elif self.margin != 0 and data["median_processing_ms"] > self.margin:
             self.state, self.reason = (
                 "not measurable",
                 "Processing takes longer than early delivery",
             )
         else:
-            self.state = "stable"
+            self.state = "lagging" if self.margin == 0 else "stable"
             if data["processing_sequence"] != self.last_sequence:
                 self.last_sequence = data["processing_sequence"]
-                measured = round(self.margin - data["median_processing_ms"])
+                measured = max(0, round(self.margin - data["median_processing_ms"]))
                 target = max(0, measured + self.config.trim_ms)
                 self.delay = (
                     target if self.first else self.delay + max(-50, min(50, target - self.delay))
@@ -338,6 +368,11 @@ class AirPlayAutoLatencyProbe:
         )
         result.update(
             source="airplay",
+            lag_ms=(
+                round(data["median_processing_ms"] + self.delay)
+                if self.margin == 0 and data["median_processing_ms"] is not None
+                else None
+            ),
             early_delivery_ms=self.margin,
             median_processing_ms=data["median_processing_ms"],
             sample_count=data["sample_count"],

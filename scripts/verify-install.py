@@ -13,7 +13,7 @@ from pathlib import Path
 import numpy as np
 
 import lampastream
-from lampastream.airplay_config import DELIVERY_MARGIN_MS, delivery_margin
+from lampastream.airplay_config import LEGACY_TIMING, SHAIRPORT_REVISION, timing_settings
 from lampastream.cavacore import CavaCoreBackend
 from lampastream.migration import migrate_file
 
@@ -24,8 +24,14 @@ def verify_player(manifest: dict, binary: Path = Path('/usr/local/bin/yeney-play
 
 
 def verify_airplay(manifest: dict, receiver_config: str) -> None:
-    assert delivery_margin(receiver_config, manifest) == DELIVERY_MARGIN_MS, (
+    assert manifest.get('airplay_delivery_margin_ms') == 0, 'AirPlay timing contract unverified'
+    assert manifest.get('airplay_timing_policy') == 'receiver-defaults', (
         'AirPlay timing contract unverified')
+    assert manifest.get('shairport_revision') == SHAIRPORT_REVISION, (
+        'AirPlay timing contract unverified')
+    settings = timing_settings(receiver_config)
+    assert not any(settings.get(key) == value for key, value in LEGACY_TIMING.items()), (
+        'Unsafe legacy AirPlay timing setting remains')
 
 
 def main() -> None:
@@ -59,7 +65,7 @@ def main() -> None:
     for item in ('Git commit', 'Python environment', 'Installed LampaStream import',
                  'Current persisted schema', 'CAVA native initialization/execution',
                  'Frontend assets', 'yeney-player binary provenance',
-                 'AirPlay early delivery (500 ms)'):
+                 'AirPlay receiver defaults (no imposed early delivery)'):
         print(f'{item}: PASS')
 
 

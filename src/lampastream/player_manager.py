@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import re
 import shutil
 import subprocess
@@ -17,7 +18,12 @@ import tempfile
 import time
 from pathlib import Path
 
-from .airplay_config import installed_delivery_margin, rename_receiver
+from .airplay_config import (
+    disable_early_delivery,
+    installed_delivery_margin,
+    rename_receiver,
+    timing_settings,
+)
 from .airplay_timing import AirPlayAutoLatencyProbe, TimingDiagnostics
 from .hue_bridge import list_entertainment_areas
 from .hue_output import ChannelInfo, HueDriver, HueOutputConfig, get_channel_infos
@@ -267,6 +273,7 @@ class ActiveSession:
         self.follower_task: asyncio.Task | None = None
         self.unsync_task: asyncio.Task | None = None
         self.track_source: TrackPositionSource | None = None
+        self.safety_task: asyncio.Task | None = None
 
 
 class PlayerManager:
@@ -274,9 +281,11 @@ class PlayerManager:
         self.storage = storage
         self.airplay_timing = TimingDiagnostics()
         self._active: ActiveSession | None = None
-        # Shairport's FIFO is an event stream, not a replayable snapshot. Keep
-        # one reader across Stop/Go so events during inactive sessions aren't lost.
+        self._session_lock = asyncio.Lock()
+        # Metadata belongs to the active receiver session; restart supplies fresh events.
         self._airplay_tracks: AirPlayTrackPositionSource | None = None
+        self._airplay_rollback_attempted = False
+        self._airplay_safety_message: str | None = None
         self.latency_warning: str | None = None
         self._detected_sync_master: str | None = None
         self._detected_sync_master_name: str | None = None
@@ -542,13 +551,19 @@ class PlayerManager:
         return self._active.profile.sensitivity if self._active else None
 
     async def activate_coupling(self, coupling: Coupling) -> None:
+        async with self._session_lock:
+            await self._activate_coupling(coupling)
+
+    async def _activate_coupling(self, coupling: Coupling) -> None:
         """Activate a Coupling, resolving all linked entities natively.
 
         Controller is used directly for Hue calls instead of the old BridgeConfig
         lookup.  A Profile is built internally so that SyncEngine keeps
         receiving a Profile while the rest of the stack works with entities.
         """
-        await self.deactivate()
+        previous = (self._active.coupling.name
+                    if self._active and self._active.coupling else "stopped")
+        await self._deactivate_unlocked()
 
         player = self.storage.get_virtual_player(coupling.player_id)
         zone = self.storage.get_zone(coupling.zone_id)
@@ -665,7 +680,7 @@ class PlayerManager:
                 )
             else:
                 raise ValueError(f"Unsupported virtual player type: {player.type!r}")
-        except Exception:
+        except BaseException:
             # Keep ownership even if cleanup itself times out. A subsequent
             # deactivate/activate retries teardown before opening a new source.
             self._active = session
@@ -675,6 +690,8 @@ class PlayerManager:
 
         self._active = session
         self.storage.set_active_coupling_id(coupling.id)
+        log.info("coupling switch: %s → %s: source opened / receiver ready / DTLS connected",
+                 previous, coupling.name)
         log.info("Activated coupling %s (%s)", coupling.name, coupling.id)
 
     async def _activate_lms(
@@ -809,17 +826,22 @@ class PlayerManager:
         reader owns the production AirPlay FIFO — AirPlayPipeStereoSource.
         """
         self.airplay_timing.reset()
+        self.latency_warning = self._airplay_safety_message
         if self._airplay_tracks is None:
             self._airplay_tracks = AirPlayTrackPositionSource(timing=self.airplay_timing)
         session.track_source = self._airplay_tracks
         session.track_source.open()
-        if self._configure_shairport_name(profile.display_name or profile.player_name):
-            self._airplay_tracks.invalidate()
-
-        await self._apply_airplay_probe(session)
-        pipe_source = TeePcmSource(AirPlayPipeStereoSource(timing=self.airplay_timing))
+        ingress = AirPlayPipeStereoSource(timing=self.airplay_timing)
+        pipe_source = TeePcmSource(ingress)
         pipe_source.open()
         session.shm_source = pipe_source
+        if await self._receiver_operation(
+                self._configure_shairport_name, profile.display_name or profile.player_name,
+                force_restart=True):
+            self._airplay_tracks.invalidate()
+            ingress.discard_pending()
+        await self._apply_airplay_probe(session)
+        session.safety_task = asyncio.create_task(self._watch_airplay_delivery(session))
 
         pcm_analyser = _make_canonical_pipeline(pipe_source, profile)
 
@@ -852,6 +874,10 @@ class PlayerManager:
                 self._airplay_tracks = None
 
     async def deactivate(self) -> None:
+        async with self._session_lock:
+            await self._deactivate_unlocked()
+
+    async def _deactivate_unlocked(self) -> None:
         if not self._active:
             return
         session = self._active
@@ -869,11 +895,22 @@ class PlayerManager:
     async def _teardown_session(self, session: ActiveSession) -> None:
         session.stopping = True
         if session.track_source is not None:
-            if session.track_source is not self._airplay_tracks:
-                await session.track_source.close()
+            await session.track_source.close()
+            if session.track_source is self._airplay_tracks:
+                self._airplay_tracks = None
             session.track_source = None
-        if session.unsync_task:
-            session.unsync_task.cancel()
+        for attribute in ("unsync_task", "safety_task", "poller_task", "task"):
+            task = getattr(session, attribute)
+            if task:
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    if asyncio.current_task().cancelling():
+                        raise
+                except Exception:
+                    log.exception("Session task failed during teardown: %s", attribute)
+                setattr(session, attribute, None)
         if session.follower:
             session.follower.stop()
             session.follower = None
@@ -888,10 +925,6 @@ class PlayerManager:
                 if asyncio.current_task().cancelling():
                     raise  # do not swallow cancellation of teardown itself
             session.follower_task = None
-        if session.poller_task:
-            session.poller_task.cancel()
-        if session.task:
-            session.task.cancel()
         if session.sync_engine:
             stopped = session.sync_engine.stop()
             if stopped is False or session.sync_engine.retirement_pending is True:
@@ -906,9 +939,11 @@ class PlayerManager:
         if session.hue_driver:
             try:
                 await session.hue_driver.stop()
+            finally:
+                # Even a failed HTTP stop must release DTLS. Failure is propagated
+                # so activation cannot overlap an unreleased Entertainment session.
                 await session.hue_driver.aclose()
-            except Exception:  # noqa: BLE001 - best-effort teardown
-                log.exception("Error stopping Hue Entertainment session")
+            session.hue_driver = None
 
         for proc in (session.lms_player,):
             if proc and proc.poll() is None:
@@ -917,6 +952,7 @@ class PlayerManager:
                     proc.wait(timeout=3)
                 except subprocess.TimeoutExpired:
                     proc.kill()
+                    proc.wait(timeout=3)
 
         # yeney-player creates /dev/shm/squeezelite-<mac> and never removes it.
         # Without this, every activate/deactivate cycle leaves an orphaned
@@ -1047,7 +1083,7 @@ class PlayerManager:
         if session is None or session.latency_mac != config.player_mac:
             result = latency_status(config, delay=0)
         elif isinstance(session.probe, (AutoLatencyProbe, AirPlayAutoLatencyProbe)):
-            return session.probe.status()
+            result = session.probe.status()
         else:
             fallback = (config.strategy == "auto"
                         and isinstance(session.follower, LmsSyncGroupObserver))
@@ -1059,10 +1095,12 @@ class PlayerManager:
                         if fallback else None),
             )
             airplay = airplay or session.player_type == VirtualPlayerType.AIRPLAY
-        if airplay:
+        if airplay and "source" not in result:
             result.update(source='airplay',
                           early_delivery_ms=installed_delivery_margin(self._SHAIRPORT_CONF),
                           median_processing_ms=None)
+        if airplay:
+            result["safety_message"] = self._airplay_safety_message
         return result
 
     @property
@@ -1083,6 +1121,13 @@ class PlayerManager:
         if config and config.strategy == 'auto':
             if isinstance(session.probe, AirPlayAutoLatencyProbe):
                 session.probe.config = config
+                margin = installed_delivery_margin(self._SHAIRPORT_CONF)
+                if margin != session.probe.margin:
+                    session.probe.margin = margin
+                    session.probe.first = True
+                    if margin == 0:
+                        session.probe.delay = max(0, config.trim_ms)
+                        session.probe.last_good = 0
                 return
             def persist(measured, timestamp):
                 current = self.storage.get_player_latency(mac)
@@ -1303,10 +1348,74 @@ class PlayerManager:
 
     _SHAIRPORT_CONF = Path("/usr/local/etc/shairport-sync.conf")
 
-    def _configure_shairport_name(self, name: str) -> bool:
+    async def _receiver_operation(self, operation, *args, **kwargs):
+        # Do not leave a restart thread running after session teardown has returned.
+        task = asyncio.create_task(asyncio.to_thread(operation, *args, **kwargs))
+        try:
+            return await asyncio.shield(task)
+        except asyncio.CancelledError:
+            try:
+                await task
+            finally:
+                raise
+
+    async def _watch_airplay_delivery(self, session):
+        while not session.stopping:
+            await asyncio.sleep(0.5)
+            await self._protect_airplay_delivery(session)
+
+    async def _protect_airplay_delivery(self, session):
+        """One rollback per manager lifetime; playback evidence survives pipe EOF."""
+        if session.stopping or self._airplay_rollback_attempted:
+            return
+        if self.airplay_timing.snapshot()["stalled_for_s"] <= 3:
+            return
+        try:
+            original = self._SHAIRPORT_CONF.read_text()
+            if timing_settings(original).get("audio_backend_latency_offset_in_seconds", 0) >= 0:
+                return
+            updated = disable_early_delivery(original)
+        except (OSError, ValueError) as exc:
+            log.debug("Cannot inspect early delivery: %s", exc)
+            return
+        self._airplay_rollback_attempted = True
+        cancelled = False
+        try:
+            # The existing receiver-name permission owns this file, not /usr/local/etc.
+            # Validate before writing; restart only after the complete write is flushed.
+            with self._SHAIRPORT_CONF.open("w") as output:
+                output.write(updated)
+                output.flush()
+                os.fsync(output.fileno())
+            await self._receiver_operation(
+                subprocess.run, ["systemctl", "restart", "shairport-sync"],
+                check=True, timeout=10, capture_output=True)
+        except asyncio.CancelledError:
+            cancelled = True  # restart completed; publish recovery before exiting the watchdog
+        except (OSError, subprocess.SubprocessError) as exc:
+            self._airplay_safety_message = "Early delivery recovery failed; check the receiver logs"
+            self.latency_warning = self._airplay_safety_message
+            log.error("Early delivery recovery failed (will not retry): %s", exc)
+            return
+        self._airplay_safety_message = (
+            "Early delivery was too much for this sender and has been switched off")
+        self.latency_warning = self._airplay_safety_message
+        log.warning(self._airplay_safety_message)
+        self.airplay_timing.reset("early delivery switched off")
+        if self._airplay_tracks is not None:
+            self._airplay_tracks.invalidate()
+        if isinstance(session.probe, AirPlayAutoLatencyProbe):
+            session.probe.margin = 0
+            session.probe.delay = max(0, session.probe.config.trim_ms)
+            session.probe.first = True
+            session.probe.last_good = 0
+        if cancelled:
+            raise asyncio.CancelledError
+
+    def _configure_shairport_name(self, name: str, *, force_restart=False) -> bool:
         """Ensure shairport-sync is configured with the given advertised name.
 
-        Return True if a receiver restart was attempted, invalidating metadata.
+        Return True after a restart attempt; forced activation refuses restart failure.
 
         Existing operator settings are preserved. Only the receiver name changes,
         through a validated update; missing files receive defaults. The service owns
@@ -1315,11 +1424,8 @@ class PlayerManager:
         """
         conf = (
             'general = {\n'
-            f'  name = "{name}";\n'
+            '  name = "LampaStream";\n'
             '  output_backend = "pipe";\n'
-            '  audio_backend_latency_offset_in_seconds = -0.5;\n'
-            '  audio_backend_buffer_desired_length_in_seconds = 0.0;\n'
-            '  audio_backend_buffer_interpolation_threshold_in_seconds = 0.0;\n'
             '  // Analysis-only receiver: full-scale PCM regardless of source volume.\n'
             '  ignore_volume_control = "yes";\n'
             '}\n'
@@ -1336,6 +1442,7 @@ class PlayerManager:
             '  progress_interval = 10.0;\n'
             '}\n'
         )
+        conf = rename_receiver(conf, name)
         try:
             existing = self._SHAIRPORT_CONF.read_text()
         except OSError:
@@ -1345,14 +1452,19 @@ class PlayerManager:
                 conf = rename_receiver(existing, name)
             except ValueError as exc:
                 log.warning("Could not safely update receiver name: %s", exc)
+                if force_restart:
+                    raise RuntimeError("Cannot safely configure the AirPlay receiver") from exc
                 return False
-        if existing == conf:
+        if existing == conf and not force_restart:
             log.debug("shairport-sync config unchanged for name %r — skipping restart", name)
             return False
         try:
-            self._SHAIRPORT_CONF.write_text(conf)
+            if existing != conf:
+                self._SHAIRPORT_CONF.write_text(conf)
         except OSError as exc:
             log.warning("Could not write shairport-sync config: %s", exc)
+            if force_restart:
+                raise RuntimeError("Cannot configure the AirPlay receiver") from exc
             return False
         try:
             subprocess.run(
@@ -1362,6 +1474,8 @@ class PlayerManager:
             log.info("shairport-sync restarted with name %r", name)
         except Exception as exc:  # noqa: BLE001
             log.warning("Could not restart shairport-sync: %s", exc)
+            if force_restart:
+                raise RuntimeError("AirPlay receiver restart failed") from exc
         return True
 
     def _start_lms_player(self, session: ActiveSession, profile: Profile) -> None:

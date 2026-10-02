@@ -261,7 +261,10 @@ def test_diagnostics_read_only_api_and_bounded_events(tmp_path):
     assert client.get("/api/airplay-timing?after=-1").status_code == 422
 
 
-@pytest.mark.parametrize("offset", ["", "audio_backend_latency_offset_in_seconds = 0.2;"])
+@pytest.mark.parametrize("offset", ["", "audio_backend_latency_offset_in_seconds = 0.2;",
+    "audio_backend_latency_offset_in_seconds = -0.5; "
+    "audio_backend_buffer_desired_length_in_seconds = 0.0; "
+    "audio_backend_buffer_interpolation_threshold_in_seconds = 0.0;"])
 def test_installer_timing_edit_preserves_and_verifies(tmp_path, offset):
     config = tmp_path / "receiver.conf"
     original = (
@@ -279,14 +282,20 @@ def test_installer_timing_edit_preserves_and_verifies(tmp_path, offset):
     updated = config.read_text()
     assert 'custom = "keep";' in updated
     assert 'pipe = { name = "fifo"; }' in updated
-    manifest = dict(airplay_delivery_margin_ms=500, shairport_revision=SHAIRPORT_REVISION)
-    assert delivery_margin(updated, manifest) == 500
+    manifest = dict(airplay_delivery_margin_ms=0, airplay_timing_policy="receiver-defaults",
+                    shairport_revision=SHAIRPORT_REVISION)
+    assert delivery_margin(updated, manifest) == (None if "0.2" in offset else 0)
+    if "0.2" in offset:
+        assert offset in updated
+    else:
+        assert "audio_backend_latency_offset_in_seconds" not in updated
+        assert "audio_backend_buffer" not in updated
     verifier = load_script('verify-install.py')
     verifier.verify_airplay(manifest, updated)
     with pytest.raises(AssertionError, match='timing contract'):
         verifier.verify_airplay({}, updated)
     assert delivery_margin(updated, {}) is None
-    assert delivery_margin(updated.replace("-0.5", "-0.2"), manifest) is None
+
     stamp = config.stat().st_mtime_ns
     subprocess.run([sys.executable, "-", str(config)], input=updater, text=True, check=True)
     assert config.stat().st_mtime_ns == stamp
@@ -332,10 +341,11 @@ def test_manifest_records_margin_and_pin(tmp_path):
     import json
 
     manifest = json.loads((tmp_path / "installation.json").read_text())
-    assert manifest["airplay_delivery_margin_ms"] == 500
+    assert manifest["airplay_delivery_margin_ms"] == 0
+    assert manifest["airplay_timing_policy"] == "receiver-defaults"
     assert manifest["shairport_revision"] == SHAIRPORT_REVISION
     assert (
-        "delivery_margin(receiver_config, manifest)"
+        "timing_settings(receiver_config)"
         in (ROOT / "scripts/verify-install.py").read_text()
     )
 
@@ -500,3 +510,183 @@ pipe = { name = "fifo"; }
         assert config.read_text() == original.replace('"Old"', '"New"')
     finally:
         directory.chmod(0o755)
+
+
+@pytest.mark.parametrize('trim, delay, lag', [(-1000, 0, 125), (0, 0, 125), (10, 10, 135)])
+def test_receiver_defaults_report_lag_without_old_measured_delay(trim, delay, lag):
+    clock = [10.0]
+    diagnostics = TimingDiagnostics(clock=lambda: clock[0])
+    config = PlayerLatency(player_mac='aa', strategy='auto', measured_delay_ms=375, trim_ms=trim)
+    probe = AirPlayAutoLatencyProbe(config, diagnostics, 0, Mock(), clock=lambda: clock[0])
+    assert probe.current_delay_ms() == max(0, trim)
+    steady(diagnostics, clock)
+    assert probe.current_delay_ms() == delay
+    assert probe.status()['state'] == 'lagging'
+    assert probe.status()['lag_ms'] == lag
+    assert probe.status()['strategy'] == 'auto'
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize('offset', [-0.5, -0.1])
+async def test_stalled_playback_removes_offset_and_restarts_exactly_once(
+        tmp_path, monkeypatch, offset):
+    from lampastream.models import Profile, VirtualPlayer, VirtualPlayerType
+
+    clock = [10.0]
+    manager = PlayerManager(Storage(tmp_path / 'config.json'))
+    manager.airplay_timing = TimingDiagnostics(clock=lambda: clock[0])
+    manager._SHAIRPORT_CONF = tmp_path / 'receiver.conf'
+    manager._SHAIRPORT_CONF.write_text(
+        f'general = {{ name = "Receiver"; audio_backend_latency_offset_in_seconds = {offset}; '
+        'audio_backend_buffer_desired_length_in_seconds = 0.0; custom = "keep"; }')
+    manager.storage.save_virtual_player(VirtualPlayer(id='ap', type=VirtualPlayerType.AIRPLAY,
+                                                     player_mac='aa'))
+    config = PlayerLatency(player_mac='aa', strategy='auto')
+    manager.storage.save_player_latency(config)
+    session = ActiveSession(Profile(player_mac='aa'), player_type=VirtualPlayerType.AIRPLAY)
+    session.latency_mac = 'aa'
+    session.probe = AirPlayAutoLatencyProbe(config, manager.airplay_timing, None, Mock())
+    manager._active = session
+    restart = Mock()
+    monkeypatch.setattr('lampastream.player_manager.subprocess.run', restart)
+    manager.airplay_timing.metadata('pbeg', '')
+    manager.airplay_timing.ended()  # EOF must not hide the sender's playback evidence.
+    clock[0] = 13
+    await manager._protect_airplay_delivery(session)
+    restart.assert_not_called()
+    clock[0] = 13.01
+    await manager._protect_airplay_delivery(session)
+    restart.assert_called_once_with(['systemctl', 'restart', 'shairport-sync'],
+                                   check=True, timeout=10, capture_output=True)
+    assert 'latency_offset' not in manager._SHAIRPORT_CONF.read_text()
+    assert 'buffer_desired' not in manager._SHAIRPORT_CONF.read_text()
+    assert 'custom = "keep"' in manager._SHAIRPORT_CONF.read_text()
+    assert session.probe.margin == 0
+    assert manager.latency_status(config)['safety_message'] == (
+        'Early delivery was too much for this sender and has been switched off')
+    for _ in range(5):
+        manager.airplay_timing.metadata('pbeg', '')
+        clock[0] += 4
+        await manager._protect_airplay_delivery(session)
+    restart.assert_called_once()
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize('evidence', ['idle', 'paused', 'flowing', 'defaults', 'ambiguous'])
+async def test_safeguard_does_not_restart_without_stalled_early_playback(
+        tmp_path, monkeypatch, evidence):
+    from lampastream.models import Profile
+
+    clock = [10.0]
+    manager = PlayerManager(Storage(tmp_path / 'config.json'))
+    manager.airplay_timing = TimingDiagnostics(clock=lambda: clock[0])
+    manager._SHAIRPORT_CONF = tmp_path / 'receiver.conf'
+    setting = 'audio_backend_latency_offset_in_seconds = -0.5;'
+    if evidence == 'defaults':
+        setting = ''
+    elif evidence == 'ambiguous':
+        setting += setting
+    original = f'general = {{ name = "Receiver"; {setting} }}'
+    manager._SHAIRPORT_CONF.write_text(original)
+    restart = Mock()
+    monkeypatch.setattr('lampastream.player_manager.subprocess.run', restart)
+    if evidence != 'idle':
+        manager.airplay_timing.metadata('pbeg', '')
+    if evidence == 'paused':
+        manager.airplay_timing.metadata('paus', '')
+    clock[0] = 14
+    if evidence == 'flowing':
+        manager.airplay_timing.arrival(441, 13.9)
+    await manager._protect_airplay_delivery(ActiveSession(Profile()))
+    restart.assert_not_called()
+    assert manager._SHAIRPORT_CONF.read_text() == original
+
+
+def test_receiver_restart_discards_previous_fifo_audio(tmp_path):
+    fifo = tmp_path / 'audio'
+    os.mkfifo(fifo)
+    source = AirPlayPipeStereoSource(fifo)
+    source.open()
+    writer = os.open(fifo, os.O_WRONLY | os.O_NONBLOCK)
+    try:
+        os.write(writer, bytes(441 * 4))
+        source.discard_pending()
+        assert not isinstance(source.read(), DataResult)
+        os.write(writer, np.ones(882, np.int16).tobytes())
+        assert isinstance(source.read(), DataResult)
+    finally:
+        os.close(writer)
+        source.close()
+
+
+@pytest.mark.anyio
+async def test_failed_safety_restart_reports_failure_and_never_loops(tmp_path, monkeypatch):
+    from lampastream.models import Profile
+
+    clock = [10.0]
+    manager = PlayerManager(Storage(tmp_path / 'config.json'))
+    manager.airplay_timing = TimingDiagnostics(clock=lambda: clock[0])
+    manager._SHAIRPORT_CONF = tmp_path / 'receiver.conf'
+    manager._SHAIRPORT_CONF.write_text(
+        'general = { name = "Receiver"; audio_backend_latency_offset_in_seconds = -0.5; }')
+    restart = Mock(side_effect=subprocess.CalledProcessError(1, 'systemctl'))
+    monkeypatch.setattr('lampastream.player_manager.subprocess.run', restart)
+    manager.airplay_timing.metadata('pbeg', '')
+    clock[0] = 14
+    for _ in range(4):
+        await manager._protect_airplay_delivery(ActiveSession(Profile()))
+    restart.assert_called_once()
+    assert manager.latency_warning == 'Early delivery recovery failed; check the receiver logs'
+
+
+@pytest.mark.parametrize('buffer', ['0.3', '1.5'])
+def test_installer_preserves_different_operator_buffer_values(tmp_path, buffer):
+    config = tmp_path / 'receiver.conf'
+    original = (f'general = {{ name = "Custom"; audio_backend_latency_offset_in_seconds = -0.2; '
+                f'audio_backend_buffer_desired_length_in_seconds = {buffer}; '
+                f'audio_backend_buffer_interpolation_threshold_in_seconds = {buffer}; }}')
+    config.write_text(original)
+    updater = ((ROOT / 'scripts/setup-airplay.sh').read_text()
+               .split("<< 'PY_VOLUME'\n")[1].split('\nPY_VOLUME')[0])
+    subprocess.run([sys.executable, '-', str(config)], input=updater, text=True, check=True)
+    updated = config.read_text()
+    assert 'audio_backend_latency_offset_in_seconds = -0.2;' in updated
+    assert f'audio_backend_buffer_desired_length_in_seconds = {buffer};' in updated
+    assert f'audio_backend_buffer_interpolation_threshold_in_seconds = {buffer};' in updated
+    manifest = dict(airplay_delivery_margin_ms=0, airplay_timing_policy='receiver-defaults',
+                    shairport_revision=SHAIRPORT_REVISION)
+    load_script('verify-install.py').verify_airplay(manifest, updated)
+    assert delivery_margin(updated, manifest) is None
+
+
+def test_safety_playback_evidence_ignores_paused_progress_and_old_heartbeats():
+    clock = [10.0]
+    diagnostics = TimingDiagnostics(clock=lambda: clock[0])
+    diagnostics.metadata('phbt', '42/100000')
+    clock[0] = 14
+    assert diagnostics.snapshot()['stalled_for_s'] == 4
+    diagnostics.metadata('paus', '')
+    diagnostics.metadata('prgr', '0/10/20')
+    diagnostics.metadata('phbt', '52/200000')
+    clock[0] = 20
+    assert diagnostics.snapshot()['stalled_for_s'] == 0
+    diagnostics.metadata('pres', '')
+    clock[0] = 22
+    assert diagnostics.snapshot()['stalled_for_s'] == 2
+    diagnostics.metadata('pbeg', '')
+    assert diagnostics.snapshot()['stalled_for_s'] == 0
+
+
+def test_same_name_activation_restarts_and_refuses_restart_failure(tmp_path, monkeypatch):
+    manager = PlayerManager(Storage(tmp_path / 'config.json'))
+    manager._SHAIRPORT_CONF = tmp_path / 'receiver.conf'
+    original = 'general = { name = "Receiver"; custom = "keep"; }'
+    manager._SHAIRPORT_CONF.write_text(original)
+    restart = Mock(side_effect=subprocess.CalledProcessError(1, 'systemctl'))
+    monkeypatch.setattr('lampastream.player_manager.subprocess.run', restart)
+    assert not manager._configure_shairport_name('Receiver')
+    restart.assert_not_called()
+    with pytest.raises(RuntimeError, match='restart failed'):
+        manager._configure_shairport_name('Receiver', force_restart=True)
+    restart.assert_called_once()
+    assert manager._SHAIRPORT_CONF.read_text() == original

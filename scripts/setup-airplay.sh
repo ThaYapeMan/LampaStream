@@ -233,9 +233,6 @@ cat > /usr/local/etc/shairport-sync.conf << 'EOF'
 general = {
   name = "LampaStream";
   output_backend = "pipe";
-  audio_backend_latency_offset_in_seconds = -0.5;
-  audio_backend_buffer_desired_length_in_seconds = 0.0;
-  audio_backend_buffer_interpolation_threshold_in_seconds = 0.0;
   // Analysis-only receiver: full-scale PCM regardless of source volume.
   ignore_volume_control = "yes";
 }
@@ -290,8 +287,7 @@ else:
     start = end = section.end(1)
     replacement = '  ' + comment + '\n  ignore_volume_control = "yes";\n'
 updated = original[:start] + replacement + original[end:]
-# The pipe's default desired buffer is one second. Set it to zero so the
-# negative offset, rather than buffer plus offset, defines the delivery margin.
+# Remove only the exact legacy values. Preserve different operator values.
 for key, value in (
     ('audio_backend_latency_offset_in_seconds', '-0.5'),
     ('audio_backend_buffer_desired_length_in_seconds', '0.0'),
@@ -307,13 +303,9 @@ for key, value in (
     matches = list(re.finditer(r'\b' + key + r'\s*=\s*[-+]?\d+(?:\.\d+)?\s*;', body))
     if len(matches) > 1 or body.count(key) != len(matches):
         sys.exit('Cannot safely update AirPlay timing: ambiguous ' + key)
-    if matches:
+    if matches and float(matches[0][0].split('=')[1].strip(' ;')) == float(value):
         start, end = (general.start(1) + pos for pos in matches[0].span())
-        replacement = key + ' = ' + value + ';'
-    else:
-        start = end = general.end(1)
-        replacement = '  ' + key + ' = ' + value + ';\n'
-    updated = updated[:start] + replacement + updated[end:]
+        updated = updated[:start] + updated[end:]
 if updated != original:
     stat = path.stat()
     fd, temporary = tempfile.mkstemp(prefix='.shairport-volume-', dir=path.parent)

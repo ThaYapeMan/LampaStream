@@ -29,8 +29,8 @@ function Sparkline({ status }: { status: NonNullable<PlayerLatency['status']> })
 export function lightTimingState(current: PlayerLatency | null | undefined, status: SocketStatus | null, airplay = false) {
   const timing = current?.status
   const group = !airplay && current?.strategy === 'auto' && (status?.follow_mode === 'sync_group' || timing?.state === 'not measurable (sync group)')
-  const state = !current ? 'missing' : current.strategy === 'none' ? 'none' : group ? 'group' : timing?.state === 'not measurable' ? 'unavailable' : current.strategy === 'fixed' ? 'fixed' : timing?.state === 'stable' ? 'stable' : timing?.state === 'measuring' ? 'measuring' : 'idle'
-  const applied = state === 'idle' ? Math.max(0, (current?.measured_delay_ms ?? 0) + (current?.trim_ms ?? 0)) : status?.applied_delay_ms ?? timing?.applied_delay_ms ?? 0
+  const state = !current ? 'missing' : current.strategy === 'none' ? 'none' : group ? 'group' : timing?.state === 'not measurable' ? 'unavailable' : current.strategy === 'fixed' ? 'fixed' : airplay && (timing?.state === 'lagging' || timing?.state === 'stable' && timing?.early_delivery_ms === 0) ? 'lagging' : timing?.state === 'stable' ? 'stable' : timing?.state === 'measuring' ? 'measuring' : 'idle'
+  const applied = state === 'idle' && !airplay ? Math.max(0, (current?.measured_delay_ms ?? 0) + (current?.trim_ms ?? 0)) : status?.applied_delay_ms ?? timing?.applied_delay_ms ?? 0
   return { state, applied } as const
 }
 
@@ -58,8 +58,10 @@ export function LightTiming({ status, onOpenLatency, playersView = false, contro
   const current = override ?? entry
   const timing = current?.status
   const { state, applied } = lightTimingState(current, status, airplay)
+  const safetyMessage = timing?.safety_message || (airplay ? status?.latency_warning : null)
   const group = state === 'group'
   const states = {
+    lagging: [Clock, 'Lights behind', 'text-amber-400 bg-amber-400/10'],
     stable: [Check, 'In sync', 'text-emerald-400 bg-emerald-400/10'],
     measuring: [Clock, 'Measuring', 'text-blue-400 bg-blue-400/10'],
     fixed: [Lock, 'Fixed', 'text-muted-foreground bg-secondary'],
@@ -80,9 +82,10 @@ export function LightTiming({ status, onOpenLatency, playersView = false, contro
     } catch (e) { setError(e instanceof Error ? e.message : 'Could not save') }
     finally { setBusy(false) }
   }
+  const minimumTrim = airplay && timing?.early_delivery_ms === 0 ? 0 : -1000
   async function fineTune(delta: number) {
     if (!mac || !current || busy) return
-    const next = Math.max(-1000, Math.min(1000, trim + delta)), previous = trim
+    const next = Math.max(minimumTrim, Math.min(1000, trim + delta)), previous = trim
     desiredTrim.current = next; setTrim(next); setBusy(true); pending.current = true; setError('')
     try {
       await updatePlayerLatency(mac, { trim_ms: next })
@@ -91,7 +94,8 @@ export function LightTiming({ status, onOpenLatency, playersView = false, contro
     finally { pending.current = false; setBusy(false) }
   }
   if (playersView) {
-    const explanation = state === 'stable' ? 'Measured automatically and kept up to date.'
+    const explanation = state === 'lagging' ? `Lights are about ${timing?.lag_ms ?? Math.round(timing?.median_processing_ms ?? 0)} ms behind the sound`
+      : state === 'stable' ? 'Measured automatically and kept up to date.'
       : state === 'fixed' ? 'A fixed delay you set by hand.'
       : state === 'none' ? 'The lights are not delayed.'
       : state === 'measuring' ? `Checking the timing · ${timing?.sample_count ?? 0} of 7 measurements.`
@@ -111,7 +115,7 @@ export function LightTiming({ status, onOpenLatency, playersView = false, contro
             {current?.strategy === 'auto' && <div className="space-y-1">
               <label htmlFor={`${id}-trim`} className="block text-xs text-muted-foreground">Fine-tune by ear</label>
               <div className="inline-flex max-w-full items-center overflow-hidden rounded-lg border bg-secondary">
-                <Button variant="ghost" size="sm" className="px-2" aria-label="Lights 10 milliseconds earlier" disabled={busy || trim <= -1000} onClick={() => fineTune(-10)}>◀ Earlier</Button>
+                <Button variant="ghost" size="sm" className="px-2" aria-label="Lights 10 milliseconds earlier" disabled={busy || trim <= minimumTrim} onClick={() => fineTune(-10)}>◀ Earlier</Button>
                 <output id={`${id}-trim`} aria-live="polite" className="min-w-14 border-x px-1 text-center font-mono text-xs">{signed(trim)}</output>
                 <Button variant="ghost" size="sm" className="px-2" aria-label="Lights 10 milliseconds later" disabled={busy || trim >= 1000} onClick={() => fineTune(10)}>Later ▶</Button>
               </div>
@@ -119,6 +123,7 @@ export function LightTiming({ status, onOpenLatency, playersView = false, contro
             {!current && <Button size="sm" disabled={busy || !mac} onClick={measure}>Measure automatically</Button>}
           </div>
         </div>
+        {safetyMessage && <p role="status" className="text-sm text-amber-400">{safetyMessage}</p>}
         {footer}
         {message && <p role="status" className="text-xs text-emerald-400">{message}</p>}
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
@@ -148,6 +153,8 @@ export function LightTiming({ status, onOpenLatency, playersView = false, contro
           <span className="grid max-w-32 justify-items-center gap-1 text-center"><Speaker className="h-9 w-9 rounded-lg border bg-secondary p-2" />{name}</span>
         </div>}
       </div>
+      {state === 'lagging' && <p className="text-sm text-muted-foreground">Lights are about {timing?.lag_ms ?? Math.round(timing?.median_processing_ms ?? 0)} ms behind the sound</p>}
+      {safetyMessage && <p role="status" className="text-sm text-amber-400">{safetyMessage}</p>}
       {state === 'measuring' && <div className="space-y-3 text-sm text-muted-foreground">
         <div className="flex items-center gap-3"><svg className="h-11 w-11 text-blue-400" viewBox="0 0 44 44" role="img" aria-label={`${timing?.sample_count ?? 0} of 7 measurements`}><circle cx="22" cy="22" r="18" fill="none" className="stroke-secondary" strokeWidth="4" /><circle cx="22" cy="22" r="18" fill="none" stroke="currentColor" strokeWidth="4" strokeDasharray={`${113 * Math.min(7, timing?.sample_count ?? 0) / 7} 113`} transform="rotate(-90 22 22)" /></svg><span>Checking the timing against {name} · {timing?.sample_count ?? 0} of 7 measurements.</span></div>
         <p>The lights keep the last good delay ({seconds(applied)} s) until the new measurement is steady.</p>
@@ -161,7 +168,7 @@ export function LightTiming({ status, onOpenLatency, playersView = false, contro
       {['fixed', 'missing', 'none'].includes(state) && <Button size="sm" disabled={busy || !mac} onClick={measure}>Measure automatically</Button>}
       {current?.strategy === 'auto' && !group && <div className="grid gap-4 border-t pt-4 sm:grid-cols-[1fr_auto] items-end">
         <div className="space-y-2">{state === 'stable' && timing && <><div className="flex flex-wrap justify-between gap-2 text-xs text-muted-foreground"><span>Steady to within ±{timing.precision_ms ?? '—'} ms</span><span>{timing.sample_count} measurements · {time(timing.last_sample_time)}</span></div><Sparkline status={timing} /></>}</div>
-        <div className="space-y-1"><label htmlFor={`${id}-trim`} className="block text-xs text-muted-foreground sm:text-right">Fine-tune by ear</label><div className="inline-flex items-center overflow-hidden rounded-lg border bg-secondary"><Button variant="ghost" size="sm" aria-label="Lights 10 milliseconds earlier" disabled={busy || trim <= -1000} onClick={() => fineTune(-10)}>◀ Earlier</Button><output id={`${id}-trim`} aria-live="polite" className="min-w-20 border-x px-2 text-center font-mono text-sm">{signed(trim)}</output><Button variant="ghost" size="sm" aria-label="Lights 10 milliseconds later" disabled={busy || trim >= 1000} onClick={() => fineTune(10)}>Later ▶</Button></div></div>
+        <div className="space-y-1"><label htmlFor={`${id}-trim`} className="block text-xs text-muted-foreground sm:text-right">Fine-tune by ear</label><div className="inline-flex items-center overflow-hidden rounded-lg border bg-secondary"><Button variant="ghost" size="sm" aria-label="Lights 10 milliseconds earlier" disabled={busy || trim <= minimumTrim} onClick={() => fineTune(-10)}>◀ Earlier</Button><output id={`${id}-trim`} aria-live="polite" className="min-w-20 border-x px-2 text-center font-mono text-sm">{signed(trim)}</output><Button variant="ghost" size="sm" aria-label="Lights 10 milliseconds later" disabled={busy || trim >= 1000} onClick={() => fineTune(10)}>Later ▶</Button></div></div>
       </div>}
       <p role="status" className="min-h-4 text-xs text-emerald-400">{message}</p>
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}

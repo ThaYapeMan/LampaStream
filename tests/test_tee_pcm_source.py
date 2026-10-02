@@ -176,8 +176,8 @@ def test_manager_activation_swap_and_teardown_reuse_tee(tmp_path, monkeypatch, i
     manager = PlayerManager(Storage(tmp_path / 'config.json'))
     monkeypatch.setattr(manager, '_wait_for_shm', MagicMock())
     monkeypatch.setattr(manager, '_poll_sync_master', AsyncMock())
-    monkeypatch.setattr(manager, '_configure_shairport_name', lambda _: False)
-    manager._airplay_tracks = MagicMock()
+    monkeypatch.setattr(manager, '_configure_shairport_name', lambda _, **kwargs: False)
+    manager._airplay_tracks = MagicMock(close=AsyncMock())
     profile = Profile(player_mac='', spectrum_backend='v2')
     session = ActiveSession(profile)
     manager._active = session

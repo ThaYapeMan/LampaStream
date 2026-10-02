@@ -171,6 +171,7 @@ def test_real_manager_teardown_retains_blocked_reader(tmp_path, monkeypatch):
 
     cap._spectrum_processor.close = count_close
     manager = PlayerManager.__new__(PlayerManager)
+    manager._session_lock = asyncio.Lock()
     manager.storage = MagicMock()
     session = ActiveSession(engine.profile)
     session.profile.player_mac = ''

@@ -92,6 +92,8 @@ export interface PlayerLatency {
     sample_count: number
     precision_ms: number | null
     source?: 'airplay'
+    lag_ms?: number | null
+    safety_message?: string | null
     early_delivery_ms?: number | null
     median_processing_ms?: number | null
     samples?: Array<{ residual_ms?: number; processing_ms?: number; timestamp: number }>

@@ -242,13 +242,14 @@ def test_lms_activation_seeds_current_track_without_newsong(tmp_path):
     asyncio.run(run())
 
 
-def test_airplay_stop_go_keeps_current_metadata_and_shutdown_closes_reader(tmp_path):
+def test_airplay_stop_go_reopens_metadata_and_discards_previous_session(tmp_path):
     from unittest.mock import MagicMock
 
     async def run():
         path = tmp_path / 'metadata'
         os.mkfifo(path, 0o600)
         source = AirPlayTrackPositionSource(str(path))
+        replacement = AirPlayTrackPositionSource(str(path))
         manager = PlayerManager(Storage(tmp_path / 'config.json'))
         driver = MagicMock()
         driver.start = AsyncMock()
@@ -256,7 +257,8 @@ def test_airplay_stop_go_keeps_current_metadata_and_shutdown_closes_reader(tmp_p
         driver.aclose = AsyncMock()
         engine = MagicMock()
         engine.run = AsyncMock()
-        with patch('lampastream.player_manager.AirPlayTrackPositionSource', return_value=source), \
+        with patch('lampastream.player_manager.AirPlayTrackPositionSource',
+                   side_effect=[source, replacement]), \
              patch('lampastream.player_manager.AirPlayPipeStereoSource'), \
              patch('lampastream.player_manager._make_canonical_pipeline'), \
              patch('lampastream.player_manager.SyncEngine', return_value=engine), \
@@ -273,24 +275,28 @@ def test_airplay_stop_go_keeps_current_metadata_and_shutdown_closes_reader(tmp_p
                          item('prgr', '0/44100/441000'))
                 await until(lambda: source.read() and source.read().duration_s == 10)
                 await manager.deactivate()
-                assert source.running and manager.track_position is None
-                # Keep consuming events while stopped, without requiring a new title.
-                os.write(writer, item('phbt', '88200/999'))
-                await until(lambda: source.read().position_s == 2)
+                assert not source.running and manager.track_position is None
+                assert source.read() is None
+                assert manager._airplay_tracks is None
                 next_session = ActiveSession(Profile())
                 await manager._activate_airplay(next_session, next_session.profile, None, None, [])
                 manager._active = next_session
-                assert next_session.track_source is source
-                assert manager.track_position.title == 'Current song'
-                assert manager.track_position.artist == 'Artist'
-                assert manager.track_position.position_s == 2
+                assert next_session.track_source is replacement
+                assert manager.track_position is None
+                await asyncio.sleep(0.01)
+                os.write(writer, item('minm', 'New song', 'core') + item('pbeg') +
+                         item('prgr', '0/88200/441000'))
+                await until(lambda: replacement.read() and replacement.read().position_s == 2)
+                assert manager.track_position.title == 'New song'
+                assert manager.track_position.artist is None
                 os.write(writer, item('pend'))
-                await until(lambda: source.read() is None)
+                await until(lambda: replacement.read() is None)
                 await manager.close()
-                assert not source.running
+                assert not source.running and not replacement.running
                 await manager.close()
             finally:
                 await source.close()
+                await replacement.close()
                 os.close(writer)
     asyncio.run(run())
 
@@ -353,3 +359,30 @@ def test_airplay_receiver_invalidation_discards_previous_track():
     assert source.read() is None
     source.feed(item('phbt', '44100/999'))
     assert source.read() is None
+
+
+def test_receiver_metadata_writer_can_reconnect_without_reader_gap(tmp_path):
+    async def run():
+        path = tmp_path / 'metadata'
+        os.mkfifo(path)
+        source = AirPlayTrackPositionSource(str(path))
+        source.open()
+        await asyncio.sleep(0.01)
+        writer = os.open(path, os.O_WRONLY | os.O_NONBLOCK)
+        try:
+            os.write(writer, item('minm', 'Old writer', 'core'))
+            await until(lambda: source.read() is not None)
+            os.close(writer)
+            writer = None
+            await until(lambda: source.read() is None)
+            # Old EOF behaviour closed the reader for one second: ENXIO here.
+            writer = os.open(path, os.O_WRONLY | os.O_NONBLOCK)
+            os.write(writer, item('minm', 'Reconnected writer', 'core') + item('pbeg'))
+            await until(lambda: source.read() is not None)
+            assert source.read().title == 'Reconnected writer'
+            assert source.read().playing
+        finally:
+            if writer is not None:
+                os.close(writer)
+            await source.close()
+    asyncio.run(run())

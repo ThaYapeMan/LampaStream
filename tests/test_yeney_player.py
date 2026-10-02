@@ -41,7 +41,8 @@ def test_manifest_and_verifier(tmp_path, revision):
     assert manifest == {
         'commit': 'abcdef12', 'short_commit': 'abcdef1', 'yeney_core_revision': REVISION,
         'shairport_revision': '0b1c4391ffd398e7b145eb4b98416261380adeea',
-        'airplay_delivery_margin_ms': 500,
+        'airplay_delivery_margin_ms': 0,
+        'airplay_timing_policy': 'receiver-defaults',
         'yeney_player_sha256': hashlib.sha256(binary.read_bytes()).hexdigest(),
     }
     verifier.verify_player(manifest, binary)

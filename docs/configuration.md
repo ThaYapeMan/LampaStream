@@ -522,15 +522,16 @@ stops the path animation and disclosure transition.
 
 ### AirPlay automatic light timing
 
-AirPlay virtual players can use Auto in Players. The receiver delivers PCM
-500 ms early; LampaStream subtracts its measured processing time and applies
-your fine-tune. The Light timing card shows processing measurements and the
-M/P breakdown. Unverified receiver settings, uneven delivery or processing
-longer than the margin use the entry's fixed fallback with a visible reason.
-The installer preserves unrelated shairport settings when configuring early
-delivery. See [AirPlay timing](airplay-timing.md) for the source evidence,
-configuration contract and read-only diagnostic probe. Fine-tune accounts for
-physical lamp response, which is not measured by a microphone or sensor.
+AirPlay virtual players can use Auto in Players. The receiver uses its own
+defaults with no imposed early-delivery offset. Auto reports measured processing
+lag honestly: “Lights are about P ms behind the sound”. Earlier cannot advance
+lights before audio arrives. A stalled active sender with a negative offset
+triggers a one-shot safety rollback and a visible message. Upgrades remove only
+the exact unsafe legacy timing values; different operator values are preserved.
+No headroom action is offered because the pinned receiver has no reliable
+normal-playback lead-time source. See [AirPlay timing](airplay-timing.md) for the
+incident, source evidence, corrected policy and read-only diagnostic probe.
+Fine-tune accounts for physical lamp response, which is not measured by a sensor.
 
 ## Players
 

@@ -218,7 +218,14 @@ class AirPlayTrackPositionSource:
                     except BlockingIOError:
                         continue
                     if not chunk:
-                        break
+                        self._clear()
+                        # Retain the read descriptor while the receiver opens its
+                        # writer. Reopening after a one-second EOF sleep can miss
+                        # the new session's begin metadata during a quick Go.
+                        loop.remove_reader(fd)
+                        await asyncio.sleep(0.1)
+                        loop.add_reader(fd, ready.set)
+                        continue
                     self.feed(chunk)
             except (OSError, ValueError):
                 pass  # missing/unavailable metadata does not stop audio

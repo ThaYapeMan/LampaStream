@@ -9,7 +9,7 @@ import asyncio
 import json
 import subprocess
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import pytest
 
@@ -631,6 +631,7 @@ def test_airplay_activation_skips_lms_player(tmp_path: Path) -> None:
     with (
         patch(f"{_pm}.list_entertainment_areas", new=AsyncMock(return_value=[fake_area])),
         patch(f"{_pm}.get_channel_infos", new=AsyncMock(return_value=[])),
+        patch(f"{_pm}.PlayerManager._configure_shairport_name", return_value=True),
         patch(f"{_pm}.AirPlayPipeStereoSource") as mock_src_cls,
         patch(f"{_pm}._make_canonical_pipeline") as mock_analyser_factory,
         patch(f"{_pm}.SyncEngine") as mock_engine_cls,
@@ -681,6 +682,7 @@ def test_airplay_activation_player_type_recorded(tmp_path: Path) -> None:
     with (
         patch(f"{_pm}.list_entertainment_areas", new=AsyncMock(return_value=[fake_area])),
         patch(f"{_pm}.get_channel_infos", new=AsyncMock(return_value=[])),
+        patch(f"{_pm}.PlayerManager._configure_shairport_name", return_value=True),
         patch(f"{_pm}.AirPlayPipeStereoSource", return_value=MagicMock()),
         patch(f"{_pm}._make_canonical_pipeline", return_value=MagicMock()),
         patch(f"{_pm}.SyncEngine") as mock_engine_cls,
@@ -717,6 +719,7 @@ def test_airplay_activation_airplay_receiving_property(tmp_path: Path) -> None:
     with (
         patch(f"{_pm}.list_entertainment_areas", new=AsyncMock(return_value=[fake_area])),
         patch(f"{_pm}.get_channel_infos", new=AsyncMock(return_value=[])),
+        patch(f"{_pm}.PlayerManager._configure_shairport_name", return_value=True),
         patch(f"{_pm}.AirPlayPipeStereoSource", return_value=mock_src),
         patch(f"{_pm}._make_canonical_pipeline", return_value=MagicMock()),
         patch(f"{_pm}.SyncEngine") as mock_engine_cls,
@@ -1062,3 +1065,189 @@ def test_exact_yeney_player_command(tmp_path, device):
     which.assert_called_once_with('yeney-player')
     popen.assert_called_once_with(expected, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     assert session.lms_player is popen.return_value
+
+
+@pytest.mark.parametrize('through_api', [False, True])
+@pytest.mark.parametrize('playing, stop_between', [(True, False), (True, True), (False, True)])
+def test_lms_airplay_switches_release_every_session(tmp_path, monkeypatch, caplog,
+                                                   through_api, playing, stop_between):
+    """Go uses real FIFO reopen/metadata cleanup; API exercises the selector's endpoint."""
+    import os
+    from dataclasses import replace
+
+    import httpx
+
+    import lampastream.player_manager as pm
+    from lampastream.app import app
+    from lampastream.canonicalizer import DataResult
+    from lampastream.pcm_source import AirPlayPipeStereoSource
+    from lampastream.track_position import AirPlayTrackPositionSource
+
+    storage, airplay = _make_airplay_storage(tmp_path)
+    lms_player = VirtualPlayer(id='lms', type=VirtualPlayerType.LMS, player_name='LMS',
+                               player_mac='02:ff:01:02:03:04', follow_mode='sync_group')
+    storage.save_virtual_player(lms_player)
+    lms = replace(airplay, id='lms-coupling', name='LMS Room', player_id='lms')
+    storage.save_coupling(lms)
+    manager = PlayerManager(storage)
+    monkeypatch.setattr(app.state, 'storage', storage)
+    monkeypatch.setattr(app.state, 'player_manager', manager)
+    area = MagicMock(id='ae-ap', name='AP Room AE')
+    monkeypatch.setattr(pm, 'list_entertainment_areas', AsyncMock(return_value=[area]))
+    monkeypatch.setattr(pm, 'get_channel_infos', AsyncMock(return_value=[]))
+    monkeypatch.setattr(pm, '_make_canonical_pipeline', MagicMock())
+    monkeypatch.setattr(manager, '_wait_for_shm', MagicMock())
+    monkeypatch.setattr(manager, '_poll_sync_master', AsyncMock())
+    observer = MagicMock()
+    observer.start = lambda: asyncio.create_task(asyncio.Event().wait())
+    monkeypatch.setattr(pm, 'LmsSyncGroupObserver', MagicMock(return_value=observer))
+    monkeypatch.setattr(pm, 'LmsTrackPositionSource',
+                        lambda *args, **kwargs: MagicMock(close=AsyncMock()))
+    fifo, metadata = tmp_path / 'audio', tmp_path / 'metadata'
+    os.mkfifo(fifo)
+    os.mkfifo(metadata)
+    monkeypatch.setattr(pm, 'AirPlayPipeStereoSource',
+                        lambda **kwargs: AirPlayPipeStereoSource(fifo, **kwargs))
+    monkeypatch.setattr(pm, 'AirPlayTrackPositionSource',
+                        lambda **kwargs: AirPlayTrackPositionSource(str(metadata), **kwargs))
+    sources, processes, drivers, tasks_finished, restarts = [], [], [], [], []
+
+    def shm_factory():
+        source = MagicMock()
+        sources.append(source)
+        return source
+
+    monkeypatch.setattr(pm, 'SqueezeliteShmStereoSource', shm_factory)
+
+    def start_player(session, profile):
+        session.lms_player = MagicMock(poll=Mock(return_value=None))
+        processes.append(session.lms_player)
+
+    monkeypatch.setattr(manager, '_start_lms_player', start_player)
+
+    def receiver(name, *, force_restart=False):
+        assert force_restart
+        # The sole production reader is already open at restart.
+        writer = os.open(fifo, os.O_WRONLY | os.O_NONBLOCK)
+        os.close(writer)
+        restarts.append(name)
+        return True
+
+    monkeypatch.setattr(manager, '_configure_shairport_name', receiver)
+
+    def engine_factory(*args, **kwargs):
+        engine = MagicMock(retirement_pending=False)
+        async def run(driver):
+            try:
+                await asyncio.Event().wait()
+            finally:
+                tasks_finished.append(driver)
+        engine.run = run
+        return engine
+
+    monkeypatch.setattr(pm, 'SyncEngine', engine_factory)
+
+    def driver_factory(*args):
+        driver = MagicMock(start=AsyncMock(), stop=AsyncMock(), aclose=AsyncMock())
+        drivers.append(driver)
+        return driver
+
+    monkeypatch.setattr(pm, 'HueDriver', driver_factory)
+
+    async def exercise():
+        sessions = []
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),
+                                    base_url='http://test') as client:
+            for coupling in (lms, airplay, lms, airplay):
+                if stop_between and sessions:
+                    if through_api:
+                        response = await client.post('/api/couplings/deactivate')
+                        assert response.status_code == 200, response.text
+                    else:
+                        await manager.deactivate()
+                if through_api:
+                    response = await client.post(f'/api/couplings/{coupling.id}/activate')
+                    assert response.status_code == 200, response.text
+                else:
+                    await manager.activate_coupling(coupling)
+                session = manager._active
+                sessions.append(session)
+                await asyncio.sleep(0)  # start engine and metadata reader tasks
+                if coupling == airplay:
+                    assert session.track_source.read() is None
+                if playing and coupling == airplay:
+                    writer = os.open(fifo, os.O_WRONLY | os.O_NONBLOCK)
+                    try:
+                        os.write(writer, bytes(441 * 4))
+                        assert isinstance(session.shm_source.read(), DataResult)
+                        session.track_source._item('ssnc', 'pbeg', '')
+                        assert manager.airplay_timing.snapshot()['playback_since'] is not None
+                    finally:
+                        os.close(writer)
+                elif playing:
+                    session.shm_source.read()
+                if len(sessions) > 1:
+                    assert sessions[-2].shm_source is None
+                    assert sessions[-2].track_source is None
+                    assert sessions[-2].task is None
+                    drivers[-2].aclose.assert_awaited_once()
+            assert sessions[1].track_source is None
+            if not playing:
+                assert sessions[3].track_source.read() is None
+            await manager.close()
+        assert manager._active is None
+        assert manager._airplay_tracks is None
+        assert len(tasks_finished) == 4
+        assert len(restarts) == 2
+        for source in sources:
+            source.open.assert_called_once()
+            source.close.assert_called_once()
+        for proc in processes:
+            proc.terminate.assert_called_once()
+            proc.wait.assert_called_once_with(timeout=3)
+        for driver in drivers:
+            driver.stop.assert_awaited_once()
+            driver.aclose.assert_awaited_once()
+
+    caplog.set_level('INFO', logger='lampastream.player_manager')
+    asyncio.run(exercise())
+    switches = [r.message for r in caplog.records if 'coupling switch:' in r.message]
+    assert len(switches) == 4
+    assert all(s.endswith('source opened / receiver ready / DTLS connected') for s in switches)
+
+
+def test_concurrent_go_and_stop_are_serialised(tmp_path, monkeypatch):
+    manager = _make_manager(tmp_path)
+    events = []
+
+    async def activate(coupling):
+        events.append(f'start {coupling}')
+        await asyncio.sleep(0.01)
+        events.append(f'end {coupling}')
+
+    async def stop():
+        events.append('stop')
+
+    monkeypatch.setattr(manager, '_activate_coupling', activate)
+    monkeypatch.setattr(manager, '_deactivate_unlocked', stop)
+
+    async def exercise():
+        await asyncio.gather(manager.activate_coupling('LMS'),
+                             manager.activate_coupling('AirPlay'), manager.deactivate())
+
+    asyncio.run(exercise())
+    assert events == ['start LMS', 'end LMS', 'start AirPlay', 'end AirPlay', 'stop']
+
+
+def test_failed_hue_stop_closes_dtls_and_blocks_replacement(tmp_path):
+    manager = _make_manager(tmp_path)
+    session = ActiveSession(Profile())
+    manager._active = session
+    driver = MagicMock(stop=AsyncMock(side_effect=RuntimeError('HTTP stop failed')),
+                       aclose=AsyncMock())
+    session.hue_driver = driver
+    with pytest.raises(RuntimeError, match='HTTP stop failed'):
+        asyncio.run(manager.deactivate())
+    driver.aclose.assert_awaited_once()
+    assert manager._active is session
+    assert session.stopping

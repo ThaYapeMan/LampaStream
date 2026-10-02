@@ -63,16 +63,19 @@ These references describe that revision, not an assumption about later releases.
   lifecycle events, retains track timing across metadata-only changes and
   pauses on end/EOF. It never infers a timeline from track text alone.
 
-## Delivery margin and processing
+## Incident on 2 October and corrected defaults
 
-The managed margin **M is 500 ms**. Typical processing of 100–150 ms leaves
-350–400 ms for local scheduling and transport variation. This is headroom, not
-an assertion of a universally bounded worst case. Measured processing longer
-than M triggers the fixed fallback because a delay cannot advance the lights.
-The owner should validate each installation with the probe.
+After installing 145d0bc, the owner's AirPlay stream produced no pipe audio:
+preview was black, Hue output stopped and Light timing said “Audio delivery
+stalled”. The journal contained the owner's evidence:
 
-The installer and upgrade path atomically set these related general settings,
-preserving unrelated operator settings and refusing ambiguous configurations:
+```text
+"player.c:1130" Dropping out of date packet 4832 with timestamp 1435647391. Lead time is 0.090227 seconds.
+"player.c:1153" Check packet from buffer 4836, timestamp …, 0.002134 seconds ahead.
+"rtp.c:2547" sleep while full
+```
+
+The configuration contained:
 
 ```conf
 audio_backend_latency_offset_in_seconds = -0.5;
@@ -80,11 +83,108 @@ audio_backend_buffer_desired_length_in_seconds = 0.0;
 audio_backend_buffer_interpolation_threshold_in_seconds = 0.0;
 ```
 
-Zero desired buffer is essential: leaving the default would deliver at M plus
-one second. Zero interpolation threshold is compatible with that zero buffer.
-The manifest records the margin and shairport revision; verification checks the
-actual configuration too. Missing provenance or changed timing settings means
-M is unknown and Auto uses the fixed fallback.
+Removing those three lines and restarting shairport-sync restored audio and
+lights immediately. This sender's runway was about 0.1 s. Requesting audio
+0.5 s early moved packets outside that runway; the presumed spare margin was
+not available. Processing time P is not evidence of sender headroom.
+
+Fresh installations impose none of these settings. Upgrades remove only the
+exact legacy numeric values above, preserving different operator values and
+unrelated settings. Duplicate, malformed or deprecated timing settings are
+refused before writing. The installer retains its validated, fsynced atomic
+replacement with ownership and mode preservation. The manifest records
+`airplay_delivery_margin_ms: 0`, `airplay_timing_policy: receiver-defaults` and
+the pinned receiver revision; verify-install checks this policy and rejects
+remaining legacy values while allowing preserved operator settings.
+
+M is conservatively **0 ms** with the receiver's own defaults. The backend's
+own default desired buffer remains one second, as upstream defines it; this
+is not a certified advance against what a particular group audibly plays.
+LampaStream adds no early-delivery offset and makes no assertion that an
+arbitrary sender has spare runway. Operator timing overrides are unverified.
+With steady Auto measurements, no deliberate delay and processing P, the card
+says “Lights are about P ms behind the sound”, with a “Lights behind” pill.
+Positive fine-tune adds to this reported lag. Earlier is disabled at zero;
+negative saved trim cannot advance the output. A previous 500 ms measurement
+is never reused as a delay when M is zero.
+
+## Early-delivery headroom: unavailable
+
+The pinned [player.c startup selection](https://github.com/mikebrady/shairport-sync/blob/0b1c4391ffd398e7b145eb4b98416261380adeea/player.c#L1119)
+reports accepted/dropped packet lead times at debug level 2 and buffer checks
+at level 3. These are startup and packet-selection diagnostics, including
+already shifted timestamps and rejected packets, not an unbiased continuous
+sample of network arrival headroom during normal playback. Normal metadata
+`prgr`, `pffr`, `phb0` and `phbt` report progress or scheduled playback; none
+reports the sender packet's arrival time and usable unshifted runway. Comparing
+`phbt` to its delivery timestamp also includes FIFO blocking and metadata
+scheduling, so it cannot prove an offset safe. Reading more debug logs does
+not fix that sampling problem.
+
+No reliable lead-time source is available through the pinned normal logs or
+metadata. Consequently the safe ceiling is **M = 0**, and there is no headroom
+action or offer to apply early delivery. This is the conservative branch of
+the design, rather than enabling an unproven opt-in. A future implementation
+would need validated unshifted arrival samples across each stream type and
+sender, sufficient coverage, a lower-tail percentile minus a safety margin,
+and a ceiling no greater than measured processing P. It must also retain the
+rollback below. Processing or pacing measurements alone cannot authorise M.
+
+The installer sets neither `-v` nor `diagnostics.log_verbosity` nor the deprecated
+`general.log_verbosity`. The [pinned default](https://github.com/mikebrady/shairport-sync/blob/0b1c4391ffd398e7b145eb4b98416261380adeea/shairport.c#L396)
+is debug level 0. The mutex/flush debug messages therefore come from an external
+verbosity setting or invocation; no managed verbosity needs reducing, and
+operator choices are preserved.
+
+## Runtime safety rollback
+
+During an active AirPlay coupling, a watchdog checks every 0.5 s. Playback
+begin/resume or a valid timed-write heartbeat establishes independent playback evidence;
+pause, flush and end clear it. Pipe EOF cannot erase that evidence. If no PCM
+has arrived for **more than three seconds**, measured from the later of playback
+begin and last arrival, and a validated negative seconds-valued offset exists,
+LampaStream removes it and the exact legacy zero buffer values. Other operator
+values remain untouched. It flushes the existing service-owned configuration
+file and uses only the existing narrow `systemctl restart shairport-sync`
+authorisation. The service cannot atomically replace files in `/usr/local/etc`;
+runtime uses the same file-only permission as receiver-name editing, whereas
+installer upgrades retain atomic replacement.
+
+The manager marks the attempt before writing or restarting: there is exactly
+one recovery attempt per application lifetime, including on failure. A restart
+operation is awaited even if teardown cancels its task, so it cannot finish
+later against a replacement session. Successful recovery clears timing and
+metadata, switches Auto to M = 0, logs one warning and displays:
+“Early delivery was too much for this sender and has been switched off”.
+Write/restart failure reports a recovery failure without claiming success or
+retrying. A stopped, paused, healthy or default-offset session never triggers
+recovery. No physical receiver was accessed during development.
+
+## Coupling switching
+
+Go previously skipped the restart when the AirPlay name was unchanged, retained
+metadata across sessions, and cancelled engine/poller/unsync tasks without
+awaiting completion. Editing a receiver name did invoke the receiver restart.
+The pinned pipe backend retains its write descriptor on stop, has no flush
+callback, and can leave queued PCM behind while the LMS coupling owns output.
+That combination allowed pending tasks and receiver/FIFO state to outlive the
+coupling, explaining why an edit-triggered restart could restore playback.
+
+Switches are serialised. Teardown waits for all session tasks, closes the
+metadata reader, stops analysis before releasing PCM, stops the probe, closes
+Hue DTLS and reaps the yeney-player process, including after a forced kill.
+A failed Hue stop still closes DTLS and blocks replacement until cleanup succeeds.
+AirPlay activation opens its sole FIFO reader first, restarts the receiver even
+when the name is unchanged (refusing activation if restart fails), discards bounded queued PCM before starting
+analysis, and opens fresh metadata/timing state. Restarting the receiver ends
+its previous sender connection; the sender may need to reconnect or resume.
+It is a deliberate clean receiver reset, not a claim of uninterrupted audio
+handover. LMS commands, LMS measurement, yeney-core and DSP algorithms are
+unchanged. Each successful Go logs `coupling switch: <from> → <to>: source
+opened / receiver ready / DTLS connected`. For LMS, receiver readiness means
+the new yeney-player process has published its SHM source.
+
+## Processing measurements
 
 P starts immediately after the sole PCM reader's `os.read`, before conversion.
 The monotonic timestamp follows source sample intervals through resampling and
@@ -100,8 +200,8 @@ The last seven accepted P values provide a median and scaled MAD precision
 (1.4826 × median absolute deviation). Non-finite/negative values and jumps over
 400 ms from the current median are rejected. Three consecutive large changes
 start a fresh window, so a sustained processing change cannot leave an old
-estimate in place indefinitely. The delay is
-`max(0, M − median(P) + trim_ms)`. After the first steady value, each newly accepted
+estimate in place indefinitely. The untrimmed delay is `max(0, M − median(P))`; applied delay is
+`max(0, untrimmed_delay + trim_ms)`. At M = 0 it is therefore never negative. After the first steady value, each newly accepted
 measurement moves the delay by at most 50 ms. The last good untrimmed value is
 saved at most every 15 s and on orderly stop. Fine-tune updates immediately in
 the UI; application follows the same step limit.
@@ -140,7 +240,7 @@ JSON lines preserve events for subsequent inspection. The probe
 checks local pacing, not audible alignment or physical lamp latency.
 
 The Light timing card uses the existing two-second status refresh. Its AirPlay
-sparkline shows P, and Details shows M, P, fine-tune and applied delay. Auto is
+Details shows M, P, fine-tune and applied delay. Auto is
 available for AirPlay's virtual-player latency entry. Fixed, paused, measuring
 and unavailable states retain words and icons as well as colour.
 

@@ -397,7 +397,7 @@ export function PlayersDetail({
                       </span>
                     </span>
                     <span
-                      aria-label={`${state === 'stable' ? 'In sync' : state === 'measuring' ? 'Measuring' : state === 'fixed' ? 'Fixed' : state === 'none' ? 'No delay' : 'Idle'}, ${(applied / 1000).toFixed(2)} seconds`}
+                      aria-label={`${state === 'stable' ? 'In sync' : state === 'measuring' ? 'Measuring' : state === 'lagging' ? 'Lights behind' : state === 'fixed' ? 'Fixed' : state === 'none' ? 'No delay' : 'Idle'}, ${(applied / 1000).toFixed(2)} seconds`}
                       className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-secondary px-2 py-1 font-mono text-xs"
                     >
                       <span

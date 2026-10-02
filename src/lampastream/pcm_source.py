@@ -1076,6 +1076,21 @@ class AirPlayPipeStereoSource:
                 pass
             self._fd = None
 
+    def discard_pending(self) -> None:
+        """Discard the stopped receiver's queued bytes before analysis starts.
+
+        Called only by activation after receiver restart, with no analysis worker.
+        Bound the drain so an immediately reconnecting sender cannot delay Go.
+        """
+        for _ in range(16):
+            try:
+                if self._fd is None or not os.read(self._fd, 65536):
+                    break
+            except BlockingIOError:
+                break
+        self._remainder = b""
+        self._last_data_t = None
+
     @property
     def sample_rate(self) -> int:
         return AIRPLAY_SAMPLE_RATE

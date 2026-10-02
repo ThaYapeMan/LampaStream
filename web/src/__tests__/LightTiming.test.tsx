@@ -111,3 +111,22 @@ it('fine-tunes the AirPlay virtual player and switches Fixed to Auto', async () 
   await screen.findByText('Saved · measuring automatically')
   expect(updatePlayerLatency).toHaveBeenCalledWith('airplay', { strategy: 'auto' })
 })
+
+it.each([false, true])('shows honest AirPlay lag and recovery in Players view=%s', (playersView) => {
+  const e: PlayerLatency = { ...entry, trim_ms: 0, status: { ...entry.status!,
+    source: 'airplay', state: 'lagging', early_delivery_ms: 0, median_processing_ms: 125,
+    lag_ms: 125, applied_delay_ms: 0,
+    safety_message: 'Early delivery was too much for this sender and has been switched off' } }
+  render(<LightTiming playersView={playersView} status={{ ...status(e), active_player_type: 'AirPlay', applied_delay_ms: 0 }} />)
+  expect(screen.getByText('Lights are about 125 ms behind the sound')).toBeVisible()
+  expect(screen.getByText('Lights behind')).toBeVisible()
+  expect(screen.queryByText('In sync')).not.toBeInTheDocument()
+  expect(screen.getByText('Early delivery was too much for this sender and has been switched off')).toBeVisible()
+  expect(screen.getByRole('button', { name: 'Lights 10 milliseconds earlier' })).toBeDisabled()
+})
+
+it('shows the recovery message even before a latency entry exists', () => {
+  render(<LightTiming status={{ ...status(null), active_player_type: 'AirPlay',
+    latency_warning: 'Early delivery was too much for this sender and has been switched off' }} />)
+  expect(screen.getByText('Early delivery was too much for this sender and has been switched off')).toBeVisible()
+})
