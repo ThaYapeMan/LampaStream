@@ -289,3 +289,22 @@ it('keeps selection usable when browser storage is unavailable', async () => {
     expect(screen.getByRole('option', { selected: true })).toHaveTextContent('Joins your AirPlay groups')
   } finally { get.mockRestore(); set.mockRestore() }
 })
+
+it('renders the decorative LMS alpha mask in currentColor without an image', async () => {
+  render(<Players />)
+  const row = await screen.findByRole('option', { name: /LampaStream LMS/ })
+  const icon = row.querySelector('[data-player-icon="LMS"]') as HTMLElement
+  expect(row.querySelector('img')).toBeNull()
+  expect(icon.parentElement).toHaveAttribute('aria-hidden', 'true')
+  expect(icon.parentElement).toHaveClass('text-foreground', 'bg-secondary', 'border')
+  expect(icon.style.backgroundColor).toBe('currentcolor')
+  expect(icon.style.maskImage).toMatch(/^url\(/)
+  expect(icon.style.webkitMaskImage).toBe(icon.style.maskImage)
+  expect(icon.style.maskMode).toBe('alpha')
+  expect(icon.style.maskSize).toBe('contain')
+  expect(icon.style.maskRepeat).toBe('no-repeat')
+  expect(icon.style.maskPosition).toBe('center')
+  expect(icon.style.width).toBe('17px')
+  const icons = document.querySelectorAll('[data-player-icon="LMS"]')
+  expect((icons[1] as HTMLElement).style.width).toBe('22px')
+})

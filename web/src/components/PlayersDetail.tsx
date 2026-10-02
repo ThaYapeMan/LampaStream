@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import { Speaker } from 'lucide-react'
 import { AirPlayReceiverIcon } from '@/components/MediaIcons'
 import { Card, CardContent } from '@/components/ui/card'
@@ -130,12 +130,19 @@ function PlayerIcon({
   return (
     <span
       aria-hidden="true"
-      className={`grid shrink-0 place-items-center rounded-lg border bg-secondary ${detail ? 'h-11 w-11' : 'h-8 w-8'}`}
+      data-player-icon-tile={row.player?.type}
+      style={row.player ? { '--foreground': '216 11.111111% 91.176471%', '--secondary': '218.571429 13.72549% 20%' } as CSSProperties : undefined}
+      className={`grid shrink-0 place-items-center rounded-lg border bg-secondary text-foreground ${detail ? 'h-11 w-11' : 'h-8 w-8'}`}
     >
       {row.player?.type === 'LMS' ? (
-        <img src={lmsIcon} alt="" width={size} height={size} />
+        <span data-player-icon="LMS" style={{
+          width: size, height: size, backgroundColor: 'currentColor',
+          maskImage: `url(${lmsIcon})`, WebkitMaskImage: `url(${lmsIcon})`,
+          maskMode: 'alpha', maskSize: 'contain', maskRepeat: 'no-repeat', maskPosition: 'center',
+          WebkitMaskSize: 'contain', WebkitMaskRepeat: 'no-repeat', WebkitMaskPosition: 'center'
+        }} />
       ) : row.player?.type === 'AirPlay' ? (
-        <AirPlayReceiverIcon width={size} height={size} />
+        <AirPlayReceiverIcon data-player-icon="AirPlay" width={size} height={size} />
       ) : (
         <Speaker size={size} />
       )}

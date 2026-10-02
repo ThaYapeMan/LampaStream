@@ -66,7 +66,33 @@ test('Players groups timings, selects AirPlay, switches Auto and stacks on phone
   await expect(
     page.getByRole('group', { name: 'Other timings', exact: true })
   ).toContainText('Sonos Port')
-  await page.getByRole('option', { name: /Joins your AirPlay groups/ }).click()
+  const measurements: Record<string, unknown> = {}
+  const lms = page.getByRole('option', { name: /LampaStream LMS/ })
+  const air = page.getByRole('option', { name: /Joins your AirPlay groups/ })
+  async function measure(label: string) {
+    const values = await page.locator('[data-player-icon]').evaluateAll(elements => elements.map(el => ({
+      type: el.getAttribute('data-player-icon'), colour: getComputedStyle(el).color,
+      background: getComputedStyle(el).backgroundColor, tileBackground: getComputedStyle(el.parentElement!).backgroundColor,
+      width: getComputedStyle(el).width
+    })))
+    for (const value of values) {
+      expect(value.colour).toBe('rgb(230, 232, 235)')
+      expect(value.tileBackground).toBe('rgb(44, 49, 58)')
+      if (value.type === 'LMS') expect(value.background).toBe(value.colour)
+    }
+    measurements[label] = values
+  }
+  expect(await page.evaluate(() => CSS.supports('mask-image', 'url("test.png")') && CSS.supports('-webkit-mask-image', 'url("test.png")') && CSS.supports('mask-mode', 'alpha'))).toBe(true)
+  await page.mouse.move(0, 0)
+  await measure('LMS selected / AirPlay normal / LMS detail')
+  await air.hover()
+  await measure('AirPlay hover')
+  await air.click()
+  await measure('LMS normal / AirPlay selected / AirPlay detail')
+  await lms.hover()
+  await measure('LMS hover')
+  console.log('PLAYER_ICON_COLOURS', JSON.stringify(measurements))
+
   await expect(
     page.getByText('AirPlay 2 receiver', { exact: true })
   ).toBeVisible()
