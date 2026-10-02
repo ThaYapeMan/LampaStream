@@ -204,7 +204,7 @@ def test_album_art_deterministic_bounded_stops(colours, shares):
     assert len(set(s["colour"] for s in first.stops)) >= min(2, len(colours))
 
 
-def test_art_merge_led_correction_and_background_flat_regions():
+def test_art_merge_led_correction_and_no_background_regions():
     rows = merge([((255, 0, 0), 0.4), ((253, 0, 0), 0.1), ((0, 0, 255), 0.3), ((0, 255, 0), 0.2)])
     assert sum(share for _, share in rows) == pytest.approx(1)
     assert len(rows) == 3
@@ -212,7 +212,7 @@ def test_art_merge_led_correction_and_background_flat_regions():
     assert max(hex_rgb(punchy((255, 128, 80)))) <= 0.951
     assert distance((255, 0, 3), (255, 3, 0)) < 0.02
     palette = extract(image_bytes([(0, 0, 0), (255, 0, 0), (0, 200, 255)], [70, 15, 15]))
-    assert [s["position"] for s in palette.stops] == [0, 15, 35, 50, 65, 85, 100]
+    assert [s["position"] for s in palette.stops] == [0, 100]
 
 
 def test_art_cache_hit_and_failure_keep_current(monkeypatch, caplog):

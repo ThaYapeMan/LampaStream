@@ -338,7 +338,12 @@ class PlayerManager:
                     candidate.palette_stops = session.sync_engine.profile.palette_stops
             session.profile = profile
             session.sync_engine.update_render(profile, mellow)
-        session.music = MusicDirector(self.storage, apply, lambda: self.track_position)
+        def current_palette():
+            from .palettes import Palette
+            stops = session.sync_engine.profile.palette_stops
+            return Palette(name="Current colours", stops=stops) if stops else None
+        session.music = MusicDirector(self.storage, apply, lambda: self.track_position,
+                                      current_palette=current_palette)
         session.music_task = asyncio.create_task(session.music.run(session.coupling),
                                                 name="music-colours")
         session.music_task.add_done_callback(_log_task_failure)

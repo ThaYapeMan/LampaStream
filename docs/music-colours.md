@@ -65,21 +65,38 @@ not edit this setting or restart the receiver to enable artwork.
 
 Artwork parsing and quantisation run off the light loop. Images are bounded to
 8 MB and 16 million pixels and reduced to 192 × 192 before median-cut extraction.
-The owner's two-pass extraction, HSV merge thresholds, share accounting,
-farthest-point rescue, dark-pixel mask and punchy LED correction are implemented.
-Circular hue distance is normalised by its maximum half-turn to 0–1 before the
-specified weighting. Deterministic ties use RGB order.
+Black and neutral pixels no longer define background regions. Pixels with HSV
+saturation below 0.12 are excluded before median-cut quantisation so small vivid
+logos survive a large black or white area. Remaining candidates retain the
+existing weighted HSV near-duplicate merge, without its former farthest-point
+rescue reintroducing near-duplicates.
 
-The common eight-stop limit also applies to extracted palettes. Without a
-background, the four strongest colours retain proportional bands and softened
-boundaries. With a dominant background, the two strongest accents have evenly
-spaced sections, a 40% flat centre and background between them. This fits all
-flat regions and boundary stops within the model. Single-colour artwork repeats
-one colour at both edges.
+Accents rank by `0.85 × saturation × value + 0.15 × share`, with shares measured
+within chromatic pixels. Colourfulness therefore dominates area. Ties use share
+then RGB order. The strongest 2–4 accepted accents have evenly spaced stops;
+there are no background flats or proportional-area bands. Their HSV value is
+lifted to at least 0.55 before the existing punchy LED correction. The 8-bit floor
+is rounded upwards (141/255) to avoid rounding below 0.55. Hue is retained before
+LED correction and output quantisation.
 
-A session cache retains 128 image hashes and 128 artwork URLs. Identical artwork
-is not extracted again. Failed artwork retains the currently displayed palette
-and logs once per failed image/URL; it never turns the lights off.
+One chromatic accent produces three stops: the accent leads, followed by hues
+30 degrees either side at the same saturation/value. Neutral-only covers produce
+no extracted palette: a single neutral stop cannot meet the two-stop minimum.
+The active genre rule's stored palette is used instead, when available; an
+Album art rule cannot recursively fall back to itself. Otherwise the renderer's
+actual current palette is kept, including a previous album palette. User-selected
+context palettes are reused rather than rewritten. The cover never introduces
+black or grey stops.
+
+Now Playing shows one short outcome line: colour count, single-accent extension,
+or the monochrome fallback used. Fallback selection runs after cached extraction,
+so changing genre rules or the current palette cannot reuse a stale contextual
+choice. Image-hash and URL cache keys include extraction version 2; old-method
+entries are ignored. A session retains at most 128 image hashes and 128 artwork
+URLs. Failed artwork keeps the active palette and logs once per failed image/URL.
+
+This corrects the 2 October 2026 report: black background regions previously
+switched lamps off and area-weighted selection suppressed small vivid accents.
 
 ## Genre privacy and rules
 

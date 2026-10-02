@@ -76,6 +76,12 @@ describe('Music colour controls', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Clear manual choices' }))
     await waitFor(() => expect(api.setMusicOverride).toHaveBeenLastCalledWith('', ''))
   })
+  it.each(['Album art: 3 colours', 'Album art: single accent → extended',
+    'Album art: monochrome cover → genre palette',
+    'Album art: monochrome cover → kept current palette'])('shows the extraction outcome: %s', (outcome) => {
+    render(<MusicChoices profiles={[]} music={{ genre: 'house', raw_tags: [], source: 'Track tag', palette_id: 'album-art', energy_profile_id: '', manual: true, album_art_outcome: outcome }} />)
+    expect(screen.getByText(outcome)).toBeVisible()
+  })
   it('offers shared and album-art palettes and real-time rotation', async () => {
     const change = vi.fn(), rotate = vi.fn()
     render(<PalettePicker value="" rotation={0} onChange={change} onRotation={rotate} />)

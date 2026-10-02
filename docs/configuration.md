@@ -619,3 +619,9 @@ Now Playing shows measured sustained energy next to the blend, plus raw genre
 tags, the mapped genre and manual palette/Energy Profile choices. Manual choices
 win over rules until cleared. Transitions last 0.7 seconds by default and can be
 crossfade, through black or through white, with a duration from 0 to 2 seconds.
+
+
+Album-art palettes use 2–4 bright chromatic accents without background colours.
+Small vivid logos take priority over dull large areas. A single accent gains
+neighbouring hues; monochrome covers use the genre palette or keep the active
+palette. Now Playing reports which outcome was used.

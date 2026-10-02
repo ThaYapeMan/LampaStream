@@ -273,7 +273,7 @@ Energy Profile REST schemas expose `energy_source`, `lufs_floor`,
 `frame.sustained_energy` is the live section-loudness value (or null before the
 first measurement). `status.music` contains the mapped `genre`, `raw_tags`,
 metadata `source`, effective rule/manual palette and Energy Profile IDs, the
-`manual` flag and `album_art_available`. Artwork bytes and API keys are never
+`manual` flag, `album_art_available` and the short `album_art_outcome` line. Artwork bytes and API keys are never
 included in preview messages. Track metadata adds genre, album, artwork URL and
 image hash when available; artwork remains owned by the single metadata reader.
 

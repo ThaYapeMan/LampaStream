@@ -9,7 +9,7 @@ from urllib.parse import urlparse
 
 import httpx
 
-from .album_art import ArtworkCache
+from .album_art import CACHE_VERSION, ArtworkCache
 from .genres import GenreLookup, matching_rule
 
 log = logging.getLogger(__name__)
@@ -24,10 +24,11 @@ def track_key(track):
 
 
 class MusicDirector:
-    def __init__(self, storage, apply, current_track, *, transport=None):
+    def __init__(self, storage, apply, current_track, *, transport=None, current_palette=None):
         self.storage, self.apply, self.current_track = storage, apply, current_track
         self.lookup = GenreLookup(storage.music_settings, transport=transport)
         self.transport = transport
+        self.current_palette = current_palette or (lambda: self.album_palette)
         self.art = ArtworkCache()
         self.images = {}
         self.image_failures = set()
@@ -45,14 +46,19 @@ class MusicDirector:
 
     async def artwork(self, track):
         if track.artwork_data:
-            return await asyncio.to_thread(self.art.palette, track.artwork_data, self.album_palette)
+            return await asyncio.to_thread(
+                self.art.palette, track.artwork_data, self.current_palette())
         url = track.artwork_url
+        cache_key = (CACHE_VERSION, url)
         if not url or urlparse(url).scheme not in ("http", "https"):
-            return self.album_palette
-        if url in self.images:
-            return self.images[url]
-        if url in self.image_failures:
-            return self.album_palette
+            self.art.outcome = ""
+            return self.current_palette()
+        if cache_key in self.images:
+            palette, self.art.outcome = self.images[cache_key]
+            return palette
+        if cache_key in self.image_failures:
+            self.art.outcome = "unavailable → kept current palette"
+            return self.current_palette()
         try:
             async with httpx.AsyncClient(timeout=1.0, transport=self.transport) as client:
                 async with client.stream("GET", url) as response:
@@ -62,17 +68,18 @@ class MusicDirector:
                         data.extend(chunk)
                         if len(data) > 8 * 1024 * 1024:
                             raise ValueError("Artwork too large")
-            palette = await asyncio.to_thread(self.art.palette, bytes(data), self.album_palette)
+            palette = await asyncio.to_thread(self.art.palette, bytes(data), self.current_palette())
             if len(self.images) >= 128:
                 self.images.pop(next(iter(self.images)))
-            self.images[url] = palette
+            self.images[cache_key] = (palette, self.art.outcome)
             return palette
         except (httpx.HTTPError, ValueError):
             if len(self.image_failures) >= 128:
                 self.image_failures.clear()
-            self.image_failures.add(url)
+            self.image_failures.add(cache_key)
             log.warning("Album artwork unavailable; keeping the current palette")
-            return self.album_palette
+            self.art.outcome = "unavailable → kept current palette"
+            return self.current_palette()
 
     def render_signature(self, coupling):
         identity = self.status["energy_profile_id"] or coupling.energy_profile_id
@@ -89,6 +96,7 @@ class MusicDirector:
         # Do not include secrets in diagnostic identities or status.
         key = (
             track_key(track),
+            CACHE_VERSION,
             self.render_signature(coupling),
             settings.lastfm_enabled,
             bool(settings.lastfm_api_key),
@@ -108,8 +116,17 @@ class MusicDirector:
             if track_key(self.current_track()) != track_key(track):
                 self.last_key = None  # stale response must not recolour the next track
                 return
+            if self.art.outcome == "monochrome cover":
+                rule_palette, _ = matching_rule(rules, resolution["genre"])
+                genre_palette = (self.storage.get_palette(rule_palette)
+                                 if rule_palette != "album-art" else None)
+                album = genre_palette or self.current_palette()
+                self.art.outcome += (" → genre palette" if genre_palette
+                                     else " → kept current palette")
             self.album_palette = album
             self.status.update(resolution)
+            self.status["album_art_outcome"] = ("Album art: " + self.art.outcome
+                                               if self.art.outcome else "")
         palette_id, energy_id = matching_rule(
             rules,
             self.status["genre"],
@@ -120,7 +137,8 @@ class MusicDirector:
             palette_id=palette_id,
             energy_profile_id=energy_id,
             manual=bool(coupling.manual_palette_id or coupling.manual_energy_profile_id),
-            album_art_available=self.album_palette is not None,
+            album_art_available=(self.album_palette is not None and bool(self.art.outcome)
+                                 and not self.art.outcome.startswith("unavailable")),
         )
         palette = (
             self.album_palette

@@ -398,7 +398,7 @@ export interface MusicSettings {
 }
 export interface MusicStatus {
   genre: string; raw_tags: string[]; source: string; palette_id: string
-  energy_profile_id: string; manual: boolean; album_art_available?: boolean
+  energy_profile_id: string; manual: boolean; album_art_available?: boolean; album_art_outcome?: string
 }
 export const getPalettes = () => request<Palette[]>('/api/palettes')
 export const savePalette = (palette: Palette) => request<Palette>(

@@ -78,3 +78,16 @@ test('Now Playing additions and both new pages fit on phones in light and dark m
     }
   }
 })
+
+
+test('album-art outcome follows extraction and both monochrome fallbacks on Now Playing', async ({ page }) => {
+  const socket = await setup(page)
+  await page.setViewportSize({ width: 390, height: 844 })
+  for (const outcome of ['Album art: 3 colours', 'Album art: single accent → extended',
+    'Album art: monochrome cover → genre palette',
+    'Album art: monochrome cover → kept current palette']) {
+    socket().send(JSON.stringify({ type: 'status', active_coupling_id: 'c', active_player_type: 'LMS', processes: {}, music: { genre: 'house', source: 'Track tag', raw_tags: [], palette_id: 'album-art', energy_profile_id: '', manual: true, album_art_outcome: outcome } }))
+    await expect(page.getByText(outcome, { exact: true })).toBeVisible()
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  }
+})
