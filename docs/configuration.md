@@ -659,3 +659,38 @@ hands the lights back using the coupling's release policy; music can continue
 without reclaiming them. Take lights explicitly takes control again. An idle
 release still resumes automatically when playback returns and the lights are
 available. Repeating Release lights on an already released output does nothing.
+
+### LMS head start
+
+Each LMS virtual player has `head_start_ms` (integer 0–2000, default 500) and
+`speaker_output_delay_ms` (integer −200–500, default 0). These are edited on
+Players, in the existing LMS player editor. Invalid values are rejected.
+
+Head start applies only to **Automatic — LMS sync group** mode. At activation,
+LampaStream sets and verifies `playDelay` on its own virtual player through the
+LMS CLI on port 9090. It never changes another player's preferences or writes
+`startDelay`. A non-zero `startDelay` is warned about: the initial offset would
+otherwise differ from the steady-state offset. Set it to 0 yourself in LMS.
+With head start 0, the existing analysis and delay-buffer path is used; activation
+sets the virtual player's `playDelay` to 0 to clear any previous head start.
+Manual follow mode leaves LMS preferences and the existing timing path unchanged.
+
+To calibrate your speaker:
+
+1. Set Head start to 500 ms and choose Automatic — LMS sync group. Save the player.
+2. In LMS, synchronise the LampaStream virtual player with the real speaker, then
+   activate the coupling with Go. LampaStream does not create the sync group.
+3. Play music. Check for **Scheduled · LMS head start** in Light timing and compare
+   the measured head start with processing time. If the card reports
+   **Not enough head start, using delay instead**, increase head start and activate
+   again. Allow the measurement to settle.
+4. Play a click track and film the lamp and audible clicks in slow motion. Set
+   Speaker output delay once to account for the real speaker's output chain:
+   increase it when the lights precede the sound; decrease it when they follow.
+   Frame counting gives the time difference: 240 fps gives about 4.17 ms per frame.
+5. Repeat the recording to verify, then leave Speaker output delay alone. Use the
+   existing fine-tune for the lamps' response or a small listening adjustment.
+
+Head start steps by 10 ms; Speaker output delay steps by 1 ms. Both also accept a
+whole number directly. Saving an active player's timing settings uses the existing
+player-edit deactivation behaviour; activate again to apply them.

@@ -687,5 +687,7 @@ def test_non_huesync_names_untouched(tmp_path: Path) -> None:
     config.write_text(json.dumps(data))
     needed = migrate_file(config)
     assert needed  # schema upgrade preserves operator names
-    assert json.loads(config.read_text())["virtual_players"] == data["virtual_players"]
+    expected = [dict(row, head_start_ms=500, speaker_output_delay_ms=0)
+                for row in data["virtual_players"]]
+    assert json.loads(config.read_text())["virtual_players"] == expected
     assert not migrate_file(config)

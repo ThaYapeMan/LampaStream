@@ -459,3 +459,45 @@ and unavailable states retain words and icons as well as colour.
 The existing 30 Hz scene output quantises the requested wait to a scene interval
 (about 33 ms). Measurement precision describes P, not absolute audible or lamp
 alignment. No physical installation was accessed during development.
+
+## LMS head start and generalised timed scheduling
+
+The timestamped output path now accepts either the AirPlay early tap or an LMS
+SHM write-clock estimate. The PCM producer and DSP are unchanged. In LMS sync-group
+mode, the virtual player's verified `playDelay` advances it relative to the real
+speaker. `startDelay` is only read: a non-zero value warns because start and
+steady-state offsets would differ. Manual follow mode and head start 0 retain the
+previous delay-buffer path.
+
+The one production SHM reader observes the v1 absolute stereo-frame write position,
+generation and gap counter with monotonic read timestamps on every poll. The
+canonical worker's existing 5 ms wait targets 200 Hz when waiting for data; late
+reads are rejected, rather than interpreted as producer skips. There is no second
+PCM reader. A 30-second sliding fit constrains advancing positions between their
+previous and first-observing reads. Long-baseline midpoint slopes estimate rate,
+limited to ±2000 ppm around the reported nominal rate; robust 95th-percentile lower
+and 5th-percentile upper interval bounds estimate the clock offset. At startup it
+uses nominal rate. Its accuracy depends on having varied, timely read brackets;
+simulated paced writers with jitter and drift are tested to p95 error ≤2 ms.
+
+Audible time is fitted write time + configured head start + speaker output delay.
+Canonicalisation preserves this through existing play spans; fine-tune is applied
+once by SceneSchedule. Every publication is rendered and scheduled, including
+onsets between output ticks. The 30 Hz sender displays the newest due scene, as
+with AirPlay. A past target is sent on the next output tick, never held further.
+Negative trim is limited by measured lead p5 minus median processing.
+
+A source generation/gap change, a predicted write outside its read bracket by more
+than 5 ms, a pause beyond the observed export-batch interval plus 5 ms (at least
+20 ms), transport pause/resume, track change or a backwards transport seek starts
+a new timing epoch.
+The triggering PCM is discarded and queued scenes from the old epoch cannot be
+sent. A poll gap over 15 ms does not prove a skip and is excluded from the fit.
+The Hue ownership and release generations continue to invalidate scheduled scenes.
+
+When lead p5 stays below p95 processing +40 ms for five continuous seconds, output
+uses the existing delay-buffer path and reports “Not enough head start, using delay
+instead”. Measurements continue through that path. Scheduling returns automatically
+when measured lead reaches that threshold; its generation changes to discard old
+queued work. No receiver or player restart is used for fallback or recovery.
+See the LMS head-start procedure in configuration.md for owner calibration.

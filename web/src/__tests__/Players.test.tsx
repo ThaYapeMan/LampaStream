@@ -18,6 +18,7 @@ vi.mock('@/lib/api', async (original) => ({
   getPlayerLatencies: vi.fn(),
   getCouplings: vi.fn().mockResolvedValue([]),
   createPlayerLatency: vi.fn(),
+  updateVirtualPlayer: vi.fn(),
   updatePlayerLatency: vi.fn(),
   deletePlayerLatency: vi.fn(),
   deleteVirtualPlayer: vi.fn()
@@ -307,4 +308,16 @@ it('renders the decorative LMS alpha mask in currentColor without an image', asy
   expect(icon.style.width).toBe('17px')
   const icons = document.querySelectorAll('[data-player-icon="LMS"]')
   expect((icons[1] as HTMLElement).style.width).toBe('22px')
+})
+
+it('edits and saves the two LMS timing fields with steppers', async () => {
+  vi.mocked(api.updateVirtualPlayer).mockResolvedValue(lms)
+  render(<Players selectedPlayer="lms" />)
+  await screen.findByRole('option', { selected: true })
+  fireEvent.click(screen.getByRole('button', { name: 'Edit', exact: true }))
+  expect(screen.getByRole('spinbutton', { name: 'Head start', exact: true })).toHaveValue(500)
+  fireEvent.click(screen.getByRole('button', { name: 'Increase Head start' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Decrease Speaker output delay' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Save', exact: true }))
+  await waitFor(() => expect(api.updateVirtualPlayer).toHaveBeenCalledWith('lms', expect.objectContaining({ head_start_ms: 510, speaker_output_delay_ms: -1 })))
 })

@@ -312,3 +312,26 @@ Released output status in `/api/status`, action responses and the preview
 websocket includes `release_kind`: `explicit`, `external` or `idle`. Other
 states omit this field. Only idle releases can re-acquire automatically; an
 explicit or external release waits for Take lights or a new Go/Start action.
+
+### LMS timestamped head start
+
+Virtual-player create, get, list and patch include `head_start_ms` (integer
+0–2000, default 500) and `speaker_output_delay_ms` (integer −200–500, default 0).
+Fractions, booleans, nulls and out-of-range values return 422. Existing
+configurations receive additive defaults, preserving explicit values.
+
+`/api/status` and preview websocket status expose `lms_timing` for an active LMS
+coupling, independently of whether a saved latency entry exists. It includes:
+
+- `source: "lms"`, `state` (`scheduled`, `fallback`, `off` or `unavailable`),
+  `reason`, and `audio_source` (`LMS head start` or `delay fallback` when timed);
+- configured `head_start_ms` and `speaker_output_delay_ms`;
+- measured `lead_p5_ms`, `lead_p50_ms`, `median_processing_ms`, `trim_ms` and
+  `available_ms` (non-negative lead p5 minus median processing);
+- `timing_generation` and `tap_drop_count` (0: SHM gaps use generation invalidation).
+
+Measured fields are null until data exists; unavailable/off states contain only
+state, source and reason. The followed player's latency-status response also
+includes the LMS timing fields when its active coupling uses the timed source.
+The existing `applied_delay_ms` then reports the estimated scheduled hold, including
+trim, rather than the old position probe's delay. AirPlay fields remain unchanged.

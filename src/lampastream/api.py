@@ -157,6 +157,8 @@ class VirtualPlayerCreateBody(BaseModel):
     player_mac: str = ""
     alsa_device: str = ""
     follow_player_mac: str = ""
+    head_start_ms: int = Field(default=500, ge=0, le=2000, strict=True)
+    speaker_output_delay_ms: int = Field(default=0, ge=-200, le=500, strict=True)
     follow_mode: Literal["manual", "sync_group"] = "manual"
 
 
@@ -169,6 +171,8 @@ class VirtualPlayerPatchBody(BaseModel):
     display_name: str | None = None
     alsa_device: str | None = None
     follow_player_mac: str | None = None
+    head_start_ms: int = Field(default=500, ge=0, le=2000, strict=True)
+    speaker_output_delay_ms: int = Field(default=0, ge=-200, le=500, strict=True)
     follow_mode: Literal["manual", "sync_group"] | None = None
 
 
@@ -398,7 +402,7 @@ _C_DEACTIVATE_FIELDS: frozenset[str] = frozenset({
     # running session.
     "player_id", "zone_id",
     "lms_host", "lms_port", "player_name", "display_name", "alsa_device",
-    "follow_player_mac", "follow_mode",
+    "follow_player_mac", "follow_mode", "head_start_ms", "speaker_output_delay_ms",
 })
 # FK fields that do NOT require a full restart — handled via lighter live-update
 # paths in _apply_coupling_action().
@@ -656,6 +660,7 @@ async def get_status(request: Request):
         "sync_master_name": manager.detected_sync_master_name,
         "applied_delay_ms": manager.applied_delay_ms,
         "latency_warning": manager.latency_warning,
+        "lms_timing": manager.lms_timing if isinstance(manager.lms_timing, dict) else None,
         "processes": manager.process_status,
         "bridge_connected": manager.bridge_connected,
         "output_status": (manager.output_status
@@ -796,6 +801,8 @@ async def create_virtual_player(request: Request, body: VirtualPlayerCreateBody)
         alsa_device=body.alsa_device,
         follow_player_mac=body.follow_player_mac,
         follow_mode=body.follow_mode,
+        head_start_ms=body.head_start_ms,
+        speaker_output_delay_ms=body.speaker_output_delay_ms,
     )
     storage.save_virtual_player(player)
     return JSONResponse(content=player.to_dict(), status_code=201)

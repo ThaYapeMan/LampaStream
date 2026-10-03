@@ -518,6 +518,9 @@ class PlayerManager:
     def applied_delay_ms(self) -> int:
         if not self._active:
             return 0
+        lms = self.lms_timing
+        if lms and lms["state"] == "scheduled" and lms.get("lead_p5_ms") is not None:
+            return max(0, round(lms["available_ms"] + lms["trim_ms"]))
         return self._active.probe.current_delay_ms()
 
     @property
@@ -852,7 +855,23 @@ class PlayerManager:
         """
         await asyncio.to_thread(self._wait_for_shm, profile.player_mac)
 
-        shm_source = TeePcmSource(SqueezeliteShmStereoSource())
+        from .lms_timing import LmsTimedSource, configure_head_start
+        player = (self.storage.get_virtual_player(session.coupling.player_id)
+                  if session.coupling else None)
+        source = SqueezeliteShmStereoSource()
+        session.lms_timed_source = None
+        if player and player.follow_mode == "sync_group":
+            verified = False
+            try:
+                verified = await asyncio.to_thread(configure_head_start, player)
+            except (OSError, ValueError, IndexError) as exc:
+                log.warning("LMS head start unavailable; using delay instead: %s", exc)
+            if verified and player.head_start_ms:
+                source = LmsTimedSource(source, player,
+                                        lambda: session.track_source.read()
+                                        if session.track_source else None)
+                session.lms_timed_source = source
+        shm_source = TeePcmSource(source)
         shm_source.open(profile.player_mac)
         session.shm_source = shm_source
 
@@ -861,6 +880,7 @@ class PlayerManager:
         engine = SyncEngine(
             None, profile, probe=session.probe,
             mellow_profile=mellow_profile, analyser=pcm_analyser,
+            timing=(session.lms_timed_source.timing if session.lms_timed_source else None),
         )
         session.sync_engine = engine
         engine.start()
@@ -1154,6 +1174,33 @@ class PlayerManager:
             return player.follow_mode if player else None
         return None
 
+    @property
+    def lms_timing(self):
+        session = self._active
+        if (not session or getattr(session, "player_type", None) != VirtualPlayerType.LMS
+                or not getattr(session, "coupling", None)):
+            return None
+        player = self.storage.get_virtual_player(session.coupling.player_id)
+        if player is None:
+            return None
+        source = getattr(session, "lms_timed_source", None)
+        if source:
+            data = source.timing.snapshot()
+            return dict(source="lms", audio_source=data["tap_source"],
+                        state="scheduled" if data["tap_source"] == "LMS head start" else "fallback",
+                        reason=source.reason, head_start_ms=player.head_start_ms,
+                        speaker_output_delay_ms=player.speaker_output_delay_ms,
+                        lead_p5_ms=data["lead_p5_ms"], lead_p50_ms=data["lead_p50_ms"],
+                        median_processing_ms=data["median_processing_ms"], tap_drop_count=0,
+                        timing_generation=data["tap_generation"],
+                        trim_ms=getattr(getattr(session.probe, "config", None), "trim_ms", 0),
+                        available_ms=max(0, (data["lead_p5_ms"] or 0)
+                                         - (data["median_processing_ms"] or 0)))
+        return dict(source="lms", state="off" if player.head_start_ms == 0 else "unavailable",
+                    reason=("Head start needs sync-group mode" if player.follow_mode != "sync_group"
+                            else "Head start is off" if player.head_start_ms == 0
+                            else "Head start could not be verified; using delay instead"))
+
     def latency_status(self, config) -> dict:
         session = self._active
         airplay = any(player.type == VirtualPlayerType.AIRPLAY
@@ -1188,6 +1235,9 @@ class PlayerManager:
                               tap_drop_count=data["tap_drop_count"],
                               median_processing_ms=data["median_processing_ms"])
             result["safety_message"] = self._airplay_safety_message
+        if (session and session.player_type == VirtualPlayerType.LMS
+                and session.latency_mac == config.player_mac and self.lms_timing):
+            result.update(self.lms_timing)
         return result
 
     @property
@@ -1284,6 +1334,11 @@ class PlayerManager:
                 new_probe = NoLatencyProbe()
                 self.latency_warning = None
 
+        if getattr(session, "lms_timed_source", None) is not None:
+            # Timed scenes use trim, not the legacy fixed-delay fallback. Retain
+            # that probe's delay for insufficient-headroom mode only.
+            new_probe.config = self.storage.get_player_latency(master) if master else None
+            self.latency_warning = None
         old_probe = session.probe
         await old_probe.stop()
         session.latency_mac = master

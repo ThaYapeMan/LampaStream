@@ -3157,7 +3157,7 @@ class SyncEngine:
                 continue
             if self._timing is not None:
                 schedule.reset(self._timing.tap_generation)
-                if (self._timing.tap_source == "early tap"
+                if (self._timing.tap_source in {"early tap", "LMS head start"}
                         and isinstance(self._analyser, CanonicalAnalysisPipeline)):
                     self._probe.current_delay_ms()
                     config = getattr(self._probe, "config", None)

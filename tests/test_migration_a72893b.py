@@ -35,8 +35,12 @@ def historical():
 
 
 def expected_current_rows(data, key):
-    # This retirement intentionally changes only the old internal analysis source.
+    # Current migrations add defaults without changing historical operator values.
     rows = copy.deepcopy(data[key])
+    if key == 'virtual_players':
+        for row in rows:
+            row.setdefault('head_start_ms', 500)
+            row.setdefault('speaker_output_delay_ms', 0)
     if key == 'analysers':
         for row in rows:
             if row.get('bars_source') == 'cava':
@@ -369,12 +373,12 @@ def test_missing_old_mac_can_be_generated_and_mac_case_is_not_identity_change():
     data = historical()
     for profile in data['profiles']:
         profile['player_mac'] = ''
-    assert convert(data)['virtual_players'] == data['virtual_players']
+    assert convert(data)['virtual_players'] == expected_current_rows(data, 'virtual_players')
     data = historical()
     data['virtual_players'][0]['player_mac'] = '02:AA:BB:CC:DD:01'
     for profile in data['profiles']:
         profile['player_mac'] = '02:aa:bb:cc:dd:01'
-    assert convert(data)['virtual_players'] == data['virtual_players']
+    assert convert(data)['virtual_players'] == expected_current_rows(data, 'virtual_players')
 
 
 def test_profile_field_policy_is_exhaustive():
@@ -393,6 +397,6 @@ def test_reference_rewiring_with_same_physical_identity_is_preserved(collection,
     data[collection].append(replacement)
     data['couplings'][0][reference] = replacement['id']
     result = convert(data)
-    assert result[collection] == data[collection]
+    assert result[collection] == expected_current_rows(data, collection)
     assert result['couplings'] == expected_current_rows(data, 'couplings')
     validate_current(result, references=True)

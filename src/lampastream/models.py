@@ -387,8 +387,15 @@ class VirtualPlayer:
     # whatever LMS sends it directly.
     follow_player_mac: str = ""
     follow_mode: str = "manual"
+    head_start_ms: int = 500
+    speaker_output_delay_ms: int = 0
 
     def __post_init__(self) -> None:
+        for name, low, high in (("head_start_ms", 0, 2000),
+                                ("speaker_output_delay_ms", -200, 500)):
+            value = getattr(self, name)
+            if type(value) is not int or not low <= value <= high:
+                raise ValueError(f"Invalid {name}: expected integer {low}..{high}")
         if self.follow_mode not in {"manual", "sync_group"}:
             raise ValueError(f"Invalid follow_mode {self.follow_mode!r}")
 
@@ -404,6 +411,8 @@ class VirtualPlayer:
             "alsa_device": self.alsa_device,
             "follow_player_mac": self.follow_player_mac,
             "follow_mode": self.follow_mode,
+            "head_start_ms": self.head_start_ms,
+            "speaker_output_delay_ms": self.speaker_output_delay_ms,
         }
 
     @classmethod

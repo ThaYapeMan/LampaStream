@@ -348,7 +348,8 @@ def test_native_publications_keep_rtp_play_times(ingress):
 
 @pytest.mark.parametrize("lead", [0.5, 0.15, 0.098, 0.02])
 @pytest.mark.parametrize("flush", [False, True])
-def test_production_output_loop_obeys_targets_and_flush(monkeypatch, lead, flush):
+@pytest.mark.parametrize("source", ["early tap", "LMS head start"])
+def test_production_output_loop_obeys_targets_and_flush(monkeypatch, lead, flush, source):
     import asyncio
     from types import SimpleNamespace
 
@@ -359,7 +360,7 @@ def test_production_output_loop_obeys_targets_and_flush(monkeypatch, lead, flush
     clock = [10.098]
     diagnostics = TimingDiagnostics(clock=lambda: clock[0])
     diagnostics.arrival(352, 10)
-    diagnostics.tap_source = "early tap"
+    diagnostics.tap_source = source
     diagnostics.tap_generation = 1
     diagnostics.tap_arrival(lead, 0)
     diagnostics.processing(10, clock[0], clock[0])

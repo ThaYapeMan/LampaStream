@@ -91,7 +91,7 @@ export interface PlayerLatency {
     trim_ms: number
     sample_count: number
     precision_ms: number | null
-    source?: 'airplay'
+    source?: 'airplay' | 'lms'
     lag_ms?: number | null
     safety_message?: string | null
     audio_source?: string
@@ -206,6 +206,8 @@ export interface VirtualPlayer {
   player_mac: string
   alsa_device?: string
   follow_player_mac: string
+  head_start_ms?: number
+  speaker_output_delay_ms?: number
   follow_mode: 'manual' | 'sync_group'
 }
 

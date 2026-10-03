@@ -18,3 +18,7 @@ See [Music colours and transitions](../music-colours.md) for design decisions.
 `lights-row-and-appearance.png` is the owner's approved design for the permanent
 Now Playing Lights row and the sidebar Appearance control. State annotations
 in that image describe alternatives; they are not interface elements.
+
+`lms-head-start.png` is the owner's approved design for the two LMS editor fields
+and the timing line in the existing Light timing card. Numbered annotations and
+alternative fallback text describe states; they are not additional UI elements.

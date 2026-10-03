@@ -244,7 +244,12 @@ def _migrate_palettes(data):
 
 
 def _migrate_release(data):
-    from .models import Coupling
+    from .models import Coupling, VirtualPlayer
+    for row in data.get("virtual_players", []):
+        player = VirtualPlayer(head_start_ms=row.get("head_start_ms", 500),
+                               speaker_output_delay_ms=row.get("speaker_output_delay_ms", 0))
+        row["head_start_ms"] = player.head_start_ms
+        row["speaker_output_delay_ms"] = player.speaker_output_delay_ms
     for row in data.get("couplings", []):
         normal = Coupling.from_dict(row)
         row["release_after_idle_s"] = normal.release_after_idle_s

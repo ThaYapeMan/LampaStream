@@ -55,9 +55,12 @@ export function LightTiming({ status, onOpenLatency, playersView = false, contro
     if (!pending.current && desiredTrim.current === null) setTrim(entry?.trim_ms ?? 0)
   }, [entry, override])
   useEffect(() => { if (!message) return; const timer = setTimeout(() => setMessage(''), 4000); return () => clearTimeout(timer) }, [message])
+  const lms = status?.lms_timing
   const current = override ?? entry
   const timing = current?.status
-  const { state, applied } = lightTimingState(current, status, airplay)
+  const { state: baseState, applied } = lightTimingState(current, status, airplay)
+  const scheduledLms = lms?.state === 'scheduled'
+  const state = scheduledLms ? 'stable' : baseState
   const safetyMessage = timing?.safety_message || (airplay ? status?.latency_warning : null)
   const group = state === 'group'
   const states = {
@@ -83,7 +86,7 @@ export function LightTiming({ status, onOpenLatency, playersView = false, contro
     finally { setBusy(false) }
   }
   const measuredHeadroom = Math.max(0, (timing?.lead_p5_ms ?? 0) - (timing?.median_processing_ms ?? 0))
-  const minimumTrim = airplay && timing?.audio_source ? -Math.floor(Math.min(1000, measuredHeadroom) / 10) * 10 : airplay && timing?.early_delivery_ms === 0 ? 0 : -1000
+  const minimumTrim = lms?.state === 'scheduled' ? -Math.floor(Math.min(1000, Math.max(0, (lms.lead_p5_ms ?? 0) - (lms.median_processing_ms ?? 0))) / 10) * 10 : airplay && timing?.audio_source ? -Math.floor(Math.min(1000, measuredHeadroom) / 10) * 10 : airplay && timing?.early_delivery_ms === 0 ? 0 : -1000
   const lagText = timing?.audio_source ? `Lights about ${timing.lag_ms ?? Math.round(timing.median_processing_ms ?? 0)} ms behind` : `Lights are about ${timing?.lag_ms ?? Math.round(timing?.median_processing_ms ?? 0)} ms behind the sound`
   const tapDetails = airplay && timing?.audio_source ? <><p className="mt-2 text-xs text-muted-foreground">{timing.audio_source === 'early tap' ? `Audio arrives about ${Math.round(timing.lead_p50_ms ?? 0)} ms early (p5 ${Math.round(timing.lead_p5_ms ?? 0)} ms)` : 'Audio arrives at playout time'}</p><p className="text-xs text-muted-foreground">Source: {timing.audio_source} · Tap dropped records: {timing.tap_drop_count ?? 0}</p></> : null
   async function fineTune(delta: number) {
@@ -96,8 +99,11 @@ export function LightTiming({ status, onOpenLatency, playersView = false, contro
     } catch (e) { desiredTrim.current = null; setTrim(previous); setError(e instanceof Error ? e.message : 'Could not save') }
     finally { pending.current = false; setBusy(false) }
   }
+  const lmsLine = lms && <p data-testid="lms-timing" className="text-sm text-muted-foreground">{scheduledLms
+    ? `Head start ${Math.round(lms.lead_p5_ms ?? 0)} ms · processing ${Math.round(lms.median_processing_ms ?? 0)} ms · fine-tune ${trim >= 0 ? '+' : ''}${trim} ms`
+    : lms.reason}</p>
   if (playersView) {
-    const explanation = state === 'lagging' ? lagText
+    const explanation = scheduledLms ? 'Lights follow measured LMS play times.' : state === 'lagging' ? lagText
       : state === 'stable' ? airplay && timing?.audio_source === 'early tap' ? 'Lights on time' : 'Measured automatically and kept up to date.'
       : state === 'fixed' ? 'A fixed delay you set by hand.'
       : state === 'none' ? 'The lights are not delayed.'
@@ -109,9 +115,10 @@ export function LightTiming({ status, onOpenLatency, playersView = false, contro
     return <Card aria-labelledby={`${id}-title`} data-testid="light-timing">
       <CardHeader className="flex-row flex-wrap items-center gap-3 space-y-0 py-4">
         <h2 id={`${id}-title`} className="text-sm font-semibold">Light timing for {name}</h2>
-        <Badge variant="secondary" className={`gap-1 border-0 ${colour}`}><Icon aria-hidden="true" className="h-3 w-3" />{label}</Badge>
+        <Badge variant="secondary" className={`gap-1 border-0 ${colour}`}><Icon aria-hidden="true" className="h-3 w-3" />{lms?.state === 'scheduled' ? 'Scheduled · LMS head start' : label}</Badge>
       </CardHeader>
       <CardContent className="space-y-4">
+        {lmsLine}
         <div className="grid items-center gap-4 sm:grid-cols-[minmax(0,1fr)_auto]">
           <div><div className={`text-4xl font-semibold tabular-nums ${state === 'idle' ? 'text-muted-foreground' : ''}`}>{seconds(applied)}<small className="ml-1 text-xl text-muted-foreground">s</small></div><p className="mt-2 text-sm text-muted-foreground">{explanation}</p>{tapDetails}</div>
           <div className="space-y-3 sm:text-right">{controls}
@@ -138,17 +145,18 @@ export function LightTiming({ status, onOpenLatency, playersView = false, contro
       <button className="flex items-center gap-1 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-expanded={open} aria-controls={`${id}-body`} onClick={() => { setOpen(!open); try { localStorage.setItem('lightTimingOpen', open ? '0' : '1') } catch { /* Storage may be unavailable. */ } }}>
         <ChevronRight aria-hidden="true" className={`h-4 w-4 text-muted-foreground transition-transform motion-reduce:transition-none ${open ? 'rotate-90' : ''}`} /><h2 id={`${id}-title`} className="text-base font-semibold">Light timing</h2>
       </button>
-      <Badge variant="secondary" className={`gap-1 border-0 ${colour}`}><Icon aria-hidden="true" className="h-3 w-3" />{label}</Badge>
+      <Badge variant="secondary" className={`gap-1 border-0 ${colour}`}><Icon aria-hidden="true" className="h-3 w-3" />{lms?.state === 'scheduled' ? 'Scheduled · LMS head start' : label}</Badge>
       {!open && <span className="font-mono text-sm tabular-nums">{state === 'none' ? 'No delay' : `${seconds(applied)} s`}</span>}
       <a href={`/players?player=${encodeURIComponent(mac ?? '')}`} className="ml-auto text-sm text-primary hover:underline" onClick={e => { if (onOpenLatency) { e.preventDefault(); onOpenLatency() } }}>Player settings</a>
     </CardHeader>
     <CardContent id={`${id}-body`} hidden={!open} className="space-y-4">
+      {lmsLine}
       <div className={state === 'stable' ? 'grid gap-5 sm:grid-cols-2 items-center' : 'space-y-3'}>
         <div>
           <div className={`text-4xl font-semibold tabular-nums ${state === 'idle' ? 'text-muted-foreground' : ''}`}>
             {state === 'none' ? 'No delay' : <>{seconds(applied)}<small className="ml-1 text-xl text-muted-foreground">s</small></>}
           </div>
-          {state === 'stable' && <p className="mt-2 text-sm text-muted-foreground">{airplay ? <>Lights follow measured audio play times for the AirPlay group.</> : <>Lights wait this long so they match what you hear on <b className="text-foreground">{name}</b>.</>}</p>}
+          {state === 'stable' && <p className="mt-2 text-sm text-muted-foreground">{scheduledLms ? <>Lights follow measured LMS play times.</> : airplay ? <>Lights follow measured audio play times for the AirPlay group.</> : <>Lights wait this long so they match what you hear on <b className="text-foreground">{name}</b>.</>}</p>}
         </div>
         {state === 'stable' && <div className="flex items-center gap-3 text-xs text-muted-foreground" aria-hidden="true">
           <span className="grid justify-items-center gap-1"><Lightbulb className="h-9 w-9 rounded-lg border bg-secondary p-2" />Lights</span>

@@ -150,3 +150,12 @@ it.each([
   if (lead <= 98) expect(earlier).toBeDisabled()
   else expect(earlier).toBeEnabled()
 })
+it.each([
+  ['scheduled', null, 'Head start 486 ms · processing 19 ms · fine-tune +0 ms'],
+  ['fallback', 'Not enough head start, using delay instead', 'Not enough head start, using delay instead'],
+  ['unavailable', 'Head start needs sync-group mode', 'Head start needs sync-group mode'],
+] as const)('shows LMS %s timing in the existing card', (state, reason, text) => {
+  render(<LightTiming status={{ ...status(), lms_timing: { state, reason, lead_p5_ms: 486, median_processing_ms: 19 } }} />)
+  expect(screen.getByTestId('lms-timing')).toHaveTextContent(text)
+  if (state === 'scheduled') expect(screen.getByText('Scheduled · LMS head start')).toBeVisible()
+})

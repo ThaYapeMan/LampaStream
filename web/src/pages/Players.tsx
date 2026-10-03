@@ -40,6 +40,8 @@ interface FormState {
   display_name: string
   follow_player_mac: string
   follow_mode: 'manual' | 'sync_group'
+  head_start_ms: string
+  speaker_output_delay_ms: string
 }
 
 function defaultForm(player?: VirtualPlayer): FormState {
@@ -51,6 +53,8 @@ function defaultForm(player?: VirtualPlayer): FormState {
     display_name: player?.display_name ?? '',
     follow_player_mac: player?.follow_player_mac ?? '',
     follow_mode: player?.follow_mode ?? 'manual',
+    head_start_ms: String(player?.head_start_ms ?? 500),
+    speaker_output_delay_ms: String(player?.speaker_output_delay_ms ?? 0),
   }
 }
 
@@ -158,6 +162,8 @@ export function Players({ activeCouplingId = null, status = null, selectedPlayer
           display_name: form.display_name,
           follow_player_mac: form.follow_player_mac,
           follow_mode: form.follow_mode,
+          ...(!isAirPlay ? { head_start_ms: Number(form.head_start_ms),
+            speaker_output_delay_ms: Number(form.speaker_output_delay_ms) } : {}),
         })
       } else {
         await createVirtualPlayer({
@@ -168,6 +174,8 @@ export function Players({ activeCouplingId = null, status = null, selectedPlayer
           display_name: form.display_name,
           follow_player_mac: form.follow_player_mac,
           follow_mode: form.follow_mode,
+          ...(!isAirPlay ? { head_start_ms: Number(form.head_start_ms),
+            speaker_output_delay_ms: Number(form.speaker_output_delay_ms) } : {}),
         })
       }
       setEditorOpen(false)
@@ -224,7 +232,7 @@ export function Players({ activeCouplingId = null, status = null, selectedPlayer
       <PlayersDetail rows={rows} selected={selected} onSelect={select} onEdit={openEdit} onDelete={handleDelete} onReload={load} onNowPlaying={onNowPlaying} status={status} activePlayerId={activeCoupling?.player_id} />
 
       <Dialog open={editorOpen} onOpenChange={(o) => { if (!o) setEditorOpen(false) }}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-h-[90dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingPlayer ? 'Edit virtual player' : 'New virtual player'}</DialogTitle>
           </DialogHeader>
@@ -359,6 +367,20 @@ export function Players({ activeCouplingId = null, status = null, selectedPlayer
                   )}
                 </div>
                 )}
+
+                {([
+                  ['head_start_ms', 'Head start', 0, 2000, 10, 'LampaStream plays this much ahead of your speaker, so the lights can be on time. 0 turns it off.'],
+                  ['speaker_output_delay_ms', 'Speaker output delay', -200, 500, 1, 'Extra delay inside the speaker you follow, such as a Squeezebox Radio. Measure once, then leave it.'],
+                ] as const).map(([field, label, min, max, step, help]) => <FormRow key={field} label={label}>
+                  <div className="inline-flex max-w-full items-center overflow-hidden rounded-md border bg-background">
+                    <Input type="number" aria-label={label} min={min} max={max} step={step} value={form[field]}
+                      className="min-h-11 w-24 border-0 shadow-none" onChange={e => set(field, e.target.value)} />
+                    <span className="pr-2 text-sm text-muted-foreground">ms</span>
+                    <Button type="button" variant="ghost" className="min-h-11 min-w-11 rounded-none border-l" aria-label={`Decrease ${label}`} disabled={Number(form[field]) <= min} onClick={() => set(field, String(Math.max(min, Number(form[field]) - step)))}>−</Button>
+                    <Button type="button" variant="ghost" className="min-h-11 min-w-11 rounded-none border-l" aria-label={`Increase ${label}`} disabled={Number(form[field]) >= max} onClick={() => set(field, String(Math.min(max, Number(form[field]) + step)))}>+</Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{help}</p>
+                </FormRow>)}
 
                 {editingPlayer && (
                   <div className="space-y-1">
