@@ -174,6 +174,7 @@ def test_audible_time_and_canonical_publications():
             assert p.features.play_monotonic == pytest.approx(10.53 + p.sample_pos / 48000,
                                                              abs=.003)
             assert p.features.timing_generation == timed.timing.tap_generation
+            assert p.features.received_monotonic is not None
     finally:
         pipeline.stop()
 
@@ -222,8 +223,8 @@ def test_timed_output_renders_every_publication_without_latest_sampling(monkeypa
     import asyncio
     from dataclasses import replace
 
-    from lampastream.airplay_timing import TimingDiagnostics
     from lampastream.latency import NoLatencyProbe
+    from lampastream.lms_timing import LmsTimingDiagnostics
     from lampastream.models import Profile
     from lampastream.sync_engine import CanonicalAnalysisPipeline, SyncEngine
     from lampastream.types import AudioFeatures
@@ -244,14 +245,18 @@ def test_timed_output_renders_every_publication_without_latest_sampling(monkeypa
         def latest(self):
             raise AssertionError('Timed sources must not sample latest()')
 
-    diagnostics = TimingDiagnostics(clock=lambda: now[0])
+    diagnostics = LmsTimingDiagnostics(clock=lambda: now[0])
     diagnostics.tap_source = 'LMS head start'
     diagnostics.tap_generation = 1
-    effect = SimpleNamespace(render=Mock(return_value='scene'), mix=.2)
+    def render(*args):
+        now[0] += .002
+        return 'scene'
+    effect = SimpleNamespace(render=Mock(side_effect=render), mix=.2)
     engine = SyncEngine(None, Profile(), analyser=Pipeline(), probe=NoLatencyProbe(),
                         timing=diagnostics)
     engine._effect = effect
     output = Mock()
+    output.send.side_effect = lambda *args: now.__setitem__(0, now[0] + .001)
 
     async def sleep(interval):
         now[0] += interval
@@ -270,6 +275,11 @@ def test_timed_output_renders_every_publication_without_latest_sampling(monkeypa
     assert effect.render.call_args_list[1].args[0].onset is True
     output.send.assert_called_once()
     assert output.send.call_args.args[1] >= 10.5
+
+    data = diagnostics.snapshot()
+    assert data['median_processing_ms'] > 0
+    assert len([e for e in data['events'] if e['kind'] == 'scene-ready']) == 3
+    assert data['events'][-1]['sent_monotonic'] >= 10.5
 
 
 def test_settings_rest_round_trip_and_bounds(tmp_path):
@@ -336,9 +346,16 @@ def test_status_uses_measured_scheduled_hold_and_legacy_when_off(tmp_path):
     diagnostics.tap_arrival(.486, 0)
     diagnostics.arrival(441, 1)
     diagnostics.processing(1, 1.019, 1.5)
-    session.lms_timed_source = SimpleNamespace(timing=diagnostics, reason=None)
+    session.lms_timed_source = SimpleNamespace(timing=diagnostics, reason=None, ready=True,
+                                                fit_snapshot=dict(precision_ms=1.5,
+                                                                  sample_count=100,
+                                                                  samples=[],
+                                                                  last_sample_time=123),
+                                                readiness_state="scheduled")
     manager._active = session
     assert manager.lms_timing['state'] == 'scheduled'
+    assert manager.lms_timing['sample_count'] == 100
+    assert manager.lms_timing['precision_ms'] == 1.5
     assert manager.lms_timing['lead_p5_ms'] == 486
     assert manager.lms_timing['median_processing_ms'] == pytest.approx(19)
     assert manager.applied_delay_ms == 457
@@ -368,3 +385,28 @@ def test_probe_exposes_trim_only_for_timed_lms(tmp_path, timed):
     asyncio.run(manager._apply_probe_for_master(session, 'speaker'))
     assert session.probe.current_delay_ms() == 90
     assert getattr(session.probe, 'config', None) == (config if timed else None)
+
+
+def test_readiness_gate_keeps_pcm_untimed_and_invalidates_when_ready():
+    from lampastream.airplay_timing import percentile
+    from lampastream.canonicalizer import DataResult, StreamInvalidated
+
+    timed, source, now, _ = timed_source()
+    for i in range(30):
+        poll(timed, source, now, i * .005)
+    generation = timed.timing.tap_generation
+    timed.set_readiness(False, 'waiting', 'Waiting for the virtual player in LMS')
+    assert isinstance(poll(timed, source, now, .15), StreamInvalidated)
+    result = poll(timed, source, now, .16)
+    assert isinstance(result, DataResult) and result.frame.play_monotonic is None
+    assert timed.timing.tap_source == 'delay fallback'
+    timed.set_readiness(True, 'scheduled', None)
+    assert isinstance(poll(timed, source, now, .17), StreamInvalidated)
+    result = poll(timed, source, now, .18)
+    assert isinstance(result, DataResult) and result.frame.play_monotonic is not None
+    assert result.frame.timing_generation > generation
+    assert timed.fit_snapshot['sample_count'] == len(timed.fit.samples)
+    residuals = [max(lo - timed.fit.at(pos), timed.fit.at(pos) - hi, 0) * 1000
+                 for pos, lo, hi in timed.fit.samples]
+    assert timed.fit_snapshot['precision_ms'] == percentile(residuals, .95)
+    assert timed.fit_snapshot['samples']

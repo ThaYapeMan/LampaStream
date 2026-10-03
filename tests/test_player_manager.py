@@ -1114,6 +1114,7 @@ def test_lms_airplay_switches_release_every_session(tmp_path, monkeypatch, caplo
 
     def shm_factory():
         source = MagicMock()
+        source._mm = None
         sources.append(source)
         return source
 

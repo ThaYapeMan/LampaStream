@@ -639,8 +639,12 @@ class LmsSyncGroupObserver(LmsFollower):
         on_target_changed: Callable[[str | None], Awaitable[None]],
         cli_port: int = _DEFAULT_CLI_PORT,
         poll_interval: float = 5.0,
+        on_group_refresh=None,
     ) -> None:
         super().__init__(lms_host, "", lampastream_mac, cli_port)
+        self._on_group_refresh = on_group_refresh
+        self._reconnected = False
+        self._observed_peers = ()
         self._managed_macs = managed_macs
         self._on_target_changed = on_target_changed
         self._poll_interval = poll_interval
@@ -653,6 +657,7 @@ class LmsSyncGroupObserver(LmsFollower):
         return self._group_warning or super().warning
 
     async def _connect_and_listen(self) -> None:
+        self._reconnected = True
         self._refresh_requested.set()
         await super()._connect_and_listen()
 
@@ -671,7 +676,11 @@ class LmsSyncGroupObserver(LmsFollower):
         # Observe only: even newsong/pause/stop must never reach the mirroring
         # dispatcher. A sync command may name either member, so refresh for any.
         parts = line.split()
-        if len(parts) >= 2 and parts[1] in {"sync", "client"}:
+        if len(parts) >= 2 and (parts[1] in {"sync", "client"} or parts[0] == "client"):
+            if parts[1] == "sync" or ("client" in parts[:2] and any(
+                item in {"new", "reconnect", "disconnect"} for item in parts[1:]
+            )):
+                self._reconnected = True
             self._refresh_requested.set()
 
     async def _monitor_group(self) -> None:
@@ -708,6 +717,8 @@ class LmsSyncGroupObserver(LmsFollower):
         except (OSError, ValueError):
             self._group_warning = "Cannot query LMS sync group — check the LMS connection"
             await self._set_target(None)
+            if self._on_group_refresh:
+                self._on_group_refresh([], True)
             return
 
         excluded = {mac.strip().lower() for mac in self._managed_macs()}
@@ -724,7 +735,14 @@ class LmsSyncGroupObserver(LmsFollower):
         else:
             self._group_warning = None
         target = self._follow_mac if self._follow_mac in eligible else next(iter(eligible), None)
+        if (self._on_group_refresh
+                and (self._reconnected or tuple(eligible) != self._observed_peers)):
+            self._on_group_refresh(eligible, self._reconnected, pending=True)
         await self._set_target(target)
+        if self._on_group_refresh:
+            self._on_group_refresh(eligible, self._reconnected)
+        self._observed_peers = tuple(eligible)
+        self._reconnected = False
 
     async def _set_target(self, target: str | None) -> None:
         if not self._target_initialized or target != (self._follow_mac or None):

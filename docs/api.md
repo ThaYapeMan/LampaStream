@@ -323,7 +323,7 @@ configurations receive additive defaults, preserving explicit values.
 `/api/status` and preview websocket status expose `lms_timing` for an active LMS
 coupling, independently of whether a saved latency entry exists. It includes:
 
-- `source: "lms"`, `state` (`scheduled`, `fallback`, `off` or `unavailable`),
+- `source: "lms"`, `state` (`waiting`, `unsynced`, `scheduled`, `fallback`, `off` or `unavailable`),
   `reason`, and `audio_source` (`LMS head start` or `delay fallback` when timed);
 - configured `head_start_ms` and `speaker_output_delay_ms`;
 - measured `lead_p5_ms`, `lead_p50_ms`, `median_processing_ms`, `trim_ms` and
@@ -335,3 +335,17 @@ state, source and reason. The followed player's latency-status response also
 includes the LMS timing fields when its active coupling uses the timed source.
 The existing `applied_delay_ms` then reports the estimated scheduled hold, including
 trim, rather than the old position probe's delay. AirPlay fields remain unchanged.
+
+LMS readiness adds `waiting` with reason “Waiting for the virtual player in LMS”,
+and `unsynced` with reason “Not synced with a speaker yet: sync it in LMS”. Both
+use the delay path. `scheduled` requires verified head start and an external
+speaker in the observed group. Leaving the group, reconnecting or losing the
+preference invalidates scheduled scenes until readiness is verified again.
+
+For the timed LMS source, `lms_timing` additionally contains `synced_player_name`,
+`precision_ms` (p95 interval residual), `sample_count` (accepted write-clock fit
+samples), `last_sample_time` (Unix seconds), `median_residual_ms` and `samples`
+(the last seven `{residual_ms, timestamp}` observations). These values also appear
+in the active player's latency status. Scheduled cards use these clock-fit fields
+in place of the inactive position probe. Processing remains measured separately
+from receipt/ready/send provenance, with deliberate queue residence excluded.

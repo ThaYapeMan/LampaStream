@@ -3,7 +3,9 @@ import { setupPreview } from './preview-fixture'
 
 for (const theme of ['light', 'dark'] as const) for (const width of [1400, 390]) {
   test(`LMS editor and scheduled/fallback/follow timing in ${theme} at ${width}px`, async ({ page }) => {
-    const timing = { state: 'scheduled', audio_source: 'LMS head start', reason: null, lead_p5_ms: 486, median_processing_ms: 19 }
+    const timing = { state: 'scheduled', audio_source: 'LMS head start', reason: null, lead_p5_ms: 486, median_processing_ms: 19,
+      synced_player_name: 'Radio Red', precision_ms: 1.2, sample_count: 211, last_sample_time: 123,
+      median_residual_ms: .1, samples: [{ residual_ms: .1, timestamp: 123 }] }
     const entry = { player_mac: 'speaker', name: 'Radio', strategy: 'auto', trim_ms: 0, fixed_delay_ms: 0,
       status: { state: 'not measurable (sync group)', strategy: 'auto', applied_delay_ms: 467, sample_count: 0 } }
     const socket = await setupPreview(page, () => ({ follow_mode: 'sync_group', timing_player_mac: 'speaker',
@@ -37,6 +39,13 @@ for (const theme of ['light', 'dark'] as const) for (const width of [1400, 390])
     const update = (state: string, reason: string) => socket().send(JSON.stringify({ type: 'status', active_coupling_id: 'c',
       active_player_type: 'LMS', follow_mode: state === 'unavailable' ? 'manual' : 'sync_group', processes: {},
       timing_player_mac: 'speaker', light_timing: entry, lms_timing: { ...timing, state, reason } }))
+    await expect(page.getByText('Steady to within ±1.2 ms')).toBeVisible()
+    await expect(page.getByText(/211 measurements/)).toBeVisible()
+    await expect(page.getByText('Lights follow measured LMS play times for Radio Red.')).toBeVisible()
+    update('waiting', 'Waiting for the virtual player in LMS')
+    await expect(page.getByTestId('lms-timing')).toHaveText('Waiting for the virtual player in LMS')
+    update('unsynced', 'Not synced with a speaker yet: sync it in LMS')
+    await expect(page.getByTestId('lms-timing')).toHaveText('Not synced with a speaker yet: sync it in LMS')
     update('fallback', 'Not enough head start, using delay instead')
     await expect(page.getByTestId('lms-timing')).toHaveText('Not enough head start, using delay instead')
     update('unavailable', 'Head start needs sync-group mode')

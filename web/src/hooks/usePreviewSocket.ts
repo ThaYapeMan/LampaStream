@@ -15,7 +15,9 @@ export interface SocketStatus {
   timing_player_name?: string | null
   lms_timing?: { state: string; reason?: string | null; audio_source?: string;
     head_start_ms?: number; speaker_output_delay_ms?: number; lead_p5_ms?: number | null;
-    lead_p50_ms?: number | null; median_processing_ms?: number | null; tap_drop_count?: number } | null
+    lead_p50_ms?: number | null; median_processing_ms?: number | null; tap_drop_count?: number; synced_player_name?: string | null; precision_ms?: number | null;
+    sample_count?: number; last_sample_time?: number | null; median_residual_ms?: number | null;
+    samples?: { residual_ms: number; timestamp: number }[] } | null
   light_timing?: PlayerLatency | null
   follow_target_mac?: string | null
   follow_target_name?: string | null

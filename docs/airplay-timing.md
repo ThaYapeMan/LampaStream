@@ -501,3 +501,37 @@ instead”. Measurements continue through that path. Scheduling returns automati
 when measured lead reaches that threshold; its generation changes to discard old
 queued work. No receiver or player restart is used for fallback or recovery.
 See the LMS head-start procedure in configuration.md for owner calibration.
+
+### LMS registration, group readiness and write-clock status
+
+Press Go before synchronising in LMS: yeney-player normally registers only while
+its coupling is active. Head start is applied in a cancellable background task,
+not during the first SHM availability check. Scheduling requires verified
+`playDelay` and an external speaker reported by the existing sync-group observer.
+The existing observer refreshes every five seconds and reacts to sync/client
+notifications; no second group poller is introduced. It invalidates timing when
+the group changes or the player reconnects. Group changes invalidate scheduling
+before speaker reconciliation, and a verification superseded by a later group
+refresh cannot enable scheduling. Registration failures continue to
+retry after the initial 30-second readiness window; preference failures use
+1/2/5/10/30-second backoff. Stop cancels CLI I/O and closes the owned socket.
+LMS normally restores group membership on reconnect. If the card says
+“Not synced with a speaker yet: sync it in LMS”, restore membership in LMS.
+
+Every scheduled LMS publication records its receipt and scene-ready timestamps.
+Receipt is captured at the start of the SHM reader poll, so processing includes
+clock fitting and PCM capture as well as analysis and rendering.
+Actual output sends complete receipt/ready/send provenance. Processing excludes
+scheduled queue residence and includes the send call. The scheduler generation
+is authoritative for LMS receipt eligibility, rather than AirPlay's metadata
+cadence boundary. Unknown processing is shown as unknown, not 0 ms; sub-millisecond
+measurements retain a decimal digit. The existing headroom safety rule uses this
+measured processing time.
+
+The scheduled card's steadiness is the p95 distance of fitted write times outside
+their read-time intervals, in milliseconds. Measurement count is the number of
+accepted intervals in the current 30-second fit; the existing sparkline shows the
+last seven residuals. These are clock-fit observations, not position-probe samples.
+The card names the observed speaker and retains its existing layout. A zero
+interval residual means the fit stays within its read brackets; it does not
+claim zero absolute clock error or zero physical lamp latency.

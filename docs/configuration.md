@@ -667,7 +667,7 @@ Each LMS virtual player has `head_start_ms` (integer 0–2000, default 500) and
 Players, in the existing LMS player editor. Invalid values are rejected.
 
 Head start applies only to **Automatic — LMS sync group** mode. At activation,
-LampaStream sets and verifies `playDelay` on its own virtual player through the
+LampaStream waits for LMS registration in the background, then sets and verifies `playDelay` on its own virtual player through the
 LMS CLI on port 9090. It never changes another player's preferences or writes
 `startDelay`. A non-zero `startDelay` is warned about: the initial offset would
 otherwise differ from the steady-state offset. Set it to 0 yourself in LMS.
@@ -678,8 +678,12 @@ Manual follow mode leaves LMS preferences and the existing timing path unchanged
 To calibrate your speaker:
 
 1. Set Head start to 500 ms and choose Automatic — LMS sync group. Save the player.
-2. In LMS, synchronise the LampaStream virtual player with the real speaker, then
-   activate the coupling with Go. LampaStream does not create the sync group.
+2. Press Go first: the virtual player normally exists in LMS only while a coupling
+   is active. Wait for it to appear, then synchronise it with the real speaker in
+   LMS. LampaStream applies and verifies head start automatically when registered;
+   scheduling starts once the group contains a speaker. LampaStream does not create
+   the sync group. LMS normally restores membership after a player reconnects; if
+   it does not, synchronise the virtual player with the speaker again in LMS.
 3. Play music. Check for **Scheduled · LMS head start** in Light timing and compare
    the measured head start with processing time. If the card reports
    **Not enough head start, using delay instead**, increase head start and activate
@@ -694,3 +698,11 @@ To calibrate your speaker:
 Head start steps by 10 ms; Speaker output delay steps by 1 ms. Both also accept a
 whole number directly. Saving an active player's timing settings uses the existing
 player-edit deactivation behaviour; activate again to apply them.
+
+LMS readiness and preference verification run in the background, so Go, music and
+Stop do not wait for registration. Initial connection polling runs for up to
+30 seconds; unsuccessful registration continues to retry afterwards. Preference
+failures retry after 1, 2, 5 and 10 seconds, then every 30 seconds. Group changes
+and reconnects request immediate re-verification. Existing group refreshes also
+check for a lost preference. Until registration, verification and real speaker
+membership are established, output stays on the delay path.

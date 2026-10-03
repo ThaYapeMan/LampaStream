@@ -3175,6 +3175,9 @@ class SyncEngine:
                         scene = self._effect.render(f, max(time.monotonic(),
                                                           f.play_monotonic + trim / 1000))
                         ready = time.monotonic()
+                        recorder = getattr(self._timing, "scene_ready", None)
+                        if recorder is not None:
+                            recorder(f.received_monotonic, ready, f.play_monotonic)
                         self._last_bars, self._last_onset = f.bars, f.onset
                         self._last_mix, self._last_energy = self._effect.mix, f.full
                         self._last_sustained_energy = f.sustained_energy

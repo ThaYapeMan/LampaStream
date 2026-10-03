@@ -291,6 +291,7 @@ class ActiveSession:
         self.shm_source: TeePcmSource | None = None
         self.follower: LmsFollower | None = None
         self.follower_task: asyncio.Task | None = None
+        self.head_start_task: asyncio.Task | None = None
         self.unsync_task: asyncio.Task | None = None
         self.track_source: TrackPositionSource | None = None
         self.safety_task: asyncio.Task | None = None
@@ -815,6 +816,8 @@ class PlayerManager:
                     vp.player_mac for vp in self.storage.list_virtual_players()
                 ],
                 on_target_changed=target_changed,
+                on_group_refresh=(session.head_start.group_refresh
+                                  if getattr(session, "head_start", None) else None),
             )
             session.follower_task = session.follower.start()
             session.follower_task.add_done_callback(_log_task_failure)
@@ -855,22 +858,22 @@ class PlayerManager:
         """
         await asyncio.to_thread(self._wait_for_shm, profile.player_mac)
 
-        from .lms_timing import LmsTimedSource, configure_head_start
+        from .lms_timing import LmsHeadStart, LmsTimedSource
         player = (self.storage.get_virtual_player(session.coupling.player_id)
                   if session.coupling else None)
         source = SqueezeliteShmStereoSource()
         session.lms_timed_source = None
+        session.head_start = None
         if player and player.follow_mode == "sync_group":
-            verified = False
-            try:
-                verified = await asyncio.to_thread(configure_head_start, player)
-            except (OSError, ValueError, IndexError) as exc:
-                log.warning("LMS head start unavailable; using delay instead: %s", exc)
-            if verified and player.head_start_ms:
+            if player.head_start_ms:
                 source = LmsTimedSource(source, player,
                                         lambda: session.track_source.read()
-                                        if session.track_source else None)
+                                        if session.track_source else None, ready=False)
                 session.lms_timed_source = source
+            session.head_start = LmsHeadStart(player, session.lms_timed_source)
+            session.head_start_task = asyncio.create_task(session.head_start.run(),
+                                                         name="lms-head-start")
+            session.head_start_task.add_done_callback(_log_task_failure)
         shm_source = TeePcmSource(source)
         shm_source.open(profile.player_mac)
         session.shm_source = shm_source
@@ -997,7 +1000,8 @@ class PlayerManager:
             if session.track_source is self._airplay_tracks:
                 self._airplay_tracks = None
             session.track_source = None
-        for attribute in ("unsync_task", "safety_task", "music_task", "poller_task", "task"):
+        for attribute in ("head_start_task", "unsync_task", "safety_task", "music_task",
+                          "poller_task", "task"):
             task = getattr(session, attribute)
             if task:
                 task.cancel()
@@ -1187,12 +1191,16 @@ class PlayerManager:
         if source:
             data = source.timing.snapshot()
             return dict(source="lms", audio_source=data["tap_source"],
-                        state="scheduled" if data["tap_source"] == "LMS head start" else "fallback",
+                        state=(source.readiness_state if not source.ready else
+                               ("scheduled" if data["tap_source"] == "LMS head start"
+                                else "fallback")),
                         reason=source.reason, head_start_ms=player.head_start_ms,
+                        synced_player_name=self._detected_sync_master_name,
                         speaker_output_delay_ms=player.speaker_output_delay_ms,
                         lead_p5_ms=data["lead_p5_ms"], lead_p50_ms=data["lead_p50_ms"],
                         median_processing_ms=data["median_processing_ms"], tap_drop_count=0,
                         timing_generation=data["tap_generation"],
+                        **source.fit_snapshot,
                         trim_ms=getattr(getattr(session.probe, "config", None), "trim_ms", 0),
                         available_ms=max(0, (data["lead_p5_ms"] or 0)
                                          - (data["median_processing_ms"] or 0)))

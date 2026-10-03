@@ -10,10 +10,12 @@ const seconds = (ms: number) => (ms / 1000).toFixed(2)
 const signed = (ms: number) => `${ms > 0 ? '+' : ''}${ms} ms`
 const time = (stamp: number | null | undefined) => stamp ? new Date(stamp * 1000).toLocaleTimeString('en-GB') : '—'
 
-function Sparkline({ status }: { status: NonNullable<PlayerLatency['status']> }) {
+function Sparkline({ status }: { status: { source?: string; precision_ms?: number | null;
+  median_residual_ms?: number | null; median_processing_ms?: number | null;
+  samples?: { residual_ms?: number; processing_ms?: number; timestamp: number }[] } }) {
   const samples = status.samples ?? []
   if (!samples.length) return <p className="text-xs text-muted-foreground">Waiting for measurements.</p>
-  const median = status.median_processing_ms ?? status.median_residual_ms ?? 0, precision = status.precision_ms ?? 0
+  const median = (status.source === 'lms' ? status.median_residual_ms : status.median_processing_ms ?? status.median_residual_ms) ?? 0, precision = status.precision_ms ?? 0
   const low = Math.min(median - precision, ...samples.map(s => (s.processing_ms ?? s.residual_ms ?? 0))) - 10
   const high = Math.max(median + precision, ...samples.map(s => (s.processing_ms ?? s.residual_ms ?? 0))) + 10
   const y = (v: number) => 36 - (v - low) / (high - low) * 32
@@ -40,7 +42,8 @@ export function LightTiming({ status, onOpenLatency, playersView = false, contro
   const airplay = status?.active_player_type === 'AirPlay' || status?.light_timing?.status?.source === 'airplay'
   const mac = status?.timing_player_mac || status?.follow_target_mac || status?.sync_master
   const entry = status?.light_timing?.player_mac === mac ? status?.light_timing : null
-  const name = status?.timing_player_name || status?.follow_target_name || status?.sync_master_name || entry?.name || mac || 'the followed player'
+  const lms = status?.lms_timing
+  const name = lms?.synced_player_name || status?.timing_player_name || status?.follow_target_name || status?.sync_master_name || entry?.name || mac || 'the followed player'
   const [override, setOverride] = useState<PlayerLatency | null>(null)
   const [trim, setTrim] = useState(entry?.trim_ms ?? 0)
   const [busy, setBusy] = useState(false)
@@ -55,15 +58,19 @@ export function LightTiming({ status, onOpenLatency, playersView = false, contro
     if (!pending.current && desiredTrim.current === null) setTrim(entry?.trim_ms ?? 0)
   }, [entry, override])
   useEffect(() => { if (!message) return; const timer = setTimeout(() => setMessage(''), 4000); return () => clearTimeout(timer) }, [message])
-  const lms = status?.lms_timing
   const current = override ?? entry
-  const timing = current?.status
-  const { state: baseState, applied } = lightTimingState(current, status, airplay)
   const scheduledLms = lms?.state === 'scheduled'
-  const state = scheduledLms ? 'stable' : baseState
+  const timing = scheduledLms ? { ...current?.status, source: 'lms' as const,
+    lead_p5_ms: lms.lead_p5_ms, lead_p50_ms: lms.lead_p50_ms,
+    precision_ms: lms.precision_ms, sample_count: lms.sample_count ?? 0, samples: lms.samples,
+    last_sample_time: lms.last_sample_time, median_residual_ms: lms.median_residual_ms,
+    median_processing_ms: lms.median_processing_ms } : current?.status
+  const { state: baseState, applied } = lightTimingState(current, status, airplay)
+  const state = scheduledLms ? 'stable' : lms?.state === 'waiting' ? 'waiting' : lms?.state === 'unsynced' ? 'group' : baseState
   const safetyMessage = timing?.safety_message || (airplay ? status?.latency_warning : null)
   const group = state === 'group'
   const states = {
+    waiting: [Clock, 'Waiting', 'text-blue-700 dark:text-blue-400 bg-blue-400/10'],
     lagging: [Clock, 'Lights behind', 'text-amber-700 dark:text-amber-400 bg-amber-400/10'],
     stable: [Check, airplay && timing?.audio_source === 'early tap' ? 'Lights on time' : 'In sync', 'text-emerald-700 dark:text-emerald-400 bg-emerald-400/10'],
     measuring: [Clock, 'Measuring', 'text-blue-700 dark:text-blue-400 bg-blue-400/10'],
@@ -100,7 +107,7 @@ export function LightTiming({ status, onOpenLatency, playersView = false, contro
     finally { pending.current = false; setBusy(false) }
   }
   const lmsLine = lms && <p data-testid="lms-timing" className="text-sm text-muted-foreground">{scheduledLms
-    ? `Head start ${Math.round(lms.lead_p5_ms ?? 0)} ms · processing ${Math.round(lms.median_processing_ms ?? 0)} ms · fine-tune ${trim >= 0 ? '+' : ''}${trim} ms`
+    ? `Head start ${lms.lead_p5_ms == null ? '—' : Math.round(lms.lead_p5_ms)} ms · processing ${lms.median_processing_ms == null ? '—' : Math.round(lms.median_processing_ms * 10) / 10} ms · fine-tune ${trim >= 0 ? '+' : ''}${trim} ms`
     : lms.reason}</p>
   if (playersView) {
     const explanation = scheduledLms ? 'Lights follow measured LMS play times.' : state === 'lagging' ? lagText
@@ -156,7 +163,7 @@ export function LightTiming({ status, onOpenLatency, playersView = false, contro
           <div className={`text-4xl font-semibold tabular-nums ${state === 'idle' ? 'text-muted-foreground' : ''}`}>
             {state === 'none' ? 'No delay' : <>{seconds(applied)}<small className="ml-1 text-xl text-muted-foreground">s</small></>}
           </div>
-          {state === 'stable' && <p className="mt-2 text-sm text-muted-foreground">{scheduledLms ? <>Lights follow measured LMS play times.</> : airplay ? <>Lights follow measured audio play times for the AirPlay group.</> : <>Lights wait this long so they match what you hear on <b className="text-foreground">{name}</b>.</>}</p>}
+          {state === 'stable' && <p className="mt-2 text-sm text-muted-foreground">{scheduledLms ? <>Lights follow measured LMS play times for {name}.</> : airplay ? <>Lights follow measured audio play times for the AirPlay group.</> : <>Lights wait this long so they match what you hear on <b className="text-foreground">{name}</b>.</>}</p>}
         </div>
         {state === 'stable' && <div className="flex items-center gap-3 text-xs text-muted-foreground" aria-hidden="true">
           <span className="grid justify-items-center gap-1"><Lightbulb className="h-9 w-9 rounded-lg border bg-secondary p-2" />Lights</span>
@@ -171,7 +178,7 @@ export function LightTiming({ status, onOpenLatency, playersView = false, contro
         <p>The lights keep the last good delay ({seconds(applied)} s) until the new measurement is steady.</p>
       </div>}
       {state === 'fixed' && <p className="text-sm text-muted-foreground">A fixed delay you set by hand for <b className="text-foreground">{name}</b>. Switch to Auto to have LampaStream measure it and keep it right when the network changes.</p>}
-      {state === 'group' && <div className="space-y-3 text-sm text-muted-foreground"><p>The lights player is in a sync group with {name}, so LMS reports one shared position and there is nothing to compare. Using your fixed fallback of {seconds(current?.fixed_delay_ms ?? 0)} s.</p><p>To measure automatically, set the virtual player's follow mode to <b className="text-foreground">Manual — fixed player</b>.</p></div>}
+      {state === 'group' && !lms && <div className="space-y-3 text-sm text-muted-foreground"><p>The lights player is in a sync group with {name}, so LMS reports one shared position and there is nothing to compare. Using your fixed fallback of {seconds(current?.fixed_delay_ms ?? 0)} s.</p><p>To measure automatically, set the virtual player's follow mode to <b className="text-foreground">Manual — fixed player</b>.</p></div>}
       {state === 'unavailable' && <p className="text-sm text-muted-foreground">{timing?.reason}. Using your fixed fallback of {seconds(current?.fixed_delay_ms ?? 0)} s.</p>}
       {state === 'idle' && <p className="text-sm text-muted-foreground">Last measured for {name} at {time(current?.measured_at)}. Measuring resumes when playback starts.</p>}
       {state === 'missing' && <p className="text-sm text-muted-foreground">Light timing has not been set up for {name}. Measure automatically to match what you hear.</p>}
@@ -183,7 +190,7 @@ export function LightTiming({ status, onOpenLatency, playersView = false, contro
       </div>}
       <p role="status" className="min-h-4 text-xs text-emerald-700 dark:text-emerald-400">{message}</p>
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-      <details className="border-t pt-3 text-sm"><summary className="cursor-pointer text-muted-foreground">Details</summary><dl className="mt-3 grid max-w-sm grid-cols-[1fr_auto] gap-x-4 gap-y-1 [&_dt]:text-muted-foreground [&_dd]:text-right [&_dd]:font-mono">{airplay ? <><dt>Measured early arrival (p5)</dt><dd>{timing?.lead_p5_ms ?? timing?.early_delivery_ms ?? '—'} ms</dd><dt>Processing (P)</dt><dd>{timing?.median_processing_ms ?? '—'} ms</dd></> : <><dt>Measured difference</dt><dd>{timing?.median_residual_ms ?? '—'} ms</dd><dt>Player Delay (set in LMS)</dt><dd>{timing?.player_delay_ms ?? '—'} ms</dd></>}<dt>Your fine-tune</dt><dd>{signed(trim)}</dd><dt className="border-t pt-2">Applied to the lights</dt><dd className="border-t pt-2">{applied} ms</dd></dl>{tapDetails}<p className="mt-3 text-xs text-muted-foreground">{airplay ? 'Measured from audio receipt to Hue output, excluding the deliberate wait. Fine-tune covers the lamps’ physical response.' : "Measured automatically by comparing both players' positions in LMS. Rechecked every 15 s and after each track change."}</p></details>
+      <details className="border-t pt-3 text-sm"><summary className="cursor-pointer text-muted-foreground">Details</summary><dl className="mt-3 grid max-w-sm grid-cols-[1fr_auto] gap-x-4 gap-y-1 [&_dt]:text-muted-foreground [&_dd]:text-right [&_dd]:font-mono">{airplay || scheduledLms ? <><dt>Measured early arrival (p5)</dt><dd>{timing?.lead_p5_ms ?? timing?.early_delivery_ms ?? '—'} ms</dd><dt>Processing (P)</dt><dd>{timing?.median_processing_ms ?? '—'} ms</dd></> : <><dt>Measured difference</dt><dd>{timing?.median_residual_ms ?? '—'} ms</dd><dt>Player Delay (set in LMS)</dt><dd>{timing?.player_delay_ms ?? '—'} ms</dd></>}<dt>Your fine-tune</dt><dd>{signed(trim)}</dd><dt className="border-t pt-2">Applied to the lights</dt><dd className="border-t pt-2">{applied} ms</dd></dl>{tapDetails}<p className="mt-3 text-xs text-muted-foreground">{scheduledLms ? 'Measured from the virtual player’s write clock. Steadiness and measurements describe the current timing fit.' : airplay ? 'Measured from audio receipt to Hue output, excluding the deliberate wait. Fine-tune covers the lamps’ physical response.' : "Measured automatically by comparing both players' positions in LMS. Rechecked every 15 s and after each track change."}</p></details>
     </CardContent>
   </Card>
 }

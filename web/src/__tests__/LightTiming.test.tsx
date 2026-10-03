@@ -151,6 +151,8 @@ it.each([
   else expect(earlier).toBeEnabled()
 })
 it.each([
+  ['waiting', 'Waiting for the virtual player in LMS', 'Waiting for the virtual player in LMS'],
+  ['unsynced', 'Not synced with a speaker yet: sync it in LMS', 'Not synced with a speaker yet: sync it in LMS'],
   ['scheduled', null, 'Head start 486 ms · processing 19 ms · fine-tune +0 ms'],
   ['fallback', 'Not enough head start, using delay instead', 'Not enough head start, using delay instead'],
   ['unavailable', 'Head start needs sync-group mode', 'Head start needs sync-group mode'],
@@ -158,4 +160,21 @@ it.each([
   render(<LightTiming status={{ ...status(), lms_timing: { state, reason, lead_p5_ms: 486, median_processing_ms: 19 } }} />)
   expect(screen.getByTestId('lms-timing')).toHaveTextContent(text)
   if (state === 'scheduled') expect(screen.getByText('Scheduled · LMS head start')).toBeVisible()
+})
+
+it('uses the write-clock statistics and speaker name while scheduled', () => {
+  render(<LightTiming status={{ ...status(), lms_timing: { state: 'scheduled',
+    synced_player_name: 'Radio Red', lead_p5_ms: 487, median_processing_ms: 19.4,
+    precision_ms: 1.2, sample_count: 211, last_sample_time: 123,
+    median_residual_ms: .1, samples: [{ residual_ms: .1, timestamp: 123 }] } }} />)
+  expect(screen.getByText('Steady to within ±1.2 ms')).toBeVisible()
+  expect(screen.getByText(/211 measurements/)).toBeVisible()
+  expect(screen.getByRole('img', { name: /Last 1 measurements, median 0.1 milliseconds/ })).toBeVisible()
+  expect(screen.getByText('Lights follow measured LMS play times for Radio Red.')).toBeVisible()
+  expect(screen.getByTestId('lms-timing')).toHaveTextContent('processing 19.4 ms')
+})
+it('does not turn an unknown LMS processing time into zero', () => {
+  render(<LightTiming status={{ ...status(), lms_timing: { state: 'scheduled',
+    lead_p5_ms: null, median_processing_ms: null } }} />)
+  expect(screen.getByTestId('lms-timing')).toHaveTextContent('Head start — ms · processing — ms')
 })
