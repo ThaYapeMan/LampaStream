@@ -635,7 +635,7 @@ The existing atomic migration adds defaults without changing routing or choices.
 
 `on_release` is `restore` (default), `off` or `leave`. Restore returns every area
 light to its pre-stream on, brightness and colour/colour-temperature state. Off
-turns lights off on idle release or Stop, but respects an external stop. Leave
+turns lights off on idle release, Release lights or Stop, but respects an external stop. Leave
 keeps the current state. Unavailable snapshots and REST timeouts warn and skip
 the action. Calls are asynchronous, bounded to 3 seconds each and 10 seconds
 per snapshot or release operation.
@@ -645,3 +645,17 @@ when no entertainment controller holds the bridge. An external Hue app stop
 or takeover stays Released until Take lights or Go/Start. Only those explicit
 actions may stop other entertainment areas. Coupling settings expose both
 options; Now Playing explains Released and offers Take lights.
+
+### Appearance
+
+The sidebar footer offers System, Light and Dark. System is the default and
+follows changes to the operating system's appearance. A choice is saved in this
+browser as `lampastream.appearance`, independently of the server configuration.
+If browser storage is unavailable, appearance falls back to System. The saved
+choice is applied before the interface renders.
+
+Now Playing always shows a Lights row while a coupling is active. Release lights
+hands the lights back using the coupling's release policy; music can continue
+without reclaiming them. Take lights explicitly takes control again. An idle
+release still resumes automatically when playback returns and the lights are
+available. Repeating Release lights on an already released output does nothing.

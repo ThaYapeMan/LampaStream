@@ -113,7 +113,7 @@ function RoutingNode({ label, name, context, onOpen, testId }: {
         </span>
         {name && onOpen && (
           <button
-            className="text-[11px] text-muted-foreground/50 hover:text-primary transition-colors"
+            className="text-[11px] text-muted-foreground hover:text-primary transition-colors"
             onClick={onOpen}
           >
             Open →
@@ -127,7 +127,7 @@ function RoutingNode({ label, name, context, onOpen, testId }: {
             {context && <p className="text-xs text-muted-foreground mt-1">{context}</p>}
           </>
         ) : (
-          <p className="text-base text-muted-foreground/40 italic">Not configured</p>
+          <p className="text-base text-muted-foreground italic">Not configured</p>
         )}
       </div>
     </div>
@@ -187,7 +187,7 @@ function EffectRoutingNode({ role, effect, onOpen, testId }: {
         </span>
         {effect && onOpen && (
           <button
-            className="text-[11px] text-muted-foreground/50 hover:text-primary transition-colors"
+            className="text-[11px] text-muted-foreground hover:text-primary transition-colors"
             onClick={onOpen}
           >
             Open →
@@ -196,7 +196,7 @@ function EffectRoutingNode({ role, effect, onOpen, testId }: {
       </div>
       <div className="px-5 py-4">
         {!effect ? (
-          <p className="text-base text-muted-foreground/40 italic">Not configured</p>
+          <p className="text-base text-muted-foreground italic">Not configured</p>
         ) : (
           <>
             <div className="bg-black/25 rounded-md mb-3">
@@ -249,7 +249,7 @@ function RoutingEditorNode({ label, options, value, onChange, placeholder, onNav
       <div className="px-5 py-3">
         {options.length === 0 ? (
           <div className="flex items-center justify-between gap-2">
-            <p className="text-xs text-muted-foreground/50 italic">No {label.toLowerCase()}s available</p>
+            <p className="text-xs text-muted-foreground italic">No {label.toLowerCase()}s available</p>
             {onNavigateCreate && (
               <button
                 className="text-xs text-primary/70 hover:text-primary transition-colors shrink-0"
@@ -301,12 +301,12 @@ function CouplingListItem({ coupling, playerLabel, zoneLabel, isActive, isSelect
     >
       <div className="flex items-center gap-2 mb-0.5">
         <span className="text-sm font-medium truncate flex-1">{coupling.name}</span>
-        {isActive && <span className="shrink-0 text-[10px] text-green-400">●</span>}
+        {isActive && <span className="shrink-0 text-[10px] text-green-700 dark:text-green-400">●</span>}
         {!isActive && !coupling.enabled && (
           <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-muted-foreground/30" />
         )}
       </div>
-      <p className="text-xs text-muted-foreground/60 truncate">
+      <p className="text-xs text-muted-foreground truncate">
         {playerLabel} → {zoneLabel}
       </p>
     </button>
@@ -498,7 +498,7 @@ function CouplingWorkspace({
             onChange={e => { setName(e.target.value); setNameError(null) }}
             onBlur={handleSaveName}
             placeholder={isCreating ? 'Coupling name…' : 'Name…'}
-            className="flex-1 min-w-0 bg-transparent text-lg font-semibold outline-none placeholder:text-muted-foreground/40 border-b border-transparent focus:border-border pb-0.5 transition-colors"
+            className="flex-1 min-w-0 bg-transparent text-lg font-semibold outline-none placeholder:text-muted-foreground border-b border-transparent focus:border-border pb-0.5 transition-colors"
           />
           {!isCreating && (
             <Badge
@@ -817,7 +817,7 @@ export function Couplings({ activeCouplingId: activeCouplingIdProp, onActivation
           ) : error ? (
             <p className="text-xs text-destructive px-1 py-2">{error}</p>
           ) : couplings.length === 0 ? (
-            <p className="text-xs text-muted-foreground/50 px-1 py-2 leading-relaxed">
+            <p className="text-xs text-muted-foreground px-1 py-2 leading-relaxed">
               No couplings yet.
             </p>
           ) : (
@@ -862,7 +862,7 @@ export function Couplings({ activeCouplingId: activeCouplingIdProp, onActivation
             />
           ) : (
             <div className="flex-1 flex items-center justify-center">
-              <p className="text-sm text-muted-foreground/35">
+              <p className="text-sm text-muted-foreground">
                 Select a coupling to view its routing
               </p>
             </div>

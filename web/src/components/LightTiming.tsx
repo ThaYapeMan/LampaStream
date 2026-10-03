@@ -61,14 +61,14 @@ export function LightTiming({ status, onOpenLatency, playersView = false, contro
   const safetyMessage = timing?.safety_message || (airplay ? status?.latency_warning : null)
   const group = state === 'group'
   const states = {
-    lagging: [Clock, 'Lights behind', 'text-amber-400 bg-amber-400/10'],
-    stable: [Check, airplay && timing?.audio_source === 'early tap' ? 'Lights on time' : 'In sync', 'text-emerald-400 bg-emerald-400/10'],
-    measuring: [Clock, 'Measuring', 'text-blue-400 bg-blue-400/10'],
+    lagging: [Clock, 'Lights behind', 'text-amber-700 dark:text-amber-400 bg-amber-400/10'],
+    stable: [Check, airplay && timing?.audio_source === 'early tap' ? 'Lights on time' : 'In sync', 'text-emerald-700 dark:text-emerald-400 bg-emerald-400/10'],
+    measuring: [Clock, 'Measuring', 'text-blue-700 dark:text-blue-400 bg-blue-400/10'],
     fixed: [Lock, 'Fixed', 'text-muted-foreground bg-secondary'],
-    unavailable: [Info, 'Can’t measure', 'text-amber-400 bg-amber-400/10'],
-    group: [Info, 'Can’t measure', 'text-amber-400 bg-amber-400/10'],
+    unavailable: [Info, 'Can’t measure', 'text-amber-700 dark:text-amber-400 bg-amber-400/10'],
+    group: [Info, 'Can’t measure', 'text-amber-700 dark:text-amber-400 bg-amber-400/10'],
     idle: [Pause, status?.track?.playing === false ? 'Paused' : 'Idle', 'text-muted-foreground bg-secondary'],
-    missing: [Info, 'Not set up', 'text-blue-400 bg-blue-400/10'],
+    missing: [Info, 'Not set up', 'text-blue-700 dark:text-blue-400 bg-blue-400/10'],
     none: [Info, 'No delay', 'text-muted-foreground bg-secondary'],
   } as const
   const [Icon, label, colour] = states[state]
@@ -126,9 +126,9 @@ export function LightTiming({ status, onOpenLatency, playersView = false, contro
             {!current && <Button size="sm" disabled={busy || !mac} onClick={measure}>Measure automatically</Button>}
           </div>
         </div>
-        {safetyMessage && <p role="status" className="text-sm text-amber-400">{safetyMessage}</p>}
+        {safetyMessage && <p role="status" className="text-sm text-amber-700 dark:text-amber-400">{safetyMessage}</p>}
         {footer}
-        {message && <p role="status" className="text-xs text-emerald-400">{message}</p>}
+        {message && <p role="status" className="text-xs text-emerald-700 dark:text-emerald-400">{message}</p>}
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       </CardContent>
     </Card>
@@ -157,9 +157,9 @@ export function LightTiming({ status, onOpenLatency, playersView = false, contro
         </div>}
       </div>
       {state === 'lagging' && <p className="text-sm text-muted-foreground">{lagText}</p>}
-      {safetyMessage && <p role="status" className="text-sm text-amber-400">{safetyMessage}</p>}
+      {safetyMessage && <p role="status" className="text-sm text-amber-700 dark:text-amber-400">{safetyMessage}</p>}
       {state === 'measuring' && <div className="space-y-3 text-sm text-muted-foreground">
-        <div className="flex items-center gap-3"><svg className="h-11 w-11 text-blue-400" viewBox="0 0 44 44" role="img" aria-label={`${timing?.sample_count ?? 0} of 7 measurements`}><circle cx="22" cy="22" r="18" fill="none" className="stroke-secondary" strokeWidth="4" /><circle cx="22" cy="22" r="18" fill="none" stroke="currentColor" strokeWidth="4" strokeDasharray={`${113 * Math.min(7, timing?.sample_count ?? 0) / 7} 113`} transform="rotate(-90 22 22)" /></svg><span>Checking the timing against {name} · {timing?.sample_count ?? 0} of 7 measurements.</span></div>
+        <div className="flex items-center gap-3"><svg className="h-11 w-11 text-blue-700 dark:text-blue-400" viewBox="0 0 44 44" role="img" aria-label={`${timing?.sample_count ?? 0} of 7 measurements`}><circle cx="22" cy="22" r="18" fill="none" className="stroke-secondary" strokeWidth="4" /><circle cx="22" cy="22" r="18" fill="none" stroke="currentColor" strokeWidth="4" strokeDasharray={`${113 * Math.min(7, timing?.sample_count ?? 0) / 7} 113`} transform="rotate(-90 22 22)" /></svg><span>Checking the timing against {name} · {timing?.sample_count ?? 0} of 7 measurements.</span></div>
         <p>The lights keep the last good delay ({seconds(applied)} s) until the new measurement is steady.</p>
       </div>}
       {state === 'fixed' && <p className="text-sm text-muted-foreground">A fixed delay you set by hand for <b className="text-foreground">{name}</b>. Switch to Auto to have LampaStream measure it and keep it right when the network changes.</p>}
@@ -173,7 +173,7 @@ export function LightTiming({ status, onOpenLatency, playersView = false, contro
         <div className="space-y-2">{state === 'stable' && timing && <><div className="flex flex-wrap justify-between gap-2 text-xs text-muted-foreground"><span>Steady to within ±{timing.precision_ms ?? '—'} ms</span><span>{timing.sample_count} measurements · {time(timing.last_sample_time)}</span></div><Sparkline status={timing} /></>}</div>
         <div className="space-y-1"><label htmlFor={`${id}-trim`} className="block text-xs text-muted-foreground sm:text-right">Fine-tune by ear</label><div className="inline-flex items-center overflow-hidden rounded-lg border bg-secondary"><Button variant="ghost" size="sm" aria-label="Lights 10 milliseconds earlier" disabled={busy || trim <= minimumTrim} onClick={() => fineTune(-10)}>◀ Earlier</Button><output id={`${id}-trim`} aria-live="polite" className="min-w-20 border-x px-2 text-center font-mono text-sm">{signed(trim)}</output><Button variant="ghost" size="sm" aria-label="Lights 10 milliseconds later" disabled={busy || trim >= 1000} onClick={() => fineTune(10)}>Later ▶</Button></div></div>
       </div>}
-      <p role="status" className="min-h-4 text-xs text-emerald-400">{message}</p>
+      <p role="status" className="min-h-4 text-xs text-emerald-700 dark:text-emerald-400">{message}</p>
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       <details className="border-t pt-3 text-sm"><summary className="cursor-pointer text-muted-foreground">Details</summary><dl className="mt-3 grid max-w-sm grid-cols-[1fr_auto] gap-x-4 gap-y-1 [&_dt]:text-muted-foreground [&_dd]:text-right [&_dd]:font-mono">{airplay ? <><dt>Measured early arrival (p5)</dt><dd>{timing?.lead_p5_ms ?? timing?.early_delivery_ms ?? '—'} ms</dd><dt>Processing (P)</dt><dd>{timing?.median_processing_ms ?? '—'} ms</dd></> : <><dt>Measured difference</dt><dd>{timing?.median_residual_ms ?? '—'} ms</dd><dt>Player Delay (set in LMS)</dt><dd>{timing?.player_delay_ms ?? '—'} ms</dd></>}<dt>Your fine-tune</dt><dd>{signed(trim)}</dd><dt className="border-t pt-2">Applied to the lights</dt><dd className="border-t pt-2">{applied} ms</dd></dl>{tapDetails}<p className="mt-3 text-xs text-muted-foreground">{airplay ? 'Measured from audio receipt to Hue output, excluding the deliberate wait. Fine-tune covers the lamps’ physical response.' : "Measured automatically by comparing both players' positions in LMS. Rechecked every 15 s and after each track change."}</p></details>
     </CardContent>

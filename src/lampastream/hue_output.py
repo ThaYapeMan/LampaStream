@@ -134,7 +134,7 @@ class HueDriver:
         self._last_audio = self._clock()
         self._audio_token = None
         self._paused_since = None
-        self._idle_release = False
+        self._release_kind = None
         self._release_audio_token = None
         self._release_track = None
         self._release_playing = False
@@ -162,7 +162,8 @@ class HueDriver:
     def output_status(self) -> dict:
         if self._active and self._state == "streaming" and not self._session.is_streaming:
             return {"state": "reconnecting", "reason": "Light connection dropped"}
-        return {"state": self._state, "reason": self._reason}
+        return {"state": self._state, "reason": self._reason, **(
+            {"release_kind": self._release_kind} if self._state == "released" else {})}
 
     async def start(self) -> None:
         """Own the stream for the entire coupling, including silence and pause."""
@@ -204,6 +205,7 @@ class HueDriver:
         self._last_commands = []
         self._owner = None
         self._state, self._reason = "streaming", None
+        self._release_kind = None
         # Capture the auth RID immediately after our own activation, not the app key.
         if check_remote:
             await self._check_remote()
@@ -228,7 +230,7 @@ class HueDriver:
                 track_key != self._release_track or not self._release_playing))
             fresh_audio = (self._audio_token != self._release_audio_token
                            and now - self._last_audio < max(2, self._config.release_after_idle_s))
-            if self._idle_release and not paused and (fresh_audio or resumed):
+            if self._release_kind == "idle" and not paused and (fresh_audio or resumed):
                 # Consume metadata edges even if another controller blocks acquisition.
                 # Fresh publications can retry, but stale audio cannot reclaim idle lights.
                 self._release_track = track_key
@@ -265,12 +267,13 @@ class HueDriver:
             except Exception:
                 log.warning("Bridge light stream stop failed; local connection is closed")
 
-    async def release(self, reason, *, idle=False, external=False):
+    async def release(self, reason, *, idle=False, external=False, explicit=False):
         async with self._lifecycle_lock:
             if self._state == "released":
                 return
             self._state, self._reason = "released", reason
-            self._idle_release = idle
+            self._release_kind = ("explicit" if explicit else "external" if external
+                                  else "idle" if idle else "explicit")
             self._release_audio_token = self._audio_token
             self.output_generation += 1
             self._last_commands = []
@@ -311,7 +314,6 @@ class HueDriver:
             self._state, self._reason = "reconnecting", "Connecting the lights"
             try:
                 await self._connect(stop_others=explicit, capture=True, check_remote=False)
-                self._idle_release = False
                 self._last_audio = self._clock()
                 connected = True
             except Exception:
@@ -356,6 +358,7 @@ class HueDriver:
             if self._state == "failed":
                 log.info("Light output health verification recovered")
             self._state, self._reason = "streaming", None
+            self._release_kind = None
 
     def _request_recovery(self, reason: str) -> None:
         if self._state == "released":

@@ -336,7 +336,7 @@ Idle release resumes automatically on fresh audio, resumed playback or a new
 track, after checking all entertainment areas on the bridge. Another controller
 leaves output released. Automatic recovery and re-acquisition always call
 `start(stop_others=False)`. Only Go/Start and Take lights may stop other areas.
-External release stays released until Take lights or a new explicit activation;
+External and explicit release stay released until Take lights or a new explicit activation;
 continuing audio never takes the lights back. Scenes produced during release
 and re-acquisition are discarded. An output generation clears the early-tap
 scene schedule and regular delay buffer across ownership changes, independently
@@ -344,7 +344,7 @@ of the tap's existing flush/discontinuity generation.
 
 `on_release` selects restore (default), off or leave. Restore snapshots each
 area light before initial start and each re-acquisition, then restores on idle,
-external release or Stop. Off applies only to idle and Stop; external controllers
+external release or Stop. Off applies to idle, Release lights and Stop; external controllers
 retain their choice. Leave performs no release-state REST writes. Snapshot and
 release operations use asynchronous Hue v2 REST, three seconds per request and
 a ten-second total budget per operation (including the area stop on release).
@@ -353,7 +353,10 @@ per ownership interval; Stop or close after release does not repeat them.
 
 `output_status` in `/api/status` and the preview websocket includes `released`
 alongside streaming, reconnecting and failed, with a plain-language reason.
-Now Playing offers Take lights while released. Analysis may continue while the
+Now Playing always shows a Lights row for an active coupling: Release lights
+while streaming or reconnecting, and Take lights while released. Explicit
+release cancels recovery and does not resume automatically on audio or track
+changes. The status includes its explicit, external or idle release kind. Analysis may continue while the
 lights are released, but `bridge_connected` remains false.
 
 Health, remote-check and recovery tasks are cancelled and awaited on teardown.

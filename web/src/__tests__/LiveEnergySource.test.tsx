@@ -230,14 +230,14 @@ it('selects Off with a muted active pill and a caption instead of parameters', a
 })
 
 it.each(ENERGY_SOURCE_OPTIONS.flatMap(source => [false, true].map(expertMode => [source.value, expertMode] as const)))(
-  'keeps Low/High links visible for %s with Expert=%s and only dims Low for Off', async (source, expertMode) => {
+  'keeps Low/High links visible for %s with Expert=%s and uses readable muted text for Low when Off', async (source, expertMode) => {
     const user = userEvent.setup(), onOpenEffect = vi.fn(), onOpen = vi.fn()
     const effects = [{ id: 'low', name: 'Quiet glow' }, { id: 'high', name: 'Bright bands' }] as Effect[]
     render(<LiveEnergySource active expertMode={expertMode} effects={effects} onOpenEffect={onOpenEffect} onOpen={onOpen}
       profile={{ ...initial, low_energy_effect_id: 'low', high_energy_effect_id: 'high', energy_source: source }} onUpdated={vi.fn()} />)
     expect(screen.getByRole('link', { name: 'Quiet glow' })).toHaveAttribute('href', '#effects/low')
     expect(screen.getByRole('link', { name: 'Bright bands' })).toBeVisible()
-    expect(screen.getByTestId('low-energy-effect').classList.contains('opacity-40')).toBe(source === 'off')
+    expect(screen.getByTestId('low-energy-effect').querySelector('a')).toHaveClass(source === 'off' ? 'text-muted-foreground' : 'text-primary')
     expect(screen.getByTestId('high-energy-effect')).not.toHaveClass('opacity-40')
     await user.click(screen.getByRole('link', { name: 'Quiet glow' }))
     await user.click(screen.getByRole('link', { name: 'Bright bands' }))

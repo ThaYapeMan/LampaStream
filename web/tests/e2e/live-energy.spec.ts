@@ -108,6 +108,8 @@ test('inactive energy control reserves the same compact rows', async ({page}, in
   await expect(block.getByText('No active coupling')).toBeVisible()
   for (const radio of await block.getByRole('radio').all()) await expect(radio).toBeDisabled()
   expect((await block.boundingBox())!.height).toBe(before.height)
-  expect((await page.getByTestId('spectrum-panel').boundingBox())!.y).toBe(spectrumY)
+  const after = (await block.boundingBox())!
+  expect((await page.getByTestId('spectrum-panel').boundingBox())!.y - after.y - after.height)
+    .toBe(spectrumY - before.y - before.height)
   await page.screenshot({path:info.outputPath('energy-inactive-1400.png'), fullPage:true})
 })

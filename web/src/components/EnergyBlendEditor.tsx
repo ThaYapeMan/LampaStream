@@ -91,7 +91,7 @@ export function EnergyBlendEditor({
         <div className="relative h-4 text-xs text-muted-foreground font-mono mt-0.5">
           <span className="absolute left-0">LOW 100%</span>
           <span
-            className="absolute -translate-x-1/2 text-amber-500"
+            className="absolute -translate-x-1/2 text-amber-700 dark:text-amber-500"
             style={{ left: `${(startPct + endPct) / 2}%` }}
           >
             AUTO BLEND
@@ -106,7 +106,7 @@ export function EnergyBlendEditor({
             style={{ left: `${markerPct}%` }}
           >
             <div className={`w-0.5 h-3 ${liveEnergy !== undefined ? 'bg-green-400' : 'bg-muted-foreground/50'}`} />
-            <span className={`text-[9px] whitespace-nowrap ${liveEnergy !== undefined ? 'text-green-400' : 'text-muted-foreground/60'}`}>
+            <span className={`text-[9px] whitespace-nowrap ${liveEnergy !== undefined ? 'text-green-700 dark:text-green-400' : 'text-muted-foreground'}`}>
               {liveEnergy !== undefined ? `live ${Math.round(markerPct)}%` : `preview ${Math.round(markerPct)}%`}
             </span>
           </div>

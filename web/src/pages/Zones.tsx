@@ -200,7 +200,7 @@ export function Zones({ activeCouplingId = null }: { activeCouplingId?: string |
                 <TableCell className="font-medium">
                   <div className="flex items-center gap-2">
                     <span>{z.name}</span>
-                    {z.id === activeCoupling?.zone_id && <span aria-label="In use by active coupling" className="shrink-0 text-[10px] text-green-400">●</span>}
+                    {z.id === activeCoupling?.zone_id && <span aria-label="In use by active coupling" className="shrink-0 text-[10px] text-green-700 dark:text-green-400">●</span>}
                   </div>
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">{controllerName(z.controller_id)}</TableCell>

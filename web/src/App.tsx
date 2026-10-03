@@ -1,3 +1,4 @@
+import { Appearance } from '@/components/Appearance'
 import { useEffect, useState, lazy, Suspense } from 'react'
 import { usePreviewSocket } from '@/hooks/usePreviewSocket'
 import { NowPlaying } from '@/pages/NowPlaying'
@@ -84,9 +85,6 @@ export default function App() {
         <div className="px-4 py-4 flex items-center justify-between">
           <h1 className="text-lg font-semibold tracking-tight">LampaStream</h1>
           <div className="flex items-center gap-3">
-            {status?.version && (
-              <span className="text-xs text-muted-foreground font-mono">{status.version}</span>
-            )}
             <select aria-label="Editor mode" value={expertMode ? 'expert' : 'standard'}
               onChange={event => changeExpertMode(event.target.value === 'expert')}
               className="rounded border border-input bg-background px-2 py-1 text-xs">
@@ -99,7 +97,7 @@ export default function App() {
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        <nav className="w-28 sm:w-44 border-r border-border shrink-0 pt-2">
+        <nav className="w-28 sm:w-44 border-r border-border shrink-0 pt-2 flex flex-col">
           {NAV_ITEMS.map((item) => (
             <button
               key={item.value}
@@ -114,6 +112,10 @@ export default function App() {
               {item.label}
             </button>
           ))}
+          <div className="mt-auto pt-6">
+            <Appearance />
+            {status?.version && <div className="px-2 sm:px-4 pb-4 text-xs text-muted-foreground">{status.version}</div>}
+          </div>
         </nav>
 
         <main className="flex-1 overflow-hidden flex flex-col">

@@ -298,3 +298,17 @@ released. The existing preview websocket carries the same state.
 for the active coupling and may stop other areas. It returns the output status;
 a different/inactive coupling returns 409. Idle re-acquisition and recovery
 never stop other areas.
+
+### Release lights
+
+`POST /api/couplings/{id}/release-lights` hands back the active coupling's
+lights, cancels recovery and applies its `on_release` policy as an idle release
+would. It returns the output status, with state `released`, reason
+`You released the lights` and `release_kind: "explicit"`. It returns 409 if
+that coupling is not active. Calling it while already released succeeds without
+repeating teardown or REST writes, and preserves the existing release kind.
+
+Released output status in `/api/status`, action responses and the preview
+websocket includes `release_kind`: `explicit`, `external` or `idle`. Other
+states omit this field. Only idle releases can re-acquire automatically; an
+explicit or external release waits for Take lights or a new Go/Start action.

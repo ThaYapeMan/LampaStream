@@ -64,7 +64,7 @@ export function FloorplanPreview({ channels, colours, onset }: Props) {
           textAnchor="middle"
           fontSize={8}
           fill="currentColor"
-          fillOpacity={0.3}
+          className="text-muted-foreground"
         >
           front
         </text>

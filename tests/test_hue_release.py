@@ -68,6 +68,7 @@ async def test_external_release_does_not_reconnect_and_logs_once(driver, remote,
     await driver._check_remote()
     await driver._check_remote()
     assert driver.output_status['state'] == 'released'
+    assert driver.output_status['release_kind'] == 'external'
     assert session.starts == [True]
     assert driver._recovery_task is None
     assert session._area_id is None  # local-only teardown prevents stopping new owner
@@ -91,7 +92,8 @@ async def test_idle_30_seconds_resume_and_busy_bridge(driver, transport):
     assert driver.output_status['state'] == 'streaming'
     driver.now = 30
     await driver._local_tick()
-    assert driver.output_status == {'state': 'released', 'reason': 'Released while idle'}
+    assert driver.output_status == {'state': 'released', 'reason': 'Released while idle',
+                                    'release_kind': 'idle'}
     generation = driver.output_generation
     driver._rest.available.return_value = False
     driver.transport = lambda: TrackPosition(title='Song', playing=True)
@@ -251,7 +253,8 @@ def test_api_validation_and_take_lights(tmp_path):
     app.state.storage = Storage(tmp_path / 'config.json')
     coupling = Coupling(name='Room')
     app.state.storage.save_coupling(coupling)
-    driver = SimpleNamespace(take_lights=AsyncMock(), _config=SimpleNamespace())
+    driver = SimpleNamespace(take_lights=AsyncMock(), release=AsyncMock(),
+                             _config=SimpleNamespace())
     app.state.player_manager = Mock(active_coupling_id=coupling.id, output_status={
         'state': 'streaming', 'reason': None}, _active=SimpleNamespace(hue_driver=driver))
     with TestClient(app) as client:
@@ -263,8 +266,11 @@ def test_api_validation_and_take_lights(tmp_path):
         assert client.patch(url, json={'on_release': 'invalid'}).status_code == 422
         assert client.post(url + '/take-lights').status_code == 200
         driver.take_lights.assert_awaited_once_with(explicit=True)
+        assert client.post(url + '/release-lights').status_code == 200
+        driver.release.assert_awaited_once_with('You released the lights', explicit=True)
         app.state.player_manager.active_coupling_id = None
         assert client.post(url + '/take-lights').status_code == 409
+        assert client.post(url + '/release-lights').status_code == 409
 
 
 @pytest.mark.anyio
@@ -428,4 +434,32 @@ async def test_idle_deadline_checks_for_takeover_before_area_stop(driver):
     assert driver.output_status['reason'] == 'Stopped from the Hue app or another controller'
     driver._rest.stop_area.assert_not_awaited()
     driver._rest.finish.assert_awaited_once_with('off', external=True)
+    await driver.aclose()
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize('mode', ['restore', 'off', 'leave'])
+@pytest.mark.parametrize('state', ['streaming', 'reconnecting', 'failed'])
+async def test_explicit_release_cancels_recovery_and_stays_released(driver, mode, state):
+    driver._config.on_release = mode
+    session = await started(driver)
+    driver._state = state
+    driver._recovery_task = asyncio.create_task(asyncio.sleep(100))
+    await driver.release('You released the lights', explicit=True)
+    assert driver._recovery_task.cancelled()
+    assert driver.output_status == {'state': 'released', 'reason': 'You released the lights',
+                                    'release_kind': 'explicit'}
+    driver._rest.finish.assert_awaited_once_with(mode, external=False)
+    session.stop.assert_awaited_once()
+    for title in ['Original', 'New track']:
+        driver.transport = lambda title=title: TrackPosition(title=title, playing=True)
+        driver.observe_audio(title)
+        await driver._local_tick()
+    assert session.starts == [True]
+    await driver.release('You released the lights', explicit=True)
+    session.stop.assert_awaited_once()
+    driver._rest.finish.assert_awaited_once()
+    await driver.take_lights(explicit=True)
+    assert session.starts == [True, True]
+    assert 'release_kind' not in driver.output_status
     await driver.aclose()

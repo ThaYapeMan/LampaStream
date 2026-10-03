@@ -34,9 +34,9 @@ import {
 } from '@/lib/api'
 
 // Semantic energy zone colors — purely for UI navigation, not actual effect/light colors.
-const E_LOW   = '#22D3EE'  // cyan-400
-const E_TRANS = '#8B5CF6'  // violet-500
-const E_HIGH  = '#FB7185'  // rose-400
+const E_LOW   = 'var(--energy-low-text)'  // cyan-400
+const E_TRANS = 'var(--energy-transition-text)'  // violet-500
+const E_HIGH  = 'var(--energy-high-text)'  // rose-400
 
 const ENERGY_PROFILE_DEFAULTS = {
   blend_start:    0.3,
@@ -271,7 +271,7 @@ function SectionWithReset({ title, isAtDefault, onReset, resetTestId, children }
           className={cn(
             'text-[9px] uppercase tracking-wide transition-colors leading-none py-0.5',
             isAtDefault
-              ? 'text-muted-foreground/25 pointer-events-none'
+              ? 'text-muted-foreground pointer-events-none'
               : 'text-foreground cursor-pointer',
           )}
         >
@@ -572,23 +572,23 @@ export function EnergyProfiles({ activeCouplingId = null, initialProfileId, expe
 
               {/* Zone labels */}
               <div className="relative h-5 mt-1 text-xs font-mono select-none">
-                <span className="absolute left-0" style={{ color: E_LOW + 'B3' }}>LOW 100%</span>
+                <span className="absolute left-0" style={{ color: E_LOW }}>LOW 100%</span>
                 <span
                   className="absolute -translate-x-1/2"
-                  style={{ left: `${(startPct + endPct) / 2}%`, color: E_TRANS + 'B3' }}
+                  style={{ left: `${(startPct + endPct) / 2}%`, color: E_TRANS }}
                 >
                   AUTO BLEND
                 </span>
-                <span className="absolute right-0" style={{ color: E_HIGH + 'B3' }}>HIGH 100%</span>
+                <span className="absolute right-0" style={{ color: E_HIGH }}>HIGH 100%</span>
               </div>
 
               {/* Percent ticks */}
-              <div className="relative h-4 mt-0.5 text-[10px] font-mono text-muted-foreground/40 select-none">
+              <div className="relative h-4 mt-0.5 text-[10px] font-mono text-muted-foreground select-none">
                 <span className="absolute left-0">0%</span>
                 {startPct > 8 && startPct < 92 && (
                   <span
                     className="absolute -translate-x-1/2"
-                    style={{ left: `${startPct}%`, color: E_LOW + '99' }}
+                    style={{ left: `${startPct}%`, color: E_LOW }}
                   >
                     {Math.round(startPct)}%
                   </span>
@@ -596,7 +596,7 @@ export function EnergyProfiles({ activeCouplingId = null, initialProfileId, expe
                 {endPct > 8 && endPct < 92 && Math.abs(endPct - startPct) > 6 && (
                   <span
                     className="absolute -translate-x-1/2"
-                    style={{ left: `${endPct}%`, color: E_HIGH + '99' }}
+                    style={{ left: `${endPct}%`, color: E_HIGH }}
                   >
                     {Math.round(endPct)}%
                   </span>
@@ -614,7 +614,7 @@ export function EnergyProfiles({ activeCouplingId = null, initialProfileId, expe
                   <span
                     className={cn(
                       'text-[9px] whitespace-nowrap font-mono',
-                      isLive ? 'text-green-400' : 'text-muted-foreground/50',
+                      isLive ? 'text-green-700 dark:text-green-400' : 'text-muted-foreground',
                     )}
                   >
                     {isLive ? `● live ${Math.round(displayEnergy * 100)}%` : `${Math.round(displayEnergy * 100)}%`}
@@ -628,7 +628,7 @@ export function EnergyProfiles({ activeCouplingId = null, initialProfileId, expe
               {/* Simulate slider — neutral track, position-colored marker, hidden when live */}
               {!isLive && (
                 <div className="mt-3 space-y-1.5">
-                  <p className="text-xs text-muted-foreground/60">Drag to simulate music energy</p>
+                  <p className="text-xs text-muted-foreground">Drag to simulate music energy</p>
                   <EnergyPositionSlider
                     value={simulatedEnergy}
                     onChange={setSimulatedEnergy}
@@ -680,7 +680,7 @@ export function EnergyProfiles({ activeCouplingId = null, initialProfileId, expe
                   data-testid={isLive ? 'label-live-output' : 'label-preview'}
                   className={cn(
                     'text-[9px] font-mono uppercase tracking-wide',
-                    isLive ? 'text-green-400' : 'text-muted-foreground/40',
+                    isLive ? 'text-green-700 dark:text-green-400' : 'text-muted-foreground',
                   )}
                 >
                   {isLive ? '● Live output' : 'Preview'}
@@ -833,7 +833,7 @@ export function EnergyProfiles({ activeCouplingId = null, initialProfileId, expe
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-2">
                       <span>{ep.name}</span>
-                      {ep.id === activeCoupling?.energy_profile_id && <span aria-label="In use by active coupling" className="shrink-0 text-[10px] text-green-400">●</span>}
+                      {ep.id === activeCoupling?.energy_profile_id && <span aria-label="In use by active coupling" className="shrink-0 text-[10px] text-green-700 dark:text-green-400">●</span>}
                     </div>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">

@@ -110,7 +110,7 @@ function ConfigSection({
             className={cn(
               'text-[9px] uppercase tracking-wide transition-colors leading-none py-0.5',
               isAtDefault
-                ? 'text-muted-foreground/25 pointer-events-none'
+                ? 'text-muted-foreground pointer-events-none'
                 : 'text-foreground cursor-pointer',
             )}
           >
@@ -222,7 +222,7 @@ function FrequencyRangeSlider({
 
   return (
     <div data-testid="frequency-range-slider">
-      <div className="flex justify-between text-[9px] text-muted-foreground/35 mb-1">
+      <div className="flex justify-between text-[9px] text-muted-foreground mb-1">
         <span>20 Hz</span>
         <span>20 kHz</span>
       </div>
@@ -286,7 +286,7 @@ function FrequencyRangeSlider({
         {ticks.map(({ hz, label }) => (
           <span
             key={hz}
-            className="absolute text-[9px] text-muted-foreground/35 -translate-x-1/2"
+            className="absolute text-[9px] text-muted-foreground -translate-x-1/2"
             style={{ left: `${hzToPercent(hz)}%` }}
           >
             {label}
@@ -321,9 +321,9 @@ function AnalyserListItem({ analyser, isActive, isSelected, onSelect }: {
     >
       <div className="flex items-center gap-2">
         <p className="text-sm font-medium truncate flex-1">{analyser.name}</p>
-        {isActive && <span aria-label="In use by active coupling" className="shrink-0 text-[10px] text-green-400">●</span>}
+        {isActive && <span aria-label="In use by active coupling" className="shrink-0 text-[10px] text-green-700 dark:text-green-400">●</span>}
       </div>
-      <p className="text-xs text-muted-foreground/60 truncate">
+      <p className="text-xs text-muted-foreground truncate">
         {methodLabel} · {analyser.bars} bars · {sourceLabel}
       </p>
     </button>
@@ -449,7 +449,7 @@ function AnalyserWorkspace({ analyser, couplings, onSaved, onDeleted, onCloned, 
             value={draft.name}
             onChange={e => setDraft(d => ({ ...d, name: e.target.value }))}
             placeholder={isCreating ? 'Analyser name…' : 'Name…'}
-            className="flex-1 min-w-0 bg-transparent text-lg font-semibold outline-none placeholder:text-muted-foreground/40 border-b border-transparent focus:border-border pb-0.5 transition-colors"
+            className="flex-1 min-w-0 bg-transparent text-lg font-semibold outline-none placeholder:text-muted-foreground border-b border-transparent focus:border-border pb-0.5 transition-colors"
             data-testid="analyser-name-input"
           />
           {/* Mode toggle */}
@@ -614,7 +614,7 @@ function AnalyserWorkspace({ analyser, couplings, onSaved, onDeleted, onCloned, 
                     </div>
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground/60">
+                <p className="text-xs text-muted-foreground">
                   Sets the frequency window analysed. 50–12000 Hz covers most music.
                 </p>
               </ConfigSection>
@@ -644,7 +644,7 @@ function AnalyserWorkspace({ analyser, couplings, onSaved, onDeleted, onCloned, 
                   onInputCommit={(v) => setDraft(d => ({ ...d, bars: String(v) }))}
                   inputTestId="field-bars"
                 />
-                <p className="text-xs text-muted-foreground/60">
+                <p className="text-xs text-muted-foreground">
                   20–30 bands works well for most rooms. More bands = finer detail.
                 </p>
               </ConfigSection>
@@ -727,7 +727,7 @@ function AnalyserWorkspace({ analyser, couplings, onSaved, onDeleted, onCloned, 
                     className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                     data-testid="field-onset-delta"
                   />
-                  <p className="text-xs text-muted-foreground/60">
+                  <p className="text-xs text-muted-foreground">
                     Lower values catch softer beats; higher values require stronger hits to trigger.
                   </p>
                 </div>
@@ -793,7 +793,7 @@ function AnalyserWorkspace({ analyser, couplings, onSaved, onDeleted, onCloned, 
                           className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                           data-testid="field-onset-alpha"
                         />
-                        <p className="text-xs text-muted-foreground/60">
+                        <p className="text-xs text-muted-foreground">
                           How quickly the beat threshold adjusts to changing volume levels.
                         </p>
                       </div>
@@ -812,7 +812,7 @@ function AnalyserWorkspace({ analyser, couplings, onSaved, onDeleted, onCloned, 
                               className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                               data-testid="field-superflux-mu"
                             />
-                            <p className="text-xs text-muted-foreground/60">
+                            <p className="text-xs text-muted-foreground">
                               Filters out false beats from sustained notes and vocal runs. Higher = more filtering.
                             </p>
                           </div>
@@ -828,7 +828,7 @@ function AnalyserWorkspace({ analyser, couplings, onSaved, onDeleted, onCloned, 
                               className="flex h-8 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                               data-testid="field-superflux-lag"
                             />
-                            <p className="text-xs text-muted-foreground/60">
+                            <p className="text-xs text-muted-foreground">
                               Number of frames used for vibrato detection. Higher = more context, slightly slower response.
                             </p>
                           </div>
@@ -963,7 +963,7 @@ export function Analysers({ activeCouplingId = null }: { activeCouplingId?: stri
           ) : error ? (
             <p className="text-xs text-destructive px-1 py-2">{error}</p>
           ) : analysers.length === 0 ? (
-            <p className="text-xs text-muted-foreground/50 px-1 py-2 leading-relaxed">
+            <p className="text-xs text-muted-foreground px-1 py-2 leading-relaxed">
               No analysers yet.
             </p>
           ) : (
@@ -993,7 +993,7 @@ export function Analysers({ activeCouplingId = null }: { activeCouplingId?: stri
             />
           ) : (
             <div className="flex-1 flex items-center justify-center">
-              <p className="text-sm text-muted-foreground/35">
+              <p className="text-sm text-muted-foreground">
                 Select an analyser to configure it
               </p>
             </div>

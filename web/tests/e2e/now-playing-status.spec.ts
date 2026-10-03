@@ -49,11 +49,11 @@ test('output warning follows failure and recovery in standard mode', async ({ pa
     active_coupling_id: 'c', active_player_type: 'LMS', processes: { lms_player: true },
     bridge_connected: state === 'streaming', output_status: { state, reason } }))
   update('reconnecting', 'Light connection dropped')
-  await expect(page.getByTestId('output-warning')).toHaveText('Reconnecting the lights · Light connection dropped')
+  await expect(page.getByTestId('lights-row')).toContainText('Reconnecting the lights · Light connection dropped')
   update('failed', 'Could not reconnect the lights; retrying')
-  await expect(page.getByTestId('output-warning')).toContainText('Light output unavailable')
+  await expect(page.getByTestId('lights-row')).toContainText('Light output unavailable')
   update('streaming', null)
-  await expect(page.getByTestId('output-warning')).toHaveCount(0)
+  await expect(page.getByTestId('lights-row')).toContainText('Following the music')
 })
 
 
@@ -69,10 +69,10 @@ test('Released respects external control and Take lights explicitly re-acquires'
   await page.setViewportSize({ width: 390, height: 844 })
   socket().send(JSON.stringify({ type: 'status', active_coupling_id: 'c', processes: {},
     bridge_connected: false, output_status: { state: 'released', reason: 'Stopped from the Hue app or another controller' } }))
-  await expect(page.getByTestId('output-warning')).toContainText('Released')
+  await expect(page.getByTestId('lights-row')).toContainText('Released')
   expect(taken).toBe(0)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
   await page.getByRole('button', { name: 'Take lights' }).click()
-  await expect(page.getByTestId('output-warning')).toHaveCount(0)
+  await expect(page.getByTestId('lights-row')).toContainText('Following the music')
   expect(taken).toBe(1)
 })

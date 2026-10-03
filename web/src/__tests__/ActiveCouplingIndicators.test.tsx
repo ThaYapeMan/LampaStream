@@ -49,7 +49,7 @@ describe('active Coupling references on list pages', () => {
     await screen.findAllByText(`${name} 1`)
     const first = screen.getAllByText(`${name} 1`)[0].closest(rowSelector)!
     const second = screen.getAllByText(`${name} 2`)[0].closest(rowSelector)!
-    expect(first.querySelector('[aria-label="' + label + '"]')).toHaveClass('text-green-400')
+    expect(first.querySelector('[aria-label="' + label + '"]')).toHaveClass('text-green-700', 'dark:text-green-400')
     expect(second.querySelector('[aria-label="' + label + '"]')).toBeNull()
     rerender(<Page activeCouplingId="c2" />)
     expect(first.querySelector('[aria-label="' + label + '"]')).toBeNull()

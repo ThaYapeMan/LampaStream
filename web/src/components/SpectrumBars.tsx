@@ -90,9 +90,9 @@ export function SpectrumBars({
     const bassPct = (bassHi / n) * 100
     const midPct  = (midHi  / n) * 100
     if (bassPct > 5 && bassPct < 95)
-      ticks.push({ pct: bassPct, label: fmtHz(bassHz), color: BAND_COLORS.bass, align: 'center' })
+      ticks.push({ pct: bassPct, label: fmtHz(bassHz), color: 'var(--band-bass-text)', align: 'center' })
     if (midPct > 5 && midPct < 95 && Math.abs(midPct - bassPct) > 8)
-      ticks.push({ pct: midPct, label: fmtHz(midHz), color: BAND_COLORS.mid, align: 'center' })
+      ticks.push({ pct: midPct, label: fmtHz(midHz), color: 'var(--band-mid-text)', align: 'center' })
     ticks.push({ pct: 100, label: fmtHz(higherCutoffHz), align: 'right' })
   }
 
@@ -166,21 +166,21 @@ export function SpectrumBars({
           </div>
 
           <div className="flex justify-between mt-1 text-xs font-mono">
-            <div className="flex items-center gap-1 tabular-nums"><span style={{ color: BAND_COLORS.bass }} className="flex items-center gap-1">
+            <div className="flex items-center gap-1 tabular-nums"><span style={{ color: 'var(--band-bass-text)' }} className="flex items-center gap-1">
               {onsetBass && <span className="inline-block w-1.5 h-1.5 rounded-full bg-current" />}
-              {bassEmpty ? <em className="not-italic opacity-50">Bass (empty)</em> : `Bass ${bassAvg.toFixed(2)}`}
+              {bassEmpty ? <em className="not-italic">Bass (empty)</em> : `Bass ${bassAvg.toFixed(2)}`}
             </span>
               {overlay && <span className="text-muted-foreground">· {bandAvg(overlay, 0, bassHi).toFixed(2)}</span>}
             </div>
-            <div className="flex items-center gap-1 tabular-nums"><span style={{ color: BAND_COLORS.mid }} className="flex items-center gap-1">
+            <div className="flex items-center gap-1 tabular-nums"><span style={{ color: 'var(--band-mid-text)' }} className="flex items-center gap-1">
               {onsetMid && <span className="inline-block w-1.5 h-1.5 rounded-full bg-current" />}
-              {midEmpty ? <em className="not-italic opacity-50">Mid (empty)</em> : `Mid ${midAvg.toFixed(2)}`}
+              {midEmpty ? <em className="not-italic">Mid (empty)</em> : `Mid ${midAvg.toFixed(2)}`}
             </span>
               {overlay && <span className="text-muted-foreground">· {bandAvg(overlay, bassHi, midHi).toFixed(2)}</span>}
             </div>
-            <div className="flex items-center gap-1 tabular-nums"><span style={{ color: BAND_COLORS.treble }} className="flex items-center gap-1">
+            <div className="flex items-center gap-1 tabular-nums"><span style={{ color: 'var(--band-treble-text)' }} className="flex items-center gap-1">
               {onsetTreble && <span className="inline-block w-1.5 h-1.5 rounded-full bg-current" />}
-              {trebleEmpty ? <em className="not-italic opacity-50">Treble (empty)</em> : `Treble ${trebleAvg.toFixed(2)}`}
+              {trebleEmpty ? <em className="not-italic">Treble (empty)</em> : `Treble ${trebleAvg.toFixed(2)}`}
             </span>
               {overlay && <span className="text-muted-foreground">· {bandAvg(overlay, midHi, n).toFixed(2)}</span>}
             </div>

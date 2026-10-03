@@ -33,7 +33,7 @@ export function EffectTypeSelector({ value, onChange }: Props) {
               <EffectPreview effectType={e.id} energy={0.72} count={6} size="sm" />
               <div className="min-w-0 flex-1">
                 <div className="text-xs font-medium leading-tight">{e.label}</div>
-                <div className="text-[10px] text-muted-foreground/70 leading-tight mt-0.5 line-clamp-1">
+                <div className="text-[10px] text-muted-foreground leading-tight mt-0.5 line-clamp-1">
                   {e.description}
                 </div>
               </div>
@@ -57,7 +57,7 @@ export function EffectTypeSelector({ value, onChange }: Props) {
       <EffectPreview effectType={value} energy={0.75} count={6} size="sm" />
       <div className="flex-1 min-w-0">
         <div className="text-sm font-medium leading-tight">{current?.label ?? value}</div>
-        <div className="text-xs text-muted-foreground/70 leading-tight mt-0.5 line-clamp-2">
+        <div className="text-xs text-muted-foreground leading-tight mt-0.5 line-clamp-2">
           {current?.description}
         </div>
       </div>

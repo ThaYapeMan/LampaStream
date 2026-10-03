@@ -1861,3 +1861,12 @@ async def take_coupling_lights(coupling_id: str, request: Request):
         raise HTTPException(409, "Activate this coupling first")
     await manager._active.hue_driver.take_lights(explicit=True)
     return manager.output_status
+
+
+@router.post("/couplings/{coupling_id}/release-lights")
+async def release_coupling_lights(coupling_id: str, request: Request):
+    manager = _manager(request)
+    if manager.active_coupling_id != coupling_id or not manager._active.hue_driver:
+        raise HTTPException(409, "Activate this coupling first")
+    await manager._active.hue_driver.release("You released the lights", explicit=True)
+    return manager.output_status

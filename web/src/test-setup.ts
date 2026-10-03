@@ -6,3 +6,8 @@ global.ResizeObserver = class ResizeObserver {
   unobserve() {}
   disconnect() {}
 }
+
+// Browser appearance APIs are not implemented by jsdom.
+window.matchMedia = () => ({ matches: false, media: '', onchange: null,
+  addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {},
+  dispatchEvent: () => true })

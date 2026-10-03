@@ -71,11 +71,11 @@ export function LiveEnergySource({ profile, active, expertMode = false, onUpdate
       {(['low', 'high'] as const).map(role => {
         const effect = active ? effects.find(item => item.id === profile?.[`${role}_energy_effect_id`]) : undefined
         return <div key={role} data-testid={`${role}-energy-effect`}
-          className={`${role === 'high' ? 'text-right' : ''} ${role === 'low' && profile?.energy_source === 'off' ? 'opacity-40' : ''}`}>
+          className={role === 'high' ? 'text-right' : undefined}>
           <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{role === 'low' ? 'Low energy' : 'High energy'}</div>
           {effect ? <a href={`#effects/${encodeURIComponent(effect.id)}`}
             onClick={e => { if (onOpenEffect) { e.preventDefault(); onOpenEffect(effect.id) } }}
-            className="text-xs text-primary hover:underline underline-offset-2">{effect.name}</a>
+            className={`text-xs hover:underline underline-offset-2 ${role === 'low' && profile?.energy_source === 'off' ? 'text-muted-foreground' : 'text-primary'}`}>{effect.name}</a>
             : <span className="text-xs text-muted-foreground">—</span>}
         </div>
       })}

@@ -32,7 +32,7 @@ export function EffectCard({ role, effectId, allEffects, onChange }: Props) {
       <div
         className={cn(
           'text-xs font-semibold uppercase tracking-widest',
-          isHigh ? 'text-rose-400' : 'text-cyan-400',
+          isHigh ? 'text-rose-700 dark:text-rose-400' : 'text-cyan-700 dark:text-cyan-400',
         )}
       >
         {isHigh ? 'High energy' : 'Low energy'}
@@ -72,7 +72,7 @@ export function EffectCard({ role, effectId, allEffects, onChange }: Props) {
               >
                 <div className={cn('w-3 h-3 rounded-sm shrink-0', getEffectSwatchClass(e.effect_type))} />
                 <span className="flex-1 truncate">{e.name}</span>
-                <span className="text-muted-foreground/50 text-[10px] shrink-0">
+                <span className="text-muted-foreground text-[10px] shrink-0">
                   {EFFECTS.find((t) => t.id === e.effect_type)?.label}
                 </span>
               </button>
@@ -102,12 +102,12 @@ export function EffectCard({ role, effectId, allEffects, onChange }: Props) {
                 </div>
               )}
               {effectTypeMeta?.description && (
-                <div className="text-xs text-muted-foreground/60 mt-1 leading-tight line-clamp-2">
+                <div className="text-xs text-muted-foreground mt-1 leading-tight line-clamp-2">
                   {effectTypeMeta.description}
                 </div>
               )}
               {!effect && role === 'low' && (
-                <div className="text-xs text-muted-foreground/60 mt-1">
+                <div className="text-xs text-muted-foreground mt-1">
                   Uses the high-energy effect
                 </div>
               )}

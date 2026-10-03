@@ -3,6 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      (() => {
+        let choice = 'system';
+        try { const saved = localStorage.getItem('lampastream.appearance'); if (saved === 'light' || saved === 'dark') choice = saved; } catch {}
+        const theme = choice === 'system' ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : choice;
+        document.documentElement.dataset.theme = theme;
+        document.documentElement.classList.toggle('dark', theme === 'dark');
+      })();
+    </script>
     <title>LampaStream</title>
   </head>
   <body>

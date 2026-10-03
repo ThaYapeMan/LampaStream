@@ -422,3 +422,5 @@ export const setMusicOverride = (palette_id: string, energy_profile_id: string) 
 export const updateGenreRule = (id: string, body: Omit<GenreRule, 'id'>) => request<GenreRule>(`/api/genre-rules/${id}`, json('PUT', body))
 
 export const takeLights = (id: string) => request(`/api/couplings/${id}/take-lights`, { method: "POST" })
+
+export const releaseLights = (id: string) => request(`/api/couplings/${id}/release-lights`, { method: "POST" })

@@ -295,7 +295,8 @@ def test_bridge_end_and_controller_takeover_release(monkeypatch, remote):
         driver._session.remote = remote
         await driver._check_remote()
         assert driver.output_status == {'state': 'released',
-                                       'reason': 'Stopped from the Hue app or another controller'}
+                                       'reason': 'Stopped from the Hue app or another controller',
+                                       'release_kind': 'external'}
         assert driver._recovery_task is None
         assert driver._session.starts == 1
         await driver.aclose()

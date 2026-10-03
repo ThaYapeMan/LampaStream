@@ -34,12 +34,12 @@ export function EditorPageHeader({
         value={name}
         onChange={(e) => onNameChange(e.target.value)}
         placeholder={placeholder}
-        className="flex-1 bg-transparent text-base font-semibold outline-none placeholder:text-muted-foreground/40 min-w-0"
+        className="flex-1 bg-transparent text-base font-semibold outline-none placeholder:text-muted-foreground min-w-0"
         data-testid="editor-name-input"
       />
       {additionalControls}
       {isLive && (
-        <span className="flex items-center gap-1.5 text-xs font-medium text-green-400 shrink-0">
+        <span className="flex items-center gap-1.5 text-xs font-medium text-green-700 dark:text-green-400 shrink-0">
           <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
           Live
         </span>

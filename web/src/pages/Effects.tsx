@@ -127,7 +127,7 @@ function FieldRow({ label, value, isAtDefault, onReset, resetTestId, children }:
             className={cn(
               'text-[9px] uppercase tracking-wide transition-colors leading-none py-0.5',
               isAtDefault
-                ? 'text-muted-foreground/25 pointer-events-none'
+                ? 'text-muted-foreground pointer-events-none'
                 : 'text-foreground cursor-pointer',
             )}
           >
@@ -163,7 +163,7 @@ function ExpertSection({ title, isAtDefault, onReset, resetTestId, children }: E
           className={cn(
             'text-[9px] uppercase tracking-wide transition-colors leading-none py-0.5',
             isAtDefault
-              ? 'text-muted-foreground/25 pointer-events-none'
+              ? 'text-muted-foreground pointer-events-none'
               : 'text-foreground cursor-pointer',
           )}
         >
@@ -265,11 +265,11 @@ function GalleryCard({ effect, isActive, onEdit, onDelete }: GalleryCardProps) {
         <div>
           <div className="flex items-center gap-2">
             <div className="font-semibold text-sm leading-tight">{effect.name}</div>
-            {isActive && <span aria-label="In use by active coupling" className="shrink-0 text-[10px] text-green-400">●</span>}
+            {isActive && <span aria-label="In use by active coupling" className="shrink-0 text-[10px] text-green-700 dark:text-green-400">●</span>}
           </div>
           <div className="text-xs text-muted-foreground mt-0.5">{meta?.label ?? effect.effect_type}</div>
         </div>
-        <div className="text-xs text-muted-foreground/70 leading-snug flex-1">
+        <div className="text-xs text-muted-foreground leading-snug flex-1">
           {effectSummary(effect)}
         </div>
         <div className="flex items-center gap-1 pt-1">
@@ -501,7 +501,7 @@ export function Effects({ activeCouplingId = null, initialEffectId }: { activeCo
                 />
                 <div className="text-center space-y-1">
                   <div className="text-sm font-medium">{selectedMeta?.label ?? form.effect_type}</div>
-                  <div className="text-xs text-muted-foreground/60 max-w-xs leading-relaxed">
+                  <div className="text-xs text-muted-foreground max-w-xs leading-relaxed">
                     {selectedMeta?.description}
                   </div>
                 </div>
@@ -512,7 +512,7 @@ export function Effects({ activeCouplingId = null, initialEffectId }: { activeCo
                 className="border-t border-border/25 px-5 py-3 flex items-center gap-1.5"
                 data-testid="preview-input-selector"
               >
-                <span className="text-[10px] uppercase tracking-widest text-muted-foreground/40 mr-1 shrink-0">
+                <span className="text-[10px] uppercase tracking-widest text-muted-foreground mr-1 shrink-0">
                   Preview
                 </span>
                 {(['calm', 'groove', 'beat-heavy'] as const).map((mode) => (
@@ -543,7 +543,7 @@ export function Effects({ activeCouplingId = null, initialEffectId }: { activeCo
                       ? 'bg-green-600 text-white'
                       : preview.connected
                       ? 'bg-muted/60 text-muted-foreground hover:text-foreground'
-                      : 'bg-muted/60 text-muted-foreground/40 cursor-not-allowed',
+                      : 'bg-muted/60 text-muted-foreground cursor-not-allowed',
                   )}
                 >
                   {previewInput === 'live' && preview.connected
@@ -582,7 +582,7 @@ export function Effects({ activeCouplingId = null, initialEffectId }: { activeCo
               {isNoneType ? (
                 <div data-testid="section-none-message">
                   <SectionLabel className="mb-2">Behaviour</SectionLabel>
-                  <p className="text-xs text-muted-foreground/60">
+                  <p className="text-xs text-muted-foreground">
                     No output is sent to this zone. No behaviour settings apply.
                   </p>
                 </div>
@@ -599,7 +599,7 @@ export function Effects({ activeCouplingId = null, initialEffectId }: { activeCo
                     resetTestId="reset-sensitivity"
                   >
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-muted-foreground/60 w-10 shrink-0">Subtle</span>
+                      <span className="text-[10px] text-muted-foreground w-10 shrink-0">Subtle</span>
                       <Slider
                         aria-label="Sensitivity"
                         min={0} max={1} step={0.01}
@@ -607,7 +607,7 @@ export function Effects({ activeCouplingId = null, initialEffectId }: { activeCo
                         onValueChange={([v]) => set('sensitivity', String(s2sens(v)))}
                         className="flex-1"
                       />
-                      <span className="text-[10px] text-muted-foreground/60 w-14 text-right shrink-0">Reactive</span>
+                      <span className="text-[10px] text-muted-foreground w-14 text-right shrink-0">Reactive</span>
                     </div>
                     {expertMode && (
                       <Input
@@ -645,7 +645,7 @@ export function Effects({ activeCouplingId = null, initialEffectId }: { activeCo
                       resetTestId="reset-speed"
                     >
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-muted-foreground/60 w-10 shrink-0">Slow</span>
+                        <span className="text-[10px] text-muted-foreground w-10 shrink-0">Slow</span>
                         <Slider
                           aria-label="Speed"
                           min={0} max={1} step={0.01}
@@ -653,7 +653,7 @@ export function Effects({ activeCouplingId = null, initialEffectId }: { activeCo
                           onValueChange={([v]) => set('effect_speed', String(s2spd(v)))}
                           className="flex-1"
                         />
-                        <span className="text-[10px] text-muted-foreground/60 w-14 text-right shrink-0">Fast</span>
+                        <span className="text-[10px] text-muted-foreground w-14 text-right shrink-0">Fast</span>
                       </div>
                       {expertMode && (
                         <Input
@@ -677,7 +677,7 @@ export function Effects({ activeCouplingId = null, initialEffectId }: { activeCo
                       resetTestId="reset-decay"
                     >
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] text-muted-foreground/60 w-10 shrink-0">Long</span>
+                        <span className="text-[10px] text-muted-foreground w-10 shrink-0">Long</span>
                         <Slider
                           aria-label="Decay"
                           min={0} max={1} step={0.01}
@@ -685,7 +685,7 @@ export function Effects({ activeCouplingId = null, initialEffectId }: { activeCo
                           onValueChange={([v]) => set('effect_decay', String(s2dec(v)))}
                           className="flex-1"
                         />
-                        <span className="text-[10px] text-muted-foreground/60 w-14 text-right shrink-0">Short</span>
+                        <span className="text-[10px] text-muted-foreground w-14 text-right shrink-0">Short</span>
                       </div>
                       {expertMode && (
                         <Input
@@ -708,7 +708,7 @@ export function Effects({ activeCouplingId = null, initialEffectId }: { activeCo
                     resetTestId="reset-brightness-floor"
                   >
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-muted-foreground/60 w-10 shrink-0">Dark</span>
+                      <span className="text-[10px] text-muted-foreground w-10 shrink-0">Dark</span>
                       <Slider
                         aria-label="Brightness floor"
                         min={0} max={1} step={0.01}
@@ -716,7 +716,7 @@ export function Effects({ activeCouplingId = null, initialEffectId }: { activeCo
                         onValueChange={([v]) => set('brightness_floor', String(Math.round(v * 100) / 100))}
                         className="flex-1"
                       />
-                      <span className="text-[10px] text-muted-foreground/60 w-14 text-right shrink-0">Bright</span>
+                      <span className="text-[10px] text-muted-foreground w-14 text-right shrink-0">Bright</span>
                     </div>
                     {expertMode && (
                       <Input
@@ -738,7 +738,7 @@ export function Effects({ activeCouplingId = null, initialEffectId }: { activeCo
                     resetTestId="reset-beat-flash"
                   >
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-muted-foreground/60 w-10 shrink-0">Off</span>
+                      <span className="text-[10px] text-muted-foreground w-10 shrink-0">Off</span>
                       <Slider
                         aria-label="Beat flash intensity"
                         min={0} max={1} step={0.05}
@@ -746,7 +746,7 @@ export function Effects({ activeCouplingId = null, initialEffectId }: { activeCo
                         onValueChange={([v]) => set('onset_flash_intensity', String(Math.round(v * 100) / 100))}
                         className="flex-1"
                       />
-                      <span className="text-[10px] text-muted-foreground/60 w-14 text-right shrink-0">Full</span>
+                      <span className="text-[10px] text-muted-foreground w-14 text-right shrink-0">Full</span>
                     </div>
                     {expertMode && (
                       <Input
