@@ -9,7 +9,7 @@ vi.mock('../lib/api', async importOriginal => ({
   getEffects: vi.fn().mockResolvedValue([]),
   getEnergyProfiles: vi.fn().mockResolvedValue([]), getCouplings: vi.fn(), getAnalysers: vi.fn(), getVirtualPlayers: vi.fn(),
   getZoneChannels: vi.fn().mockResolvedValue([{ channel_id: 1, x: .5, y: 0, z: .5 }]),
-  activateCoupling: vi.fn(), deactivateCoupling: vi.fn(), restartCouplingCava: vi.fn(),
+  takeLights: vi.fn().mockResolvedValue({}), activateCoupling: vi.fn(), deactivateCoupling: vi.fn(), restartCouplingCava: vi.fn(),
 }))
 
 const status = {
@@ -163,5 +163,17 @@ it.each(['reconnecting', 'failed'] as const)('warns about %s output and clears o
   view.rerender(<NowPlaying {...props} status={{ ...status,
     output_status: { state: 'streaming', reason: null } }} />)
   expect(screen.queryByTestId('output-warning')).not.toBeInTheDocument()
+  await screen.findByText('CAVA Core')
+})
+
+
+it('released output explains ownership and explicitly takes lights', async () => {
+  const api = await import('../lib/api')
+  render(<NowPlaying {...props} status={{ ...status, bridge_connected: false,
+    output_status: { state: 'released', reason: 'Stopped from the Hue app or another controller' } }} />)
+  expect(screen.getByTestId('output-warning')).toHaveTextContent('Released')
+  const button = screen.getByRole('button', { name: 'Take lights' })
+  button.click()
+  await waitFor(() => expect(api.takeLights).toHaveBeenCalledWith('c'))
   await screen.findByText('CAVA Core')
 })

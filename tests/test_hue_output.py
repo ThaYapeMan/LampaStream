@@ -6,9 +6,24 @@ minimal stub session so no network or DTLS connection is required.
 
 from __future__ import annotations
 
+from unittest.mock import AsyncMock
+
+import pytest
+
 from lampastream.hue_output import ChannelInfo, HueDriver, HueOutputConfig
 from lampastream.models import BridgeConfig
 from lampastream.types import Colour, Position, UniformScene
+
+
+@pytest.fixture(autouse=True)
+def fake_release_rest(monkeypatch):
+    monkeypatch.setattr("lampastream.hue_release.HueReleaseRest.stop_area", AsyncMock())
+    monkeypatch.setattr("lampastream.hue_release.HueReleaseRest.capture", AsyncMock())
+    monkeypatch.setattr("lampastream.hue_release.HueReleaseRest.finish", AsyncMock())
+    monkeypatch.setattr("lampastream.hue_release.HueReleaseRest.available",
+                        AsyncMock(return_value=True))
+
+
 
 # ---------------------------------------------------------------------------
 # Stub helpers
@@ -56,6 +71,7 @@ def test_hue_driver_send_updates_last_colours():
     driver = HueDriver(_config(), _channels())
     fake = _FakeSession()
     driver._session = fake  # type: ignore[assignment]
+    driver._state = "streaming"
 
     scene = UniformScene(Colour(0.5, 0.3, 0.1))
     driver.send(scene, 0.0)
@@ -70,6 +86,7 @@ def test_hue_driver_send_calls_session_with_correct_channel_ids():
     driver = HueDriver(_config(), _channels())
     fake = _FakeSession()
     driver._session = fake  # type: ignore[assignment]
+    driver._state = "streaming"
 
     driver.send(UniformScene(Colour(1.0, 1.0, 1.0)), 0.0)
 
@@ -85,6 +102,7 @@ def test_hue_driver_send_converts_colour_to_16bit():
     driver = HueDriver(_config(), _channels())
     fake = _FakeSession()
     driver._session = fake  # type: ignore[assignment]
+    driver._state = "streaming"
 
     driver.send(UniformScene(Colour(1.0, 0.5, 0.0)), 0.0)
 
@@ -111,7 +129,8 @@ class LifecycleSession(_FakeSession):
         self.failures = 0
         self.remote = ('active', 'our-auth-rid')
 
-    async def start(self, area):
+    async def start(self, area, *, stop_others=True):
+        self.stop_others = stop_others
         self.starts += 1
         if self.failures:
             self.failures -= 1
@@ -266,22 +285,19 @@ def test_output_recovery_backoff_status_and_logs(monkeypatch, caplog):
     asyncio.run(run())
 
 
-def test_bridge_end_and_controller_takeover_request_recovery(monkeypatch):
+@pytest.mark.parametrize('remote', [('inactive', ''), ('active', 'another-auth-rid')])
+def test_bridge_end_and_controller_takeover_release(monkeypatch, remote):
     import asyncio
-    from unittest.mock import Mock
-
     monkeypatch.setattr('lampastream.hue_output.EntertainmentSession', LifecycleSession)
     async def run():
         driver = HueDriver(_config(), _channels())
         await driver.start()
-        request = Mock()
-        monkeypatch.setattr(driver, '_request_recovery', request)
-        driver._session.remote = ('inactive', '')
+        driver._session.remote = remote
         await driver._check_remote()
-        request.assert_called_with('Bridge ended the light stream')
-        driver._session.remote = ('active', 'another-auth-rid')
-        await driver._check_remote()
-        request.assert_called_with('Another controller took over the lights')
+        assert driver.output_status == {'state': 'released',
+                                       'reason': 'Stopped from the Hue app or another controller'}
+        assert driver._recovery_task is None
+        assert driver._session.starts == 1
         await driver.aclose()
     asyncio.run(run())
 

@@ -29,7 +29,7 @@ export interface SocketStatus {
   applied_delay_ms: number
   latency_warning: string | null
   processes: { lms_player: boolean }
-  output_status?: { state: "streaming" | "reconnecting" | "failed"; reason: string | null } | null
+  output_status?: { state: "streaming" | "reconnecting" | "failed" | "released"; reason: string | null } | null
   bridge_connected: boolean
   effect_type: string | null
   follower_warning: string | null

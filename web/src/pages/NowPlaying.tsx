@@ -27,6 +27,7 @@ import {
   type Coupling,
   activateCoupling,
   deactivateCoupling,
+  takeLights,
   getCouplings,
   getZoneChannels,
   restartCouplingCava,
@@ -246,6 +247,8 @@ type Props = Pick<PreviewState, 'colour' | 'channel_colours' | 'onset' | 'bars' 
 }
 
 export function NowPlaying({ expertMode = false, colour, channel_colours, onset, onset_bass = false, onset_mid = false, onset_treble = false, mix = 0, sustained_energy = null, loudness_momentary_lufs = null, bars, normalised_bars, status, connected = true, onOpenLatency, onOpenEffect, onOpenEnergyProfile, last_energy_input = 0 }: Props) {
+  const [takeError, setTakeError] = useState('')
+  const [takingLights, setTakingLights] = useState(false)
   const couplingId = status?.active_coupling_id ?? null
   const zoneId = status?.active_zone_id ?? null
 
@@ -422,10 +425,12 @@ export function NowPlaying({ expertMode = false, colour, channel_colours, onset,
         } : undefined} />
 
       {status?.active_coupling_id && status.output_status && status.output_status.state !== 'streaming' &&
-        <p role="status" className="text-sm text-amber-400" data-testid="output-warning">
-          {status.output_status.state === 'reconnecting' ? 'Reconnecting the lights' : 'Light output unavailable'}
+        <div role="status" className={status.output_status.state === 'released' ? "text-sm text-muted-foreground" : "text-sm text-amber-400"} data-testid="output-warning">
+          {status.output_status.state === 'released' ? 'Released' : status.output_status.state === 'reconnecting' ? 'Reconnecting the lights' : 'Light output unavailable'}
           {status.output_status.reason && ` · ${status.output_status.reason}`}
-        </p>}
+          {status.output_status.state === 'released' && <Button variant="outline" className="ml-2 min-h-11" disabled={takingLights} onClick={async () => { setTakeError(''); setTakingLights(true); try { await takeLights(status.active_coupling_id!) } catch (error) { setTakeError(error instanceof Error ? error.message : "Could not take the lights") } finally { setTakingLights(false) } }}>Take lights</Button>}
+          {takeError && <span role="alert" className="block text-sm text-destructive">{takeError}</span>}
+        </div>}
 
       <LightTiming status={status} onOpenLatency={onOpenLatency} />
 

@@ -231,7 +231,8 @@ play time; None adds no intentional delay. Pipe fallback keeps the existing
 non-negative delay behaviour. Processing P excludes the intentional queue wait.
 Flush, pause, discontinuity and source changes discard scheduled scenes.
 Hue ownership, five-second keepalive, idle_timeout=0 and output recovery from
-78b9c84 are unchanged; no silence-triggered handshake is introduced.
+78b9c84 remain while playing. Couplings now release after the configured idle interval;
+re-acquisition clears old scenes without changing early-tap generations.
 
 The existing Light timing card says **“Lights on time”** when p5 lead ≥ P,
 otherwise **“Lights about N ms behind”**, where N = max(0, P − p5 lead).
@@ -307,48 +308,53 @@ restart therefore caused, rather than repaired, a long ingress gap.
 
 ## Hue output ownership and recovery
 
-HueDriver constructs `EntertainmentSession(..., idle_timeout=0)` and owns the
-stream until explicit coupling teardown. The installed, unmodified
-`hue-entertainment` **0.1.2** was inspected: its session.py constructor accepts
-this keyword, zero disables the idle monitor, and its dtls.py sender resends
-the last message when its queue times out at **five seconds**. The source files
-match their installed wheel RECORD hashes. This is the minimum already allowed
-by pyproject.toml, so the lower bound remains `>=0.1.2`; `is_streaming` and
-`remote_status()` are also present in that version.
+HueDriver still uses `EntertainmentSession(..., idle_timeout=0)`. The installed
+`hue-entertainment` 0.1.2 sender resends its last frame every five seconds; this
+keeps the bridge stream alive while music starts, plays or fills the delay buffer.
+The library's own idle monitor stays disabled. Idle ownership is now a coupling
+policy, rather than a library timeout: `release_after_idle_s` defaults to 30
+seconds, with 0 disabling idle release. Pause, stop or absent new analyser
+publications count as idle. The two-second health loop checks this policy; gaps
+shorter than the configured interval retain their existing visual behaviour.
 
-A black frame is queued immediately after connecting. Without this seed, the
-sender has no last message to resend before the first audio frame. Thereafter
-its five-second keepalive supplies frames to prevent bridge inactivity even
-when analysis produces nothing or the delay buffer is filling. Gaps up to ten
-seconds retain their previous visual behaviour. Longer silence or pauses hold
-the last displayed frame as well; there is no silence-triggered teardown or
-3–8 second re-handshake. Effects do not share a reliable silent-state API for
-missing analyser output, so no synthetic DSP input or new effect algorithm is
-introduced. Explicit Stop retains the existing shutdown behaviour.
+Local connection failure still recovers with 1/2/5/10-second backoff, capped at
+10 seconds. Local `is_streaming` is checked every two seconds. Remote status and
+streamer identity are checked every ten seconds, with a five-second timeout.
+Remote inactivity or changed ownership triggers recovery only if a local
+connection failure is present or a send/handshake failure was recorded within
+15 seconds. Otherwise it is an external release: no recovery is scheduled.
+The local connection closes without sending the library's area-stop REST call,
+which would otherwise stop the new controller. The library lacks a public
+local-only disconnect; the driver clears its internal area ID before `stop()`.
+Idle/explicit release then uses its own bounded area-stop REST request; external
+release omits it. Ownership is checked again immediately before idle release,
+so a takeover between the regular polls is respected.
+A test exercises this adapter against the installed library. REST verification
+failure alone does not authorise recovery.
 
-Output health is independent of audio: local `session.is_streaming` is checked
-**every two seconds**. Bridge `remote_status()` is checked **every ten seconds**,
-with a five-second HTTP timeout. The active-streamer auth RID captured immediately
-after our own activation is the baseline; a changed RID detects another
-controller taking over, and an inactive remote status detects bridge teardown.
-An active coupling reclaims its configured area on recovery.
+Idle release resumes automatically on fresh audio, resumed playback or a new
+track, after checking all entertainment areas on the bridge. Another controller
+leaves output released. Automatic recovery and re-acquisition always call
+`start(stop_others=False)`. Only Go/Start and Take lights may stop other areas.
+External release stays released until Take lights or a new explicit activation;
+continuing audio never takes the lights back. Scenes produced during release
+and re-acquisition are discarded. An output generation clears the early-tap
+scene schedule and regular delay buffer across ownership changes, independently
+of the tap's existing flush/discontinuity generation.
 
-Local failure or remote teardown/takeover logs a WARNING and starts one owned
-recovery task. Retry waits are **1, 2, 5, 10 seconds, capped at 10**. Recovery
-stops the failed connection, starts it again and immediately restores the latest
-frame (or the black seed). Failed attempts remain visible and retry; success
-logs INFO. A remote HTTP failure alone does not prove DTLS failed: it marks
-verification as failed and retries verification without tearing down a possibly
-healthy stream. This avoids reconnecting during a temporary REST outage.
+`on_release` selects restore (default), off or leave. Restore snapshots each
+area light before initial start and each re-acquisition, then restores on idle,
+external release or Stop. Off applies only to idle and Stop; external controllers
+retain their choice. Leave performs no release-state REST writes. Snapshot and
+release operations use asynchronous Hue v2 REST, three seconds per request and
+a ten-second total budget per operation (including the area stop on release).
+Failures warn and do not block the light loop or prevent shutdown. Recovery retains the original ownership snapshot. End-state actions run once
+per ownership interval; Stop or close after release does not repeat them.
 
-`output_status` in `/api/status` and the existing preview websocket contains
-`state` (`streaming`, `reconnecting`, `failed`) and `reason`. `bridge_connected`
-now reflects output health rather than the mere presence of a driver. A local
-connection failure is reflected immediately when status is read, even before
-the next two-second check. Remote-only failures are bounded by remote polling
-and request time. Now Playing displays a short warning line in both editor
-modes until output recovers. Analysis/preview can continue during reconnection,
-but are never presented as evidence of healthy light output.
+`output_status` in `/api/status` and the preview websocket includes `released`
+alongside streaming, reconnecting and failed, with a plain-language reason.
+Now Playing offers Take lights while released. Analysis may continue while the
+lights are released, but `bridge_connected` remains false.
 
 Health, remote-check and recovery tasks are cancelled and awaited on teardown.
 An in-flight library handshake/disconnect executor is also awaited before a

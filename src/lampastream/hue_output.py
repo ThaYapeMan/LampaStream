@@ -18,10 +18,12 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 from dataclasses import dataclass
 
 from hue_entertainment import EntertainmentSession, HueEntertainmentAPI, LightColorCommand
 
+from .hue_release import HueReleaseRest
 from .models import BridgeConfig
 from .types import Colour, Position, Scene
 
@@ -44,6 +46,8 @@ class HueOutputConfig:
     bridge: BridgeConfig
     area_id: str
     area_name: str
+    release_after_idle_s: int = 30
+    on_release: str = "restore"
 
 
 @dataclass
@@ -110,7 +114,7 @@ class HueDriver:
         driver = HueDriver(config, channels)
         await driver.start()          # opens the DTLS stream
         driver.send(scene, t)         # called at 30 Hz by SyncEngine
-        await driver.stop()           # sends a final black frame, closes stream
+        await driver.stop()           # releases lights using the coupling policy
         await driver.aclose()         # releases the connection object
 
     last_colours is updated on every send() call and exposed for the web UI
@@ -125,6 +129,19 @@ class HueDriver:
         self.last_colours: list[Colour] = []
         self._last_commands: list[LightColorCommand] = []
         self._active = False
+        self._clock = time.monotonic
+        self._local_failure_at = float("-inf")
+        self._last_audio = self._clock()
+        self._audio_token = None
+        self._paused_since = None
+        self._idle_release = False
+        self._release_audio_token = None
+        self._release_track = None
+        self._release_playing = False
+        self.transport = lambda: None
+        self._rest = HueReleaseRest(config.bridge, config.area_id)
+        self._lifecycle_lock = asyncio.Lock()
+        self.output_generation = 0
         self._sleep = asyncio.sleep
         self._state = "failed"
         self._reason: str | None = "Light output is not active"
@@ -132,6 +149,10 @@ class HueDriver:
         self._health_task: asyncio.Task | None = None
         self._remote_task: asyncio.Task | None = None
         self._recovery_task: asyncio.Task | None = None
+
+    @property
+    def accepting_frames(self):
+        return self._state == "streaming"
 
     @property
     def channels(self) -> list[ChannelInfo]:
@@ -148,7 +169,7 @@ class HueDriver:
         b = self._config.bridge
         self._session = EntertainmentSession(b.host, b.app_key, b.client_key, idle_timeout=0)
         try:
-            await self._connect()
+            await self._connect(stop_others=True, capture=True)
         except BaseException:
             await self._session.aclose()
             self._session = None
@@ -159,9 +180,9 @@ class HueDriver:
         self._health_task = asyncio.create_task(self._monitor_local(), name="hue-output-health")
         self._remote_task = asyncio.create_task(self._monitor_remote(), name="hue-output-remote")
 
-    async def _session_operation(self, operation, *args):
+    async def _session_operation(self, operation, *args, **kwargs):
         # The library's handshake/disconnect executor must finish before teardown.
-        task = asyncio.create_task(operation(*args))
+        task = asyncio.create_task(operation(*args, **kwargs))
         try:
             return await asyncio.shield(task)
         except asyncio.CancelledError:
@@ -170,30 +191,149 @@ class HueDriver:
             finally:
                 raise
 
-    async def _connect(self) -> None:
-        await self._session_operation(self._session.start, self._config.area_id)
+    async def _connect(self, *, stop_others=False, capture=False, check_remote=True) -> None:
+        if capture and self._config.on_release != "leave":
+            await self._rest.capture()
+        await self._session_operation(self._session.start, self._config.area_id,
+                                      stop_others=stop_others)
         # The library can resend only after it has received a first frame.
         commands = self._last_commands or [LightColorCommand(channel_id=c.channel_id)
                                           for c in self._channels]
         self._session.send(commands)
+        self.output_generation += 1
+        self._last_commands = []
         self._owner = None
         self._state, self._reason = "streaming", None
         # Capture the auth RID immediately after our own activation, not the app key.
-        await self._check_remote()
+        if check_remote:
+            await self._check_remote()
+
+    def observe_audio(self, token, present=True):
+        if present and token != self._audio_token:
+            self._audio_token = token
+            self._last_audio = self._clock()
+
+    async def _local_tick(self):
+        now = self._clock()
+        track = self.transport()
+        paused = track is not None and not track.playing
+        if paused:
+            if self._paused_since is None:
+                self._paused_since = now
+        else:
+            self._paused_since = None
+        track_key = (track.title, track.artist) if track else None
+        if self._state == "released":
+            resumed = bool(track and track.playing and (
+                track_key != self._release_track or not self._release_playing))
+            fresh_audio = (self._audio_token != self._release_audio_token
+                           and now - self._last_audio < max(2, self._config.release_after_idle_s))
+            if self._idle_release and not paused and (fresh_audio or resumed):
+                # Consume metadata edges even if another controller blocks acquisition.
+                # Fresh publications can retry, but stale audio cannot reclaim idle lights.
+                self._release_track = track_key
+                self._release_playing = bool(track and track.playing)
+                await self.take_lights(explicit=False)
+            return
+        limit = self._config.release_after_idle_s
+        idle_since = self._paused_since if paused else self._last_audio
+        if limit and now - idle_since >= limit:
+            # An app may have taken over since the last ten-second poll.
+            await self._check_remote()
+            if self._state == "released":
+                return
+            self._release_track = track_key
+            self._release_playing = bool(track and track.playing)
+            await self.release("Released while idle", idle=True)
+        elif not self._session.is_streaming:
+            self._local_failure_at = now
+            self._request_recovery("Light connection dropped")
 
     async def _monitor_local(self) -> None:
         while self._active:
             await self._sleep(2)
-            if not self._session.is_streaming:
-                self._request_recovery("Light connection dropped")
+            await self._local_tick()
+
+    async def _disconnect(self, *, external=False):
+        # The library has no local-only disconnect and its default REST client
+        # can wait minutes. Separate local teardown from our bounded area stop.
+        self._session._area_id = None
+        await self._session_operation(self._session.stop)
+        if not external:
+            try:
+                await self._rest.stop_area()
+            except Exception:
+                log.warning("Bridge light stream stop failed; local connection is closed")
+
+    async def release(self, reason, *, idle=False, external=False):
+        async with self._lifecycle_lock:
+            if self._state == "released":
+                return
+            self._state, self._reason = "released", reason
+            self._idle_release = idle
+            self._release_audio_token = self._audio_token
+            self.output_generation += 1
+            self._last_commands = []
+            task = self._recovery_task
+            if task and task is not asyncio.current_task() and not task.done():
+                task.cancel()
+                await asyncio.gather(task, return_exceptions=True)
+            try:
+                await self._disconnect(external=True)
+            except Exception:
+                log.warning("Local light stream cleanup failed; ownership remains released")
+            try:
+                async with asyncio.timeout(10):
+                    if not external:
+                        try:
+                            await self._rest.stop_area()
+                        except Exception:
+                            log.warning("Bridge light stream stop failed; "
+                                        "ownership remains released")
+                    await self._rest.finish(self._config.on_release, external=external)
+            except Exception:
+                log.warning("Light release REST budget exhausted; ownership remains released")
+            log.info("Light output released: %s", reason)
+
+    async def take_lights(self, *, explicit=True):
+        connected = False
+        async with self._lifecycle_lock:
+            if not self._active or self._state != "released":
+                return
+            if not explicit:
+                try:
+                    if not await self._rest.available():
+                        self._reason = "Another controller is using the lights"
+                        return
+                except Exception:
+                    self._reason = "Cannot check whether the lights are available"
+                    return
+            self._state, self._reason = "reconnecting", "Connecting the lights"
+            try:
+                await self._connect(stop_others=explicit, capture=True, check_remote=False)
+                self._idle_release = False
+                self._last_audio = self._clock()
+                connected = True
+            except Exception:
+                self._local_failure_at = self._clock()
+                self._request_recovery("Could not connect the lights")
+        if connected:
+            # A remote release can acquire the lifecycle lock only after this
+            # connection transaction has finished (the lock is not re-entrant).
+            await self._check_remote()
+            if self._state == "streaming":
+                log.info("Light output re-acquired")
 
     async def _monitor_remote(self) -> None:
         while self._active:
             await self._sleep(10)
-            if self._recovery_task is None or self._recovery_task.done():
+            if (self._state != "released"
+                    and (self._recovery_task is None or self._recovery_task.done())):
                 await self._check_remote()
 
     async def _check_remote(self) -> None:
+        if self._state == "released":
+            return
         try:
             status, owner = await asyncio.wait_for(self._session.remote_status(), timeout=5)
         except Exception as exc:
@@ -201,10 +341,16 @@ class HueDriver:
                 log.warning("Light output health check failed: %s", exc)
             self._state, self._reason = "failed", "Cannot verify the light connection"
             return
-        if status != "active":
-            self._request_recovery("Bridge ended the light stream")
-        elif self._owner is not None and owner != self._owner:
-            self._request_recovery("Another controller took over the lights")
+        if self._state == "released":
+            return
+        if status != "active" or self._owner is not None and owner != self._owner:
+            if not self._session.is_streaming:
+                self._local_failure_at = self._clock()
+            if self._clock() - self._local_failure_at <= 15:
+                self._request_recovery("Bridge ended the light stream" if status != "active"
+                                       else "Another controller took over the lights")
+            else:
+                await self.release("Stopped from the Hue app or another controller", external=True)
         else:
             self._owner = owner
             if self._state == "failed":
@@ -212,6 +358,8 @@ class HueDriver:
             self._state, self._reason = "streaming", None
 
     def _request_recovery(self, reason: str) -> None:
+        if self._state == "released":
+            return
         self._state, self._reason = "reconnecting", reason
         if (not self._active or
                 self._recovery_task is not None and not self._recovery_task.done()):
@@ -228,7 +376,7 @@ class HueDriver:
                 return
             self._state = "reconnecting"
             try:
-                await self._session_operation(self._session.stop)
+                await self._disconnect()
                 await self._connect()
                 if self._state == "reconnecting" or not self._session.is_streaming:
                     raise RuntimeError(self._reason or "Light connection is not streaming")
@@ -236,6 +384,7 @@ class HueDriver:
                     log.info("Light output reconnected; awaiting bridge health verification")
                     return
             except Exception as exc:
+                self._local_failure_at = self._clock()
                 self._state, self._reason = "failed", "Could not reconnect the lights; retrying"
                 log.warning("Light output reconnect failed (retry in %s s): %s",
                             (1, 2, 5, 10)[min(attempt + 1, 3)], exc)
@@ -250,7 +399,7 @@ class HueDriver:
         Converts Colour.to_16bit() values into LightColorCommands.  If start()
         has not been called yet (or after stop()/aclose()), this is a no-op.
         """
-        if self._session is None:
+        if self._session is None or self._state != "streaming":
             return
         colours = [scene.color_at(ch.position, t) for ch in self._channels]
         self.last_colours = colours
@@ -259,7 +408,11 @@ class HueDriver:
             for ch, (r, g, b) in zip(self._channels, (c.to_16bit() for c in colours), strict=True)
         ]
         self._last_commands = commands
-        self._session.send(commands)
+        try:
+            self._session.send(commands)
+        except Exception:
+            self._local_failure_at = self._clock()
+            self._request_recovery("Light connection dropped")
 
     async def stop(self) -> None:
         """Stop health/recovery ownership before ending the bridge stream."""
@@ -274,9 +427,8 @@ class HueDriver:
                     if asyncio.current_task().cancelling():
                         raise
                 setattr(self, attribute, None)
-        self._state, self._reason = "failed", "Light output is not active"
-        if self._session is not None:
-            await self._session.stop()
+        if self._session is not None and self._state != "released":
+            await self.release("Stopped")
 
     async def aclose(self) -> None:
         """Release the connection and every task even after failed teardown."""

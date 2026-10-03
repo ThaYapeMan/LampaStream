@@ -40,7 +40,8 @@ def test_migration_backup_references_and_idempotency(tmp_path):
     assert len(backups) == 1 and backups[0].read_bytes() == original
     current = json.loads(path.read_bytes())
     validate_current(current, references=True)
-    assert current['couplings'][0] == dict(id='run', player_id='player', zone_id='zone',
+    assert current['couplings'][0] == dict(release_after_idle_s=30, on_release='restore',
+                                         id='run', player_id='player', zone_id='zone',
                                          analyser_id='analysis', energy_profile_id='energy')
     assert current['energy_profiles'][0] == dict(id='energy', high_energy_effect_id='bright',
                                                low_energy_effect_id='quiet', blend_start=.2)

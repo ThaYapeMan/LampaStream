@@ -632,6 +632,14 @@ class EnergyProfile:
 
 
 
+def validate_idle_release(value):
+    if type(value) is not int or not 0 <= value <= 3600:
+        import logging
+        logging.getLogger(__name__).warning("Invalid idle release seconds; using 30 seconds")
+        return 30
+    return value
+
+
 @dataclass
 class Coupling:
     """Links a Player + Analyser + Zone + EnergyProfile.
@@ -652,7 +660,14 @@ class Coupling:
     energy_profile_id: str = ""
     manual_palette_id: str = ""
     manual_energy_profile_id: str = ""
+    release_after_idle_s: int = 30
+    on_release: str = "restore"
     enabled: bool = True
+
+    def __post_init__(self):
+        self.release_after_idle_s = validate_idle_release(self.release_after_idle_s)
+        if self.on_release not in ("restore", "off", "leave"):
+            raise ValueError("Choose restore, off or leave for released lights")
 
     def to_dict(self) -> dict:
         return {
@@ -665,6 +680,8 @@ class Coupling:
             "manual_palette_id": self.manual_palette_id,
             "manual_energy_profile_id": self.manual_energy_profile_id,
             "enabled": self.enabled,
+            "release_after_idle_s": self.release_after_idle_s,
+            "on_release": self.on_release,
         }
 
     @classmethod

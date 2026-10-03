@@ -345,6 +345,13 @@ function CouplingWorkspace({
 
   const [name, setName] = useState(coupling?.name ?? '')
   const [nameError, setNameError] = useState<string | null>(null)
+  const [releaseIdle, setReleaseIdle] = useState(coupling?.release_after_idle_s ?? 30)
+  const [onRelease, setOnRelease] = useState(coupling?.on_release ?? "restore")
+  const [releaseError, setReleaseError] = useState('')
+  async function saveRelease(idle: number, mode: "restore" | "off" | "leave") {
+    setReleaseIdle(idle); setOnRelease(mode); setReleaseError('')
+    if (coupling) { try { const saved = await updateCoupling(coupling.id, { release_after_idle_s: idle, on_release: mode }); setReleaseIdle(saved.release_after_idle_s ?? 30); setOnRelease(saved.on_release ?? "restore"); onSaved(saved) } catch (e) { setReleaseError(e instanceof Error ? e.message : "Could not save light settings") } }
+  }
   const [enabled, setEnabled] = useState(coupling?.enabled ?? true)
 
   const [isEditingRouting, setIsEditingRouting] = useState(isCreating)
@@ -407,6 +414,8 @@ function CouplingWorkspace({
         zone_id: draft.zoneId,
         analyser_id: draft.analyserId,
         energy_profile_id: draft.energyProfileId,
+        release_after_idle_s: releaseIdle,
+        on_release: onRelease,
       }
       const saved = isCreating
         ? await createCoupling({ name: name.trim() || 'New coupling', enabled, ...body })
@@ -618,6 +627,13 @@ function CouplingWorkspace({
         </div>
       </div>
 
+      <div className="px-4 py-3 space-y-3 border-t border-border">
+        <label className="block text-sm">Release lights after idle (seconds)<input aria-label="Release lights after idle (seconds)" type="number" min={0} max={3600} step={1} value={releaseIdle} onChange={e => setReleaseIdle(Number(e.target.value))} onBlur={() => saveRelease(releaseIdle, onRelease)} className="block min-h-11 w-full rounded-md border bg-background px-3" /></label>
+        <p className="text-xs text-muted-foreground">Release when playback pauses, stops or audio stops arriving. Use 0 to keep the lights.</p>
+        <label className="block text-sm">When lights are released<select aria-label="When lights are released" value={onRelease} onChange={e => saveRelease(releaseIdle, e.target.value as typeof onRelease)} className="block min-h-11 w-full rounded-md border bg-background px-3"><option value="restore">Restore previous lights</option><option value="off">Turn lights off</option><option value="leave">Leave lights as they are</option></select></label>
+        <p className="text-xs text-muted-foreground">Turning off applies to idle release and Stop. The Turn lights off option respects external stops.</p>
+        {releaseError && <p role="alert" className="text-sm text-destructive">{releaseError}</p>}
+      </div>
       {/* Action bar — view mode only */}
       {!isEditingRouting && !isCreating && (
         <div className="px-4 py-2.5 border-t border-border shrink-0 flex items-center gap-2">

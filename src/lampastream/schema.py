@@ -94,6 +94,8 @@ def validate_current(data: dict, *, references: bool = False) -> None:
                 if (key == "palettes" and field == "stops"
                         or key == "music_settings" and field == "genre_mapping"):
                     continue  # nested contents are validated by the model constructor
+                if key == "couplings" and field == "release_after_idle_s":
+                    continue  # model normalises invalid operator values with a warning
                 expected = _FIELD_TYPES[key][field]
                 choices = (get_args(expected) if get_origin(expected) is types.UnionType
                            else (expected,))

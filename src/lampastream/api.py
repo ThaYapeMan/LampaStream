@@ -14,7 +14,7 @@ from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import JSONResponse, Response
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from . import __git_hash__, __version__, hue_bridge
 from .backup import (
@@ -310,7 +310,18 @@ class EnergyProfilePatchBody(BaseModel):
     blend_response: float | None = None
 
 
-class CouplingCreateBody(BaseModel):
+class CouplingReleaseBody(BaseModel):
+    release_after_idle_s: int = 30
+    on_release: Literal["restore", "off", "leave"] = "restore"
+
+    @field_validator("release_after_idle_s", mode="before")
+    @classmethod
+    def idle_seconds(cls, value):
+        from .models import validate_idle_release
+        return validate_idle_release(value)
+
+
+class CouplingCreateBody(CouplingReleaseBody):
     model_config = ConfigDict(extra="forbid")
 
     name: str
@@ -321,7 +332,9 @@ class CouplingCreateBody(BaseModel):
     enabled: bool = True
 
 
-class CouplingPatchBody(BaseModel):
+class CouplingPatchBody(CouplingReleaseBody):
+    release_after_idle_s: int | None = None
+    on_release: Literal["restore", "off", "leave"] = None
     model_config = ConfigDict(extra="forbid")
 
     """Omnibus PATCH body; routes each field to the appropriate sub-entity.
@@ -429,7 +442,7 @@ _C_FK_FIELDS: frozenset[str] = frozenset({
 # Fields that live directly on Coupling (not on a sub-entity) and are set
 # via setattr(coupling, field, value) in the patch handler.
 _C_COUPLING_DIRECT_FIELDS: frozenset[str] = frozenset({
-    "name", "enabled",
+    "name", "enabled", "release_after_idle_s", "on_release",
 })
 
 
@@ -1261,6 +1274,8 @@ async def create_coupling(request: Request, body: CouplingCreateBody):
         body.name, [(c.id, c.name) for c in storage.list_couplings()], "Coupling"
     )
     coupling = Coupling(
+        release_after_idle_s=body.release_after_idle_s,
+        on_release=body.on_release,
         name=body.name,
         player_id=body.player_id,
         analyser_id=body.analyser_id,
@@ -1513,6 +1528,9 @@ async def patch_coupling(coupling_id: str, request: Request, body: CouplingPatch
         storage.save_effect(effect_inline)
 
     if was_active:
+        if manager._active and manager._active.hue_driver:
+            manager._active.hue_driver._config.release_after_idle_s = coupling.release_after_idle_s
+            manager._active.hue_driver._config.on_release = coupling.on_release
         changed = set(updates.keys())
         actionable = (
             _C_DEACTIVATE_FIELDS | _C_LIVE_FK_FIELDS
@@ -1834,3 +1852,12 @@ async def update_genre_rule(identity: str, request: Request, body: GenreRuleBody
         return rule.to_dict()
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
+
+
+@router.post("/couplings/{coupling_id}/take-lights")
+async def take_coupling_lights(coupling_id: str, request: Request):
+    manager = _manager(request)
+    if manager.active_coupling_id != coupling_id or not manager._active.hue_driver:
+        raise HTTPException(409, "Activate this coupling first")
+    await manager._active.hue_driver.take_lights(explicit=True)
+    return manager.output_status

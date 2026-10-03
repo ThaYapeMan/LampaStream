@@ -625,3 +625,23 @@ Album-art palettes use 2–4 bright chromatic accents without background colours
 Small vivid logos take priority over dull large areas. A single accent gains
 neighbouring hues; monochrome covers use the genre palette or keep the active
 palette. Now Playing reports which outcome was used.
+
+## Releasing coupled lights
+
+Each coupling has `release_after_idle_s` (integer 0–3600, default 30). Pause,
+stop or no new analyser publications for that interval releases the lights.
+Zero keeps ownership through idle periods. Invalid values use 30 with a warning.
+The existing atomic migration adds defaults without changing routing or choices.
+
+`on_release` is `restore` (default), `off` or `leave`. Restore returns every area
+light to its pre-stream on, brightness and colour/colour-temperature state. Off
+turns lights off on idle release or Stop, but respects an external stop. Leave
+keeps the current state. Unavailable snapshots and REST timeouts warn and skip
+the action. Calls are asynchronous, bounded to 3 seconds each and 10 seconds
+per snapshot or release operation.
+
+Fresh audio or resumed/new-track playback re-acquires after idle release only
+when no entertainment controller holds the bridge. An external Hue app stop
+or takeover stays Released until Take lights or Go/Start. Only those explicit
+actions may stop other entertainment areas. Coupling settings expose both
+options; Now Playing explains Released and offers Take lights.

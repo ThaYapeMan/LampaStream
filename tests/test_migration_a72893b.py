@@ -42,6 +42,10 @@ def expected_current_rows(data, key):
             if row.get('bars_source') == 'cava':
                 row['bars_source'] = 'pcm_pipeline'
                 row.setdefault('spectrum_backend', 'v2')
+    if key == "couplings":
+        for row in rows:
+            row.setdefault("release_after_idle_s", 30)
+            row.setdefault("on_release", "restore")
     if key == "player_latencies":
         for row in rows:
             row.pop("speaker_ip", None)
@@ -230,7 +234,7 @@ def test_installer_migration_command_in_isolated_environment(tmp_path, edited_co
     assert f'Schema {SCHEMA_VERSION}: valid' in result.stdout
     assert subprocess.run(command + ['--check'], capture_output=True).returncode == 0
     assert next(tmp_path.glob('*.bak')).read_bytes() == original
-    assert json.loads(config.read_bytes())['couplings'] == data['couplings']
+    assert json.loads(config.read_bytes())['couplings'] == expected_current_rows(data, 'couplings')
     assert Storage(config).get_controller('bridge-1').app_key == data['controllers'][0]['app_key']
 
 
@@ -390,5 +394,5 @@ def test_reference_rewiring_with_same_physical_identity_is_preserved(collection,
     data['couplings'][0][reference] = replacement['id']
     result = convert(data)
     assert result[collection] == data[collection]
-    assert result['couplings'] == data['couplings']
+    assert result['couplings'] == expected_current_rows(data, 'couplings')
     validate_current(result, references=True)

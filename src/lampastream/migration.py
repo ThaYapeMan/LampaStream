@@ -243,6 +243,14 @@ def _migrate_palettes(data):
         # Legacy fields intentionally remain byte-for-byte JSON values for old clients/export.
 
 
+def _migrate_release(data):
+    from .models import Coupling
+    for row in data.get("couplings", []):
+        normal = Coupling.from_dict(row)
+        row["release_after_idle_s"] = normal.release_after_idle_s
+        row["on_release"] = normal.on_release
+
+
 def convert(original: dict) -> dict:
     if not isinstance(original, dict):
         raise ValueError("Configuration must be a JSON object")
@@ -252,6 +260,7 @@ def convert(original: dict) -> dict:
         data = copy.deepcopy(original)
         _migrate_bars_source(data)
         _migrate_player_latency(data)
+        _migrate_release(data)
         validate_current(data, references=True)
         return data
     if original.get("schema_version") == 1:
@@ -262,6 +271,10 @@ def convert(original: dict) -> dict:
         _migrate_bars_source(data)
         _migrate_player_latency(data)
         _migrate_palettes(data)
+        for row in data["couplings"]:
+            row.setdefault("release_after_idle_s", 30)
+            row.setdefault("on_release", "restore")
+        _migrate_release(data)
         validate_current(data, references=True)
         return data
     if original.get("schema_version", 0) != 0:
@@ -345,6 +358,7 @@ def convert(original: dict) -> dict:
     _migrate_player_latency(data)
     _migrate_flat_residue(data)
     _migrate_palettes(data)
+    _migrate_release(data)
     validate_current(data, references=True)
     return data
 

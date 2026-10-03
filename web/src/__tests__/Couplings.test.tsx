@@ -373,3 +373,14 @@ describe('VirtualPlayer configured name precedence', () => {
     expect(selector).toHaveTextContent(expected)
   })
 })
+
+
+it('coupling light release settings save independently of routing', async () => {
+  setupDefaultMocks({ couplings: [{ id: 'release', name: 'Release room', player_id: '', zone_id: '', analyser_id: '', energy_profile_id: '', enabled: true }] })
+  await renderAndSelectCoupling('release')
+  const input = await screen.findByLabelText('Release lights after idle (seconds)')
+  expect(input).toHaveValue(30)
+  fireEvent.change(input, { target: { value: '0' } })
+  fireEvent.blur(input)
+  await waitFor(() => expect(api.updateCoupling).toHaveBeenCalledWith('release', { release_after_idle_s: 0, on_release: 'restore' }))
+})

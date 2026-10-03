@@ -865,7 +865,11 @@ class PlayerManager:
         session.sync_engine = engine
         engine.start()
 
+        if session.coupling:
+            output_config.release_after_idle_s = session.coupling.release_after_idle_s
+            output_config.on_release = session.coupling.on_release
         hue_driver = HueDriver(output_config, channels)
+        hue_driver.transport = lambda: session.track_source.read() if session.track_source else None
         await hue_driver.start()
         session.hue_driver = hue_driver
 
@@ -921,7 +925,11 @@ class PlayerManager:
         session.sync_engine = engine
         engine.start()
 
+        if session.coupling:
+            output_config.release_after_idle_s = session.coupling.release_after_idle_s
+            output_config.on_release = session.coupling.on_release
         hue_driver = HueDriver(output_config, channels)
+        hue_driver.transport = lambda: session.track_source.read() if session.track_source else None
         await hue_driver.start()
         session.hue_driver = hue_driver
 

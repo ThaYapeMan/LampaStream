@@ -55,3 +55,24 @@ test('output warning follows failure and recovery in standard mode', async ({ pa
   update('streaming', null)
   await expect(page.getByTestId('output-warning')).toHaveCount(0)
 })
+
+
+test('Released respects external control and Take lights explicitly re-acquires', async ({ page }) => {
+  const socket = await setupPreview(page)
+  let taken = 0
+  await page.route('**/api/couplings/c/take-lights', async route => {
+    taken++
+    await route.fulfill({ json: { state: 'streaming', reason: null } })
+    socket().send(JSON.stringify({ type: 'status', active_coupling_id: 'c', processes: {},
+      bridge_connected: true, output_status: { state: 'streaming', reason: null } }))
+  })
+  await page.setViewportSize({ width: 390, height: 844 })
+  socket().send(JSON.stringify({ type: 'status', active_coupling_id: 'c', processes: {},
+    bridge_connected: false, output_status: { state: 'released', reason: 'Stopped from the Hue app or another controller' } }))
+  await expect(page.getByTestId('output-warning')).toContainText('Released')
+  expect(taken).toBe(0)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  await page.getByRole('button', { name: 'Take lights' }).click()
+  await expect(page.getByTestId('output-warning')).toHaveCount(0)
+  expect(taken).toBe(1)
+})

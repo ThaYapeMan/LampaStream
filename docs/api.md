@@ -281,3 +281,20 @@ Effect responses retain legacy `band_colours` and `gradient_palette` fields and
 add `palette_id` and `palette_rotation_cps`. An empty palette ID retains the legacy
 colour choice; `album-art` selects the session's extracted artwork palette.
 See [music colours](music-colours.md) for sampling, privacy and migration details.
+
+### Light ownership
+
+Coupling create, get and patch include `release_after_idle_s` (integer 0–3600,
+default 30; invalid inputs normalise to 30 and log a warning) and `on_release`
+(`restore`, `off`, `leave`; default `restore`; invalid API choices return 422).
+Changes apply to the active coupling without restarting audio.
+
+`output_status.state` may be `released`; reasons include `Released while idle`,
+`Stopped from the Hue app or another controller` and
+`Another controller is using the lights`. `bridge_connected` is false while
+released. The existing preview websocket carries the same state.
+
+`POST /api/couplings/{id}/take-lights` explicitly re-acquires released lights
+for the active coupling and may stop other areas. It returns the output status;
+a different/inactive coupling returns 409. Idle re-acquisition and recovery
+never stop other areas.

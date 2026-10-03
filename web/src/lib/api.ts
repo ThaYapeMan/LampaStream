@@ -287,6 +287,8 @@ export interface EnergyProfile {
 }
 
 export interface Coupling {
+  release_after_idle_s?: number
+  on_release?: "restore" | "off" | "leave"
   manual_palette_id?: string
   manual_energy_profile_id?: string
   id: string
@@ -418,3 +420,5 @@ export const setMusicOverride = (palette_id: string, energy_profile_id: string) 
   request('/api/music/override', json('PUT', { palette_id, energy_profile_id }))
 
 export const updateGenreRule = (id: string, body: Omit<GenreRule, 'id'>) => request<GenreRule>(`/api/genre-rules/${id}`, json('PUT', body))
+
+export const takeLights = (id: string) => request(`/api/couplings/${id}/take-lights`, { method: "POST" })

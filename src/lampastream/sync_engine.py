@@ -92,6 +92,7 @@ class FifoReader:
         self._thread: threading.Thread | None = None
         self._lock = threading.Lock()
         self._latest_frame: bytes | None = None
+        self.pub_seq = 0
 
     def start(self) -> None:
         self._thread = threading.Thread(target=self._run, daemon=True)
@@ -121,6 +122,7 @@ class FifoReader:
                     frame, buf = buf[: self.frame_size], buf[self.frame_size :]
                     with self._lock:
                         self._latest_frame = frame
+                        self.pub_seq += 1
         finally:
             os.close(fd)
 
@@ -1872,6 +1874,10 @@ class CavaPipeline:
         self._onset = OnsetDetector(delta=onset_delta, alpha=onset_alpha)
         self._last_normalise_t: float | None = None
 
+    @property
+    def pub_seq(self):
+        return self._reader.pub_seq
+
     def start(self) -> None:
         self._reader.start()
 
@@ -3128,7 +3134,27 @@ class SyncEngine:
         """
         from .airplay_early import SceneSchedule
         schedule = SceneSchedule()
+        output_generation = getattr(output, "output_generation", 0)
+        output_minimum_sequence = None
         while True:
+            token = getattr(self._analyser, "pub_seq", None)
+            observer = getattr(output, "observe_audio", None)
+            if observer is not None:
+                if isinstance(token, int):
+                    observer(token, token > 0)
+            generation = getattr(output, "output_generation", 0)
+            if (generation != output_generation
+                    or getattr(output, "accepting_frames", True) is False):
+                output_generation = generation
+                if isinstance(token, int):
+                    output_minimum_sequence = token
+                schedule.queue.clear()
+                self._delay_buffer.clear()
+                self._scene_timing.clear()
+                if isinstance(self._analyser, CanonicalAnalysisPipeline):
+                    self._analyser.drain_publications()
+                await asyncio.sleep(SEND_INTERVAL_S)
+                continue
             if self._timing is not None:
                 schedule.reset(self._timing.tap_generation)
                 if (self._timing.tap_source == "early tap"
@@ -3168,6 +3194,9 @@ class SyncEngine:
                     continue
                 schedule.queue.clear()
             features = self._analyser.latest()
+            if (output_minimum_sequence is not None and isinstance(token, int)
+                    and token <= output_minimum_sequence):
+                features = None  # do not replay cached pre-release analysis
             t = time.monotonic()
 
             if features is not None:
