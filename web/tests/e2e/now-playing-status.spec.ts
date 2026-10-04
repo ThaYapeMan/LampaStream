@@ -76,3 +76,27 @@ test('Released respects external control and Take lights explicitly re-acquires'
   await expect(page.getByTestId('lights-row')).toContainText('Following the music')
   expect(taken).toBe(1)
 })
+
+for (const theme of ['light', 'dark'] as const) for (const width of [1400, 390]) {
+  test(`follow-mode probe keeps live timing in ${theme} at ${width}px`, async ({ page }) => {
+    const entry = { player_mac: 'speaker', name: 'Radio', strategy: 'auto', trim_ms: 0,
+      fixed_delay_ms: 0, measured_delay_ms: 0,
+      status: { strategy: 'auto', state: 'measuring', applied_delay_ms: 3094, sample_count: 3 } }
+    const base = { active_coupling_id: 'c', active_player_type: 'LMS', follow_mode: 'manual',
+      timing_player_mac: 'speaker', timing_player_name: 'Radio', follow_target_mac: 'speaker',
+      follow_target_name: 'Radio', processes: {}, lms_timing: null }
+    const socket = await setupPreview(page, () => ({ ...base, applied_delay_ms: 3094, light_timing: entry }))
+    await page.setViewportSize({ width, height: 1100 })
+    await page.getByRole('button', { name: theme === 'light' ? 'Light' : 'Dark', exact: true }).click()
+    await expect(page.getByText('Measuring', { exact: true })).toBeVisible()
+    await expect(page.getByTestId('light-timing').locator('.text-4xl')).toContainText('3.09')
+    await expect(page.getByText(/Checking the timing.*3 of 7 measurements/)).toBeVisible()
+    await expect(page.getByTestId('lms-timing')).toHaveCount(0)
+    socket().send(JSON.stringify({ type: 'status', ...base, applied_delay_ms: 1530,
+      light_timing: { ...entry, status: { ...entry.status, state: 'stable', applied_delay_ms: 1530, sample_count: 7 } } }))
+    await expect(page.getByText('In sync', { exact: true })).toBeVisible()
+    await expect(page.getByTestId('light-timing').locator('.text-4xl')).toContainText('1.53')
+    await expect(page.getByTestId('lms-timing')).toHaveCount(0)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  })
+}

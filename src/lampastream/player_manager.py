@@ -1185,7 +1185,7 @@ class PlayerManager:
                 or not getattr(session, "coupling", None)):
             return None
         player = self.storage.get_virtual_player(session.coupling.player_id)
-        if player is None:
+        if player is None or player.follow_mode != "sync_group":
             return None
         source = getattr(session, "lms_timed_source", None)
         if source:
@@ -1205,8 +1205,7 @@ class PlayerManager:
                         available_ms=max(0, (data["lead_p5_ms"] or 0)
                                          - (data["median_processing_ms"] or 0)))
         return dict(source="lms", state="off" if player.head_start_ms == 0 else "unavailable",
-                    reason=("Head start needs sync-group mode" if player.follow_mode != "sync_group"
-                            else "Head start is off" if player.head_start_ms == 0
+                    reason=("Head start is off" if player.head_start_ms == 0
                             else "Head start could not be verified; using delay instead"))
 
     def latency_status(self, config) -> dict:
@@ -1244,8 +1243,11 @@ class PlayerManager:
                               median_processing_ms=data["median_processing_ms"])
             result["safety_message"] = self._airplay_safety_message
         if (session and session.player_type == VirtualPlayerType.LMS
-                and session.latency_mac == config.player_mac and self.lms_timing):
-            result.update(self.lms_timing)
+                and session.latency_mac == config.player_mac
+                and getattr(session, "lms_timed_source", None) is not None):
+            timing = self.lms_timing
+            if timing:
+                result.update(timing)
         return result
 
     @property

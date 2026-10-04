@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import { LightTiming } from '@/components/LightTiming'
+import { LightTiming, lightTimingState } from '@/components/LightTiming'
 import { createPlayerLatency, updatePlayerLatency, type PlayerLatency } from '@/lib/api'
 import type { SocketStatus } from '@/hooks/usePreviewSocket'
 vi.mock('@/lib/api', () => ({ createPlayerLatency: vi.fn(), updatePlayerLatency: vi.fn() }))
@@ -155,15 +155,15 @@ it.each([
   ['unsynced', 'Not synced with a speaker yet: sync it in LMS', 'Not synced with a speaker yet: sync it in LMS'],
   ['scheduled', null, 'Head start 486 ms · processing 19 ms · fine-tune +0 ms'],
   ['fallback', 'Not enough head start, using delay instead', 'Not enough head start, using delay instead'],
-  ['unavailable', 'Head start needs sync-group mode', 'Head start needs sync-group mode'],
+  ['unavailable', 'Head start could not be verified; using delay instead', 'Head start could not be verified; using delay instead'],
 ] as const)('shows LMS %s timing in the existing card', (state, reason, text) => {
-  render(<LightTiming status={{ ...status(), lms_timing: { state, reason, lead_p5_ms: 486, median_processing_ms: 19 } }} />)
+  render(<LightTiming status={{ ...status(), follow_mode: 'sync_group', lms_timing: { state, reason, lead_p5_ms: 486, median_processing_ms: 19 } }} />)
   expect(screen.getByTestId('lms-timing')).toHaveTextContent(text)
   if (state === 'scheduled') expect(screen.getByText('Scheduled · LMS head start')).toBeVisible()
 })
 
 it('uses the write-clock statistics and speaker name while scheduled', () => {
-  render(<LightTiming status={{ ...status(), lms_timing: { state: 'scheduled',
+  render(<LightTiming status={{ ...status(), follow_mode: 'sync_group', lms_timing: { state: 'scheduled',
     synced_player_name: 'Radio Red', lead_p5_ms: 487, median_processing_ms: 19.4,
     precision_ms: 1.2, sample_count: 211, last_sample_time: 123,
     median_residual_ms: .1, samples: [{ residual_ms: .1, timestamp: 123 }] } }} />)
@@ -174,7 +174,24 @@ it('uses the write-clock statistics and speaker name while scheduled', () => {
   expect(screen.getByTestId('lms-timing')).toHaveTextContent('processing 19.4 ms')
 })
 it('does not turn an unknown LMS processing time into zero', () => {
-  render(<LightTiming status={{ ...status(), lms_timing: { state: 'scheduled',
+  render(<LightTiming status={{ ...status(), follow_mode: 'sync_group', lms_timing: { state: 'scheduled',
     lead_p5_ms: null, median_processing_ms: null } }} />)
   expect(screen.getByTestId('lms-timing')).toHaveTextContent('Head start — ms · processing — ms')
+})
+
+it.each(['measuring', 'stable', 'idle'])('keeps follow-mode live probe %s without head-start text', state => {
+  const current = { ...entry, measured_delay_ms: 0, status: { ...entry.status!, state, applied_delay_ms: 1530 } }
+  render(<LightTiming status={{ ...status(current), active_coupling_id: 'c', follow_mode: 'manual', applied_delay_ms: 1530,
+    lms_timing: { state: 'unavailable', reason: 'Head start needs sync-group mode' } }} />)
+  expect(screen.getByTestId('light-timing').querySelector('.text-4xl')).toHaveTextContent(/1\.53\s*s/)
+  expect(screen.queryByTestId('lms-timing')).not.toBeInTheDocument()
+  if (state === 'stable') expect(screen.getByText('In sync')).toBeVisible()
+  if (state === 'measuring') expect(screen.getByText('Measuring')).toBeVisible()
+})
+
+it('uses live idle delay only for an active session, including zero', () => {
+  const current = { ...entry, trim_ms: 10, status: { ...entry.status!, state: 'idle', applied_delay_ms: 800 } }
+  expect(lightTimingState(current, { ...status(current), active_coupling_id: 'c', applied_delay_ms: 0 }).applied).toBe(0)
+  expect(lightTimingState(current, { ...status(current), active_coupling_id: 'c', applied_delay_ms: undefined }).applied).toBe(800)
+  expect(lightTimingState(current, status(current)).applied).toBe(2253)
 })

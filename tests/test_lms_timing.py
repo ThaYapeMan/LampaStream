@@ -360,6 +360,9 @@ def test_status_uses_measured_scheduled_hold_and_legacy_when_off(tmp_path):
     assert manager.lms_timing['median_processing_ms'] == pytest.approx(19)
     assert manager.applied_delay_ms == 457
     assert manager.latency_status(config)['audio_source'] == 'LMS head start'
+    assert manager.latency_status(config)['state'] == 'scheduled'
+    assert manager.latency_status(config)['source'] == 'lms'
+    assert manager.latency_status(config)['reason'] is None
     session.lms_timed_source = None
     player.head_start_ms = 0
     storage.save_virtual_player(player)
@@ -410,3 +413,62 @@ def test_readiness_gate_keeps_pcm_untimed_and_invalidates_when_ready():
                  for pos, lo, hi in timed.fit.samples]
     assert timed.fit_snapshot['precision_ms'] == percentile(residuals, .95)
     assert timed.fit_snapshot['samples']
+
+
+@pytest.mark.parametrize('state', ['measuring', 'stable'])
+@pytest.mark.parametrize('head_start', [0, 500])
+def test_follow_mode_retains_live_auto_probe_status(tmp_path, state, head_start):
+    from lampastream.latency import AutoLatencyProbe
+    from lampastream.models import Coupling, PlayerLatency, Profile, VirtualPlayerType
+    from lampastream.player_manager import ActiveSession, PlayerManager
+    from lampastream.storage import Storage
+
+    storage = Storage(tmp_path / 'config.json')
+    player = VirtualPlayer(player_mac='virtual', follow_mode='manual',
+                           head_start_ms=head_start)
+    storage.save_virtual_player(player)
+    manager = PlayerManager(storage)
+    config = PlayerLatency(player_mac='speaker', strategy='auto', measured_delay_ms=0)
+    probe = AutoLatencyProbe(config, Mock(), Mock())
+    probe.state = state
+    probe.delay = 1530
+    probe.samples.extend([1.52, 1.53, 1.54])
+    probe.sample_times.extend([1, 2, 3])
+    session = ActiveSession(Profile(), coupling=Coupling(player_id=player.id),
+                            player_type=VirtualPlayerType.LMS)
+    session.probe = probe
+    session.latency_mac = 'speaker'
+    manager._active = session
+    result = manager.latency_status(config)
+    assert result == probe.status()
+    assert result['state'] == state
+    assert result['applied_delay_ms'] == 1530
+    assert result['reason'] is None
+    assert result.get('source') != 'lms'
+    assert manager.lms_timing is None
+
+
+@pytest.mark.parametrize('strategy, delay', [('fixed', 900), ('none', 0)])
+def test_follow_mode_retains_fixed_and_none_status(tmp_path, strategy, delay):
+    from lampastream.latency import FixedLatencyProbe, NoLatencyProbe
+    from lampastream.models import Coupling, PlayerLatency, Profile, VirtualPlayerType
+    from lampastream.player_manager import ActiveSession, PlayerManager
+    from lampastream.storage import Storage
+
+    storage = Storage(tmp_path / 'config.json')
+    player = VirtualPlayer(player_mac='virtual', follow_mode='manual')
+    storage.save_virtual_player(player)
+    manager = PlayerManager(storage)
+    session = ActiveSession(Profile(), coupling=Coupling(player_id=player.id),
+                            player_type=VirtualPlayerType.LMS)
+    session.probe = FixedLatencyProbe(delay) if strategy == 'fixed' else NoLatencyProbe()
+    session.latency_mac = 'speaker'
+    manager._active = session
+    config = PlayerLatency(player_mac='speaker', strategy=strategy, fixed_delay_ms=delay)
+    result = manager.latency_status(config)
+    assert result['state'] == 'idle'
+    assert result['strategy'] == strategy
+    assert result['applied_delay_ms'] == delay
+    assert result['reason'] is None
+    assert result.get('source') != 'lms'
+    assert manager.lms_timing is None

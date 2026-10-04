@@ -32,7 +32,7 @@ export function lightTimingState(current: PlayerLatency | null | undefined, stat
   const timing = current?.status
   const group = !airplay && current?.strategy === 'auto' && (status?.follow_mode === 'sync_group' || timing?.state === 'not measurable (sync group)')
   const state = !current ? 'missing' : current.strategy === 'none' ? 'none' : group ? 'group' : timing?.state === 'not measurable' ? 'unavailable' : current.strategy === 'fixed' ? 'fixed' : airplay && (timing?.state === 'lagging' || timing?.state === 'stable' && timing?.early_delivery_ms === 0) ? 'lagging' : timing?.state === 'stable' ? 'stable' : timing?.state === 'measuring' ? 'measuring' : 'idle'
-  const applied = state === 'idle' && !airplay ? Math.max(0, (current?.measured_delay_ms ?? 0) + (current?.trim_ms ?? 0)) : status?.applied_delay_ms ?? timing?.applied_delay_ms ?? 0
+  const applied = state === 'idle' && !airplay && !status?.active_coupling_id ? Math.max(0, (current?.measured_delay_ms ?? 0) + (current?.trim_ms ?? 0)) : status?.applied_delay_ms ?? timing?.applied_delay_ms ?? 0
   return { state, applied } as const
 }
 
@@ -42,7 +42,7 @@ export function LightTiming({ status, onOpenLatency, playersView = false, contro
   const airplay = status?.active_player_type === 'AirPlay' || status?.light_timing?.status?.source === 'airplay'
   const mac = status?.timing_player_mac || status?.follow_target_mac || status?.sync_master
   const entry = status?.light_timing?.player_mac === mac ? status?.light_timing : null
-  const lms = status?.lms_timing
+  const lms = status?.follow_mode === 'sync_group' ? status.lms_timing : null
   const name = lms?.synced_player_name || status?.timing_player_name || status?.follow_target_name || status?.sync_master_name || entry?.name || mac || 'the followed player'
   const [override, setOverride] = useState<PlayerLatency | null>(null)
   const [trim, setTrim] = useState(entry?.trim_ms ?? 0)

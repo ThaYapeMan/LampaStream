@@ -469,6 +469,10 @@ speaker. `startDelay` is only read: a non-zero value warns because start and
 steady-state offsets would differ. Manual follow mode and head start 0 retain the
 previous delay-buffer path.
 
+LMS `lms_timing` status is exclusive to sync-group mode. In follow mode it is
+null; the Light timing card uses the position probe’s measuring/stable state
+and live applied delay, without a head-start status line.
+
 The one production SHM reader observes the v1 absolute stereo-frame write position,
 generation and gap counter with monotonic read timestamps on every poll. The
 canonical worker's existing 5 ms wait targets 200 Hz when waiting for data; late

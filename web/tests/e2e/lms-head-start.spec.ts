@@ -37,7 +37,7 @@ for (const theme of ['light', 'dark'] as const) for (const width of [1400, 390])
     await expect(page.getByText('Scheduled · LMS head start')).toBeVisible()
     await expect(page.getByTestId('lms-timing')).toHaveText('Head start 486 ms · processing 19 ms · fine-tune +0 ms')
     const update = (state: string, reason: string) => socket().send(JSON.stringify({ type: 'status', active_coupling_id: 'c',
-      active_player_type: 'LMS', follow_mode: state === 'unavailable' ? 'manual' : 'sync_group', processes: {},
+      active_player_type: 'LMS', follow_mode: 'sync_group', processes: {},
       timing_player_mac: 'speaker', light_timing: entry, lms_timing: { ...timing, state, reason } }))
     await expect(page.getByText('Steady to within ±1.2 ms')).toBeVisible()
     await expect(page.getByText(/211 measurements/)).toBeVisible()
@@ -48,8 +48,8 @@ for (const theme of ['light', 'dark'] as const) for (const width of [1400, 390])
     await expect(page.getByTestId('lms-timing')).toHaveText('Not synced with a speaker yet: sync it in LMS')
     update('fallback', 'Not enough head start, using delay instead')
     await expect(page.getByTestId('lms-timing')).toHaveText('Not enough head start, using delay instead')
-    update('unavailable', 'Head start needs sync-group mode')
-    await expect(page.getByTestId('lms-timing')).toHaveText('Head start needs sync-group mode')
+    update('unavailable', 'Head start could not be verified; using delay instead')
+    await expect(page.getByTestId('lms-timing')).toHaveText('Head start could not be verified; using delay instead')
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   })
 }

@@ -321,7 +321,9 @@ Fractions, booleans, nulls and out-of-range values return 422. Existing
 configurations receive additive defaults, preserving explicit values.
 
 `/api/status` and preview websocket status expose `lms_timing` for an active LMS
-coupling, independently of whether a saved latency entry exists. It includes:
+sync-group coupling, independently of whether a saved latency entry exists.
+In follow mode `lms_timing` is null and latency status retains the active probe’s
+state, reason and live applied delay. It includes:
 
 - `source: "lms"`, `state` (`waiting`, `unsynced`, `scheduled`, `fallback`, `off` or `unavailable`),
   `reason`, and `audio_source` (`LMS head start` or `delay fallback` when timed);
