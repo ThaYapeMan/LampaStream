@@ -82,6 +82,7 @@ describe('NowPlaying — Reset to saved & Restore factory defaults', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    localStorage.setItem('lampastream.spectrumTuning', '1')
   })
 
   // ── Initialisation ────────────────────────────────────────────────────────
@@ -98,14 +99,12 @@ describe('NowPlaying — Reset to saved & Restore factory defaults', () => {
     it('"Reset to saved" is disabled on init (pending equals applied)', () => {
       renderNowPlaying()
       expect(screen.getByTestId('reset-cutoffs')).toBeDisabled()
-      expect(screen.getByTestId('reset-bands')).toBeDisabled()
     })
 
     it('"Restore defaults" is enabled on init (applied values differ from factory defaults)', () => {
       renderNowPlaying()
       // APPLIED_* ≠ DEFAULT_* so Restore defaults should be available.
       expect(screen.getByTestId('restore-defaults-cutoffs')).toBeEnabled()
-      expect(screen.getByTestId('restore-defaults-bands')).toBeEnabled()
     })
   })
 
@@ -200,14 +199,14 @@ describe('NowPlaying — Reset to saved & Restore factory defaults', () => {
       await user.clear(input)
       await user.type(input, String(PENDING_BASS))
       await user.keyboard('{Enter}')
-      expect(screen.getByTestId('reset-bands')).toBeEnabled()
+      expect(screen.getByTestId('reset-cutoffs')).toBeEnabled()
 
-      await user.click(screen.getByTestId('reset-bands'))
+      await user.click(screen.getByTestId('reset-cutoffs'))
 
       // Must equal APPLIED_BASS (400), not DEFAULT_BASS (250).
       expect(input).toHaveValue(APPLIED_BASS)
       expect(input).not.toHaveValue(DEFAULT_BASS)
-      expect(screen.getByTestId('reset-bands')).toBeDisabled()
+      expect(screen.getByTestId('reset-cutoffs')).toBeDisabled()
     })
 
     it('Mid/treble: Reset goes to APPLIED value, not factory default', async () => {
@@ -218,7 +217,7 @@ describe('NowPlaying — Reset to saved & Restore factory defaults', () => {
       await user.type(input, String(PENDING_MID))
       await user.keyboard('{Enter}')
 
-      await user.click(screen.getByTestId('reset-bands'))
+      await user.click(screen.getByTestId('reset-cutoffs'))
 
       // Must equal APPLIED_MID (2500), not DEFAULT_MID (2000).
       expect(input).toHaveValue(APPLIED_MID)
@@ -233,7 +232,7 @@ describe('NowPlaying — Reset to saved & Restore factory defaults', () => {
       renderNowPlaying()
       const input = screen.getByTestId('bass-hz')
 
-      await user.click(screen.getByTestId('restore-defaults-bands'))
+      await user.click(screen.getByTestId('restore-defaults-cutoffs'))
 
       // Must equal DEFAULT_BASS (250), not APPLIED_BASS (400).
       expect(input).toHaveValue(DEFAULT_BASS)
@@ -244,7 +243,7 @@ describe('NowPlaying — Reset to saved & Restore factory defaults', () => {
       renderNowPlaying()
       const input = screen.getByTestId('mid-hz')
 
-      await user.click(screen.getByTestId('restore-defaults-bands'))
+      await user.click(screen.getByTestId('restore-defaults-cutoffs'))
 
       // Must equal DEFAULT_MID (2000), not APPLIED_MID (2500).
       expect(input).toHaveValue(DEFAULT_MID)
@@ -254,17 +253,17 @@ describe('NowPlaying — Reset to saved & Restore factory defaults', () => {
     it('Restore defaults enables "Reset to saved" for bands', async () => {
       renderNowPlaying()
 
-      await user.click(screen.getByTestId('restore-defaults-bands'))
+      await user.click(screen.getByTestId('restore-defaults-cutoffs'))
 
-      expect(screen.getByTestId('reset-bands')).toBeEnabled()
+      expect(screen.getByTestId('reset-cutoffs')).toBeEnabled()
     })
 
     it('"Restore defaults" for bands is disabled when already at factory defaults', async () => {
       renderNowPlaying()
 
-      await user.click(screen.getByTestId('restore-defaults-bands'))
+      await user.click(screen.getByTestId('restore-defaults-cutoffs'))
 
-      expect(screen.getByTestId('restore-defaults-bands')).toBeDisabled()
+      expect(screen.getByTestId('restore-defaults-cutoffs')).toBeDisabled()
     })
   })
 })

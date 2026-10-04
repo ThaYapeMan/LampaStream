@@ -24,7 +24,7 @@ const props = { colour: { r: 1, g: 0, b: 0 }, channel_colours: [], onset: false,
 afterEach(cleanup)
 beforeEach(() => {
   vi.mocked(getCouplings).mockResolvedValue([{ id: 'c', name: 'Room', analyser_id: 'a', player_id: 'p' }] as never)
-  vi.mocked(getAnalysers).mockResolvedValue([{ id: 'a', name: 'Canonical analyser', bars_source: 'pcm_pipeline', spectrum_backend: 'cavacore', onset_method: 'combined' }] as never)
+  vi.mocked(getAnalysers).mockResolvedValue([{ id: 'a', name: 'Canonical analyser', band_normalise: true, bars_source: 'pcm_pipeline', spectrum_backend: 'cavacore', onset_method: 'combined' }] as never)
   vi.mocked(getVirtualPlayers).mockResolvedValue([{ id: 'p', type: 'LMS' }] as never)
 })
 
@@ -128,7 +128,7 @@ it('only exposes transport for LMS with a live follow target; AirPlay sync is n/
 it('shows raw spectrum, tick comparison, readouts and description from one pair', async () => {
   const bars = [.6,.6,.2,.2,.2,.2,.4,.4,.4,.4]
   const view = render(<NowPlaying {...props} bars={bars} normalised_bars={Array(10).fill(.33)} status={status} />)
-  expect(screen.getByTestId('spectrum-legend')).toHaveTextContent('SpectrumNormalised')
+  await waitFor(() => expect(screen.getByTestId('spectrum-legend')).toHaveTextContent('RawNormalised'))
   expect(screen.getAllByTestId('spectrum-tick')).toHaveLength(10)
   expect(screen.getAllByTestId('spectrum-raw')[0]).toHaveStyle({ height: '60%' })
   expect(screen.getAllByTestId('spectrum-tick')[0].querySelector('line')).toHaveAttribute('y1', '67%')

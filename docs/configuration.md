@@ -713,3 +713,18 @@ failures retry after 1, 2, 5 and 10 seconds, then every 30 seconds. Group change
 and reconnects request immediate re-verification. Existing group refreshes also
 check for a lost preference. Until registration, verification and real speaker
 membership are established, output stays on the delay path.
+
+### Spectrum controls on Now Playing
+
+Spectrum combines the bars, band readouts and analyser frequency controls in one
+card. **Band normaliser** applies immediately to the active analyser; it shows or
+hides the normalised overlay and comparison values. Without an active coupling,
+the switch is disabled. A failed change restores the previous setting and shows
+an inline error.
+
+**Frequency range and bands** starts collapsed and remembers its disclosure state
+per browser. Its summary uses the live frequency values. Expand it to edit Low
+cut, High cut, Bass / mid and Mid / treble. One **Apply** restarts analysis briefly;
+**Reset to saved** restores all four live settings and **Restore defaults** resets
+all four pending values to their factory defaults. Track colours follows Spectrum
+and keeps its existing controls.

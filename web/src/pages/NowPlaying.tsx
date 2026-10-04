@@ -3,7 +3,8 @@ import { MusicChoices } from '@/components/MusicChoices'
 import { LightTiming } from '@/components/LightTiming'
 import { LiveEnergySource } from '@/components/LiveEnergySource'
 import { TrackProgress } from '@/components/TrackProgress'
-import { useEffect, useRef, useState } from 'react'
+import { ChevronRight } from 'lucide-react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { ColourSwatch } from '@/components/ColourSwatch'
 import { FloorplanPreview } from '@/components/FloorplanPreview'
 import { SpectrumBars } from '@/components/SpectrumBars'
@@ -31,6 +32,7 @@ import {
   getCouplings,
   getZoneChannels,
   restartCouplingCava,
+  updateAnalyser,
 } from '@/lib/api'
 
 const LOG_MIN = Math.log10(20)
@@ -270,9 +272,14 @@ export function NowPlaying({ expertMode = false, colour, channel_colours, onset,
 
   const [bassSlider, setBassSlider] = useState<number>(hzToSlider(250))
   const [midSlider, setMidSlider] = useState<number>(hzToSlider(2000))
-  const [applyingBands, setApplyingBands] = useState(false)
-  const [bandResult, setBandResult] = useState<string | null>(null)
-  const [bandError, setBandError] = useState(false)
+  const tuningId = useId()
+  const [tuningOpen, setTuningOpen] = useState(() => {
+    try { return localStorage.getItem('lampastream.spectrumTuning') === '1' }
+    catch { return false }
+  })
+  const [normaliserBusy, setNormaliserBusy] = useState(false)
+  const normaliserPending = useRef(false)
+  const [normaliserError, setNormaliserError] = useState<string | null>(null)
 
   // Reload coupling selector when activation changes.
   const [reloadKey, setReloadKey] = useState(0)
@@ -293,6 +300,7 @@ export function NowPlaying({ expertMode = false, colour, channel_colours, onset,
   const activeCoupling = couplings.find((item) => item.id === couplingId)
   const activeEnergyProfile = couplingId ? energyProfiles.find(item => item.id === status?.active_energy_profile_id) : undefined
   const activeAnalyser = analysers.find((item) => item.id === activeCoupling?.analyser_id)
+  const normaliserOn = !!couplingId && !!activeAnalyser?.band_normalise
   const playerType = status?.active_player_type ?? players.find((item) => item.id === activeCoupling?.player_id)?.type
 
 
@@ -305,7 +313,6 @@ export function NowPlaying({ expertMode = false, colour, channel_colours, onset,
     if (status.bass_hz != null) setBassSlider(hzToSlider(status.bass_hz))
     if (status.mid_hz != null) setMidSlider(hzToSlider(status.mid_hz))
     setApplyResult(null)
-    setBandResult(null)
   }, [couplingId, status])
 
   const appliedLower  = status?.lower_cutoff_freq  ?? 50
@@ -361,7 +368,7 @@ export function NowPlaying({ expertMode = false, colour, channel_colours, onset,
     setApplyResult(null)
     setApplyError(false)
     try {
-      await restartCouplingCava(couplingId, { lower_cutoff_freq: pendingLower, higher_cutoff_freq: pendingHigher })
+      await restartCouplingCava(couplingId, { lower_cutoff_freq: pendingLower, higher_cutoff_freq: pendingHigher, bass_hz: pendingBass, mid_hz: pendingMid })
       setApplyResult('Applied.')
     } catch (e) {
       setApplyResult(e instanceof Error ? e.message : 'Failed')
@@ -374,27 +381,13 @@ export function NowPlaying({ expertMode = false, colour, channel_colours, onset,
   function handleReset() {
     setLowSlider(hzToSlider(appliedLower))
     setHighSlider(hzToSlider(appliedHigher))
+    handleResetBands()
   }
 
   function handleRestoreDefaults() {
     setLowSlider(hzToSlider(DEFAULT_LOW))
     setHighSlider(hzToSlider(DEFAULT_HIGH))
-  }
-
-  async function handleApplyBands() {
-    if (!couplingId) return
-    setApplyingBands(true)
-    setBandResult(null)
-    setBandError(false)
-    try {
-      await restartCouplingCava(couplingId, { bass_hz: pendingBass, mid_hz: pendingMid })
-      setBandResult('Applied.')
-    } catch (e) {
-      setBandResult(e instanceof Error ? e.message : 'Failed')
-      setBandError(true)
-    } finally {
-      setApplyingBands(false)
-    }
+    handleRestoreDefaultsBands()
   }
 
   function handleResetBands() {
@@ -406,6 +399,37 @@ export function NowPlaying({ expertMode = false, colour, channel_colours, onset,
     setBassSlider(hzToSlider(DEFAULT_BASS))
     setMidSlider(hzToSlider(DEFAULT_MID))
   }
+
+  async function toggleNormaliser() {
+    if (!couplingId || !activeAnalyser || normaliserPending.current) return
+    const id = activeAnalyser.id
+    const previous = !!activeAnalyser.band_normalise
+    const next = !previous
+    normaliserPending.current = true
+    setNormaliserBusy(true)
+    setNormaliserError(null)
+    setAnalysers(items => items.map(item => item.id === id ? { ...item, band_normalise: next } : item))
+    try {
+      const updated = await updateAnalyser(id, { band_normalise: next })
+      setAnalysers(items => items.map(item => item.id === id
+        ? { ...item, band_normalise: updated.band_normalise ?? next } : item))
+    } catch (error) {
+      setAnalysers(items => items.map(item => item.id === id ? { ...item, band_normalise: previous } : item))
+      setNormaliserError(error instanceof Error ? error.message : 'Could not change the band normaliser')
+    } finally {
+      normaliserPending.current = false
+      setNormaliserBusy(false)
+    }
+  }
+
+  function toggleTuning() {
+    const next = !tuningOpen
+    setTuningOpen(next)
+    try { localStorage.setItem('lampastream.spectrumTuning', next ? '1' : '0') }
+    catch { /* Browser storage may be unavailable. */ }
+  }
+
+  const frequencyLabel = (hz: number) => hz >= 1000 ? `${Math.round(hz / 100) / 10} kHz` : `${hz} Hz`
 
   return (
     <div className="space-y-4">
@@ -487,24 +511,14 @@ export function NowPlaying({ expertMode = false, colour, channel_colours, onset,
         </CardContent>
       </Card>
 
-      {status?.music && <MusicChoices music={status.music} coupling={activeCoupling} profiles={energyProfiles} />}
-
       <Card data-testid="spectrum-panel">
-        <CardHeader className="pb-3 flex-row flex-wrap gap-2 items-center justify-between">
-          <CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">
-            Spectrum
-          </CardTitle>
-          {normalised_bars?.length === bars.length && bars.length > 0 && (
-            <div className="flex gap-3 text-xs text-muted-foreground" data-testid="spectrum-legend">
-              <span className="flex items-center gap-1"><span className="h-2 w-2 bg-current" />Spectrum</span>
-              <span className="flex items-center gap-1"><span className="h-0.5 w-3 rounded-full bg-current" />Normalised</span>
-            </div>
-          )}
+        <CardHeader className="pb-3">
+          <CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">Spectrum</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <SpectrumBars
             bars={bars}
-            normalisedBars={normalised_bars}
+            normalisedBars={normaliserOn ? normalised_bars : undefined}
             colorMode={status?.effect_type ?? null}
             lowerCutoffHz={appliedLower}
             higherCutoffHz={appliedHigher}
@@ -514,153 +528,82 @@ export function NowPlaying({ expertMode = false, colour, channel_colours, onset,
             onsetMid={onset_mid}
             onsetTreble={onset_treble}
           />
-
-          {couplingId && (
-            <>
-              <Separator />
-              <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">
-                Band boundaries
-              </p>
-              <div className="space-y-3">
-                <SliderField
-                  label="Bass / mid"
-                  value={bassSlider}
-                  min={0}
-                  max={100}
-                  step={1}
-                  format={() => `${pendingBass} Hz`}
-                  onChange={handleBassChange}
-                  disabled={applyingBands}
-                  inputHz={pendingBass}
-                  inputMin={20}
-                  inputMax={20000}
-                  onInputCommit={handleBassCommit}
-                  inputTestId="bass-hz"
-                />
-                <SliderField
-                  label="Mid / treble"
-                  value={midSlider}
-                  min={0}
-                  max={100}
-                  step={1}
-                  format={() => `${pendingMid} Hz`}
-                  onChange={handleMidChange}
-                  disabled={applyingBands}
-                  inputHz={pendingMid}
-                  inputMin={20}
-                  inputMax={20000}
-                  onInputCommit={handleMidCommit}
-                  inputTestId="mid-hz"
-                />
-                <div className="flex items-center gap-3">
-                  <Button size="sm" onClick={handleApplyBands} disabled={applyingBands || !hasBandChanges} data-testid="apply-bands">
-                    {applyingBands ? 'Applying…' : 'Apply'}
-                  </Button>
-                  <Button
-                    size="sm" variant="outline"
-                    onClick={handleResetBands}
-                    disabled={applyingBands || !hasBandChanges}
-                    title="Reset to saved value"
-                    data-testid="reset-bands"
-                  >
-                    Reset to saved
-                  </Button>
-                  <Button
-                    size="sm" variant="ghost"
-                    onClick={handleRestoreDefaultsBands}
-                    disabled={applyingBands || !hasDefaultBandChanges}
-                    title="Restore factory defaults"
-                    data-testid="restore-defaults-bands"
-                  >
-                    Restore defaults
-                  </Button>
-                  {bandResult && (
-                    <span className={bandError ? 'text-destructive text-sm' : 'text-sm text-muted-foreground'}>
-                      {bandResult}
-                    </span>
-                  )}
-                  <span className="text-xs text-muted-foreground italic ml-auto">
-                    analysis restarts briefly
-                  </span>
-                </div>
-              </div>
-            </>
+          {normaliserOn && normalised_bars?.length === bars.length && bars.length > 0 && (
+            <div className="flex gap-3 text-xs text-muted-foreground" data-testid="spectrum-legend">
+              <span className="flex items-center gap-1"><span className="h-2 w-2 bg-current" />Raw</span>
+              <span className="flex items-center gap-1"><span className="h-0.5 w-3 rounded-full bg-current" />Normalised</span>
+            </div>
           )}
+          <Separator />
+          <div className="flex min-h-11 items-center justify-between gap-3">
+            <div className="min-w-0">
+              <label id={`${tuningId}-normaliser-label`} htmlFor={`${tuningId}-normaliser`} className="text-sm">Band normaliser</label>
+              <p id={`${tuningId}-normaliser-help`} className="text-xs text-muted-foreground">
+                {couplingId ? `Balances bass, mid and treble colours · Analyser "${activeAnalyser?.name ?? '—'}"`
+                  : 'Start a coupling to change this'}
+              </p>
+            </div>
+            <button id={`${tuningId}-normaliser`} type="button" role="switch" aria-checked={normaliserOn}
+              aria-labelledby={`${tuningId}-normaliser-label`} aria-describedby={`${tuningId}-normaliser-help`}
+              aria-busy={normaliserBusy} disabled={!couplingId || !activeAnalyser || normaliserBusy}
+              onClick={toggleNormaliser}
+              className="flex min-h-11 min-w-14 shrink-0 items-center justify-center rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50">
+              <span aria-hidden="true" className={`flex h-7 w-12 items-center rounded-full border p-0.5 ${normaliserOn ? 'justify-end bg-emerald-600 dark:bg-emerald-500' : 'justify-start bg-muted'}`}>
+                <span className="h-5 w-5 rounded-full bg-white shadow-sm" />
+              </span>
+            </button>
+          </div>
+          {couplingId && normaliserError && <p role="alert" className="text-sm text-destructive">{normaliserError}</p>}
+          {couplingId && <>
+            <Separator />
+            <button type="button" aria-expanded={tuningOpen} aria-controls={tuningId} onClick={toggleTuning}
+              className="flex min-h-11 w-full flex-wrap items-center gap-2 rounded-md text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              <span className="flex min-w-0 items-center gap-2">
+                <ChevronRight aria-hidden="true" className={`h-4 w-4 shrink-0 ${tuningOpen ? 'rotate-90' : ''}`} />
+                <span className="text-sm">Frequency range and bands</span>
+              </span>
+              {!tuningOpen && <span className="ml-auto text-xs text-muted-foreground">
+                {frequencyLabel(appliedLower)} – {frequencyLabel(appliedHigher)} · {frequencyLabel(appliedBass)} · {frequencyLabel(appliedMid)}
+              </span>}
+            </button>
+            <div id={tuningId} hidden={!tuningOpen} className="space-y-4">
+              {[
+                { title: 'Frequency cutoffs', fields: [
+                  { label: 'Low cut', value: lowSlider, hz: pendingLower, change: setLowSlider, commit: handleLowCommit, id: 'low-cut-hz' },
+                  { label: 'High cut', value: highSlider, hz: pendingHigher, change: setHighSlider, commit: handleHighCommit, id: 'high-cut-hz' },
+                ] },
+                { title: 'Band boundaries', fields: [
+                  { label: 'Bass / mid', value: bassSlider, hz: pendingBass, change: handleBassChange, commit: handleBassCommit, id: 'bass-hz' },
+                  { label: 'Mid / treble', value: midSlider, hz: pendingMid, change: handleMidChange, commit: handleMidCommit, id: 'mid-hz' },
+                ] },
+              ].map(group => <div key={group.title} className="space-y-3">
+                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{group.title}</p>
+                {group.fields.map(field => <SliderField key={field.id} label={field.label}
+                  value={field.value} min={0} max={100} step={1} format={() => `${field.hz} Hz`}
+                  onChange={field.change} disabled={applying} inputHz={field.hz}
+                  inputMin={20} inputMax={20000} onInputCommit={field.commit} inputTestId={field.id} />)}
+              </div>)}
+              <div className="flex flex-wrap items-center gap-3">
+                <Button size="sm" onClick={handleApply} disabled={applying || (!hasChanges && !hasBandChanges)} data-testid="apply-cutoffs">
+                  {applying ? 'Applying…' : 'Apply'}
+                </Button>
+                <Button size="sm" variant="outline" onClick={handleReset}
+                  disabled={applying || (!hasChanges && !hasBandChanges)} title="Reset to saved value" data-testid="reset-cutoffs">
+                  Reset to saved
+                </Button>
+                <Button size="sm" variant="ghost" onClick={handleRestoreDefaults}
+                  disabled={applying || (!hasDefaultChanges && !hasDefaultBandChanges)} title="Restore factory defaults" data-testid="restore-defaults-cutoffs">
+                  Restore defaults
+                </Button>
+                {applyResult && <span className={applyError ? 'text-destructive text-sm' : 'text-sm text-muted-foreground'}>{applyResult}</span>}
+                <span className="ml-auto text-xs italic text-muted-foreground">analysis restarts briefly</span>
+              </div>
+            </div>
+          </>}
         </CardContent>
       </Card>
 
-      {couplingId && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">
-              Frequency cutoffs
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <SliderField
-              label="Low cut"
-              value={lowSlider}
-              min={0}
-              max={100}
-              step={1}
-              format={() => `${pendingLower} Hz`}
-              onChange={setLowSlider}
-              disabled={applying}
-              inputHz={pendingLower}
-              inputMin={20}
-              inputMax={20000}
-              onInputCommit={handleLowCommit}
-              inputTestId="low-cut-hz"
-            />
-            <SliderField
-              label="High cut"
-              value={highSlider}
-              min={0}
-              max={100}
-              step={1}
-              format={() => `${pendingHigher} Hz`}
-              onChange={setHighSlider}
-              disabled={applying}
-              inputHz={pendingHigher}
-              inputMin={20}
-              inputMax={20000}
-              onInputCommit={handleHighCommit}
-              inputTestId="high-cut-hz"
-            />
-            <div className="flex items-center gap-3">
-              <Button size="sm" onClick={handleApply} disabled={applying || !hasChanges} data-testid="apply-cutoffs">
-                {applying ? 'Applying…' : 'Apply'}
-              </Button>
-              <Button
-                size="sm" variant="outline"
-                onClick={handleReset}
-                disabled={applying || !hasChanges}
-                title="Reset to saved value"
-                data-testid="reset-cutoffs"
-              >
-                Reset to saved
-              </Button>
-              <Button
-                size="sm" variant="ghost"
-                onClick={handleRestoreDefaults}
-                disabled={applying || !hasDefaultChanges}
-                title="Restore factory defaults"
-                data-testid="restore-defaults-cutoffs"
-              >
-                Restore defaults
-              </Button>
-              {applyResult && (
-                <span className={applyError ? 'text-destructive text-sm' : 'text-sm text-muted-foreground'}>
-                  {applyResult}
-                </span>
-              )}
-              <span className="text-xs text-muted-foreground italic ml-auto">
-                analysis restarts briefly
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {status?.music && <MusicChoices music={status.music} coupling={activeCoupling} profiles={energyProfiles} />}
 
     </div>
   )

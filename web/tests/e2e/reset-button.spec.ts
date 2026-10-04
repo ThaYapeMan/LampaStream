@@ -104,6 +104,7 @@ test.describe('NowPlaying — "Reset to saved" restores applied coupling value',
     await mockApiRoutes(page)
     await setupStaticWebSocket(page)
     await page.goto('/')
+    await page.getByRole('button', { name: /Frequency range and bands/ }).click()
   })
 
   test('Low cut: Reset to saved → APPLIED value, not factory default', async ({ page }) => {
@@ -135,28 +136,28 @@ test.describe('NowPlaying — "Reset to saved" restores applied coupling value',
 
   test('Bass/mid: Reset to saved → APPLIED value, not factory default', async ({ page }) => {
     await waitForValue(page, 'bass-hz', APPLIED_BASS)
-    await expect(page.locator('[data-testid="reset-bands"]')).toBeDisabled()
+    await expect(page.locator('[data-testid="reset-cutoffs"]')).toBeDisabled()
 
     await typeAndCommit(page, 'bass-hz', PENDING_BASS)
-    await expect(page.locator('[data-testid="reset-bands"]')).toBeEnabled()
+    await expect(page.locator('[data-testid="reset-cutoffs"]')).toBeEnabled()
 
-    await page.locator('[data-testid="reset-bands"]').click()
+    await page.locator('[data-testid="reset-cutoffs"]').click()
     await expect(page.locator('[data-testid="bass-hz"]')).toHaveValue(String(APPLIED_BASS))
     await expect(page.locator('[data-testid="bass-hz"]')).not.toHaveValue(String(DEFAULT_BASS))
-    await expect(page.locator('[data-testid="reset-bands"]')).toBeDisabled()
+    await expect(page.locator('[data-testid="reset-cutoffs"]')).toBeDisabled()
   })
 
   test('Mid/treble: Reset to saved → APPLIED value, not factory default', async ({ page }) => {
     await waitForValue(page, 'mid-hz', APPLIED_MID)
-    await expect(page.locator('[data-testid="reset-bands"]')).toBeDisabled()
+    await expect(page.locator('[data-testid="reset-cutoffs"]')).toBeDisabled()
 
     await typeAndCommit(page, 'mid-hz', PENDING_MID)
-    await expect(page.locator('[data-testid="reset-bands"]')).toBeEnabled()
+    await expect(page.locator('[data-testid="reset-cutoffs"]')).toBeEnabled()
 
-    await page.locator('[data-testid="reset-bands"]').click()
+    await page.locator('[data-testid="reset-cutoffs"]').click()
     await expect(page.locator('[data-testid="mid-hz"]')).toHaveValue(String(APPLIED_MID))
     await expect(page.locator('[data-testid="mid-hz"]')).not.toHaveValue(String(DEFAULT_MID))
-    await expect(page.locator('[data-testid="reset-bands"]')).toBeDisabled()
+    await expect(page.locator('[data-testid="reset-cutoffs"]')).toBeDisabled()
   })
 })
 
@@ -167,6 +168,7 @@ test.describe('NowPlaying — "Restore defaults" restores factory defaults', () 
     await mockApiRoutes(page)
     await setupStaticWebSocket(page)
     await page.goto('/')
+    await page.getByRole('button', { name: /Frequency range and bands/ }).click()
   })
 
   test('Low cut: Restore defaults → DEFAULT value, not applied coupling value', async ({ page }) => {
@@ -190,7 +192,7 @@ test.describe('NowPlaying — "Restore defaults" restores factory defaults', () 
   test('Bass/mid: Restore defaults → DEFAULT value, not applied coupling value', async ({ page }) => {
     await waitForValue(page, 'bass-hz', APPLIED_BASS)
 
-    await page.locator('[data-testid="restore-defaults-bands"]').click()
+    await page.locator('[data-testid="restore-defaults-cutoffs"]').click()
     await expect(page.locator('[data-testid="bass-hz"]')).toHaveValue(String(DEFAULT_BASS))
     await expect(page.locator('[data-testid="bass-hz"]')).not.toHaveValue(String(APPLIED_BASS))
   })
@@ -198,7 +200,7 @@ test.describe('NowPlaying — "Restore defaults" restores factory defaults', () 
   test('Mid/treble: Restore defaults → DEFAULT value, not applied coupling value', async ({ page }) => {
     await waitForValue(page, 'mid-hz', APPLIED_MID)
 
-    await page.locator('[data-testid="restore-defaults-bands"]').click()
+    await page.locator('[data-testid="restore-defaults-cutoffs"]').click()
     await expect(page.locator('[data-testid="mid-hz"]')).toHaveValue(String(DEFAULT_MID))
     await expect(page.locator('[data-testid="mid-hz"]')).not.toHaveValue(String(APPLIED_MID))
   })
@@ -240,6 +242,7 @@ test.describe('NowPlaying — Apply makes "Reset to saved" disabled', () => {
 
     await setupDynamicWebSocket(page, applied)
     await page.goto('/')
+    await page.getByRole('button', { name: /Frequency range and bands/ }).click()
 
     await waitForValue(page, 'high-cut-hz', APPLIED_HIGH)
     await expect(page.locator('[data-testid="reset-cutoffs"]')).toBeDisabled()
@@ -248,7 +251,7 @@ test.describe('NowPlaying — Apply makes "Reset to saved" disabled', () => {
     await expect(page.locator('[data-testid="reset-cutoffs"]')).toBeEnabled()
 
     await page.locator('[data-testid="apply-cutoffs"]').click()
-    await expect(page.locator('[data-testid="apply-cutoffs"]')).toBeEnabled({ timeout: 5000 })
+    await expect(page.getByText('Applied.', { exact: true })).toBeVisible()
 
     // WebSocket sends updated applied = PENDING_HIGH → pending == applied → Reset disabled.
     await expect(page.locator('[data-testid="reset-cutoffs"]')).toBeDisabled({ timeout: 3000 })
