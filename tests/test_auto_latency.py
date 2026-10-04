@@ -42,7 +42,7 @@ def test_median_outlier_precision_and_window():
     assert len(probe.samples) == 7
     assert probe.accept(1.01, 11)
     assert len(probe.samples) == 7
-    assert saved[-1][0] == 1010
+    assert saved[-1][0] == 1005
 
 
 def test_first_estimate_then_fifty_ms_limit_and_arithmetic():
@@ -53,12 +53,14 @@ def test_first_estimate_then_fifty_ms_limit_and_arithmetic():
         probe.accept(value, 5)
         assert probe.current_delay_ms() == 400
     probe.accept(.99, 11)
+    assert probe.current_delay_ms() == 400
+    probe.accept(1, 12)
     assert probe.current_delay_ms() == 1100
-    for value in [1.3] * 7:
+    for value in [1.3] * 12:
         old = probe.current_delay_ms()
         probe.accept(value, 14)
         assert abs(probe.current_delay_ms() - old) <= 50
-    assert probe.current_delay_ms() == 1360
+    assert probe.current_delay_ms() == 1400
     probe.accept(1.3, 17)
     assert probe.current_delay_ms() == 1400
 
@@ -173,12 +175,12 @@ def test_fake_cli_only_positions_and_one_preference_no_paused_or_stopped_request
         try:
             probe, follower, contexts, now, _ = fixture_probe()
             follower._port = server.sockets[0].getsockname()[1]
-            for second in (5, 8, 11):
+            for second in (5, 8, 11, 14):
                 now[0] = second
                 await probe.tick()
             followed = [c for c in commands if c.startswith(FOLLOW)]
             assert followed.count(f'{FOLLOW} playerpref playDelay ?') == 1
-            assert followed.count(f'{FOLLOW} time ?') == 3
+            assert followed.count(f'{FOLLOW} time ?') == 4
             assert all(c in {f'{FOLLOW} time ?', f'{FOLLOW} playerpref playDelay ?'}
                        for c in followed)
             for mode in ('pause', 'stop'):
@@ -249,7 +251,7 @@ def test_preference_absence_is_cached_and_lowering_is_bounded():
                 raise ValueError('unsupported')
             return (now[0] + (1 if mac == OWN else 0), now[0])
         probe._value = value
-        for second in (5, 8, 11):
+        for second in (5, 8, 11, 14):
             now[0] = second
             await probe.tick()
         assert queries.count('playerpref playDelay ?') == 1
@@ -338,7 +340,7 @@ def test_trim_refresh_preserves_estimate_and_first_step_allowance(tmp_path):
         storage.save_player_latency(config)
         manager = PlayerManager(storage)
         probe, follower, _, _, _ = fixture_probe()
-        for residual in (1, 1, 1):
+        for residual in (1, 1, 1, 1):
             probe.accept(residual, 5)
         session = ActiveSession(Profile(player_mac=OWN))
         session.follower = follower
@@ -348,7 +350,7 @@ def test_trim_refresh_preserves_estimate_and_first_step_allowance(tmp_path):
         storage.save_player_latency(config)
         await manager._apply_probe_for_master(session, FOLLOW)
         assert session.probe is probe
-        assert not probe.first and len(probe.samples) == 3
+        assert not probe.first and len(probe.samples) == 4
         assert probe.current_delay_ms() == 1000
         probe.accept(1, 8)
         assert probe.current_delay_ms() == 1050
@@ -380,3 +382,58 @@ def test_recent_samples_are_bounded_timestamped_and_detached(monkeypatch):
     assert probe.status()['samples'][0]['residual_ms'] == 1003
     probe.eligible(context[0], 5)
     assert probe.status()['samples'] == []
+
+
+@pytest.mark.parametrize('baseline,excursions', [(.432, [-.527, .475]),
+                                               (1.004, [-.430])])
+def test_field_excursions_cannot_poison_initial_consensus(baseline, excursions, caplog):
+    import logging
+    probe, _, _, _, saved = fixture_probe()
+    with caplog.at_level(logging.INFO, logger='lampastream.latency'):
+        stable_at = None
+        for i in range(40):
+            excursion = excursions[(i // 16) % len(excursions)] if i % 16 < 2 else 0
+            probe.accept(baseline + excursion + ((i % 3) - 1) * .002, i * 3)
+            if probe.state == 'stable' and stable_at is None:
+                stable_at = i + 1
+            if i == 0:
+                assert not saved
+            if probe.state == 'stable':
+                assert abs(probe.delay - baseline * 1000) <= 10
+    assert stable_at <= 7
+    assert len(caplog.records) == 40
+    assert all('window_median_ms=' in r.message and 'inliers=' in r.message
+               for r in caplog.records)
+    assert any('rejected' in r.message for r in caplog.records)
+    assert len(probe.raw_samples) == 9
+
+
+def test_slow_field_drift_is_followed_within_twenty_ms():
+    probe, _, _, _, saved = fixture_probe()
+    for second in range(0, 361, 3):
+        if second > 30 and second % 15:
+            continue
+        value = .432 + .0007 * second
+        probe.accept(value, second)
+        if not probe.first:
+            assert abs(probe.delay - value * 1000) <= 20
+    assert saved
+
+
+def test_three_rejections_restart_burst_without_losing_last_good_delay():
+    probe, _, _, _, saved = fixture_probe()
+    for i in range(4):
+        probe.accept(.432, i * 3)
+    previous = probe.delay
+    count = len(saved)
+    for i in range(3):
+        assert not probe.accept(1, 30 + i * 15)
+    assert probe.state == 'measuring'
+    assert not probe.raw_samples and not probe.samples
+    assert probe.delay == previous and len(saved) == count
+    assert probe.next_sample == 63 and probe.burst_end == 90
+    for i in range(4):
+        probe.accept(1, 63 + i * 3)
+    assert probe.state == 'stable'
+    assert probe.delay == previous + 50
+    assert saved[-1][0] == 1000

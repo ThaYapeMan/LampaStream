@@ -431,10 +431,17 @@ the followed player remains forbidden.
 A five-second guard follows newsong, seek, pause, resume and reconnect events on
 either player. A thirty-second burst starts after the guard, sampling every three
 seconds; subsequent samples are fifteen seconds apart. Paused, stopped, disconnected
-or mismatched tracks produce no measurement requests. The estimator retains seven
-valid samples, rejects values more than 400 ms from its current median (including
-whole-second position corrections), and reports precision as 1.4826 times the
-median absolute deviation. Precision describes position consistency, not a
+or mismatched tracks produce no measurement requests. The estimator keeps the last
+nine raw residuals, including rejected values. Inliers lie within 60 ms of their
+window median; four values spanning at most 60 ms establish consensus before any
+delay is applied or saved. Three consecutive rejections clear the window and
+restart the three-second burst while retaining the last good delay. The display
+retains up to seven inliers and reports precision as 1.4826 times their median
+absolute deviation. Every sample logs its decision, median and inlier count.
+To follow slow drift without the lag of a fifteen-second sample window, a robust
+median of pairwise slopes (pairs at least fifteen seconds apart, limited to
+±1 ms/s) projects the consensus values to the current sample time before taking
+their median. Precision describes position consistency, not a
 measurement of acoustic latency.
 
 The followed player's `playerpref playDelay ?` preference is read once when the
@@ -447,7 +454,7 @@ max(0, median residual ms + Player Delay ms + trim ms)
 ```
 
 Manual trim ranges from −1000 to +1000 ms. The first estimate after a newsong or
-re-alignment steps directly once three samples agree within 200 ms; subsequent
+re-alignment steps directly once four samples agree within 60 ms; subsequent
 updates change by at most 50 ms. Editing trim preserves the estimator and applies
 the new target through that same limit. A median below −300 ms after the burst triggers
 one own-player position re-alignment per followed track and a fresh burst. This

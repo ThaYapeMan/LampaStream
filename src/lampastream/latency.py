@@ -10,6 +10,7 @@ AutoLatencyProbe measures standard LMS positions for manually followed players.
 from __future__ import annotations
 
 import asyncio
+import logging
 import math
 import statistics
 import time
@@ -91,6 +92,8 @@ class AutoLatencyProbe:
         self.persist = persist
         self.clock = clock
         self.cache = preference_cache if preference_cache is not None else {}
+        self.raw_samples = deque(maxlen=9)
+        self.rejected_samples = 0
         self.samples = deque(maxlen=7)
         self.sample_times = deque(maxlen=7)
         self.delay = max(0, (config.measured_delay_ms or 0) + config.trim_ms)
@@ -148,6 +151,8 @@ class AutoLatencyProbe:
             self.context = context
             self.samples.clear()
             self.sample_times.clear()
+            self.raw_samples.clear()
+            self.rejected_samples = 0
             if new_track:
                 self.first = True
             self.next_sample = context.changed_at + 5
@@ -156,32 +161,66 @@ class AutoLatencyProbe:
                  and now >= context.changed_at + 5)
         if not ready:
             self.state = "idle"
-        elif self.first or len(self.samples) < 3:
+        elif self.first or len(self.samples) < 4:
             self.state = "measuring"
         return ready and now >= self.next_sample
 
     def accept(self, residual, now):
-        if not math.isfinite(residual):
+        finite = math.isfinite(residual)
+        stamp = time.time()
+        if finite:
+            self.raw_samples.append((residual, stamp, now))
+        median = (statistics.median(value for value, _, _ in self.raw_samples)
+                  if self.raw_samples else None)
+        inliers = [(value, timestamp, sampled_at)
+                   for value, timestamp, sampled_at in self.raw_samples
+                   if abs(value - median) <= .060 + 1e-12]
+        accepted = finite and abs(residual - median) <= .060 + 1e-12
+        reason = ("within 60 ms of window median" if accepted else
+                  "non-finite residual" if not finite else "outside 60 ms of window median")
+        logging.getLogger(__name__).info(
+            "latency sample: residual_ms=%s %s: %s; window_median_ms=%s inliers=%d",
+            round(residual * 1000, 3) if finite else residual,
+            "accepted" if accepted else "rejected", reason,
+            round(median * 1000, 3) if median is not None else None, len(inliers))
+        if not accepted:
+            self.rejected_samples += 1
+            if self.rejected_samples == 3:
+                self.raw_samples.clear()
+                self.samples.clear()
+                self.sample_times.clear()
+                self.rejected_samples = 0
+                self.state = "measuring"
+                self.next_sample = now + 3
+                self.burst_end = now + 30
             return False
-        if self.samples and abs(residual - statistics.median(self.samples)) > .4:
-            return False
-        self.samples.append(residual)
-        self.last_sample = time.time()
-        self.sample_times.append(self.last_sample)
-        if len(self.samples) < 3:
+        self.rejected_samples = 0
+        self.samples.clear()
+        self.sample_times.clear()
+        self.samples.extend(value for value, _, _ in inliers)
+        self.sample_times.extend(timestamp for _, timestamp, _ in inliers)
+        self.last_sample = stamp
+        # A single candidate never sets or persists the delay. Four mutually
+        # consistent values establish consensus, including after a window reset.
+        ordered = sorted(value for value, _, _ in inliers)
+        agreed = any(ordered[i + 3] - ordered[i] <= .060 + 1e-12
+                     for i in range(len(ordered) - 3))
+        if not agreed:
             return True
-        median = statistics.median(self.samples)
-        # Require three mutually consistent values before the initial step.
-        agreed = any(max(group) - min(group) <= .2 for group in
-                     (sorted(self.samples)[i:i + 3] for i in range(len(self.samples) - 2)))
-        if self.first and not agreed:
-            return True
-        measured = round(median * 1000) + (self.player_delay or 0)
+        # The median of a 9-sample, 15-second window otherwise trails a
+        # 0.7 ms/s drift by 42 ms. Project the consensus to this sample's time
+        # with a robust, bounded drift rate; never extrapolate a lone sample.
+        slopes = [(b - a) / (tb - ta)
+                  for i, (a, _, ta) in enumerate(inliers)
+                  for b, _, tb in inliers[i + 1:] if tb - ta >= 15]
+        rate = max(-.001, min(.001, statistics.median(slopes))) if slopes else 0
+        estimate = statistics.median(value + rate * (now - sampled_at)
+                                     for value, _, sampled_at in inliers)
+        measured = round(estimate * 1000) + (self.player_delay or 0)
         target = max(0, measured + self.config.trim_ms)
         self.delay = target if self.first else self.delay + max(-50, min(50, target - self.delay))
         self.first = False
         self.state = "stable"
-        # Persist the measured component, so subsequent trim edits remain additive.
         self.persist(measured, self.last_sample)
         return True
 
@@ -253,13 +292,15 @@ class AutoLatencyProbe:
         if self.stopping or context != self.follower.latency_context():
             return
         self.accept(residual, now)
-        if (now >= self.burst_end and len(self.samples) >= 3
+        if (now >= self.burst_end and len(self.samples) >= 4
                 and statistics.median(self.samples) < -.3
                 and self.realign_track != context.track):
             self.realign_track = context.track
             await self._owned_call(self.follower.realign_own_player, context.track)
             self.samples.clear()
             self.sample_times.clear()
+            self.raw_samples.clear()
+            self.rejected_samples = 0
             self.first = True
             self.state = "measuring"
             self.next_sample = self.clock() + 5
