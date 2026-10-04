@@ -327,6 +327,8 @@ state, reason and live applied delay. It includes:
 
 - `source: "lms"`, `state` (`waiting`, `unsynced`, `scheduled`, `fallback`, `off` or `unavailable`),
   `reason`, and `audio_source` (`LMS head start` or `delay fallback` when timed);
+- `provenance`: `"player clock"` for a validated YNPT block, or
+  `"write-clock estimate"` for an older player; this does not change `audio_source`;
 - configured `head_start_ms` and `speaker_output_delay_ms`;
 - measured `lead_p5_ms`, `lead_p50_ms`, `median_processing_ms`, `trim_ms` and
   `available_ms` (non-negative lead p5 minus median processing);
@@ -346,7 +348,7 @@ preference invalidates scheduled scenes until readiness is verified again.
 
 For the timed LMS source, `lms_timing` additionally contains `synced_player_name`,
 `precision_ms` (p95 interval residual), `sample_count` (accepted write-clock fit
-samples), `last_sample_time` (Unix seconds), `median_residual_ms` and `samples`
+samples; these remain empty/null when the player supplies its clock directly), `last_sample_time` (Unix seconds), `median_residual_ms` and `samples`
 (the last seven `{residual_ms, timestamp}` observations). These values also appear
 in the active player's latency status. Scheduled cards use these clock-fit fields
 in place of the inactive position probe. Processing remains measured separately

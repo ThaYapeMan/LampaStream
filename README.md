@@ -244,11 +244,10 @@ verifies the installed artifacts, and starts the repository service. No manual
 package installation, producer patching or JSON migration is part of that workflow.
 
 Create/pair a Controller through the API, then open `http://<host>:8420` to configure
-the Zone, player, Analyser, Effects/EnergyProfile and Coupling. Host audio-device passthrough remains an LXC
-prerequisite for paced LMS playback; a guest script cannot provision host devices.
+the Zone, player, Analyser, Effects/EnergyProfile and Coupling. LMS pacing is internal to yeney-player; host audio-device passthrough is not required.
 See [installation](docs/installation.md) and [LXC deployment](docs/deployment-lxc.md).
 LMS virtual players use `yeney-player` from the recursive `third_party/yeney-core`
-submodule at `13e606f`. Initialize it with `git submodule update --init --recursive`.
+submodule at `45779a4`. Initialize it with `git submodule update --init --recursive`.
 It paces PCM internally and preserves full-scale analysis PCM regardless of LMS volume.
 No snd-dummy or `/dev/snd` passthrough is required. Existing host mappings can remain
 harmlessly; optional removal steps are in [LXC deployment](docs/deployment-lxc.md).

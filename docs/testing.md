@@ -119,7 +119,7 @@ allows only measurement position/preference commands. Migration tests verify exa
 backups, reserved-field retirement and idempotency; API tests reject writable
 measurement fields and invalid trims. `web/src/__tests__/Latency.test.tsx` and
 `web/tests/e2e/latency.spec.ts` exercise Auto status, trim, fallback and the removed
-ALSA editor field. The real SHM integration builds yeney-player at `13e606f` and
+ALSA editor field. The real SHM integration builds yeney-player at `45779a4` and
 reads it through the unchanged strict-v1 PCM consumer.
 
 Another repository may run tests concurrently on the development machine. If the

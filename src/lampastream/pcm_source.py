@@ -13,7 +13,7 @@ import os
 import struct
 import time
 from collections import deque
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Generic, ParamSpec, Protocol
 
@@ -28,6 +28,16 @@ from lampastream.canonicalizer import (
     SourceReadResult,
     StreamInvalidated,
     TemporarilyNoData,
+)
+
+from .player_clock import (
+    DISCONTINUITY,
+    FLUSH,
+    SYNC_PAUSE,
+    SYNC_SKIP,
+    TIMING_OFFSET,
+    TIMING_SIZE,
+    PlayerClock,
 )
 
 _log = logging.getLogger(__name__)
@@ -191,6 +201,8 @@ class _ShmExtHeader:
     generation: int     # producer lifetime ID (random per process)
     abs_write_pos: int  # exclusive next stereo-frame position (monotonic)
     gap_seq: int        # monotonic gap sequence
+    timing: PlayerClock | None = None
+    legacy_header: tuple[int, int, bool, int, int] | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -377,6 +389,9 @@ class SqueezeliteShmStereoSource:
         self._prev_generation: int = 0
         self._abs_write_pos_frames: int = 0  # in stereo frames
         self._prev_gap_seq: int = 0
+        self.use_player_clock = False  # enabled only by LMS timed ingress, never follow mode
+        self._clock_event_seq: int | None = None
+        self._clock_segments: list[tuple[int, PlayerClock | None]] = []
         # (st_dev, st_ino) at the time of mmap.  Used to detect SHM
         # replacement (e.g. squeezelite recreated the segment with a fresh
         # inode while our mmap kept pointing at the unlinked file).  See
@@ -420,12 +435,17 @@ class SqueezeliteShmStereoSource:
         """
         path = _path if _path is not None else Path(f"/dev/shm/squeezelite-{mac}")
         self._path = path
+        self._clock_event_seq = None
+        self._clock_segments.clear()
         self._require_v1 = require_v1
         fd = path.open("rb")
         try:
             # Try v1 size first; fall back to v0 if file is smaller.
             try:
-                self._mm = mmap.mmap(fd.fileno(), _MMAP_SIZE_V1, access=mmap.ACCESS_READ)
+                self._mm = mmap.mmap(fd.fileno(),
+                    TIMING_OFFSET + TIMING_SIZE if os.fstat(fd.fileno()).st_size
+                    >= TIMING_OFFSET + TIMING_SIZE else _MMAP_SIZE_V1,
+                    access=mmap.ACCESS_READ)
             except (ValueError, OSError):
                 self._mm = mmap.mmap(fd.fileno(), _MMAP_SIZE, access=mmap.ACCESS_READ)
             # Record the (st_dev, st_ino) tuple identifying this SHM segment
@@ -508,6 +528,7 @@ class SqueezeliteShmStereoSource:
         magic, abi_ver, flags, write_seq, generation, abs_write_pos, gap_seq = struct.unpack(
             _V2_EXT_FMT, raw
         )
+        clock = PlayerClock.read(self._mm, flags)
         return _ShmExtHeader(
             magic=magic,
             abi_version=abi_ver,
@@ -516,6 +537,8 @@ class SqueezeliteShmStereoSource:
             generation=generation,
             abs_write_pos=abs_write_pos,
             gap_seq=gap_seq,
+            timing=clock,
+            legacy_header=self._read_header() if clock is not None else None,
         )
 
     def _read_ext_coherent(self) -> _ShmExtHeader | None:
@@ -607,6 +630,8 @@ class SqueezeliteShmStereoSource:
         # re-set the flag below; if it is a valid v1 we adopt it and the
         # source recovers automatically (BLOCKER 3 audit round 3).
         self._prev_generation = 0
+        self._clock_event_seq = None
+        self._clock_segments.clear()
         self._abs_write_pos_frames = 0
         self._prev_gap_seq = 0
         self._prev_index = 0
@@ -628,7 +653,10 @@ class SqueezeliteShmStereoSource:
             return False
         try:
             try:
-                self._mm = mmap.mmap(fd.fileno(), _MMAP_SIZE_V1, access=mmap.ACCESS_READ)
+                self._mm = mmap.mmap(fd.fileno(),
+                    TIMING_OFFSET + TIMING_SIZE if os.fstat(fd.fileno()).st_size
+                    >= TIMING_OFFSET + TIMING_SIZE else _MMAP_SIZE_V1,
+                    access=mmap.ACCESS_READ)
             except (ValueError, OSError):
                 # v1-sized mmap failed (file smaller than v1 layout).
                 # If the caller requires v1 this is not usable yet — keep
@@ -730,12 +758,55 @@ class SqueezeliteShmStereoSource:
         assert self._mm is not None
         ext = self._read_ext_coherent()
         if ext is None:
+            _log.info("LMS stream invalidated: incoherent SHM snapshot")
             return StreamInvalidated(
                 cause=InvalidationCause.UNKNOWN, known_lost_samples=None
             )
 
+        if not self.use_player_clock:
+            ext = replace(ext, timing=None)
+        if ext.timing is not None:
+            timing = ext.timing
+            if self._prev_generation and ext.generation != self._prev_generation:
+                # A new producer's event counter is unrelated to the old one's.
+                self._clock_event_seq = timing.event_seq
+                self._clock_segments.clear()
+            new_event = self._clock_event_seq != timing.event_seq
+            if new_event:
+                old_seq = self._clock_event_seq
+                self._clock_event_seq = timing.event_seq
+                if timing.event_flags & (SYNC_PAUSE | SYNC_SKIP):
+                    name = 'SYNC_PAUSE' if timing.event_flags & SYNC_PAUSE else 'SYNC_SKIP'
+                    _log.info('LMS player clock: %s value=%d frame=%d',
+                              name, timing.event_value, timing.event_abs_frame)
+                    if self._clock_segments:
+                        self._clock_segments.append((timing.event_abs_frame, None))
+                discontinuity = timing.event_flags & (FLUSH | DISCONTINUITY)
+                lost_events = (old_seq is not None and
+                               (timing.event_seq - old_seq) % 2**32 > 1 and
+                               self._abs_write_pos_frames < timing.event_abs_frame)
+                if discontinuity or lost_events:
+                    cause = 'flush' if timing.event_flags & FLUSH else (
+                        'track change' if discontinuity else 'lost timing events')
+                    _log.info('LMS stream invalidated: %s frame=%d', cause,
+                              timing.event_abs_frame)
+                    self._clock_segments.clear()
+                    self._abs_write_pos_frames = min(timing.event_abs_frame, ext.abs_write_pos)
+                    self._prev_generation = ext.generation
+                    self._prev_gap_seq = ext.gap_seq
+                    header = ext.legacy_header or self._read_header()
+                    self._prev_running = header[2]
+                    self._prev_rate = header[3]
+                    return StreamInvalidated(InvalidationCause.SEEK, None)
+            if not self._clock_segments:
+                self._clock_segments.append((self._abs_write_pos_frames, timing))
+            start, _current = self._clock_segments[-1]
+            if timing.anchor_abs_frame >= start:
+                self._clock_segments[-1] = (start, timing)
+
         # Rate change → new epoch.
-        _, buf_index_before, running, rate, updated = self._read_header()
+        _, buf_index_before, running, rate, updated = (
+            ext.legacy_header if ext.timing is not None else self._read_header())
         if self._prev_rate != 0 and rate != self._prev_rate:
             _log.warning(
                 "SHM stereo source: sample rate changed (%d → %d); invalidating epoch.",
@@ -750,7 +821,7 @@ class SqueezeliteShmStereoSource:
             return StreamInvalidated(cause=InvalidationCause.UNKNOWN, known_lost_samples=None)
 
         # running transition False → True: new session.
-        if running and not self._prev_running:
+        if running and not self._prev_running and ext.timing is None:
             self._prev_running = running
             self._prev_rate = rate
             self._prev_index = buf_index_before
@@ -763,6 +834,9 @@ class SqueezeliteShmStereoSource:
 
         # Generation change: producer restarted.
         if self._prev_generation != 0 and ext.generation != self._prev_generation:
+            _log.info("LMS stream invalidated: generation change")
+            self._clock_segments.clear()
+            self._clock_event_seq = ext.timing.event_seq if ext.timing else None
             self._prev_generation = ext.generation
             self._abs_write_pos_frames = ext.abs_write_pos
             self._prev_gap_seq = ext.gap_seq
@@ -773,6 +847,8 @@ class SqueezeliteShmStereoSource:
         # abs_write_pos backward regression: producer reset counter.
         delta_frames = int(ext.abs_write_pos) - int(self._abs_write_pos_frames)
         if delta_frames < 0:
+            _log.info("LMS stream invalidated: frame position regression")
+            self._clock_segments.clear()
             self._abs_write_pos_frames = ext.abs_write_pos
             self._prev_gap_seq = ext.gap_seq
             self._prev_index = buf_index_before
@@ -780,6 +856,8 @@ class SqueezeliteShmStereoSource:
 
         # Gap sequence advanced → producer skipped exports; invalidate epoch.
         if ext.gap_seq != self._prev_gap_seq:
+            _log.info("LMS stream invalidated: skipped PCM export")
+            self._clock_segments.clear()
             self._prev_gap_seq = ext.gap_seq
             self._abs_write_pos_frames = ext.abs_write_pos
             self._prev_index = buf_index_before
@@ -790,6 +868,8 @@ class SqueezeliteShmStereoSource:
 
         frame_capacity = VIS_BUF_SIZE // 2  # ring capacity in stereo frames
         if delta_frames >= frame_capacity:
+            _log.info("LMS stream invalidated: PCM ring overrun")
+            self._clock_segments.clear()
             # A full lap (or more) has been overwritten between polls.
             self._abs_write_pos_frames = ext.abs_write_pos
             self._prev_index = buf_index_before
@@ -800,8 +880,17 @@ class SqueezeliteShmStereoSource:
 
         # Copy the new PCM window from the ring buffer.  Sample counts here
         # are in scalar int16 units so the arithmetic matches the ring layout.
+        stamp_clock = None
+        if ext.timing is not None:
+            while len(self._clock_segments) > 1 and self._clock_segments[1][0] <= start_abs_pos:
+                self._clock_segments.pop(0)
+            stamp_clock = self._clock_segments[0][1]
+            if len(self._clock_segments) > 1:
+                delta_frames = min(delta_frames, self._clock_segments[1][0] - start_abs_pos)
+            if stamp_clock is None:
+                return TemporarilyNoData()
         n_new_scalar = delta_frames * 2
-        start_scalar = (buf_index_before - n_new_scalar) % VIS_BUF_SIZE
+        start_scalar = (buf_index_before - (ext.abs_write_pos - start_abs_pos) * 2) % VIS_BUF_SIZE
         buf_offset = self._buf_offset()
         if start_scalar + n_new_scalar <= VIS_BUF_SIZE:
             self._mm.seek(buf_offset + start_scalar * 2)
@@ -835,6 +924,7 @@ class SqueezeliteShmStereoSource:
             or ext_after.generation != ext.generation
             or ext_after.abs_write_pos != ext.abs_write_pos
         ):
+            _log.info("LMS stream invalidated: writer changed during PCM copy")
             return StreamInvalidated(cause=InvalidationCause.UNKNOWN, known_lost_samples=None)
 
         s16 = np.frombuffer(raw, dtype=np.int16)
@@ -850,7 +940,7 @@ class SqueezeliteShmStereoSource:
         wall_ns = time.time_ns()
 
         # Commit position now that the copy verified.
-        self._abs_write_pos_frames = int(ext.abs_write_pos)
+        self._abs_write_pos_frames = start_abs_pos + delta_frames
         self._prev_index = buf_index_before
         self._prev_updated = updated
 
@@ -860,6 +950,7 @@ class SqueezeliteShmStereoSource:
             channels=2,
             source_id=self._source_id,
             source_sample_pos=start_abs_pos,
+            play_monotonic=stamp_clock.at(start_abs_pos) if stamp_clock else None,
             over_range=over_range,
             wall_ns=wall_ns,
         )

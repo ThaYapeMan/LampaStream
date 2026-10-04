@@ -197,6 +197,7 @@ def test_invalid_restore_leaves_bytes_unchanged(configured, tmp_path, mutation):
 @pytest.mark.parametrize(
     "raw",
     [b"not-json", b'{"a":1,"a":2}', b"[]", b"\xff", b"[" * 2000, b"x" * (MAX_BACKUP_BYTES + 1)],
+    ids=["not-json", "duplicate-key", "array", "invalid-utf8", "deep-array", "oversized"],
 )
 def test_malformed_json_rejected(raw):
     with pytest.raises(BackupError):

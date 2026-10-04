@@ -19,7 +19,7 @@ from lampastream.migration import migrate_file
 
 
 def verify_player(manifest: dict, binary: Path = Path('/usr/local/bin/yeney-player')) -> None:
-    assert manifest['yeney_core_revision'] == '13e606f452d9a2ae729f9590ec4ea696ab4dbcde'
+    assert manifest['yeney_core_revision'] == '45779a4383929840a46a931fc1519b4778b64a72'
     assert hashlib.sha256(binary.read_bytes()).hexdigest() == manifest['yeney_player_sha256']
 
 

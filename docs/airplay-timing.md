@@ -463,7 +463,7 @@ alignment. No physical installation was accessed during development.
 ## LMS head start and generalised timed scheduling
 
 The timestamped output path now accepts either the AirPlay early tap or an LMS
-SHM write-clock estimate. The PCM producer and DSP are unchanged. In LMS sync-group
+SHM player-clock timestamp (with a write-clock estimate for older players). The DSP is unchanged. In LMS sync-group
 mode, the virtual player's verified `playDelay` advances it relative to the real
 speaker. `startDelay` is only read: a non-zero value warns because start and
 steady-state offsets would differ. Manual follow mode and head start 0 retain the
@@ -473,25 +473,49 @@ LMS `lms_timing` status is exclusive to sync-group mode. In follow mode it is
 null; the Light timing card uses the position probe’s measuring/stable state
 and live applied delay, without a head-start status line.
 
-The one production SHM reader observes the v1 absolute stereo-frame write position,
-generation and gap counter with monotonic read timestamps on every poll. The
-canonical worker's existing 5 ms wait targets 200 Hz when waiting for data; late
-reads are rejected, rather than interpreted as producer skips. There is no second
-PCM reader. A 30-second sliding fit constrains advancing positions between their
-previous and first-observing reads. Long-baseline midpoint slopes estimate rate,
-limited to ±2000 ppm around the reported nominal rate; robust 95th-percentile lower
-and 5th-percentile upper interval bounds estimate the clock offset. At startup it
-uses nominal rate. Its accuracy depends on having varied, timely read brackets;
-simulated paced writers with jitter and drift are tested to p95 error ≤2 ms.
+LMS timed ingress enables the optional clock on the one production reader;
+manual follow mode keeps the reader’s existing unstamped lifecycle. The reader reads the optional `YNPT` v1 timing block at byte
+32888 under the same seqlock as PCM. Extension flags bit 0, mapping length,
+magic, version and nonzero rate must all validate. Each native stereo frame F
+is stamped from `anchor_play_mono_ns / 1e9 + (F - anchor_abs_frame) * 1000 /
+rate_milli_hz`. This is the core pacer's scheduled play moment, whose consumption
+advances LMS elapsed, rather than the time the SHM memcpy completed. Blocks may
+contain already-due audio (up to 20 ms accumulated credit); no extra look-ahead
+is added by the timing extension. Audible time adds the existing configured
+head start and speaker output delay. No Sonos probe/model is involved.
 
-Audible time is fitted write time + configured head start + speaker output delay.
+The latest event is retained with `event_seq`, `event_abs_frame`, flags and a
+signed value. `SYNC_PAUSE` carries pause nanoseconds; `SYNC_SKIP` carries skipped
+source frames. Both are logged at INFO and preserve the DSP/timing generation.
+A pause shifts subsequent stamps. A skip removes content before export: the SHM
+absolute frame counter counts only actual exported samples, so it remains
+continuous while source content jumps forward. It does not insert fictitious
+frames or add another time correction. Unread PCM crossing a pause boundary is
+split and uses its pre-event anchor until the boundary, then the new anchor.
+`running=false` during a sync pause is not a seek and never resets WriteClock.
+
+`FLUSH` and `DISCONTINUITY` (including real gapless track boundaries), generation
+and rate changes invalidate once. Producer track events are authoritative; a
+later metadata title/position update does not create a duplicate reset. Export
+gaps, ring overwrites and lost event history are genuine data discontinuities
+and fail closed. INFO logs identify each reset. The PCM stream and producer
+playback remain unchanged; only the analysis epoch at a real boundary changes.
+
+If a valid optional block is absent, the existing WriteClock observes absolute
+write positions and monotonic poll brackets. Its 30-second fit, late-read
+rejection, pause/seek guesses and bounds remain unchanged. Status reports
+`provenance: "player clock"` or `"write-clock estimate"`; the existing
+`audio_source: "LMS head start"` label and card presentation are unchanged.
+
+Audible time is player play time (or fitted write time) + configured head start +
+speaker output delay.
 Canonicalisation preserves this through existing play spans; fine-tune is applied
 once by SceneSchedule. Every publication is rendered and scheduled, including
 onsets between output ticks. The 30 Hz sender displays the newest due scene, as
 with AirPlay. A past target is sent on the next output tick, never held further.
 Negative trim is limited by measured lead p5 minus median processing.
 
-A source generation/gap change, a predicted write outside its read bracket by more
+For the older-player fallback, a source generation/gap change, a predicted write outside its read bracket by more
 than 5 ms, a pause beyond the observed export-batch interval plus 5 ms (at least
 20 ms), transport pause/resume, track change or a backwards transport seek starts
 a new timing epoch.

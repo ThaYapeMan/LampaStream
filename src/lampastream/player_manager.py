@@ -1191,6 +1191,7 @@ class PlayerManager:
         if source:
             data = source.timing.snapshot()
             return dict(source="lms", audio_source=data["tap_source"],
+                        provenance=getattr(source, "provenance", "write-clock estimate"),
                         state=(source.readiness_state if not source.ready else
                                ("scheduled" if data["tap_source"] == "LMS head start"
                                 else "fallback")),

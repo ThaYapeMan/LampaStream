@@ -300,10 +300,12 @@ class LmsTimingDiagnostics(TimingDiagnostics):
 class LmsTimedSource:
     def __init__(self, source, player, transport=lambda: None, clock=time.monotonic, ready=True):
         self.source = source
+        self.source.use_player_clock = True
         self.player = player
         self.transport = transport
         self.clock = clock
         self.fit = WriteClock()
+        self.provenance = "write-clock estimate"
         self.timing = LmsTimingDiagnostics(clock=clock)
         self.timing.tap_source = 'LMS head start'
         self.bad_since = None
@@ -349,17 +351,20 @@ class LmsTimedSource:
         ext = self.source._read_ext_coherent() if self.source._mm is not None else None
         after = self.clock()
         track = self.transport()
+        player_clock = ext is not None and getattr(ext, 'timing', None) is not None
+        self.provenance = 'player clock' if player_clock else 'write-clock estimate'
         key = (track.title, track.artist, track.playing) if track else None
-        changed = self.reset_requested or (self.track is not None and key != self.track)
+        changed = self.reset_requested or (
+            not player_clock and self.track is not None and key != self.track)
         self.reset_requested = False
         self.track = key
         position = getattr(track, "position_s", None)
-        if position is not None and self.transport_position is not None:
+        if not player_clock and position is not None and self.transport_position is not None:
             changed = changed or position < self.transport_position - .05
         self.transport_position = position
         if changed:
             self.reset()
-        if ext is not None:
+        if ext is not None and not player_clock:
             _, _, running, rate, _ = self.source._read_header()
             jumped = self.fit.observe(ext.abs_write_pos, before, after, rate,
                                       ext.generation, ext.gap_seq, running)
@@ -382,10 +387,13 @@ class LmsTimedSource:
                              for point, r in zip(points[-7:], residuals[-7:], strict=False)])
         result = self.source.read()
         if isinstance(result, StreamInvalidated):
+            if not player_clock:
+                log.info("LMS stream invalidated: %s", result.cause.value)
             if not changed:
                 self.reset()
             return result
         if changed:
+            log.info("LMS stream invalidated: transport or readiness change")
             return StreamInvalidated(InvalidationCause.SEEK, None)
         if not isinstance(result, DataResult):
             return result
@@ -395,9 +403,13 @@ class LmsTimedSource:
         received = before
         self.timing.arrival(len(frame.samples), received)
         if not self.ready:
-            return DataResult(replace(frame, received_monotonic=received))
-        stamp = (self.fit.at(frame.source_sample_pos)
-                 if frame.source_sample_pos is not None else None)
+            return DataResult(replace(frame, received_monotonic=received, play_monotonic=None))
+        native_clock = frame.play_monotonic is not None
+        if native_clock:
+            self.provenance = "player clock"
+        stamp = frame.play_monotonic if native_clock else (
+            self.fit.at(frame.source_sample_pos)
+            if frame.source_sample_pos is not None else None)
         if stamp is None:
             return result
         audible = stamp + (self.player.head_start_ms + self.player.speaker_output_delay_ms) / 1000
