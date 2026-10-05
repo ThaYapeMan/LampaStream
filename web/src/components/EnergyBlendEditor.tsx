@@ -248,6 +248,8 @@ export function EnergySourceControls({ source, floor, ceiling, tau, peakAuto = t
   onStep?: (field: EnergySetting, value: string) => void; header?: ReactNode
 }) {
   const error = validateEnergySettings({ source, floor, ceiling, tau, peakAuto, attack, release, reshapeEnabled, reshapePower })
+  const options = compact ? ENERGY_SOURCE_OPTIONS.filter(option => option.value !== 'off') : ENERGY_SOURCE_OPTIONS
+  const labels: Record<string, string> = { sustained: 'Sustained', loudness_fixed: 'Fixed Loudness', loudness_adaptive: 'Adaptive Loudness', peak_envelope: 'Peak Envelope' }
   const fields = source === 'loudness_fixed'
     ? [{ field: 'lufs_floor' as const, label: 'Floor', unit: 'LUFS', value: floor },
        { field: 'lufs_ceiling' as const, label: 'Ceiling', unit: 'LUFS', value: ceiling }]
@@ -257,35 +259,34 @@ export function EnergySourceControls({ source, floor, ceiling, tau, peakAuto = t
         ? [{ field: 'peak_attack_s' as const, label: 'Attack (s)', unit: '', value: attack },
            { field: 'peak_release_s' as const, label: 'Release (s)', unit: '', value: release }] : []
   return <section className={compact ? 'space-y-2' : 'space-y-3'} aria-label="Energy source settings">
-    {!compact && <Label>Energy source</Label>}
-    <div className={compact ? 'flex flex-wrap items-center justify-between gap-2' : undefined}>
+    <Label className={compact ? 'text-sm text-muted-foreground' : undefined}>Energy source</Label>
+    <div className={compact ? 'w-full' : undefined}>
     {compact && header}
     <div role={compact ? 'radiogroup' : undefined} aria-label={compact ? 'Energy source' : undefined}
-      style={compact ? { gridTemplateColumns: `repeat(${ENERGY_SOURCE_OPTIONS.length}, minmax(0, 1fr))` } : undefined}
-      className={compact ? 'inline-grid w-max rounded-md border-[0.5px] border-border bg-background/40 p-0.5' : 'grid grid-cols-1 gap-1.5'}>
-      {ENERGY_SOURCE_OPTIONS.map((opt, index) => <button key={opt.value} type="button"
+      className={compact ? 'grid w-full grid-cols-2 sm:grid-cols-4 rounded-lg border border-border bg-background/40 p-0.5' : 'grid grid-cols-1 gap-1.5'}>
+      {options.map((opt, index) => <button key={opt.value} type="button"
         role={compact ? 'radio' : undefined} aria-checked={compact ? source === opt.value : undefined}
-        tabIndex={compact ? (source === opt.value ? 0 : -1) : undefined}
+        tabIndex={compact ? (source === opt.value || (source === 'off' && index === 0) ? 0 : -1) : undefined}
         aria-pressed={compact ? undefined : source === opt.value} disabled={disabled} aria-disabled={disabled || pending}
         onClick={() => { if (!pending) onChange('energy_source', opt.value) }}
         onKeyDown={event => {
           if (pending || !compact || !['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(event.key)) return
           event.preventDefault()
-          const count = ENERGY_SOURCE_OPTIONS.length
+          const count = options.length
           const next = event.key === 'Home' ? 0 : event.key === 'End' ? count - 1
             : (index + (['ArrowLeft', 'ArrowUp'].includes(event.key) ? count - 1 : 1)) % count
           ;(event.currentTarget.parentElement!.children[next] as HTMLButtonElement).focus()
-          onChange('energy_source', ENERGY_SOURCE_OPTIONS[next].value)
+          onChange('energy_source', options[next].value)
         }}
         className={compact
-          ? `h-5 whitespace-nowrap rounded px-1 text-xs disabled:opacity-50 ${source === opt.value && opt.value === 'off' ? 'bg-muted text-muted-foreground font-medium shadow-sm ring-[0.5px] ring-border' : source === opt.value ? 'bg-secondary text-foreground font-medium shadow-sm ring-[0.5px] ring-border' : 'text-muted-foreground'}`
+          ? `min-h-11 sm:min-h-9 rounded-md px-1 py-2 text-xs disabled:opacity-50 ${source === opt.value && opt.value === 'off' ? 'bg-muted text-muted-foreground font-medium shadow-sm ring-[0.5px] ring-border' : source === opt.value ? 'bg-secondary text-foreground font-medium shadow-sm ring-[0.5px] ring-border' : 'text-muted-foreground'}`
           : `rounded border p-2.5 text-left text-sm ${source === opt.value && opt.value === 'off' ? 'border-muted-foreground bg-muted' : source === opt.value ? 'border-primary bg-primary/10' : 'border-border hover:border-muted-foreground/60'}`}>
-        <div className={compact ? undefined : "font-medium"}>{opt.label}</div>
+        <div className={compact ? undefined : "font-medium"}>{compact ? labels[opt.value] : opt.label}</div>
         {!compact && <div className="mt-0.5 text-xs text-muted-foreground">{opt.description}</div>}
       </button>)}
     </div>
     </div>
-    {source === 'peak_envelope' && <div className={compact ? 'flex h-7 items-center gap-2 whitespace-nowrap' : 'flex flex-wrap items-center gap-2'}>
+    {source === 'peak_envelope' && <div className={compact ? 'flex flex-wrap items-center gap-x-3 gap-y-2' : 'flex flex-wrap items-center gap-2'}>
       <div role="group" aria-label="Peak envelope mode" className="inline-flex rounded border border-input p-0.5">
         {[true, false].map(auto => <button key={String(auto)} type="button"
           aria-pressed={peakAuto === auto} disabled={disabled || pending}
@@ -303,11 +304,9 @@ export function EnergySourceControls({ source, floor, ceiling, tau, peakAuto = t
         disabled={disabled || pending} invalid={!!error} onChange={v => onChange(field, v)}
         onCommit={onCommit} onStep={v => onStep?.(field, v)} />))}
     </div>}
-    {!(compact && source === 'peak_envelope') && (compact || fields.length > 0) && <div data-testid={compact && source !== 'off' ? 'energy-parameters' : undefined}
-      className={compact ? 'flex h-7 items-center gap-5' : fields.length === 1 ? 'block' : 'grid grid-cols-2 gap-3'}>
-      {compact && (disabled || fields.length === 0) ? <span className="text-xs text-muted-foreground">
-        {disabled ? 'No active coupling' : source === 'peak_envelope' ? 'Auto: 0.05 s attack · 2 s release' : source === 'off' ? 'No energy input — always shows the High-energy Effect.' : 'No parameters for this source'}
-      </span> : fields.map(({field, label, unit, value}) => compact ? <CompactEnergyNumber key={field}
+    {!(compact && source === 'peak_envelope') && fields.length > 0 && <div data-testid={compact && source !== 'off' ? 'energy-parameters' : undefined}
+      className={compact ? 'flex flex-wrap items-center gap-5' : fields.length === 1 ? 'block' : 'grid grid-cols-2 gap-3'}>
+      {fields.map(({field, label, unit, value}) => compact ? <CompactEnergyNumber key={field}
         testId={field === 'peak_attack_s' ? 'field-peak-attack' : field === 'peak_release_s' ? 'field-peak-release' : undefined}
         label={label} unit={unit} value={value} step={field === 'adaptation_tau_s' ? 5 : field === 'peak_attack_s' ? 0.01 : field === 'peak_release_s' ? 0.1 : 1}
         disabled={disabled || pending} invalid={!!error} onChange={v => onChange(field, v)}
@@ -323,7 +322,7 @@ export function EnergySourceControls({ source, floor, ceiling, tau, peakAuto = t
         </span>
       </label>)}
     </div>}
-    {source === 'peak_envelope' && <div role="group" aria-label="Reshape settings" className={compact ? "flex h-9 items-center gap-3 border-t border-border/50 pt-2" : "space-y-2 border-t border-border/50 pt-2"}>
+    {source === 'peak_envelope' && <div role="group" aria-label="Reshape settings" className={compact ? "flex flex-wrap items-center gap-3 border-t border-border/50 pt-2" : "space-y-2 border-t border-border/50 pt-2"}>
       <label className="flex items-center gap-2 text-xs">
         <input type="checkbox" checked={reshapeEnabled} disabled={disabled || pending}
           onChange={e => onChange('peak_reshape_enabled', String(e.target.checked))} />

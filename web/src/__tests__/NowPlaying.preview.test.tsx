@@ -2,7 +2,7 @@ import { cleanup, render, screen, waitFor, within } from '@testing-library/react
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { NowPlaying } from '../pages/NowPlaying'
 import type { SocketStatus } from '../hooks/usePreviewSocket'
-import { getAnalysers, getCouplings, getVirtualPlayers } from '../lib/api'
+import { getAnalysers, getCouplings, getVirtualPlayers, getEffects, getEnergyProfiles } from '../lib/api'
 
 vi.mock('../lib/api', async importOriginal => ({
   ...await importOriginal<typeof import('../lib/api')>(),
@@ -28,7 +28,9 @@ beforeEach(() => {
   vi.mocked(getVirtualPlayers).mockResolvedValue([{ id: 'p', type: 'LMS' }] as never)
 })
 
-it('resolves the three technical status rows in order, preserving the preview layout', async () => {
+it('groups analysis rows, names the effect, and uses quiet header status', async () => {
+  vi.mocked(getEffects).mockResolvedValueOnce([{id:'fx', name:'Spectrum RGB', effect_type:'spectrum_rgb'}] as never)
+  vi.mocked(getEnergyProfiles).mockResolvedValueOnce([{id:'e', name:'Room energy', high_energy_effect_id:'fx'}] as never)
   render(<NowPlaying {...props} status={status} />)
   const dl = screen.getByLabelText('Session status')
   await within(dl).findByText('CAVA Core')
@@ -38,29 +40,32 @@ it('resolves the three technical status rows in order, preserving the preview la
   expect(within(dl).queryByText('Energy Profile')).not.toBeInTheDocument()
   expect(within(dl).queryByText('Canonical analyser')).not.toBeInTheDocument()
   expect([...dl.querySelectorAll('dt')].map(el => el.textContent)).toEqual([
-    'Spectrum engine', 'Beat detection', 'Effect',
+    'Spectrum engine', 'Beat detection', 'Effect', 'Energy profile',
   ])
   expect(within(dl).queryByText('Sync master')).not.toBeInTheDocument()
   expect(within(dl).queryByText('Delay')).not.toBeInTheDocument()
   expect(within(dl).queryByText('1100 ms')).not.toBeInTheDocument()
   expect(screen.queryByText('Onset method')).not.toBeInTheDocument()
-  for (const id of ['colour-preview-size', 'floorplan-preview-size']) {
-    expect(screen.getByTestId(id)).toHaveClass('aspect-square', 'w-full')
-  }
-  expect(screen.getByTestId('live-preview-grid')).toHaveClass('grid-cols-1', 'lg:grid-cols-3')
-  expect(screen.getByLabelText('Light floorplan')).toHaveAttribute('viewBox', '0 0 200 200')
+  expect(screen.getByTestId('colour-preview-size')).toHaveClass('h-4', 'w-4')
+  expect(screen.getByTestId('live-preview-grid')).toHaveClass('grid-cols-1', 'lg:grid-cols-[minmax(0,11fr)_minmax(0,9fr)]')
+  expect(screen.getByLabelText('Light floorplan')).toHaveAttribute('viewBox', '0 0 200 120')
   expect(screen.getByText('front')).toBeInTheDocument()
-  expect(screen.getByText('Bridge API')).toBeInTheDocument()
-  expect(screen.queryByText('Bridge', { exact: true })).not.toBeInTheDocument()
-  expect(within(dl).queryByText('Bridge API')).not.toBeInTheDocument()
-  expect(screen.getByText('Energy blend').compareDocumentPosition(screen.getByText('Bridge API'))
-    & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  expect(await within(dl).findByText('Spectrum RGB')).toHaveAttribute('title', 'spectrum_rgb')
+  expect(within(dl).getByText('Room energy')).toBeInTheDocument()
+  expect(within(dl).getByRole('link', {name:'Open Energy Profile ›'})).toHaveAttribute('href', '#energy-profiles/e')
+  const session = screen.getByTestId('session-diagnostics')
+  expect(within(session).getByText('Bridge connected')).toBeVisible()
+  expect(within(session).getByText('LMS player running')).toBeVisible()
+  expect(within(session).queryByRole('button')).not.toBeInTheDocument()
+  expect(session.querySelectorAll('.bg-green-500')).toHaveLength(2)
+  expect(screen.queryByText('Session', {exact:true})).not.toBeInTheDocument()
+
 })
 
 it('shows muted placeholders while the analyser is unavailable', async () => {
   vi.mocked(getAnalysers).mockReturnValue(new Promise(() => {}))
   render(<NowPlaying {...props} status={status} />)
-  await screen.findByText('LMS player')
+  await screen.findByText('LMS player running')
   const names = screen.getByLabelText('Session status').querySelectorAll('dd')
   for (const index of [0, 1]) {
     expect(names[index]).toHaveTextContent('—')
@@ -70,19 +75,19 @@ it('shows muted placeholders while the analyser is unavailable', async () => {
 
 it('shows LMS player only for LMS and never an external CAVA process', async () => {
   const view = render(<NowPlaying {...props} status={status} />)
-  await screen.findByText('LMS player') // resolves player type from the entity list
+  await screen.findByText('LMS player running') // resolves player type from the entity list
   expect(screen.queryByText('cava', { exact: true })).not.toBeInTheDocument()
   view.rerender(<NowPlaying {...props} status={{ ...status, active_player_type: 'AirPlay' }} />)
-  expect(screen.queryByText('LMS player')).not.toBeInTheDocument()
+  expect(screen.queryByText('LMS player running')).not.toBeInTheDocument()
   expect(screen.queryByText('cava', { exact: true })).not.toBeInTheDocument()
-  expect(screen.getByText('AirPlay', { exact: true })).toBeInTheDocument()
+  expect(screen.getByText('AirPlay —', { exact: true })).toBeInTheDocument()
 })
 
 it('resolves an AirPlay player from configuration when the websocket omits its type', async () => {
   vi.mocked(getVirtualPlayers).mockResolvedValue([{ id: 'p', type: 'AirPlay' }] as never)
   render(<NowPlaying {...props} status={status} />)
-  await screen.findByText('AirPlay', { exact: true })
-  expect(screen.queryByText('LMS player')).not.toBeInTheDocument()
+  await screen.findByText('AirPlay —', { exact: true })
+  expect(screen.queryByText('LMS player running')).not.toBeInTheDocument()
   expect(screen.queryByText('cava', { exact: true })).not.toBeInTheDocument()
 })
 
@@ -90,7 +95,7 @@ it('keeps follower and latency warnings visible outside the three status rows', 
   render(<NowPlaying {...props} status={{ ...status, follower_warning: 'Not synced', latency_warning: 'No latency data' }} />)
   await waitFor(() => expect(screen.getByText('Not synced')).toBeInTheDocument())
   expect(screen.getByText('No latency data')).toBeInTheDocument()
-  expect(screen.getByLabelText('Session status').querySelectorAll('dt')).toHaveLength(3)
+  expect(screen.getByLabelText('Session status').querySelectorAll('dt')).toHaveLength(4)
 })
 
 
@@ -175,5 +180,49 @@ it('released output explains ownership and explicitly takes lights', async () =>
   const button = screen.getByRole('button', { name: 'Take lights' })
   button.click()
   await waitFor(() => expect(api.takeLights).toHaveBeenCalledWith('c'))
+  await screen.findByText('CAVA Core')
+})
+
+
+it.each([{}, {manual_energy_profile_id:'e'}, {manual_palette_id:'palette'}])('shows manual choice only for coupling overrides %j', async override => {
+  vi.mocked(getCouplings).mockResolvedValueOnce([{id:'c', analyser_id:'a', player_id:'p', ...override}] as never)
+  render(<NowPlaying {...props} status={status} />)
+  await screen.findByText('CAVA Core')
+  expect(!!screen.queryByText('Manual choice active')).toBe(Object.keys(override).length > 0)
+})
+
+it('draws the white outline only on the floorplan frame during onset', async () => {
+  const view = render(<NowPlaying {...props} status={status} />)
+  await screen.findByLabelText('Light floorplan')
+  expect(screen.getByTestId('floorplan-frame')).toHaveAttribute('stroke', 'currentColor')
+  view.rerender(<NowPlaying {...props} status={status} onset />)
+  expect(screen.getByTestId('floorplan-frame')).toHaveAttribute('stroke', 'white')
+  expect(screen.getByTestId('colour-preview-size')).not.toHaveClass('outline-white')
+  view.rerender(<NowPlaying {...props} status={status} onset={false} />)
+  expect(screen.getByTestId('floorplan-frame')).toHaveAttribute('stroke', 'currentColor')
+})
+
+it('uses warning dots for disconnected and stopped status', async () => {
+  render(<NowPlaying {...props} status={{...status, bridge_connected:false, processes:{lms_player:false}}} />)
+  const session = screen.getByTestId('session-diagnostics')
+  expect(within(session).getByText('Bridge disconnected')).toBeVisible()
+  expect(await within(session).findByText('LMS player stopped')).toBeVisible()
+  expect(session.querySelectorAll('.bg-amber-500')).toHaveLength(2)
+  expect(within(session).queryByRole('button')).not.toBeInTheDocument()
+})
+
+it.each([NaN, Infinity, null])('uses unavailable readouts for non-finite or missing energy %s', async value => {
+  render(<NowPlaying {...props} status={status} sustained_energy={value} loudness_momentary_lufs={value} />)
+  expect(screen.getByTestId('sustained-energy')).toHaveTextContent('—')
+  expect(screen.getByTestId('momentary-loudness')).toHaveTextContent('— LUFS')
+  expect(screen.getByTestId('sustained-energy')).toHaveClass('tabular-nums')
+  await screen.findByText('CAVA Core')
+})
+
+it('reflects live manual-choice updates without changing Track colours or refetching', async () => {
+  const view = render(<NowPlaying {...props} status={{...status, music:{manual:true, raw_tags:[], source:'Track tag', genre:'other'} as never}} />)
+  expect(screen.getByText('Manual choice active')).toBeVisible()
+  view.rerender(<NowPlaying {...props} status={{...status, music:{manual:false, raw_tags:[], source:'Track tag', genre:'other'} as never}} />)
+  expect(screen.queryByText('Manual choice active')).not.toBeInTheDocument()
   await screen.findByText('CAVA Core')
 })

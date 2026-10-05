@@ -59,7 +59,7 @@ test('genre privacy, rules and transition controls work in the existing visual l
 
 test('Now Playing additions and both new pages fit on phones in light and dark mode', async ({ page }) => {
   const socket = await setup(page)
-  await expect(page.getByTestId('sustained-energy')).toHaveText('Sustained 0.63')
+  await expect(page.getByTestId('sustained-energy')).toHaveText('0.63')
   await expect(page.getByTestId('track-colours').getByText('deep house')).toBeVisible()
   await page.getByLabel('Track palette').selectOption('album-art')
   await expect(page.getByRole('button', { name: 'Clear manual choices' })).toBeVisible()

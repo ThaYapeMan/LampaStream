@@ -9,7 +9,6 @@ import { ColourSwatch } from '@/components/ColourSwatch'
 import { FloorplanPreview } from '@/components/FloorplanPreview'
 import { SpectrumBars } from '@/components/SpectrumBars'
 import { SliderField } from '@/components/SliderField'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
@@ -51,14 +50,6 @@ function sliderToHz(v: number): number {
   return Math.round(10 ** (LOG_MIN + v / 100 * (LOG_MAX - LOG_MIN)))
 }
 
-function ProcessBadge({ running }: { running: boolean }) {
-  return (
-    <Badge variant={running ? 'default' : 'destructive'} className="text-xs">
-      {running ? 'Running' : 'Stopped'}
-    </Badge>
-  )
-}
-
 function StatusRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <>
@@ -68,14 +59,19 @@ function StatusRow({ label, children }: { label: string; children: React.ReactNo
   )
 }
 
-function StatusGrid({ status, analyser }: {
+function StatusGrid({ status, analyser, effects, profile, manual, onOpen }: {
   status: SocketStatus | null
   analyser?: Analyser
+  effects: Effect[]; profile?: EnergyProfile; manual: boolean; onOpen?: (id: string) => void
   playerType?: string | null
 }) {
+  const matchingEffects = effects.filter(item => item.effect_type === status?.effect_type)
+  const effect = effects.find(item => item.id === profile?.high_energy_effect_id)
+    ?? effects.find(item => item.id === status?.effect_type)
+    ?? (matchingEffects.length === 1 ? matchingEffects[0] : undefined)
   const unknown = <span className="text-muted-foreground">—</span>
   return (
-    <dl aria-label="Session status" className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm items-start [&_dd]:min-w-0 [&_dd]:break-words">
+    <dl aria-label="Session status" className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] sm:grid-cols-[auto_1fr] gap-x-3 gap-y-2 text-sm items-start [&_dd]:min-w-0 [&_dd]:break-words">
       <StatusRow label="Spectrum engine">
         {SPECTRUM_BACKEND_OPTIONS.find(option => option.value === analyser?.spectrum_backend)?.label ?? unknown}
       </StatusRow>
@@ -83,9 +79,14 @@ function StatusGrid({ status, analyser }: {
         {ONSET_METHODS.find(option => option.value === analyser?.onset_method)?.label ?? unknown}
       </StatusRow>
       <StatusRow label="Effect">
-        {status?.effect_type ? <code className="text-xs font-mono">{status.effect_type}</code> : unknown}
+        {effect ? <span title={status?.effect_type ?? effect.id}>{effect.name}</span> : unknown}
       </StatusRow>
-
+      <StatusRow label="Energy profile">
+        {profile?.name ?? unknown}
+        {manual && <span className="ml-2 text-xs text-muted-foreground">Manual choice active</span>}
+      </StatusRow>
+      {profile && <dd className="col-span-2 mt-2"><a className="text-primary hover:underline underline-offset-2" href={`#energy-profiles/${encodeURIComponent(profile.id)}`}
+        onClick={event => { if (onOpen) { event.preventDefault(); onOpen(profile.id) } }}>Open Energy Profile ›</a></dd>}
     </dl>
   )
 }
@@ -95,33 +96,17 @@ function SessionDiagnostics({ status, playerType }: {
   playerType?: string | null
 }) {
   if (!status) return null
-  return (
-    <div className="mt-3 border-t pt-3 space-y-2" data-testid="session-diagnostics">
-      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-        <span className="uppercase tracking-wider">Session</span>
-        <dl className="flex flex-wrap items-center gap-x-3 gap-y-2">
-          <StatusRow label="Bridge API">
-            <Badge variant={status.bridge_connected ? 'default' : 'secondary'} className="text-xs">
-              {status.bridge_connected ? 'Connected' : 'Disconnected'}
-            </Badge>
-          </StatusRow>
-          {playerType === 'LMS' && <>
-            <StatusRow label="LMS player"><ProcessBadge running={status.processes.lms_player} /></StatusRow>
-          </>}
-          {playerType === 'AirPlay' && (
-            <StatusRow label="AirPlay">
-              <Badge variant={status.airplay_receiving ? 'default' : 'secondary'} className="text-xs">
-                {status.airplay_receiving === true ? 'Receiving audio'
-                  : status.airplay_receiving === false ? 'Waiting for AirPlay connection…' : '—'}
-              </Badge>
-            </StatusRow>
-          )}
-        </dl>
-      </div>
-      {status.follower_warning && <p className="text-destructive text-xs">{status.follower_warning}</p>}
-      {status.latency_warning && <p className="text-destructive text-xs">{status.latency_warning}</p>}
-    </div>
-  )
+  const indicator = (ok: boolean, text: string) => <span className="inline-flex items-center gap-2 text-xs text-muted-foreground">
+    <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${ok ? 'bg-green-500' : 'bg-amber-500'}`} />{text}
+  </span>
+  return <div className="flex flex-wrap items-center gap-x-4 gap-y-2" data-testid="session-diagnostics">
+    {indicator(status.bridge_connected, status.bridge_connected ? 'Bridge connected' : 'Bridge disconnected')}
+    {playerType === 'LMS' && indicator(status.processes.lms_player, status.processes.lms_player ? 'LMS player running' : 'LMS player stopped')}
+    {playerType === 'AirPlay' && indicator(status.airplay_receiving === true,
+      status.airplay_receiving === true ? 'AirPlay receiving audio' : status.airplay_receiving === false ? 'Waiting for AirPlay connection…' : 'AirPlay —')}
+    {status.follower_warning && <p className="w-full text-destructive text-xs">{status.follower_warning}</p>}
+    {status.latency_warning && <p className="w-full text-destructive text-xs">{status.latency_warning}</p>}
+  </div>
 }
 
 function CouplingSelector({
@@ -451,63 +436,48 @@ export function NowPlaying({ expertMode = false, colour, channel_colours, onset,
 
       <LightTiming status={status} onOpenLatency={onOpenLatency} />
 
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-xs text-muted-foreground uppercase tracking-wider">
-            Live preview
-          </CardTitle>
+      <Card data-testid="live-preview-card">
+        <CardHeader className="pb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+          <CardTitle className="text-base">Live preview</CardTitle>
+          <SessionDiagnostics status={status} playerType={playerType} />
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start" data-testid="live-preview-grid">
-            <div className="min-w-0">
-              <div className="aspect-square w-full flex" data-testid="colour-preview-size">
-                <ColourSwatch r={colour.r} g={colour.g} b={colour.b} onset={onset} />
+          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,11fr)_minmax(0,9fr)] gap-6 items-stretch" data-testid="live-preview-grid">
+            <section className="min-w-0 rounded-xl border p-4" aria-label="Lights preview">
+              <div className="mb-3 flex items-center justify-between gap-3 text-sm text-muted-foreground">
+                <h3 title="An onset appears as a white outline on the floorplan">Lights</h3>
+                <ColourSwatch r={colour.r} g={colour.g} b={colour.b} />
               </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                First channel colour. White outline&nbsp;= onset detected.
-              </p>
-            </div>
-            <div className="min-w-0">
-              <div className="aspect-square w-full" data-testid="floorplan-preview-size">
-                {channels.length > 0 ? (
-                  <FloorplanPreview channels={channels} colours={channel_colours} onset={onset} />
-                ) : <p className="text-sm text-muted-foreground">No floorplan available</p>}
+              <div className="w-full" data-testid="floorplan-preview-size">
+                <FloorplanPreview channels={channels} colours={channel_colours} onset={onset} />
               </div>
-            </div>
-            <div className="min-w-0 lg:aspect-square">
-              <h3 className="text-xs text-muted-foreground uppercase tracking-wider mb-3">Status</h3>
-              <StatusGrid status={status} analyser={activeAnalyser} playerType={playerType} />
-            </div>
+            </section>
+            <section className="min-w-0 rounded-xl border p-4" aria-label="Analysis">
+              <h3 className="mb-4 text-sm text-muted-foreground">Analysis</h3>
+              <StatusGrid status={status} analyser={activeAnalyser} effects={effects} profile={activeEnergyProfile}
+                manual={!!couplingId && (status?.music?.manual ?? !!(activeCoupling?.manual_energy_profile_id || activeCoupling?.manual_palette_id))} onOpen={onOpenEnergyProfile} />
+            </section>
           </div>
-          <div className="mt-3" data-testid="energy-blend">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs text-muted-foreground">
-                Energy blend
-                <span className="ml-3 inline-block font-mono" data-testid="sustained-energy">Sustained {connected && sustained_energy !== null ? sustained_energy.toFixed(2) : '—'}</span>
-                <span className="ml-3 font-mono" title="K-weighted momentary loudness (400 ms); independent of energy blend" data-testid="momentary-loudness">
-                  {connected && loudness_momentary_lufs !== null && Number.isFinite(loudness_momentary_lufs)
-                    ? `${loudness_momentary_lufs.toFixed(1)} LUFS`
-                    : '— LUFS'}
-                </span>
-              </span>
-              <span className="text-xs font-mono text-muted-foreground">{Math.round(mix * 100)}%</span>
-            </div>
-            <div className="relative h-2 w-full overflow-hidden rounded-full bg-secondary">
-              <div data-testid="energy-input-marker" title={`Energy input: ${Math.round(last_energy_input * 100)}%`} className="absolute z-10 h-full w-0.5 bg-foreground" style={{ left: `${Math.max(0, Math.min(1, last_energy_input)) * 100}%` }} />
-              <div
-                className="h-full bg-primary transition-none"
-                style={{ width: `${mix * 100}%` }}
-                title={`High-energy Effect: ${Math.round(mix * 100)}% (Low energy: ${Math.round((1 - mix) * 100)}%)`}
-              />
-            </div>
-            <div className="flex justify-between mt-0.5">
-              <span className="text-[10px] text-muted-foreground">Low energy</span>
-              <span className="text-[10px] text-muted-foreground">High energy</span>
-            </div>
-          </div>
-          <LiveEnergySource expertMode={expertMode} key={activeEnergyProfile?.id ?? 'none'} profile={activeEnergyProfile} active={!!couplingId}
-            effects={effects} onOpenEffect={onOpenEffect} onOpen={onOpenEnergyProfile} onUpdated={updated => setEnergyProfiles(items => items.map(item => item.id === updated.id ? updated : item))} />
-          <SessionDiagnostics status={status} playerType={playerType} />
+          <LiveEnergySource expertMode={expertMode} profile={activeEnergyProfile} active={!!couplingId}
+            effects={effects} onOpenEffect={onOpenEffect}
+            gauge={<div data-testid="energy-blend">
+              <div className="mb-3 flex items-center justify-between gap-4">
+                <span className="text-sm text-muted-foreground">Blend between low and high energy effect</span>
+                <span className="text-3xl font-semibold tabular-nums">{Math.round(mix * 100)}%</span>
+              </div>
+              <div className="relative h-2 w-full overflow-hidden rounded-full bg-secondary">
+                <div data-testid="energy-input-marker" title={`Energy input: ${Math.round(last_energy_input * 100)}%`} className="absolute z-10 h-full w-0.5 bg-foreground" style={{ left: `${Math.max(0, Math.min(1, last_energy_input)) * 100}%` }} />
+                <div className="h-full bg-foreground transition-none" style={{ width: `${mix * 100}%` }}
+                  title={`High-energy Effect: ${Math.round(mix * 100)}% (Low energy: ${Math.round((1 - mix) * 100)}%)`} />
+              </div>
+            </div>}
+            readouts={<div className="my-5 grid grid-cols-2 gap-4 sm:flex sm:gap-8">
+              <div><div className="mb-1 text-xs text-muted-foreground">Sustained energy</div>
+                <span className="tabular-nums" data-testid="sustained-energy">{connected && sustained_energy !== null && Number.isFinite(sustained_energy) ? sustained_energy.toFixed(2) : '—'}</span></div>
+              <div><div className="mb-1 text-xs text-muted-foreground">Momentary loudness</div>
+                <span className="tabular-nums" title="K-weighted momentary loudness (400 ms); independent of energy blend" data-testid="momentary-loudness">{connected && loudness_momentary_lufs !== null && Number.isFinite(loudness_momentary_lufs) ? `${loudness_momentary_lufs.toFixed(1)} LUFS` : '— LUFS'}</span></div>
+            </div>}
+            onUpdated={updated => setEnergyProfiles(items => items.map(item => item.id === updated.id ? updated : item))} />
         </CardContent>
       </Card>
 

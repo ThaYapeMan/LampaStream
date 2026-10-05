@@ -334,9 +334,25 @@ silence. Now Playing shows the live value beside the blend. Raw `full` remains
 only a fallback for callers without a sustained measurement. Optional colour band
 normalisation does not alter this raw-PCM measurement.
 
-Now Playing labels the profile **Energy Trigger**, with **Open trigger** linking
-to its editor. Low- and High-energy Effect links are always visible in Standard
-and Expert modes; Off dims the Low-energy link without hiding it.
+Now Playing's **Live preview** puts quiet Bridge and player status indicators in
+its header. The **Lights** panel shows the floorplan, a small Channel 1 colour
+chip, and a white frame outline only during an onset. **Analysis** lists the
+Spectrum engine, Beat detection, the configured Effect's display name (technical
+code in its tooltip), and Energy profile, with **Open Energy Profile ›** linking
+to its editor. A manual energy profile or palette displays **Manual choice active**.
+The panels sit side by side on desktop and stack on phones.
+
+Below the divider, **Energy** shows the blend percentage, its input tick, and
+Low/High Effect links at the ends of the gauge. Sustained energy and momentary
+LUFS have separate labelled readouts. Expert mode adds an Energy switch and four
+source segments: Sustained, Fixed Loudness, Adaptive Loudness and Peak Envelope.
+Off is controlled by the switch; enabling restores the last non-Off source
+remembered for that profile during the page session (default Sustained).
+Source changes appear immediately and revert with an error if saving fails.
+Without an active coupling, controls are disabled with an explanation. Standard
+mode shows On/Off as text. Parameters appear only for sources that have them;
+validation, blur/Enter commits and the 250 ms stepper debounce are unchanged.
+Off still dims the Low-energy link without hiding either Effect link.
 
 - `off`: immediately supplies a constant energy input of 1 without reading audio
   features. Existing blend smoothing settles at 100% High-energy Effect. There

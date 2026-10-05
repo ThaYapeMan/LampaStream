@@ -21,8 +21,8 @@ it('applies modes immediately, commits validated numbers only on blur/Enter, and
   const user = userEvent.setup()
   render(<Harness />)
   const group = screen.getByRole('radiogroup', { name:'Energy source' })
-  expect(within(group).getAllByRole('radio')).toHaveLength(5)
-  await user.click(screen.getByRole('radio', {name:'Fixed loudness'}))
+  expect(within(group).getAllByRole('radio')).toHaveLength(4)
+  await user.click(screen.getByRole('radio', {name:'Fixed Loudness'}))
   await waitFor(() => expect(updateEnergyProfile).toHaveBeenCalledWith('e', {energy_source:'loudness_fixed'}))
   const floor = screen.getByRole('spinbutton', {name:'Floor'})
   await user.clear(floor); await user.type(floor, '-25')
@@ -33,7 +33,7 @@ it('applies modes immediately, commits validated numbers only on blur/Enter, and
   await user.click(floor); await user.clear(floor); await user.type(floor, '-5'); await user.tab()
   expect(screen.getByRole('alert')).toHaveTextContent('lufs_floor must be below lufs_ceiling')
   expect(updateEnergyProfile).toHaveBeenCalledTimes(2)
-  await user.click(screen.getByRole('radio', {name:'Adaptive loudness'}))
+  await user.click(screen.getByRole('radio', {name:'Adaptive Loudness'}))
   await screen.findByRole('spinbutton', {name:'Adaptation'})
   expect(screen.queryByRole('spinbutton', {name:'Floor'})).not.toBeInTheDocument()
   await user.click(screen.getByRole('radio', {name:'Sustained'}))
@@ -46,7 +46,7 @@ it('uses the same validation messages and labels as the profile editor', () => {
   expect(screen.getByRole('button', {name:/Fixed loudness/})).toHaveAttribute('aria-pressed','true')
   rerender(<EnergySourceControls {...props} compact />)
   expect(screen.getByRole('alert').textContent).toBe(message)
-  expect(screen.getByRole('radio', {name:'Fixed loudness'})).toHaveAttribute('aria-checked','true')
+  expect(screen.getByRole('radio', {name:'Fixed Loudness'})).toHaveAttribute('aria-checked','true')
   rerender(<EnergySourceControls {...props} floor="" compact />)
   expect(screen.getByRole('alert')).toHaveTextContent('Energy source settings must be finite')
 })
@@ -54,7 +54,7 @@ it('keeps all segments visible but disabled without an active coupling', () => {
   render(<LiveEnergySource expertMode active={false} onUpdated={vi.fn()} />)
   expect(screen.getByText('No active coupling')).toBeInTheDocument()
   for (const radio of screen.getAllByRole('radio')) expect(radio).toBeDisabled()
-  expect(screen.queryByText('Open trigger')).not.toBeInTheDocument()
+  expect(screen.queryByText('Open Energy Profile ›')).not.toBeInTheDocument()
 })
 it('supports arrow-key selection and shows server failure without changing persisted selection', async () => {
   const user = userEvent.setup()
@@ -67,22 +67,19 @@ it('supports arrow-key selection and shows server failure without changing persi
   expect(screen.getByRole('radio', {name:'Sustained'})).toHaveAttribute('aria-checked','true')
 })
 
-it('keeps the parameter row for sustained and disabled states', async () => {
+it('renders parameter rows only for sources with parameters', async () => {
   const user = userEvent.setup()
-  const view = render(<Harness />)
-  expect(screen.getByTestId('energy-parameters')).toHaveClass('h-7')
-  expect(screen.getByText('No parameters for this source')).toBeVisible()
-  await user.click(screen.getByRole('radio', {name:'Fixed loudness'}))
+  render(<Harness />)
+  expect(screen.queryByTestId('energy-parameters')).not.toBeInTheDocument()
+  expect(screen.queryByText('No parameters for this source')).not.toBeInTheDocument()
+  await user.click(screen.getByRole('radio', {name:'Fixed Loudness'}))
   expect(await screen.findByRole('spinbutton', {name:'Floor'})).toBeVisible()
-  expect(screen.getByTestId('energy-parameters')).toHaveClass('h-7')
-  view.rerender(<LiveEnergySource expertMode active={false} onUpdated={vi.fn()} />)
-  expect(screen.getByTestId('energy-parameters')).toHaveTextContent('No active coupling')
-  expect(screen.getByTestId('energy-parameters')).toHaveClass('h-7')
+  expect(screen.getByTestId('energy-parameters')).toBeVisible()
 })
 it('steps floor/ceiling by 1 and adaptation by 5; keyboard Shift multiplies by 5', async () => {
   const user = userEvent.setup()
   render(<Harness />)
-  await user.click(screen.getByRole('radio', {name:'Fixed loudness'}))
+  await user.click(screen.getByRole('radio', {name:'Fixed Loudness'}))
   const floor = await screen.findByRole('spinbutton', {name:'Floor'})
   await user.click(screen.getByRole('button', {name:'Increase Floor'}))
   await waitFor(() => expect(updateEnergyProfile).toHaveBeenLastCalledWith('e', {lufs_floor:-29}))
@@ -96,7 +93,7 @@ it('steps floor/ceiling by 1 and adaptation by 5; keyboard Shift multiplies by 5
   await waitFor(() => expect(updateEnergyProfile).toHaveBeenLastCalledWith('e', {lufs_floor:-23}))
   await user.click(screen.getByRole('button', {name:'Decrease Ceiling'}))
   await waitFor(() => expect(updateEnergyProfile).toHaveBeenLastCalledWith('e', {lufs_ceiling:-9}))
-  await user.click(screen.getByRole('radio', {name:'Adaptive loudness'}))
+  await user.click(screen.getByRole('radio', {name:'Adaptive Loudness'}))
   await user.click(await screen.findByRole('button', {name:'Increase Adaptation'}))
   await waitFor(() => expect(updateEnergyProfile).toHaveBeenLastCalledWith('e', {adaptation_tau_s:65}))
   const tau = screen.getByRole('spinbutton', {name:'Adaptation'})
@@ -106,7 +103,7 @@ it('steps floor/ceiling by 1 and adaptation by 5; keyboard Shift multiplies by 5
 it('coalesces rapid stepper clicks and still rejects an invalid stepped window', async () => {
   const user = userEvent.setup()
   render(<Harness />)
-  await user.click(screen.getByRole('radio', {name:'Fixed loudness'}))
+  await user.click(screen.getByRole('radio', {name:'Fixed Loudness'}))
   const up = await screen.findByRole('button', {name:'Increase Floor'})
   await user.dblClick(up)
   await waitFor(() => expect(updateEnergyProfile).toHaveBeenCalledTimes(2))
@@ -126,13 +123,13 @@ it('hides source controls and manual fields in Standard mode', () => {
   expect(screen.queryByLabelText('Energy source settings')).not.toBeInTheDocument()
   expect(screen.queryByTestId('field-peak-attack')).not.toBeInTheDocument()
   expect(screen.queryByTestId('field-peak-release')).not.toBeInTheDocument()
-  expect(screen.getByText('Open trigger')).toBeVisible()
+  expect(screen.getByText('On', {exact:true})).toBeVisible()
 })
 
 it('patches peak Auto/Manual and validates attack and release before committing', async () => {
   const user = userEvent.setup()
   render(<Harness />)
-  await user.click(screen.getByRole('radio', {name:'Peak envelope'}))
+  await user.click(screen.getByRole('radio', {name:'Peak Envelope'}))
   expect(await screen.findByRole('button', {name:'Auto', exact:true})).toHaveAttribute('aria-pressed', 'true')
   expect(screen.queryByTestId('field-peak-attack')).not.toBeInTheDocument()
   await user.click(screen.getByRole('button', {name:'Manual', exact:true}))
@@ -153,7 +150,7 @@ it('persists reshape independently of Auto/Manual and validates its compact fiel
   const user = userEvent.setup()
   render(<Harness />)
   expect(screen.queryByRole('checkbox', {name:'Reshape'})).not.toBeInTheDocument()
-  await user.click(screen.getByRole('radio', {name:'Peak envelope'}))
+  await user.click(screen.getByRole('radio', {name:'Peak Envelope'}))
   await user.click(await screen.findByRole('checkbox', {name:'Reshape'}))
   await waitFor(() => expect(updateEnergyProfile).toHaveBeenLastCalledWith('e', {peak_reshape_enabled:true}))
   const power = await screen.findByRole('spinbutton', {name:'Reshape power'})
@@ -188,9 +185,8 @@ it.each([
   const mode = screen.getByRole('group', {name:'Peak envelope mode'})
   const agcRow = mode.parentElement!
   const reshapeRow = screen.getByRole('group', {name:'Reshape settings'})
-  expect(agcRow).toHaveClass('flex', 'h-7', 'items-center')
-  expect(agcRow).not.toHaveClass('flex-wrap')
-  expect(reshapeRow).toHaveClass('flex', 'h-9', 'items-center', 'border-t', 'pt-2')
+  expect(agcRow).toHaveClass('flex', 'flex-wrap', 'items-center')
+  expect(reshapeRow).toHaveClass('flex', 'flex-wrap', 'items-center', 'border-t', 'pt-2')
   expect(reshapeRow).not.toHaveClass('space-y-2')
   expect(agcRow.nextElementSibling).toBe(reshapeRow)
   expect(reshapeRow.nextElementSibling).toBeNull()
@@ -217,23 +213,53 @@ it.each([
   }
 })
 
-it('selects Off with a muted active pill and a caption instead of parameters', async () => {
+it('switches Off and restores the previous source, without an Off segment', async () => {
   const user = userEvent.setup()
   render(<Harness />)
-  await user.click(screen.getByRole('radio', { name: 'Off' }))
-  await waitFor(() => expect(updateEnergyProfile).toHaveBeenCalledWith('e', { energy_source: 'off' }))
-  expect(screen.getByRole('radio', { name: 'Off' })).toHaveAttribute('aria-checked', 'true')
-  expect(screen.getByRole('radio', { name: 'Off' })).toHaveClass('bg-muted')
-  expect(screen.getByText('No energy input — always shows the High-energy Effect.')).toBeVisible()
-  expect(screen.queryByTestId('energy-parameters')).not.toBeInTheDocument()
+  await user.click(screen.getByRole('radio', {name:'Adaptive Loudness'}))
+  const toggle = screen.getByRole('switch', {name:'Energy'})
+  await user.click(toggle)
+  await waitFor(() => expect(updateEnergyProfile).toHaveBeenLastCalledWith('e', {energy_source:'off'}))
+  expect(toggle).toHaveAttribute('aria-checked', 'false')
+  expect(screen.queryByRole('radio', {name:'Off'})).not.toBeInTheDocument()
   expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument()
+  await user.click(toggle)
+  await waitFor(() => expect(updateEnergyProfile).toHaveBeenLastCalledWith('e', {energy_source:'loudness_adaptive'}))
+  expect(toggle).toHaveAttribute('aria-checked', 'true')
+})
+
+it('optimistically switches and reverts a failed save', async () => {
+  const user = userEvent.setup()
+  let reject!: (reason: Error) => void
+  vi.mocked(updateEnergyProfile).mockImplementation(() => new Promise((_, fail) => { reject = fail }))
+  render(<Harness />)
+  const toggle = screen.getByRole('switch', {name:'Energy'})
+  await user.click(toggle)
+  expect(toggle).toHaveAttribute('aria-checked', 'false')
+  expect(toggle).toBeDisabled()
+  reject(new Error('Save failed'))
+  expect(await screen.findByRole('alert')).toHaveTextContent('Save failed')
+  expect(toggle).toHaveAttribute('aria-checked', 'true')
+})
+
+it('disables the switch with the inactive-coupling reason', () => {
+  render(<LiveEnergySource expertMode active={false} onUpdated={vi.fn()} />)
+  expect(screen.getByRole('switch', {name:'Energy'})).toBeDisabled()
+  expect(screen.getByRole('switch', {name:'Energy'})).toHaveAttribute('title', 'No active coupling')
+})
+
+it('defaults an initially Off profile to Sustained', async () => {
+  const user = userEvent.setup()
+  render(<LiveEnergySource expertMode active profile={{...initial, energy_source:'off'}} onUpdated={vi.fn()} />)
+  await user.click(screen.getByRole('switch', {name:'Energy'}))
+  expect(updateEnergyProfile).toHaveBeenCalledWith('e', {energy_source:'sustained'})
 })
 
 it.each(ENERGY_SOURCE_OPTIONS.flatMap(source => [false, true].map(expertMode => [source.value, expertMode] as const)))(
   'keeps Low/High links visible for %s with Expert=%s and uses readable muted text for Low when Off', async (source, expertMode) => {
-    const user = userEvent.setup(), onOpenEffect = vi.fn(), onOpen = vi.fn()
+    const user = userEvent.setup(), onOpenEffect = vi.fn()
     const effects = [{ id: 'low', name: 'Quiet glow' }, { id: 'high', name: 'Bright bands' }] as Effect[]
-    render(<LiveEnergySource active expertMode={expertMode} effects={effects} onOpenEffect={onOpenEffect} onOpen={onOpen}
+    render(<LiveEnergySource active expertMode={expertMode} effects={effects} onOpenEffect={onOpenEffect}
       profile={{ ...initial, low_energy_effect_id: 'low', high_energy_effect_id: 'high', energy_source: source }} onUpdated={vi.fn()} />)
     expect(screen.getByRole('link', { name: 'Quiet glow' })).toHaveAttribute('href', '#effects/low')
     expect(screen.getByRole('link', { name: 'Bright bands' })).toBeVisible()
@@ -242,9 +268,6 @@ it.each(ENERGY_SOURCE_OPTIONS.flatMap(source => [false, true].map(expertMode => 
     await user.click(screen.getByRole('link', { name: 'Quiet glow' }))
     await user.click(screen.getByRole('link', { name: 'Bright bands' }))
     expect(onOpenEffect.mock.calls).toEqual([['low'], ['high']])
-    await user.click(screen.getByRole('link', { name: 'Open trigger' }))
-    expect(onOpen).toHaveBeenCalledWith('e')
-    expect(screen.getByText('Energy Trigger')).toHaveAttribute('title', 'Decides how loud the music needs to get before the Low-energy Effect gives way to the High-energy Effect — and how smoothly the two blend.')
   },
 )
 
@@ -255,4 +278,15 @@ it('shows placeholders without links for missing effects or an inactive coupling
   rerender(<LiveEnergySource active={false} profile={{ ...initial, high_energy_effect_id: 'high' }}
     effects={[{ id: 'high', name: 'Stale effect' }] as Effect[]} onUpdated={vi.fn()} />)
   expect(screen.queryByRole('link')).not.toBeInTheDocument()
+})
+
+it('remembers a separate non-Off source for each profile', async () => {
+  const user = userEvent.setup(), onUpdated = vi.fn()
+  const view = render(<LiveEnergySource expertMode active profile={{...initial, energy_source:'loudness_adaptive'}} onUpdated={onUpdated} />)
+  view.rerender(<LiveEnergySource expertMode active profile={{...initial, energy_source:'off'}} onUpdated={onUpdated} />)
+  view.rerender(<LiveEnergySource expertMode active profile={{...initial, id:'other', energy_source:'loudness_fixed'}} onUpdated={onUpdated} />)
+  view.rerender(<LiveEnergySource expertMode active profile={{...initial, id:'other', energy_source:'off'}} onUpdated={onUpdated} />)
+  view.rerender(<LiveEnergySource expertMode active profile={{...initial, energy_source:'off'}} onUpdated={onUpdated} />)
+  await user.click(screen.getByRole('switch', {name:'Energy'}))
+  expect(updateEnergyProfile).toHaveBeenCalledWith('e', {energy_source:'loudness_adaptive'})
 })
