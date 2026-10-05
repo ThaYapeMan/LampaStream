@@ -256,3 +256,151 @@ def test_status_publishes_clock_provenance(ingress, tmp_path, provenance):
     status = manager.lms_timing  # forwarded unchanged by /api/status and websocket status
     assert status['provenance'] == provenance
     assert status['audio_source'] == 'LMS head start'
+
+
+def copy_race(source, monkeypatch, action):
+    """Run a fake producer after the PCM copy, before its validation read."""
+    copying = [False]
+    offset = source._buf_offset
+    header = source._read_ext_header
+
+    def begin():
+        copying[0] = True
+        return offset()
+
+    def finish():
+        if copying[0]:
+            copying[0] = False
+            action()
+        return header()
+
+    monkeypatch.setattr(source, '_buf_offset', begin)
+    monkeypatch.setattr(source, '_read_ext_header', finish)
+
+
+def test_small_write_during_every_copy_is_continuous(ingress, monkeypatch):
+    writer, timed, _, _ = ingress
+    source = timed.source
+    source.use_player_clock = False
+    copy_race(source, monkeypatch, lambda: writer.write(16))
+    writer.write(240)
+    position = 0
+    for _ in range(20):
+        result = source.read()
+        assert isinstance(result, DataResult)
+        assert result.frame.source_sample_pos == position
+        assert (result.frame.samples[:, 0] == 100 / 32768).all()
+        position += len(result.frame.samples)
+    assert source.retry_count == source.overwrite_invalidations == 0
+
+
+def test_writer_lap_during_copy_invalidates_once(ingress, monkeypatch):
+    writer, timed, _, _ = ingress
+    calls = [0]
+
+    def lap_once():
+        calls[0] += 1
+        if calls[0] == 1:
+            writer.write(8193)
+
+    copy_race(timed.source, monkeypatch, lap_once)
+    writer.write()
+    assert isinstance(timed.source.read(), StreamInvalidated)
+    assert isinstance(timed.source.read(), TemporarilyNoData)
+    writer.write()
+    assert isinstance(timed.source.read(), DataResult)
+    assert timed.source.overwrite_invalidations == 1
+
+
+def test_odd_after_copy_retries_then_succeeds(ingress, monkeypatch):
+    writer, timed, _, _ = ingress
+    source = timed.source
+    writer.write()
+    header = source._read_ext_header
+    reads = [0]
+
+    def odd_once():
+        from dataclasses import replace
+        reads[0] += 1
+        ext = header()
+        return replace(ext, write_seq=ext.write_seq | 1) if reads[0] == 3 else ext
+
+    monkeypatch.setattr(source, '_read_ext_header', odd_once)
+    assert isinstance(source.read(), DataResult)
+    assert source.retry_count == 1
+    assert source.overwrite_invalidations == 0
+
+
+def test_generation_change_during_copy(ingress, monkeypatch):
+    writer, timed, _, _ = ingress
+
+    def restart():
+        writer.generation += 1
+        writer.publish()
+
+    copy_race(timed.source, monkeypatch, restart)
+    writer.write()
+    assert isinstance(timed.source.read(), StreamInvalidated)
+    assert timed.source.overwrite_invalidations == 0
+
+
+def test_anchor_change_retries_with_new_stamp(ingress, monkeypatch):
+    writer, timed, _, _ = ingress
+    calls = [0]
+
+    def change_once():
+        calls[0] += 1
+        if calls[0] == 1:
+            writer.stamp += .125
+            writer.publish()
+
+    writer.write()
+    copy_race(timed.source, monkeypatch, change_once)
+    result = timed.source.read()
+    assert isinstance(result, DataResult)
+    assert result.frame.play_monotonic == pytest.approx(100.125)
+    assert timed.source.retry_count == 1
+
+
+def test_safety_margin_contention_is_bounded(ingress, monkeypatch):
+    writer, timed, _, _ = ingress
+    writer.write(8192 - 128)
+    assert isinstance(timed.source.read(), TemporarilyNoData)
+    assert timed.source.retry_count == 3
+    assert timed.source.overwrite_invalidations == 0
+    assert timed.source._abs_write_pos_frames == 0
+
+
+@pytest.mark.parametrize('offset,fmt,value', [
+    (32848, '<I', 0), (32852, '<H', 2), (32876, '<Q', 1),
+])
+def test_extension_invalidation_during_copy(ingress, monkeypatch, offset, fmt, value):
+    writer, timed, _, _ = ingress
+    writer.write()
+    copy_race(timed.source, monkeypatch,
+              lambda: struct.pack_into(fmt, writer.mm, offset, value))
+    assert isinstance(timed.source.read(), StreamInvalidated)
+    assert timed.source.overwrite_invalidations == 0
+
+
+def test_ring_index_paired_with_position_without_player_clock(ingress, monkeypatch):
+    writer, timed, _, _ = ingress
+    source = timed.source
+    source.use_player_clock = False
+    writer.write(240)
+    for frame in range(240):
+        struct.pack_into('<hh', writer.mm, 80 + frame * 4, frame, -frame)
+    coherent = source._read_ext_coherent
+
+    def advance_after_snapshot():
+        snapshot = coherent()
+        writer.write(16)
+        return snapshot
+
+    monkeypatch.setattr(source, '_read_ext_coherent', advance_after_snapshot)
+    result = source.read()
+    assert isinstance(result, DataResult)
+    assert result.frame.source_sample_pos == 0
+    assert len(result.frame.samples) == 240
+    assert result.frame.samples[:, 0].tolist() == [frame / 32768 for frame in range(240)]
+    assert source.retry_count == 0

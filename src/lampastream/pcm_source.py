@@ -188,6 +188,8 @@ _MMAP_SIZE_V1: int = _V2_EXT_OFFSET + _V2_EXT_SIZE    # 32888
 # write_seq only for the few microseconds it takes to memcpy a small ring
 # segment plus a handful of scalar stores; ten retries is generous.
 MAX_SEQLOCK_RETRIES: int = 10
+MAX_PCM_COPY_RETRIES: int = 3
+PCM_SAFETY_MARGIN: int = 256
 
 
 @dataclass
@@ -389,6 +391,8 @@ class SqueezeliteShmStereoSource:
         self._prev_generation: int = 0
         self._abs_write_pos_frames: int = 0  # in stereo frames
         self._prev_gap_seq: int = 0
+        self.retry_count = 0
+        self.overwrite_invalidations = 0
         self.use_player_clock = False  # enabled only by LMS timed ingress, never follow mode
         self._clock_event_seq: int | None = None
         self._clock_segments: list[tuple[int, PlayerClock | None]] = []
@@ -538,7 +542,7 @@ class SqueezeliteShmStereoSource:
             abs_write_pos=abs_write_pos,
             gap_seq=gap_seq,
             timing=clock,
-            legacy_header=self._read_header() if clock is not None else None,
+            legacy_header=self._read_header(),
         )
 
     def _read_ext_coherent(self) -> _ShmExtHeader | None:
@@ -754,14 +758,27 @@ class SqueezeliteShmStereoSource:
         return _BUF_OFFSET_V1 if self._abi_version >= 1 else _BUF_OFFSET
 
     def _read_v1(self) -> SourceReadResult:
+        for attempt in range(MAX_PCM_COPY_RETRIES + 1):
+            result = self._read_v1_attempt()
+            if result is not None:
+                return result
+            if attempt < MAX_PCM_COPY_RETRIES:
+                self.retry_count += 1
+                _log.debug("LMS PCM read retry %d/%d (total=%d)",
+                           attempt + 1, MAX_PCM_COPY_RETRIES, self.retry_count)
+        return TemporarilyNoData()
+
+    def _read_v1_attempt(self) -> SourceReadResult | None:
         """v1 read path: coherent snapshot + producer continuity classification."""
         assert self._mm is not None
         ext = self._read_ext_coherent()
         if ext is None:
-            _log.info("LMS stream invalidated: incoherent SHM snapshot")
-            return StreamInvalidated(
-                cause=InvalidationCause.UNKNOWN, known_lost_samples=None
-            )
+            current = self._read_ext_header()
+            if (current is None or current.magic != SHM_ABI_V1_MAGIC
+                    or current.abi_version != SHM_ABI_VERSION):
+                _log.info("LMS stream invalidated: SHM extension missing or ABI changed")
+                return StreamInvalidated(InvalidationCause.UNKNOWN, None)
+            return None
 
         if not self.use_player_clock:
             ext = replace(ext, timing=None)
@@ -806,7 +823,7 @@ class SqueezeliteShmStereoSource:
 
         # Rate change → new epoch.
         _, buf_index_before, running, rate, updated = (
-            ext.legacy_header if ext.timing is not None else self._read_header())
+            ext.legacy_header or self._read_header())
         if self._prev_rate != 0 and rate != self._prev_rate:
             _log.warning(
                 "SHM stereo source: sample rate changed (%d → %d); invalidating epoch.",
@@ -868,6 +885,7 @@ class SqueezeliteShmStereoSource:
 
         frame_capacity = VIS_BUF_SIZE // 2  # ring capacity in stereo frames
         if delta_frames >= frame_capacity:
+            self.overwrite_invalidations += 1
             _log.info("LMS stream invalidated: PCM ring overrun")
             self._clock_segments.clear()
             # A full lap (or more) has been overwritten between polls.
@@ -903,29 +921,51 @@ class SqueezeliteShmStereoSource:
             raw_head = self._mm.read((n_new_scalar - tail) * 2)
             raw = raw_tail + raw_head
 
-        # Final seqlock verification: refuse the block if a writer ran while
-        # we were copying.  A single retry loop already handled the metadata
-        # coherence; this catches races against the PCM copy itself.
-        #
-        # The full snapshot spans (metadata read, PCM copy, metadata re-read)
-        # so verify EVERY authoritative field agrees:
-        #   - magic must still be present (segment not truncated)
-        #   - abi_version unchanged (producer not rewritten mid-copy)
-        #   - write_seq matches AND is even (no writer since the coherent read)
-        #   - generation matches (producer did not restart during the copy)
-        #   - abs_write_pos matches (no writer since the coherent read)
+        # Writes ahead are harmless until they approach this window. Timing
+        # remains paired with the pre-copy coherent metadata snapshot.
         ext_after = self._read_ext_header()
-        if (
-            ext_after is None
-            or ext_after.magic != SHM_ABI_V1_MAGIC
-            or ext_after.abi_version != SHM_ABI_VERSION
-            or ext_after.write_seq % 2 == 1
-            or ext_after.write_seq != ext.write_seq
-            or ext_after.generation != ext.generation
-            or ext_after.abs_write_pos != ext.abs_write_pos
-        ):
-            _log.info("LMS stream invalidated: writer changed during PCM copy")
-            return StreamInvalidated(cause=InvalidationCause.UNKNOWN, known_lost_samples=None)
+        cause = None
+        if ext_after is None or ext_after.magic != ext.magic:
+            cause = "SHM magic changed during PCM copy"
+        elif ext_after.abi_version != ext.abi_version:
+            cause = "SHM ABI changed during PCM copy"
+        elif ext_after.generation != ext.generation:
+            cause = "generation changed during PCM copy"
+        elif ext_after.gap_seq > ext.gap_seq:
+            cause = "skipped PCM export during PCM copy"
+        if cause is not None:
+            _log.info("LMS stream invalidated: %s", cause)
+            self._clock_segments.clear()
+            if ext_after is not None:
+                self._prev_generation = ext_after.generation
+                self._prev_gap_seq = ext_after.gap_seq
+                self._abs_write_pos_frames = ext_after.abs_write_pos
+            return StreamInvalidated(InvalidationCause.UNKNOWN, None)
+
+        if ext_after.write_seq % 2:
+            return None
+        verified = self._read_ext_header()
+        if verified is None or verified.write_seq != ext_after.write_seq:
+            return None
+        distance = ext_after.abs_write_pos - start_abs_pos
+        if distance > frame_capacity:
+            # Confirm a coherent snapshot before declaring a real overwrite.
+            confirmed = self._read_ext_coherent()
+            if (confirmed is None or confirmed.generation != ext.generation
+                    or confirmed.gap_seq != ext.gap_seq):
+                return None
+            if confirmed.abs_write_pos - start_abs_pos > frame_capacity:
+                self.overwrite_invalidations += 1
+                _log.info("LMS stream invalidated: PCM window overwritten during copy")
+                self._clock_segments.clear()
+                self._abs_write_pos_frames = confirmed.abs_write_pos
+                self._prev_index = (confirmed.legacy_header or self._read_header())[1]
+                return StreamInvalidated(InvalidationCause.UNKNOWN, None)
+            return None
+        if distance > frame_capacity - PCM_SAFETY_MARGIN:
+            return None
+        if self.use_player_clock and ext_after.timing != ext.timing:
+            return None
 
         s16 = np.frombuffer(raw, dtype=np.int16)
         left = s16[0::2].astype(np.float32) / 32768.0

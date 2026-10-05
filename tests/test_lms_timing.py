@@ -353,7 +353,10 @@ def test_status_uses_measured_scheduled_hold_and_legacy_when_off(tmp_path):
                                                                   last_sample_time=123),
                                                 readiness_state="scheduled")
     manager._active = session
+    session.lms_timed_source.source = SimpleNamespace(retry_count=7, overwrite_invalidations=2)
     assert manager.lms_timing['state'] == 'scheduled'
+    assert manager.lms_timing['retry_count'] == 7
+    assert manager.lms_timing['overwrite_invalidations'] == 2
     assert manager.lms_timing['sample_count'] == 100
     assert manager.lms_timing['precision_ms'] == 1.5
     assert manager.lms_timing['lead_p5_ms'] == 486

@@ -1201,6 +1201,9 @@ class PlayerManager:
                         lead_p5_ms=data["lead_p5_ms"], lead_p50_ms=data["lead_p50_ms"],
                         median_processing_ms=data["median_processing_ms"], tap_drop_count=0,
                         timing_generation=data["tap_generation"],
+                        retry_count=getattr(getattr(source, "source", None), "retry_count", 0),
+                        overwrite_invalidations=getattr(
+                            getattr(source, "source", None), "overwrite_invalidations", 0),
                         **source.fit_snapshot,
                         trim_ms=getattr(getattr(session.probe, "config", None), "trim_ms", 0),
                         available_ms=max(0, (data["lead_p5_ms"] or 0)
