@@ -27,6 +27,7 @@ spectrum_backend. Unknown engine IDs raise explicit errors.
 | `bars_source` | `pcm_pipeline` | Schema compatibility field; only canonical PCM is valid |
 | `spectrum_backend` | `v2` | Canonical Spectrum engine; currently `v2` / `cavacore` |
 | `bars` | 30 | Spectrum bar count |
+| `bar_falloff_s` | 0.3 | V2 per-bar decay time constant, 0.05–1.00 seconds; stored but unused by CAVA Core |
 | `lower_cutoff_freq` | 50 | Hz |
 | `higher_cutoff_freq` | 12000 | Hz |
 | `onset_method` | `combined` | Also `multiband` / `superflux` |
@@ -739,8 +740,18 @@ the switch is disabled. A failed change restores the previous setting and shows
 an inline error.
 
 **Frequency range and bands** starts collapsed and remembers its disclosure state
-per browser. Its summary uses the live frequency values. Expand it to edit Low
-cut, High cut, Bass / mid and Mid / treble. One **Apply** restarts analysis briefly;
-**Reset to saved** restores all four live settings and **Restore defaults** resets
-all four pending values to their factory defaults. Track colours follows Spectrum
+per browser. Its summary uses the live frequency values and the saved bar falloff
+(e.g. **falloff 0.30 s**). Expand it to edit Low cut, High cut, Bass / mid and
+Mid / treble, followed by **Response → Bar falloff**. The slider and number field
+use seconds from **Crisp · 0.05 s** to **Smooth · 1.00 s**. Shorter falloff drops
+bars faster after a hit; longer falloff makes the lights smoother.
+
+One **Apply** saves the pending values together. A falloff-only change applies
+live to V2 without resetting DSP, the current bar envelope, or the peak reference.
+Frequency changes retain the existing brief analysis restart. **Reset to saved**
+restores the saved/live settings and **Restore defaults** resets pending values,
+including bar falloff to **0.30 s**. CAVA Core retains the value for a later switch
+to V2, but its disabled response controls explain that CAVA uses its own bar
+falloff. This setting does not alter peak EMA, BandNormaliser, onset or pacing.
+Existing stored analysers receive 0.3 through the repository migration. Track colours follows Spectrum
 and keeps its existing controls.

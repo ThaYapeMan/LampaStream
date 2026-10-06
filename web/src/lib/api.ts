@@ -162,7 +162,7 @@ export const getControllerAreas = (controllerId: string) =>
 
 export const restartCouplingCava = (
   id: string,
-  body: { lower_cutoff_freq?: number; higher_cutoff_freq?: number; bass_hz?: number; mid_hz?: number } = {}
+  body: { bar_falloff_s?: number; lower_cutoff_freq?: number; higher_cutoff_freq?: number; bass_hz?: number; mid_hz?: number } = {}
 ) => request<{ ok: true }>(`/api/couplings/${id}/restart-cava`, json('POST', body))
 
 // Player latencies
@@ -233,6 +233,7 @@ export interface ChannelPosition {
 }
 
 export interface Analyser {
+  bar_falloff_s?: number
   id: string
   name: string
   onset_method: string

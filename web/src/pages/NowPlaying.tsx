@@ -8,6 +8,7 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { ColourSwatch } from '@/components/ColourSwatch'
 import { FloorplanPreview } from '@/components/FloorplanPreview'
 import { SpectrumBars } from '@/components/SpectrumBars'
+import { BarFalloffControl } from '@/components/BarFalloffControl'
 import { SliderField } from '@/components/SliderField'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -300,6 +301,16 @@ export function NowPlaying({ expertMode = false, colour, channel_colours, onset,
     setApplyResult(null)
   }, [couplingId, status])
 
+  const appliedFalloff = activeAnalyser?.bar_falloff_s ?? .3
+  const [falloffDraft, setFalloffDraft] = useState<{ id: string; value: number } | null>(null)
+  const pendingFalloff = falloffDraft && falloffDraft.id === activeAnalyser?.id ? falloffDraft.value : appliedFalloff
+  const falloffEnabled = !!activeAnalyser && activeAnalyser.spectrum_backend !== 'cavacore'
+  const hasFalloffChanges = !!activeAnalyser && pendingFalloff !== appliedFalloff
+  const hasDefaultFalloffChanges = !!activeAnalyser && pendingFalloff !== .3
+  function setFalloff(value: number) {
+    if (activeAnalyser) setFalloffDraft({ id: activeAnalyser.id, value })
+  }
+
   const appliedLower  = status?.lower_cutoff_freq  ?? 50
   const appliedHigher = status?.higher_cutoff_freq ?? 12000
   const appliedBass   = status?.bass_hz            ?? 250
@@ -353,7 +364,14 @@ export function NowPlaying({ expertMode = false, colour, channel_colours, onset,
     setApplyResult(null)
     setApplyError(false)
     try {
-      await restartCouplingCava(couplingId, { lower_cutoff_freq: pendingLower, higher_cutoff_freq: pendingHigher, bass_hz: pendingBass, mid_hz: pendingMid })
+      await restartCouplingCava(couplingId, {
+        ...(hasChanges || hasBandChanges ? { lower_cutoff_freq: pendingLower, higher_cutoff_freq: pendingHigher, bass_hz: pendingBass, mid_hz: pendingMid } : {}),
+        ...(hasFalloffChanges ? { bar_falloff_s: pendingFalloff } : {}),
+      })
+      if (hasFalloffChanges && activeAnalyser) {
+        setAnalysers(items => items.map(item => item.id === activeAnalyser.id ? { ...item, bar_falloff_s: pendingFalloff } : item))
+        setFalloffDraft(null)
+      }
       setApplyResult('Applied.')
     } catch (e) {
       setApplyResult(e instanceof Error ? e.message : 'Failed')
@@ -364,12 +382,14 @@ export function NowPlaying({ expertMode = false, colour, channel_colours, onset,
   }
 
   function handleReset() {
+    setFalloff(appliedFalloff)
     setLowSlider(hzToSlider(appliedLower))
     setHighSlider(hzToSlider(appliedHigher))
     handleResetBands()
   }
 
   function handleRestoreDefaults() {
+    setFalloff(.3)
     setLowSlider(hzToSlider(DEFAULT_LOW))
     setHighSlider(hzToSlider(DEFAULT_HIGH))
     handleRestoreDefaultsBands()
@@ -533,7 +553,7 @@ export function NowPlaying({ expertMode = false, colour, channel_colours, onset,
                 <span className="text-sm">Frequency range and bands</span>
               </span>
               {!tuningOpen && <span className="ml-auto text-xs text-muted-foreground">
-                {frequencyLabel(appliedLower)} – {frequencyLabel(appliedHigher)} · {frequencyLabel(appliedBass)} · {frequencyLabel(appliedMid)}
+                {frequencyLabel(appliedLower)} – {frequencyLabel(appliedHigher)} · {frequencyLabel(appliedBass)} · {frequencyLabel(appliedMid)} · falloff {appliedFalloff.toFixed(2)} s
               </span>}
             </button>
             <div id={tuningId} hidden={!tuningOpen} className="space-y-4">
@@ -553,20 +573,23 @@ export function NowPlaying({ expertMode = false, colour, channel_colours, onset,
                   onChange={field.change} disabled={applying} inputHz={field.hz}
                   inputMin={20} inputMax={20000} onInputCommit={field.commit} inputTestId={field.id} />)}
               </div>)}
+              <BarFalloffControl value={pendingFalloff} onChange={setFalloff}
+                disabled={applying || !falloffEnabled}
+                reason={activeAnalyser?.spectrum_backend === 'cavacore' ? 'V2 only; CAVA Core uses its own bar falloff.' : !activeAnalyser ? 'Analyser unavailable.' : undefined} />
               <div className="flex flex-wrap items-center gap-3">
-                <Button size="sm" onClick={handleApply} disabled={applying || (!hasChanges && !hasBandChanges)} data-testid="apply-cutoffs">
+                <Button size="sm" className="min-h-11" onClick={handleApply} disabled={applying || (!hasChanges && !hasBandChanges && !hasFalloffChanges)} data-testid="apply-cutoffs">
                   {applying ? 'Applying…' : 'Apply'}
                 </Button>
-                <Button size="sm" variant="outline" onClick={handleReset}
-                  disabled={applying || (!hasChanges && !hasBandChanges)} title="Reset to saved value" data-testid="reset-cutoffs">
+                <Button size="sm" className="min-h-11" variant="outline" onClick={handleReset}
+                  disabled={applying || (!hasChanges && !hasBandChanges && !hasFalloffChanges)} title="Reset to saved value" data-testid="reset-cutoffs">
                   Reset to saved
                 </Button>
-                <Button size="sm" variant="ghost" onClick={handleRestoreDefaults}
-                  disabled={applying || (!hasDefaultChanges && !hasDefaultBandChanges)} title="Restore factory defaults" data-testid="restore-defaults-cutoffs">
+                <Button size="sm" className="min-h-11" variant="ghost" onClick={handleRestoreDefaults}
+                  disabled={applying || (!hasDefaultChanges && !hasDefaultBandChanges && !hasDefaultFalloffChanges)} title="Restore factory defaults" data-testid="restore-defaults-cutoffs">
                   Restore defaults
                 </Button>
                 {applyResult && <span className={applyError ? 'text-destructive text-sm' : 'text-sm text-muted-foreground'}>{applyResult}</span>}
-                <span className="ml-auto text-xs italic text-muted-foreground">analysis restarts briefly</span>
+                <span className="ml-auto text-xs italic text-muted-foreground">{hasChanges || hasBandChanges ? 'analysis restarts briefly' : activeAnalyser?.spectrum_backend === 'cavacore' ? 'falloff stored for V2' : 'falloff applies live'}</span>
               </div>
             </div>
           </>}

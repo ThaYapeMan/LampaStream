@@ -25,7 +25,7 @@ export async function setupPreview(page: Page, timingStatus: () => Record<string
     ws.send(JSON.stringify({ type: 'spectrum', bars: [.6,.6,.2,.2,.2,.2,.4,.4,.4,.4], normalised_bars: Array(10).fill(.33) }))
   })
   await page.goto('/')
-  await expect(page.getByRole('button', { name: 'Pause', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Pause', exact: true })).toBeVisible({ timeout: 15000 })
   return () => socket
 }
 

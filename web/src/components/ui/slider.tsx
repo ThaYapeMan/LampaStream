@@ -6,10 +6,11 @@ import { cn } from "@/lib/utils"
 const Slider = React.forwardRef<
   React.ElementRef<typeof SliderPrimitive.Root>,
   React.ComponentPropsWithoutRef<typeof SliderPrimitive.Root> & {
+    thumbLabel?: string
     trackStyle?: React.CSSProperties
     rangeClassName?: string
   }
->(({ className, trackStyle, rangeClassName, ...props }, ref) => {
+>(({ className, trackStyle, rangeClassName, thumbLabel, ...props }, ref) => {
   const thumbCount = (props.value ?? props.defaultValue ?? [0]).length
   return (
     <SliderPrimitive.Root
@@ -29,6 +30,7 @@ const Slider = React.forwardRef<
       {Array.from({ length: thumbCount }).map((_, i) => (
         <SliderPrimitive.Thumb
           key={i}
+          aria-label={thumbLabel}
           className="block h-5 w-5 rounded-full border-2 border-primary bg-background ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50"
         />
       ))}
