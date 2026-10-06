@@ -209,6 +209,7 @@ class AnalyserCreateBody(BaseModel):
     band_normalise: bool = False
     bars_source: str = "pcm_pipeline"
     spectrum_backend: str = "v2"
+    bar_falloff_s: float = Field(default=0.3, ge=0.05, le=1.0)
 
 
 class AnalyserPatchBody(BaseModel):
@@ -226,6 +227,7 @@ class AnalyserPatchBody(BaseModel):
     band_normalise: bool | None = None
     bars_source: str | None = None
     spectrum_backend: str | None = None
+    bar_falloff_s: float = Field(default=0.3, ge=0.05, le=1.0)
 
 
 class EffectCreateBody(BaseModel):
@@ -365,6 +367,7 @@ class CouplingPatchBody(CouplingReleaseBody):
     lms_port: int | None = None
     player_name: str | None = None
     alsa_device: str | None = None
+    bar_falloff_s: float = Field(default=0.3, ge=0.05, le=1.0)
     # Analyser spectrum category (replace_pcm_analyser)
     bars: int | None = None
     lower_cutoff_freq: int | None = None
@@ -434,7 +437,7 @@ _C_PLAYER_INLINE: frozenset[str] = frozenset({
 _C_ANALYSER_INLINE: frozenset[str] = frozenset({
     "bars", "lower_cutoff_freq", "higher_cutoff_freq",
     "onset_method", "onset_delta", "onset_alpha", "superflux_mu", "superflux_lag",
-    "use_hpss_separation", "band_normalise",
+    "use_hpss_separation", "band_normalise", "bar_falloff_s",
 })
 _C_EFFECT_INLINE: frozenset[str] = frozenset({
     "bass_hz", "mid_hz",
@@ -513,6 +516,11 @@ async def _apply_coupling_action(
 
     if needs_spectrum_rebuild:
         manager.replace_pcm_analyser(profile)
+
+    if "bar_falloff_s" in changed and not needs_spectrum_rebuild:
+        manager.update_bar_falloff(profile)
+    if changed == {"bar_falloff_s"}:
+        return
 
     if changed & (_C_PCM_FIELDS | {"analyser_id"}):
         manager.update_onset_pipeline(profile)
@@ -978,6 +986,7 @@ async def create_analyser(request: Request, body: AnalyserCreateBody):
             band_normalise=body.band_normalise,
             bars_source=body.bars_source,
             spectrum_backend=body.spectrum_backend,
+            bar_falloff_s=body.bar_falloff_s,
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -1309,6 +1318,7 @@ async def deactivate_coupling(request: Request):
 
 
 class RestartCouplingCavaBody(BaseModel):
+    bar_falloff_s: float = Field(default=0.3, ge=0.05, le=1.0)
     model_config = ConfigDict(extra="forbid")
 
     """Update cutoffs and/or band boundaries while rebuilding canonical analysis.
@@ -1354,7 +1364,7 @@ async def restart_coupling_cava(
     if storage.get_active_coupling_id() != coupling_id:
         raise HTTPException(status_code=400, detail="Coupling is not active")
 
-    has_updates = any(
+    has_updates = "bar_falloff_s" in body.model_fields_set or any(
         v is not None
         for v in (body.lower_cutoff_freq, body.higher_cutoff_freq, body.bass_hz, body.mid_hz)
     )
@@ -1387,6 +1397,8 @@ async def restart_coupling_cava(
             raise HTTPException(status_code=404, detail="Analyser not found")
         analyser_snapshot = _clone_dataclass(ac)
         proposed_analyser = _clone_dataclass(ac)
+        if "bar_falloff_s" in body.model_fields_set:
+            proposed_analyser.bar_falloff_s = body.bar_falloff_s
         if body.lower_cutoff_freq is not None:
             proposed_analyser.lower_cutoff_freq = body.lower_cutoff_freq
         if body.higher_cutoff_freq is not None:
@@ -1431,7 +1443,10 @@ async def restart_coupling_cava(
             if effect_snapshot is not None:
                 storage.save_effect(effect_snapshot)
             raise HTTPException(status_code=422, detail="Coupling has broken FK references")
-        manager.replace_pcm_analyser(profile)
+        if body.model_fields_set == {"bar_falloff_s"}:
+            manager.update_bar_falloff(profile)
+        else:
+            manager.replace_pcm_analyser(profile)
     except HTTPException:
         raise
     except Exception as exc:
@@ -1541,7 +1556,7 @@ async def patch_coupling(coupling_id: str, request: Request, body: CouplingPatch
         changed = set(updates.keys())
         actionable = (
             _C_DEACTIVATE_FIELDS | _C_LIVE_FK_FIELDS
-            | _C_SPECTRUM_FIELDS | _C_PCM_FIELDS | _C_RENDER_FIELDS
+            | _C_SPECTRUM_FIELDS | _C_PCM_FIELDS | _C_RENDER_FIELDS | {"bar_falloff_s"}
         )
         if changed & actionable:
             await _apply_coupling_action(coupling, storage, manager, changed)

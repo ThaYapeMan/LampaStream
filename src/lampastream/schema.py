@@ -84,6 +84,7 @@ def validate_current(data: dict, *, references: bool = False) -> None:
             if not isinstance(identity, str) or not identity or identity in seen:
                 raise ValueError(f"{key}: missing/duplicate ID {identity!r}")
             seen.add(identity)
+            # Constructors validate domain bounds, including Analyser.bar_falloff_s.
             entity = model.from_dict(row)
             if key == "effects":
                 _validate_band_colours(entity.band_colours, entity.band_playback,

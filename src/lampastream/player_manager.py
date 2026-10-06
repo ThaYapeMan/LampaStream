@@ -67,6 +67,7 @@ def _make_canonical_pipeline(
         n_bars=profile.bars,
         lower_hz=float(profile.lower_cutoff_freq),
         upper_hz=float(profile.higher_cutoff_freq),
+        bar_falloff_s=profile.bar_falloff_s,
     )
     return CanonicalAnalysisPipeline(
         source=source,
@@ -173,6 +174,7 @@ def _build_engine_profile(coupling: Coupling, storage: Storage) -> Profile | Non
         band_normalise=ac.band_normalise,
         bars_source=ac.bars_source,
         spectrum_backend=ac.spectrum_backend,
+        bar_falloff_s=ac.bar_falloff_s,
         bars=ac.bars,
         lower_cutoff_freq=ac.lower_cutoff_freq,
         higher_cutoff_freq=ac.higher_cutoff_freq,
@@ -250,6 +252,7 @@ def _build_mellow_profile(coupling: Coupling, storage: Storage) -> Profile | Non
         band_normalise=ac.band_normalise,
         bars_source=ac.bars_source,
         spectrum_backend=ac.spectrum_backend,
+        bar_falloff_s=ac.bar_falloff_s,
         bars=ac.bars,
         lower_cutoff_freq=ac.lower_cutoff_freq,
         higher_cutoff_freq=ac.higher_cutoff_freq,
@@ -734,6 +737,7 @@ class PlayerManager:
             band_normalise=ac.band_normalise,
             bars_source=ac.bars_source,
             spectrum_backend=ac.spectrum_backend,
+            bar_falloff_s=ac.bar_falloff_s,
             bars=ac.bars,
             lower_cutoff_freq=ac.lower_cutoff_freq,
             higher_cutoff_freq=ac.higher_cutoff_freq,
@@ -1081,6 +1085,12 @@ class PlayerManager:
                 log.info("Removed orphaned yeney-player shm segment %s", seg.name)
             except OSError as exc:
                 log.warning("Could not remove %s: %s", seg.name, exc)
+
+    def update_bar_falloff(self, profile: Profile) -> None:
+        """Apply V2 response without replacing analysis or render state."""
+        if self._active and self._active.sync_engine:
+            self._active.sync_engine.update_bar_falloff(profile)
+            self._active.profile = profile
 
     def update_onset_pipeline(self, profile: Profile) -> None:
         """Switch PCM onset method live on the active session."""

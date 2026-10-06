@@ -210,6 +210,12 @@ def _migrate_bars_source(data: dict) -> None:
             row.setdefault("spectrum_backend", "v2")
 
 
+def _migrate_bar_falloff(data: dict) -> None:
+    """Materialise the previous V2 response for every stored Analyser."""
+    for row in data.get("analysers", []):
+        row.setdefault("bar_falloff_s", 0.3)
+
+
 def _migrate_player_latency(data: dict) -> None:
     """Normalise legacy reserved fields through the existing backed-up migration."""
     rows = data.get("player_latencies", [])
@@ -266,6 +272,7 @@ def convert(original: dict) -> dict:
         _migrate_bars_source(data)
         _migrate_player_latency(data)
         _migrate_release(data)
+        _migrate_bar_falloff(data)
         validate_current(data, references=True)
         return data
     if original.get("schema_version") == 1:
@@ -280,6 +287,7 @@ def convert(original: dict) -> dict:
             row.setdefault("release_after_idle_s", 30)
             row.setdefault("on_release", "restore")
         _migrate_release(data)
+        _migrate_bar_falloff(data)
         validate_current(data, references=True)
         return data
     if original.get("schema_version", 0) != 0:
@@ -364,6 +372,7 @@ def convert(original: dict) -> dict:
     _migrate_flat_residue(data)
     _migrate_palettes(data)
     _migrate_release(data)
+    _migrate_bar_falloff(data)
     validate_current(data, references=True)
     return data
 

@@ -1195,6 +1195,12 @@ class CanonicalAnalysisPipeline:
             raw = bytes(int(max(0.0, min(1.0, v)) * 255) for v in bars)
             return [v / 255.0 for v in self._band_normaliser.normalise(raw, dt)]
 
+    def set_bar_falloff(self, seconds: float) -> None:
+        """Update a supported engine's scalar response; cavacore keeps its native fall."""
+        setter = getattr(self._spectrum_processor._engine, "set_bar_falloff", None)
+        if setter is not None:
+            setter(seconds)
+
     def rebuild_beat_detector(self, profile: Profile) -> None:
         """Rebuild the BeatDetector onset pipeline from new profile parameters.
 
@@ -2810,6 +2816,11 @@ class SyncEngine:
         effective_mellow = mellow_profile if mellow_profile is not None else profile
         self._effect = SmoothLayerMixer(profile, effective_mellow, self._effect,
                                          lambda: (self._shown_scene, self._shown_t))
+
+    def update_bar_falloff(self, profile: Profile) -> None:
+        if isinstance(self._analyser, CanonicalAnalysisPipeline):
+            self._analyser.set_bar_falloff(profile.bar_falloff_s)
+        self.profile = profile
 
     def update_onset_pipeline(self, profile: Profile) -> None:
         """Rebuild canonical onset/HPSS processing without restarting the session.

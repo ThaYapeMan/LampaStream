@@ -14,6 +14,7 @@ from enum import StrEnum
 
 from .spectrum_engine import VALID_BARS_SOURCES as _VALID_BARS_SOURCES
 from .spectrum_engine import VALID_ENGINE_IDS as _VALID_ENGINE_IDS
+from .spectrum_engine import validate_bar_falloff
 
 # Canonical set of onset detection method identifiers.  SyncEngine switches on
 # these exact strings; any other value silently falls through to cava-based
@@ -260,6 +261,7 @@ class Profile:
     # "v2"      — LampaStream V2SpectrumEngine (Hamming STFT, np.max aggregation)
     # "cavacore" — upstream cavacore via ctypes (Hann, dual FFT, bandwidth-normalised mean)
     spectrum_backend: str = "v2"
+    bar_falloff_s: float = 0.3
 
     # Three-layer loudness pipeline:
     #   1. exertion_clip (HERE): sets "maximally loud" in relative terms.
@@ -290,6 +292,7 @@ class Profile:
                 f"Invalid bars_source {self.bars_source!r}; "
                 f"must be one of {sorted(_VALID_BARS_SOURCES)}"
             )
+        validate_bar_falloff(self.bar_falloff_s)
         if self.spectrum_backend not in _VALID_ENGINE_IDS:
             raise ValueError(
                 f"Invalid spectrum_backend {self.spectrum_backend!r}; "
@@ -484,6 +487,7 @@ class Analyser:
     # "v2"      — V2SpectrumEngine: LampaStream Hamming STFT, np.max, peak EMA AGC
     # "cavacore" — upstream cavacore: Hann dual-FFT, bandwidth-normalised mean, autosens
     spectrum_backend: str = "v2"
+    bar_falloff_s: float = 0.3
 
     def __post_init__(self) -> None:
         if self.bars_source not in _VALID_BARS_SOURCES:
@@ -491,6 +495,7 @@ class Analyser:
                 f"Invalid bars_source {self.bars_source!r}; "
                 f"must be one of {sorted(_VALID_BARS_SOURCES)}"
             )
+        validate_bar_falloff(self.bar_falloff_s)
         if self.spectrum_backend not in _VALID_ENGINE_IDS:
             raise ValueError(
                 f"Invalid spectrum_backend {self.spectrum_backend!r}; "
@@ -513,6 +518,7 @@ class Analyser:
             "band_normalise": self.band_normalise,
             "bars_source": self.bars_source,
             "spectrum_backend": self.spectrum_backend,
+            "bar_falloff_s": self.bar_falloff_s,
         }
 
     @classmethod

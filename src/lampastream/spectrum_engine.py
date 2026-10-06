@@ -42,7 +42,12 @@ _STFT_HOP: int = round(_SAMPLE_RATE * 0.010)    # 480 samples at 48 kHz = 10 ms 
 _V2_NOISE_FLOOR: float = 1e-3
 _V2_ATTACK_TAU_S: float = 0.005   # fast attack — matches BandNormaliser.DEFAULT_ATTACK_TAU_S
 _V2_RELEASE_TAU_S: float = 1.5    # slow release
-_V2_BAR_FALL_TAU_S: float = 0.3   # per-bar falloff time constant
+
+
+def validate_bar_falloff(value: float) -> None:
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not 0.05 <= value <= 1.0:
+        raise ValueError("bar_falloff_s must be between 0.05 and 1.0 seconds")
+
 
 
 # ---------------------------------------------------------------------------
@@ -262,7 +267,7 @@ class V2SpectrumEngine:
       2. Layout-derived per-band pink-noise compensation.
       3. Global peak EMA: fast attack (_V2_ATTACK_TAU_S) / slow release
          (_V2_RELEASE_TAU_S) — WLED-style adaptive reference.
-      4. Per-bar fast-attack / slow-release falloff (_V2_BAR_FALL_TAU_S).
+      4. Per-bar fast-attack / slow-release falloff (per-Analyser bar_falloff_s).
 
     No second FFT: mag_frames were computed once by StereoMagStft in
     CanonicalAnalysisPipeline and shared here directly.  This preserves the
@@ -274,13 +279,20 @@ class V2SpectrumEngine:
         n_bars: int,
         lower_hz: float,
         upper_hz: float,
+        bar_falloff_s: float = 0.3,
     ) -> None:
+        self.set_bar_falloff(bar_falloff_s)
         self._n_bars = n_bars
         self._lower_hz = lower_hz
         self._upper_hz = upper_hz
         self._v2_peak_ema: float | None = None
         self._bar_smooth: list[float] | None = None
         self._pink_compensation = derive_pink_compensation(n_bars, lower_hz, upper_hz)
+
+    def set_bar_falloff(self, seconds: float) -> None:
+        """Exchange one immutable coefficient; worker-owned DSP state is untouched."""
+        validate_bar_falloff(seconds)
+        self._bar_fall_factor = math.exp(-(_STFT_HOP / _SAMPLE_RATE) / seconds)
 
     @property
     def engine_id(self) -> str:
@@ -322,7 +334,7 @@ class V2SpectrumEngine:
                 self._v2_peak_ema += a * (peak - self._v2_peak_ema)
             ref = max(self._v2_peak_ema, _V2_NOISE_FLOOR)
             bars = [min(m / ref, 1.0) for m in bar_mags]
-            fall_factor = math.exp(-dt / _V2_BAR_FALL_TAU_S)
+            fall_factor = self._bar_fall_factor
             if self._bar_smooth is None:
                 self._bar_smooth = list(bars)
             else:
@@ -825,6 +837,7 @@ def make_spectrum_engine(
     n_bars: int,
     lower_hz: float,
     upper_hz: float,
+    bar_falloff_s: float = 0.3,
 ) -> SpectrumEngine:
     """Construct a SpectrumEngine by registry ID.
 
@@ -839,4 +852,9 @@ def make_spectrum_engine(
             f"Spectrum engine {engine_id!r} is not available on this system. "
             f"Build the native library first: pip install .  (requires libfftw3-dev)"
         )
-    return spec.create(n_bars, lower_hz, upper_hz)  # type: ignore[return-value]
+    validate_bar_falloff(bar_falloff_s)
+    engine = spec.create(n_bars, lower_hz, upper_hz)
+    setter = getattr(engine, "set_bar_falloff", None)
+    if setter is not None:
+        setter(bar_falloff_s)
+    return engine  # type: ignore[return-value]

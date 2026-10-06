@@ -43,6 +43,7 @@ def expected_current_rows(data, key):
             row.setdefault('speaker_output_delay_ms', 0)
     if key == 'analysers':
         for row in rows:
+            row.setdefault('bar_falloff_s', 0.3)
             if row.get('bars_source') == 'cava':
                 row['bars_source'] = 'pcm_pipeline'
                 row.setdefault('spectrum_backend', 'v2')

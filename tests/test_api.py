@@ -1831,3 +1831,61 @@ def test_status_reports_output_failure_and_recovery(client: TestClient):
         assert response.status_code == 200
         assert response.json()['output_status'] == {'state': state, 'reason': reason}
         assert response.json()['bridge_connected'] == (state == 'streaming')
+
+
+@pytest.mark.parametrize('value', [0.05, 0.3, 1.0])
+def test_bar_falloff_crud_clone_and_coupling_routing(client, value):
+    created = client.post('/api/analysers', json={'name': 'Response', 'bar_falloff_s': value})
+    assert created.status_code == 201
+    identity = created.json()['id']
+    assert created.json()['bar_falloff_s'] == value
+    clone = client.post(f'/api/analysers/{identity}/clone')
+    assert clone.json()['bar_falloff_s'] == value
+    coupling = _make_full_coupling(client._storage)
+    client._storage.set_active_coupling_id(coupling.id)
+    response = client.patch(f'/api/couplings/{coupling.id}', json={'bar_falloff_s': value})
+    assert response.status_code == 200
+    assert client._storage.get_analyser(coupling.analyser_id).bar_falloff_s == value
+    client._manager.update_bar_falloff.assert_called_once()
+    assert client._manager.update_bar_falloff.call_args.args[0].bar_falloff_s == value
+    client._manager.replace_pcm_analyser.assert_not_called()
+    client._manager.update_onset_pipeline.assert_not_called()
+    client._manager.update_render.assert_not_called()
+
+
+@pytest.mark.parametrize('value', [0.049, 1.001, None, 'nan', 'inf'])
+def test_bar_falloff_invalid_api_requests(client, value):
+    coupling = _make_full_coupling(client._storage)
+    identity = coupling.analyser_id
+    for path, method in [(f'/api/analysers/{identity}', client.patch),
+                         (f'/api/couplings/{coupling.id}', client.patch),
+                         (f'/api/couplings/{coupling.id}/restart-cava', client.post),
+                         ('/api/analysers', client.post)]:
+        assert method(path, json={'bar_falloff_s': value}).status_code == 422
+    assert client._storage.get_analyser(identity).bar_falloff_s == 0.3
+
+
+def test_bar_falloff_default_and_active_analyser_patch(client):
+    coupling = _make_full_coupling(client._storage)
+    identity = coupling.analyser_id
+    assert client.get(f'/api/analysers/{identity}').json()['bar_falloff_s'] == 0.3
+    client._storage.set_active_coupling_id(coupling.id)
+    response = client.patch(f'/api/analysers/{identity}', json={'bar_falloff_s': 0.1})
+    assert response.status_code == 200
+    client._manager.update_bar_falloff.assert_called_once()
+    client._manager.replace_pcm_analyser.assert_not_called()
+
+
+def test_bar_falloff_restart_endpoint_live_and_rollback(client):
+    coupling = _make_full_coupling(client._storage)
+    client._storage.set_active_coupling_id(coupling.id)
+    path = f'/api/couplings/{coupling.id}/restart-cava'
+    assert client.post(path, json={'bar_falloff_s': 0.1}).status_code == 200
+    client._manager.update_bar_falloff.assert_called_once()
+    client._manager.replace_pcm_analyser.assert_not_called()
+    client._manager.update_bar_falloff.side_effect = RuntimeError('cannot apply')
+    assert client.post(path, json={'bar_falloff_s': 0.2}).status_code == 409
+    assert client._storage.get_analyser(coupling.analyser_id).bar_falloff_s == 0.1
+    response = client.post(path, json={'bar_falloff_s': 0.2, 'lower_cutoff_freq': 100})
+    assert response.status_code == 200
+    assert client._manager.replace_pcm_analyser.call_args.args[0].bar_falloff_s == 0.2
