@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { usePlayerMetadata } from '@/hooks/usePlayerMetadata'
+import { PlayerGlyph } from '@/components/PlayerGlyph'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -68,6 +70,7 @@ function FormRow({ label, children }: { label: string; children: React.ReactNode
 }
 
 export function Players({ activeCouplingId = null, status = null, selectedPlayer, onSelect, onNowPlaying }: { activeCouplingId?: string | null; status?: SocketStatus | null; selectedPlayer?: string | null; onSelect?: (id: string) => void; onNowPlaying?: () => void }) {
+  const metadata = usePlayerMetadata()
   const [latencies, setLatencies] = useState<PlayerLatency[]>([])
   const [selection, setSelection] = useState(() => { try { return localStorage.getItem('lampastream.selectedPlayer') || '' } catch { return '' } })
   const [couplings, setCouplings] = useState<Coupling[]>([])
@@ -208,7 +211,7 @@ export function Players({ activeCouplingId = null, status = null, selectedPlayer
     followOptions.unshift({ playerid: form.follow_player_mac, name: form.follow_player_mac })
   }
 
-  const rows = buildPlayerRows(players, latencies, status, activeCoupling?.player_id)
+  const rows = buildPlayerRows(players, latencies, status, activeCoupling?.player_id, metadata)
   const selected = rows.find(r => r.id === (selectedPlayer || selection) || (!!selectedPlayer && (r.mac === selectedPlayer || r.player?.player_mac === selectedPlayer))) || rows[0]
   useEffect(() => {
     if (!selected) return
@@ -348,7 +351,7 @@ export function Players({ activeCouplingId = null, status = null, selectedPlayer
                         <SelectItem value="__none__">None — track mirroring disabled</SelectItem>
                         {followOptions.map((p) => (
                           <SelectItem key={p.playerid} value={p.playerid}>
-                            {p.name !== p.playerid ? `${p.name} (${p.playerid})` : p.playerid}
+                            <span className="inline-flex items-center gap-2"><PlayerGlyph identity={p} />{p.name !== p.playerid ? `${p.name} (${p.playerid})` : p.playerid}</span>
                           </SelectItem>
                         ))}
                       </SelectContent>

@@ -1,6 +1,6 @@
 import { useEffect, useState, type CSSProperties } from 'react'
-import { Speaker } from 'lucide-react'
-import { AirPlayReceiverIcon } from '@/components/MediaIcons'
+import { PlayerGlyph } from './PlayerGlyph'
+import type { PlayerIdentity } from '@/lib/playerIcons'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -15,9 +15,9 @@ import {
   type PlayerLatency
 } from '@/lib/api'
 import type { SocketStatus } from '@/hooks/usePreviewSocket'
-import lmsIcon from '@/assets/lms-player-icon.png'
 
 export interface PlayerRow {
+  identity?: PlayerIdentity
   id: string
   name: string
   mac: string
@@ -31,7 +31,8 @@ export function buildPlayerRows(
   players: VirtualPlayer[],
   entries: PlayerLatency[],
   status: SocketStatus | null,
-  activeId?: string
+  activeId?: string,
+  metadata: import('@/lib/api').LmsPlayer[] = []
 ): PlayerRow[] {
   const followed = new Set<string>()
   const rows = players.map((player) => {
@@ -83,6 +84,7 @@ export function buildPlayerRows(
               ))
     } as SocketStatus
     return {
+      identity: { type: player.type, managed: true },
       id: player.id,
       name: player.player_name,
       mac: mac || '',
@@ -98,6 +100,7 @@ export function buildPlayerRows(
     ...entries
       .filter((e) => !followed.has(e.player_mac.toLowerCase()))
       .map((entry) => ({
+        identity: { ...metadata.find(p => p.playerid.toLowerCase() === entry.player_mac.toLowerCase()), playerid: entry.player_mac, name: entry.name || undefined },
         id: `timing:${entry.player_mac}`,
         name: entry.name || entry.player_mac,
         mac: entry.player_mac,
@@ -134,18 +137,7 @@ function PlayerIcon({
       style={row.player ? { '--foreground': '216 11.111111% 91.176471%', '--secondary': '218.571429 13.72549% 20%' } as CSSProperties : undefined}
       className={`grid shrink-0 place-items-center rounded-lg border bg-secondary text-foreground ${detail ? 'h-11 w-11' : 'h-8 w-8'}`}
     >
-      {row.player?.type === 'LMS' ? (
-        <span data-player-icon="LMS" style={{
-          width: size, height: size, backgroundColor: 'currentColor',
-          maskImage: `url(${lmsIcon})`, WebkitMaskImage: `url(${lmsIcon})`,
-          maskMode: 'alpha', maskSize: 'contain', maskRepeat: 'no-repeat', maskPosition: 'center',
-          WebkitMaskSize: 'contain', WebkitMaskRepeat: 'no-repeat', WebkitMaskPosition: 'center'
-        }} />
-      ) : row.player?.type === 'AirPlay' ? (
-        <AirPlayReceiverIcon data-player-icon="AirPlay" width={size} height={size} />
-      ) : (
-        <Speaker size={size} />
-      )}
+      <PlayerGlyph identity={row.identity} size={size} />
     </span>
   )
 }

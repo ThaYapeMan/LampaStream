@@ -15,6 +15,7 @@ import type { SocketStatus } from '@/hooks/usePreviewSocket'
 vi.mock('@/lib/api', async (original) => ({
   ...(await original<typeof api>()),
   getVirtualPlayers: vi.fn(),
+  listLmsPlayers: vi.fn().mockResolvedValue([]),
   getPlayerLatencies: vi.fn(),
   getCouplings: vi.fn().mockResolvedValue([]),
   createPlayerLatency: vi.fn(),
@@ -320,4 +321,22 @@ it('edits and saves the two LMS timing fields with steppers', async () => {
   fireEvent.click(screen.getByRole('button', { name: 'Decrease Speaker output delay' }))
   fireEvent.click(screen.getByRole('button', { name: 'Save', exact: true }))
   await waitFor(() => expect(api.updateVirtualPlayer).toHaveBeenCalledWith('lms', expect.objectContaining({ head_start_ms: 510, speaker_output_delay_ms: -1 })))
+})
+
+
+it('renders model icons in the Players list and the selected detail header', async () => {
+  players = [{ ...lms, follow_player_mac: '' }, airplay]
+  entries = [timing('sonos', 'Study (Sonos)'), timing('radio', 'Radio Red'), timing('pi', 'piCorePlayer'), timing('unknown', 'Unknown')]
+  vi.mocked(api.listLmsPlayers).mockResolvedValue([
+    { playerid: 'sonos', name: 'Study (Sonos)', modelname: 'YeneY' },
+    { playerid: 'radio', name: 'Radio Red', model: 'baby' },
+    { playerid: 'pi', name: 'piCorePlayer', modelname: 'SqueezeLite-pCP' },
+  ])
+  render(<Players />)
+  for (const [name, kind] of [['LampaStream LMS', 'LMS'], ['Joins your AirPlay groups', 'AirPlay'], ['Study (Sonos)', 'Sonos'], ['Radio Red', 'Radio'], ['piCorePlayer', 'RaspberryPi'], ['Unknown', 'Speaker']]) {
+    const row = await screen.findByRole('option', { name: new RegExp(name.replace(/[()]/g, '\\$&')) })
+    await waitFor(() => expect(row.querySelector(`[data-player-icon="${kind}"]`)).not.toBeNull())
+    fireEvent.click(row)
+    expect(document.querySelectorAll(`[data-player-icon="${kind}"]`).length).toBeGreaterThanOrEqual(2)
+  }
 })

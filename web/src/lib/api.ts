@@ -212,6 +212,11 @@ export interface VirtualPlayer {
 }
 
 export interface LmsPlayer {
+  model?: string
+  modelname?: string
+  firmware?: string
+  sonos_room?: string
+
   playerid: string
   name: string
 }

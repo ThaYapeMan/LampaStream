@@ -1,5 +1,7 @@
+import { PlayerGlyph } from './PlayerGlyph'
+import { usePlayerMetadata } from '@/hooks/usePlayerMetadata'
 import { useEffect, useId, useRef, useState } from 'react'
-import { Check, ChevronRight, Clock, Info, Lightbulb, Lock, Pause, Speaker } from 'lucide-react'
+import { Check, ChevronRight, Clock, Info, Lightbulb, Lock, Pause } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
@@ -37,6 +39,7 @@ export function lightTimingState(current: PlayerLatency | null | undefined, stat
 }
 
 export function LightTiming({ status, onOpenLatency, playersView = false, controls, footer }: { status: SocketStatus | null; onOpenLatency?: () => void; playersView?: boolean; controls?: React.ReactNode; footer?: React.ReactNode }) {
+  const metadata = usePlayerMetadata(!playersView)
   const id = useId()
   const [open, setOpen] = useState(() => { try { return localStorage.getItem('lightTimingOpen') !== '0' } catch { return true } })
   const airplay = status?.active_player_type === 'AirPlay' || status?.light_timing?.status?.source === 'airplay'
@@ -168,7 +171,7 @@ export function LightTiming({ status, onOpenLatency, playersView = false, contro
         {state === 'stable' && <div className="flex items-center gap-3 text-xs text-muted-foreground" aria-hidden="true">
           <span className="grid justify-items-center gap-1"><Lightbulb className="h-9 w-9 rounded-lg border bg-secondary p-2" />Lights</span>
           <div className="relative flex-1 border-t-2 border-dashed"><span className="absolute -top-6 left-1/2 -translate-x-1/2 whitespace-nowrap font-mono text-foreground">+{seconds(applied)} s →</span><i className="timing-dot" style={{ animationDuration: `${Math.max(.1, applied / 1000)}s` }} /></div>
-          <span className="grid max-w-32 justify-items-center gap-1 text-center"><Speaker className="h-9 w-9 rounded-lg border bg-secondary p-2" />{name}</span>
+          <span className="grid max-w-32 justify-items-center gap-1 text-center"><span className="grid h-9 w-9 place-items-center rounded-lg border bg-secondary p-2"><PlayerGlyph identity={{ ...metadata.find(p => p.playerid.toLowerCase() === mac?.toLowerCase()), name, type: airplay ? 'AirPlay' : undefined }} size={18} /></span>{name}</span>
         </div>}
       </div>
       {state === 'lagging' && <p className="text-sm text-muted-foreground">{lagText}</p>}
