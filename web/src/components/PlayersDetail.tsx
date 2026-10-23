@@ -1,5 +1,6 @@
 import { useEffect, useState, type CSSProperties } from 'react'
 import { PlayerGlyph } from './PlayerGlyph'
+import { LyrionIcon } from './LyrionIcon'
 import type { PlayerIdentity } from '@/lib/playerIcons'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -100,7 +101,7 @@ export function buildPlayerRows(
     ...entries
       .filter((e) => !followed.has(e.player_mac.toLowerCase()))
       .map((entry) => ({
-        identity: { ...metadata.find(p => p.playerid.toLowerCase() === entry.player_mac.toLowerCase()), playerid: entry.player_mac, name: entry.name || undefined },
+        identity: { name: entry.name || undefined, ...metadata.find(p => p.playerid.toLowerCase() === entry.player_mac.toLowerCase()), playerid: entry.player_mac },
         id: `timing:${entry.player_mac}`,
         name: entry.name || entry.player_mac,
         mac: entry.player_mac,
@@ -459,7 +460,7 @@ export function PlayersDetail({
             <dl className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)] gap-x-4 gap-y-3 text-sm">
               {facts.map(([label, value]) => (
                 <div className="contents" key={label}>
-                  <dt className="text-muted-foreground">{label}</dt>
+                  <dt className="relative text-muted-foreground">{label}{label === 'LMS server' && <span className="absolute right-0 top-1/2 -translate-y-1/2"><LyrionIcon /></span>}</dt>
                   <dd className="break-words text-right">{value}</dd>
                 </div>
               ))}

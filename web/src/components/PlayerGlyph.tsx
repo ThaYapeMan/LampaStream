@@ -13,7 +13,7 @@ export function PlayerGlyph({ identity, size = 17 }: { identity?: PlayerIdentity
   const asset = { LMS: waveform, Sonos: sonos, Radio: radio, RaspberryPi: pi }[kind]
   return <span aria-hidden="true" data-player-icon={kind} style={{
     display: 'inline-block', flexShrink: 0, width: size, height: size, backgroundColor: 'currentColor',
-    maskImage: `url(${asset})`, WebkitMaskImage: `url(${asset})`, maskMode: 'alpha',
+    maskImage: `url("${asset}")`, WebkitMaskImage: `url("${asset}")`, maskMode: 'alpha',
     maskSize: 'contain', maskRepeat: 'no-repeat', maskPosition: 'center',
     WebkitMaskSize: 'contain', WebkitMaskRepeat: 'no-repeat', WebkitMaskPosition: 'center'
   }} />

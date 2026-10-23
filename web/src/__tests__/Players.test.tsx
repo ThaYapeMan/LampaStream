@@ -8,6 +8,7 @@ import {
   waitFor
 } from '@testing-library/react'
 import { Players } from '@/pages/Players'
+import lyrionAsset from '@/assets/lyrion-icon.svg'
 import { buildPlayerRows } from '@/components/PlayersDetail'
 import { readRoute } from '@/App'
 import * as api from '@/lib/api'
@@ -326,17 +327,29 @@ it('edits and saves the two LMS timing fields with steppers', async () => {
 
 it('renders model icons in the Players list and the selected detail header', async () => {
   players = [{ ...lms, follow_player_mac: '' }, airplay]
-  entries = [timing('sonos', 'Study (Sonos)'), timing('radio', 'Radio Red'), timing('pi', 'piCorePlayer'), timing('unknown', 'Unknown')]
+  entries = [timing('sonos', 'Sonos Study'), timing('radio', 'Radio Red'), timing('pi', 'piCorePlayer'), timing('unknown', 'Unknown')]
   vi.mocked(api.listLmsPlayers).mockResolvedValue([
     { playerid: 'sonos', name: 'Study (Sonos)', modelname: 'YeneY' },
     { playerid: 'radio', name: 'Radio Red', model: 'baby' },
     { playerid: 'pi', name: 'piCorePlayer', modelname: 'SqueezeLite-pCP' },
   ])
   render(<Players />)
-  for (const [name, kind] of [['LampaStream LMS', 'LMS'], ['Joins your AirPlay groups', 'AirPlay'], ['Study (Sonos)', 'Sonos'], ['Radio Red', 'Radio'], ['piCorePlayer', 'RaspberryPi'], ['Unknown', 'Speaker']]) {
+  for (const [name, kind] of [['LampaStream LMS', 'LMS'], ['Joins your AirPlay groups', 'AirPlay'], ['Sonos Study', 'Sonos'], ['Radio Red', 'Radio'], ['piCorePlayer', 'RaspberryPi'], ['Unknown', 'Speaker']]) {
     const row = await screen.findByRole('option', { name: new RegExp(name.replace(/[()]/g, '\\$&')) })
     await waitFor(() => expect(row.querySelector(`[data-player-icon="${kind}"]`)).not.toBeNull())
+    if (!['AirPlay', 'Speaker'].includes(kind)) {
+      expect((row.querySelector(`[data-player-icon="${kind}"]`) as HTMLElement).style.maskImage).toMatch(/^url\(/)
+    }
     fireEvent.click(row)
     expect(document.querySelectorAll(`[data-player-icon="${kind}"]`).length).toBeGreaterThanOrEqual(2)
   }
+})
+
+it('uses the supplied Lyrion asset for the LMS server while preserving the receiver waveform', async () => {
+  render(<Players />)
+  await screen.findByRole('option', { name: /LampaStream LMS/ })
+  const logo = document.querySelector('[data-lyrion-icon]') as HTMLElement
+  expect(logo.style.maskImage).toBe(`url("${lyrionAsset}")`)
+  expect(logo.style.width).toBe('17px')
+  expect(document.querySelector('[data-player-icon="LMS"]')).not.toBeNull()
 })
