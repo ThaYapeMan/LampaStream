@@ -351,7 +351,7 @@ export function Players({ activeCouplingId = null, status = null, selectedPlayer
                         <SelectItem value="__none__">None — track mirroring disabled</SelectItem>
                         {followOptions.map((p) => (
                           <SelectItem key={p.playerid} value={p.playerid}>
-                            <span className="inline-flex items-center gap-2"><PlayerGlyph identity={p} />{p.name !== p.playerid ? `${p.name} (${p.playerid})` : p.playerid}</span>
+                            <span className="inline-flex items-center gap-2"><PlayerGlyph identity={p} size={17} />{p.name !== p.playerid ? `${p.name} (${p.playerid})` : p.playerid}</span>
                           </SelectItem>
                         ))}
                       </SelectContent>
