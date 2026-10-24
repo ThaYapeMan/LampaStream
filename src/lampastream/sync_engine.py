@@ -3129,7 +3129,7 @@ class SyncEngine:
         """
         return bool(self._retiring)
 
-    async def run(self, output: Output) -> None:
+    async def run(self, output: Output, *, clock=None, sleep=None) -> None:
         """Send the latest available frame at a fixed rate until cancelled.
 
         Deliberately does NOT try to send every frame cava produces — see the
@@ -3144,6 +3144,9 @@ class SyncEngine:
         animation stay consistent with the real display moment.
         """
         from .airplay_early import SceneSchedule
+
+        clock = clock or time.monotonic
+        sleep = sleep or asyncio.sleep
         schedule = SceneSchedule()
         output_generation = getattr(output, "output_generation", 0)
         output_minimum_sequence = None
@@ -3164,7 +3167,7 @@ class SyncEngine:
                 self._scene_timing.clear()
                 if isinstance(self._analyser, CanonicalAnalysisPipeline):
                     self._analyser.drain_publications()
-                await asyncio.sleep(SEND_INTERVAL_S)
+                await sleep(SEND_INTERVAL_S)
                 continue
             if self._timing is not None:
                 schedule.reset(self._timing.tap_generation)
@@ -3183,9 +3186,9 @@ class SyncEngine:
                         if (f.play_monotonic is None
                                 or f.timing_generation != self._timing.tap_generation):
                             continue
-                        scene = self._effect.render(f, max(time.monotonic(),
+                        scene = self._effect.render(f, max(clock(),
                                                           f.play_monotonic + trim / 1000))
-                        ready = time.monotonic()
+                        ready = clock()
                         recorder = getattr(self._timing, "scene_ready", None)
                         if recorder is not None:
                             recorder(f.received_monotonic, ready, f.play_monotonic)
@@ -3194,24 +3197,24 @@ class SyncEngine:
                         self._last_sustained_energy = f.sustained_energy
                         schedule.add(scene, f.play_monotonic, ready, f.timing_generation, trim,
                                      (f.received_monotonic, ready))
-                    due = schedule.due(time.monotonic(), self._timing.tap_generation)
+                    due = schedule.due(clock(), self._timing.tap_generation)
                     if due is not None:
                         scene, provenance = due
-                        sent = time.monotonic()
+                        sent = clock()
                         output.send(scene, sent)
                         self._shown_scene, self._shown_t = scene, sent
                         if provenance[0] is not None:
                             self._timing.processing(*provenance, sent)
                     self._delay_buffer.clear()
                     self._scene_timing.clear()
-                    await asyncio.sleep(SEND_INTERVAL_S)
+                    await sleep(SEND_INTERVAL_S)
                     continue
                 schedule.queue.clear()
             features = self._analyser.latest()
             if (output_minimum_sequence is not None and isinstance(token, int)
                     and token <= output_minimum_sequence):
                 features = None  # do not replay cached pre-release analysis
-            t = time.monotonic()
+            t = clock()
 
             if features is not None:
                 self._last_onset = features.onset
@@ -3231,7 +3234,7 @@ class SyncEngine:
                 self._last_energy = features.full
                 self._last_sustained_energy = features.sustained_energy
                 self._scene_timing.append(
-                    (features.received_monotonic, time.monotonic())
+                    (features.received_monotonic, clock())
                     if self._timing is not None and features.received_monotonic is not None
                     else None)
                 self._delay_buffer.append(scene)
@@ -3278,10 +3281,10 @@ class SyncEngine:
                 entry = self._delay_buffer.popleft()
                 provenance = self._scene_timing.popleft() if self._scene_timing else None
                 if entry is not None:
-                    sent = time.monotonic()
+                    sent = clock()
                     output.send(entry, sent)
                     self._shown_scene, self._shown_t = entry, sent
                     if provenance is not None and self._timing is not None:
                         self._timing.processing(*provenance, sent)
 
-            await asyncio.sleep(SEND_INTERVAL_S)
+            await sleep(SEND_INTERVAL_S)
