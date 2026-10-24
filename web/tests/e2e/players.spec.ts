@@ -70,7 +70,7 @@ test('Players groups timings, selects AirPlay, switches Auto and stacks on phone
   const lms = page.getByRole('option', { name: /LampaStream LMS/ })
   const air = page.getByRole('option', { name: /Joins your AirPlay groups/ })
   async function measure(label: string) {
-    const values = await page.locator('[data-player-icon]').evaluateAll(elements => elements.map(el => ({
+    const values = await page.locator('[data-player-icon-tile] [data-player-icon]').evaluateAll(elements => elements.map(el => ({
       type: el.getAttribute('data-player-icon'), colour: getComputedStyle(el).color,
       background: getComputedStyle(el).backgroundColor, tileBackground: getComputedStyle(el.parentElement!).backgroundColor,
       width: getComputedStyle(el).width
