@@ -60,6 +60,17 @@ from lampastream.trace_output import TraceOutput, load_room  # noqa: E402
 BANDS = ("all", "bass", "mid", "treble")
 RATE = 48000
 HOP = 480
+FEATURE_EXTRA = ["availability_sample", "publication_time_s", "carried_historical", "level",
+    "loudness_momentary_lufs", "loudness_short_term_lufs", "sustained_energy", "hpss_active",
+    "percussive_energy", "harmonic_energy", "received_time_s", "play_time_s",
+    "timing_generation"] + [f"{key}_{band}" for band in BANDS
+    for key in ("event_id", "candidate_sample", "candidate_strength", "reported_sample",
+                "reported_strength", "decision_sample")]
+RENDER_COLUMNS = ["render_id", "virtual_time_s", "render_argument_s", "route", "sequence",
+    "play_time_s", "scheduled_play_time_s", "schedule_target_s", "event_ids", "high_effect",
+    "low_effect", "onset_consumed", "channel_id", "r", "g", "b"]
+SEND_COLUMNS = ["send_id", "virtual_time_s", "route", "generation", "scene_id", "channel_id",
+                "r", "g", "b", "r8", "g8", "b8", "interval_ms", "event_ids"]
 
 
 def digest(raw):
@@ -279,7 +290,9 @@ class Replay:
                        level=f.level, loudness_momentary_lufs=f.loudness_momentary_lufs,
                        loudness_short_term_lufs=f.loudness_short_term_lufs,
                        sustained_energy=f.sustained_energy, hpss_active=int(f.hpss_active),
-                       percussive_energy=f.percussive_energy, harmonic_energy=f.harmonic_energy)
+                       percussive_energy=f.percussive_energy, harmonic_energy=f.harmonic_energy,
+                       received_time_s=f.received_monotonic, play_time_s=f.play_monotonic,
+                       timing_generation=f.timing_generation)
             for band in BANDS:
                 flag = f.onset if band == "all" else getattr(f, f"onset_{band}")
                 row[f"event_id_{band}"] = (f"{record.epoch}:{band}:{record.sample_pos}"
@@ -386,6 +399,8 @@ class Replay:
         schedule = self.args.delay_schedule
 
         def delay():
+            if self.args.route == "timestamped":
+                return 0
             value = self.args.delay_ms
             for stamp, setting in schedule:
                 if self.now + 1e-10 >= stamp:
@@ -401,8 +416,9 @@ class Replay:
         # Changing the rate is isolated to this offline process/context. The
         # production default and delay-depth formula remain the same algorithm.
         interval = 1 / self.args.render_hz
-        tail = max(self.args.lead_s if self.args.route == "timestamped" else 0,
-                   self.args.delay_ms / 1000, *(v / 1000 for _, v in schedule)) + 2 * interval
+        normal_tail = max(self.args.delay_ms / 1000, *(v / 1000 for _, v in schedule), 0)
+        tail = (self.args.lead_s if self.args.route == "timestamped" else normal_tail)
+        tail += 2 * interval
         final_release = self.sample_count / RATE
         if self.args.publications_per_tick:
             final_release = max(final_release, len(self.records) * interval /
@@ -474,9 +490,9 @@ class Replay:
     def save(self, pcm_format):
         out = self.args.out
         out.mkdir(parents=True, exist_ok=True)
-        write_csv(out / "features.csv", self.features,
-                  list(dict.fromkeys(acceptance.CSV_COLUMNS + list(self.features[0])
-                       if self.features else acceptance.CSV_COLUMNS)))
+        columns = acceptance.CSV_COLUMNS + [f"bar_{i:02d}"
+                    for i in range(30, self.high.bars)] + FEATURE_EXTRA
+        write_csv(out / "features.csv", self.features, columns)
         for tick in self.energy:
             delivered = tick["delivered_sequences"]
             for key, predicate in (("consumed", lambda n: n == 1),
@@ -488,8 +504,8 @@ class Replay:
         for row in self.output.rows:
             row["event_ids"] = self.event_ids(self.render_records[row["scene_id"]])
         write_csv(out / "energy.csv", self.energy)
-        write_csv(out / "renders.csv", self.renders)
-        write_csv(out / "sends.csv", self.output.rows)
+        write_csv(out / "renders.csv", self.renders, RENDER_COLUMNS)
+        write_csv(out / "sends.csv", self.output.rows, SEND_COLUMNS)
         counters = self.counters()
         write_json(out / "counters.json", counters)
         write_json(out / "meta.json", {"trace_version": 1, "quantization_decimals": 6,

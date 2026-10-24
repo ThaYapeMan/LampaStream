@@ -245,7 +245,8 @@ reproducible backlog. It never releases future records early. `--delay-ms` sets
 the normal-route probe; `--delay-schedule '[[0,500],[5,0]]'` changes it at virtual
 seconds, preserving today's burst-on-shrink behavior. `--lead-s` (default 1.5)
 sets simulated timestamped play time relative to the reported sample. Normal
-playback does not use this lead. A post-input tail covers delay/lead and two render
+playback does not use this lead; timestamped playback ignores the normal-only
+delay and delay-schedule options. A post-input tail covers delay/lead and two render
 intervals; the normal route deliberately retains production's terminal latest
 snapshot while the tail is rendered.
 
@@ -302,6 +303,7 @@ above 30 bars):
 | `carried_spectrum_start`, `carried_spectrum_end`, `carried_historical` | Historical bars' interval (blank if absent) and 0/1 carried marker; carried bars are not fresh contributions. |
 | `availability_sample` | Canonical input frontier when feed/EOS returned this record; source-frame availability boundary before delivery batching. Does not measure resampler/CPU latency. |
 | `publication_time_s` | Virtual tick at which the record was released to consumers, after any delivery cap/backlog. |
+| `received_time_s`, `play_time_s`, `timing_generation` | Original source-read/play provenance and generation; these are not detection/publication times. |
 | `level`, `loudness_momentary_lufs`, `loudness_short_term_lufs` | Raw stereo RMS and K-weighted LUFS; blank for unavailable/nonfinite readings. |
 | `sustained_energy`, `hpss_active`, `percussive_energy`, `harmonic_energy` | Existing sustained scalar, 0/1 HPSS validity and fractions. |
 | `event_id_B` | For B=`all,bass,mid,treble`: one ID `epoch:band:reported_sample` for each positive flag, blank otherwise. Aggregate and band events must not be summed as distinct physical clicks. |
