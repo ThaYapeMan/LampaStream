@@ -61,7 +61,7 @@ screenshots stayed in the temporary copy. Nothing contacted the reference setup.
 | Frontend production build | Passed; 1,978 modules; bundle-size warning above 500 kB |
 | Playwright | 69 passed (32.4 s) |
 
-The 93 skips cover unavailable native CAVA/CavaCore execution and the installer
+The 93 skips cover unavailable soundfile, native CAVA/CavaCore execution and the installer
 case reserved for unsupported review hosts. Five warnings are Starlette/httpx
 and FastAPI startup/shutdown deprecations. Exact skip reasons remain in the full
 transcript; a skipped native test is
