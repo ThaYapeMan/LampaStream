@@ -1,6 +1,8 @@
 # LampaStream distribution notices
 
-LampaStream's own code is MIT licensed. The separately built yeney-player is
+LampaStream's own code is licensed under PolyForm Noncommercial 1.0.0; see
+[LICENSE](LICENSE), including Required Notice: Copyright (c) 2026 Jaap van Vliet.
+The separately built yeney-player is
 PolyForm Noncommercial 1.0.0, from ThaYapeMan/yeney-core at
 45779a4383929840a46a931fc1519b4778b64a72. This does not change either licence.
 

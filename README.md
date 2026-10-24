@@ -297,3 +297,9 @@ CLI restore is offline and requires the service to be stopped.
 
 See [configuration backup/restore](docs/configuration.md#backup-and-restore) for the
 format, scope, API/CLI commands and failure policy, and [LXC recovery](docs/deployment-lxc.md#disaster-recovery).
+
+## Licence
+
+LampaStream’s own code is licensed under [PolyForm Noncommercial 1.0.0](LICENSE).
+Required Notice: Copyright (c) 2026 Jaap van Vliet. Third-party components retain
+their own licences; see [distribution notices](THIRD_PARTY_NOTICES.md).

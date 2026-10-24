@@ -4,7 +4,8 @@ version = "0.2.0"
 description = "Spectrum-reactive Philips Hue Entertainment lighting driven by LMS or AirPlay 2."
 readme = "README.md"
 requires-python = ">=3.11"
-license = { text = "MIT" }
+license = "PolyForm-Noncommercial-1.0.0"
+license-files = ["LICENSE"]
 authors = [{ name = "Jaap van Vliet" }]
 dependencies = [
     "fastapi>=0.115",
