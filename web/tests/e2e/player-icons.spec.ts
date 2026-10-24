@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 import { setupPreview } from './preview-fixture'
 
 for (const theme of ['light', 'dark']) {
-  test(`player icons preserve geometry in ${theme}`, async ({ page }) => {
+  test(`option B player icon geometry in ${theme}`, async ({ page }) => {
     await setupPreview(page)
     await page.route('**/api/virtual-players', route => route.fulfill({ json: [
       { id: 'p', type: 'LMS', player_name: 'LampaStream LMS', player_mac: 'local', lms_host: 'fixture.invalid', lms_port: 9000, follow_player_mac: '', follow_mode: 'manual' },
@@ -34,21 +34,21 @@ for (const theme of ['light', 'dark']) {
       }
       const box = await glyph.boundingBox()
       const tile = await glyph.locator('..').boundingBox()
-      expect([box!.width, box!.height, tile!.width, tile!.height]).toEqual([17, 17, 32, 32])
+      expect([box!.width, box!.height, tile!.width, tile!.height]).toEqual([30, 30, 40, 40])
       expect(box!.x + box!.width / 2).toBe(tile!.x + tile!.width / 2)
       expect(box!.y + box!.height / 2).toBe(tile!.y + tile!.height / 2)
       await row.click()
       const detail = page.locator(`[data-player-icon="${kind}"]`).last()
       const detailBox = await detail.boundingBox()
       const detailTile = await detail.locator('..').boundingBox()
-      expect([detailBox!.width, detailBox!.height, detailTile!.width, detailTile!.height]).toEqual([22, 22, 44, 44])
+      expect([detailBox!.width, detailBox!.height, detailTile!.width, detailTile!.height]).toEqual([40, 40, 56, 56])
       measurements.push({ kind, list: [box!.width, box!.height], listTile: [tile!.width, tile!.height], detail: [detailBox!.width, detailBox!.height], detailTile: [detailTile!.width, detailTile!.height] })
     }
     await page.getByRole('option', { name: /LampaStream LMS/ }).click()
     await expect(page.locator('[data-player-icon="LMS"]').last()).toBeVisible()
-    await page.screenshot({ path: `../docs/designs/players-icons-lms-${theme}.png`, fullPage: true })
+    await page.screenshot({ path: `../docs/designs/players-icons-b-lms-${theme}.png`, fullPage: true })
     await sonos.click()
-    await page.screenshot({ path: `../docs/designs/players-icons-${theme}.png`, fullPage: true })
+    await page.screenshot({ path: `../docs/designs/players-icons-b-${theme}.png`, fullPage: true })
     console.log(theme, JSON.stringify(measurements))
   })
 }

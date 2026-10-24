@@ -129,13 +129,13 @@ function PlayerIcon({
   row: PlayerRow
   detail?: boolean
 }) {
-  const size = detail ? 22 : 17
+  const size = detail ? 40 : 30
   return (
     <span
       aria-hidden="true"
       data-player-icon-tile={row.player?.type}
       style={row.player ? { '--foreground': '216 11.111111% 91.176471%', '--secondary': '218.571429 13.72549% 20%' } as CSSProperties : undefined}
-      className={`grid shrink-0 place-items-center rounded-lg border bg-secondary text-foreground ${detail ? 'h-11 w-11' : 'h-8 w-8'}`}
+      className={`grid shrink-0 place-items-center rounded-lg border bg-secondary text-foreground ${detail ? 'h-14 w-14' : 'h-10 w-10'}`}
     >
       <PlayerGlyph identity={row.identity} size={size} />
     </span>

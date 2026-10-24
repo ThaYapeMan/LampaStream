@@ -307,9 +307,11 @@ it('renders the decorative LMS alpha mask in currentColor without an image', asy
   expect(icon.style.maskSize).toBe('contain')
   expect(icon.style.maskRepeat).toBe('no-repeat')
   expect(icon.style.maskPosition).toBe('center')
-  expect(icon.style.width).toBe('17px')
+  expect(icon.style.width).toBe('30px')
+  expect(icon.parentElement).toHaveClass('h-10', 'w-10')
   const icons = document.querySelectorAll('[data-player-icon="LMS"]')
-  expect((icons[1] as HTMLElement).style.width).toBe('22px')
+  expect((icons[1] as HTMLElement).style.width).toBe('40px')
+  expect(icons[1].parentElement).toHaveClass('h-14', 'w-14')
 })
 
 it('edits and saves the two LMS timing fields with steppers', async () => {
@@ -350,6 +352,6 @@ it('uses the supplied Lyrion waveform in both managed LMS player locations', asy
   await screen.findByRole('option', { name: /LampaStream LMS/ })
   const logo = document.querySelector('[data-player-icon="LMS"]') as HTMLElement
   expect(logo.style.maskImage).toBe(`url("${lyrionAsset}")`)
-  expect(logo.style.width).toBe('17px')
+  expect(logo.style.width).toBe('30px')
   expect(document.querySelectorAll('[data-player-icon="LMS"]')).toHaveLength(2)
 })
