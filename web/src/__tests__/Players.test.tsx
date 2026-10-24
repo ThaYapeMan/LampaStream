@@ -345,11 +345,11 @@ it('renders model icons in the Players list and the selected detail header', asy
   }
 })
 
-it('uses the supplied Lyrion asset for the LMS server while preserving the receiver waveform', async () => {
+it('uses the supplied Lyrion waveform in both managed LMS player locations', async () => {
   render(<Players />)
   await screen.findByRole('option', { name: /LampaStream LMS/ })
-  const logo = document.querySelector('[data-lyrion-icon]') as HTMLElement
+  const logo = document.querySelector('[data-player-icon="LMS"]') as HTMLElement
   expect(logo.style.maskImage).toBe(`url("${lyrionAsset}")`)
   expect(logo.style.width).toBe('17px')
-  expect(document.querySelector('[data-player-icon="LMS"]')).not.toBeNull()
+  expect(document.querySelectorAll('[data-player-icon="LMS"]')).toHaveLength(2)
 })

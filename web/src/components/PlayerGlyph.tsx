@@ -1,7 +1,7 @@
 import { Speaker } from 'lucide-react'
 import { AirPlayReceiverIcon } from './MediaIcons'
 import { playerIcon, type PlayerIdentity } from '@/lib/playerIcons'
-import waveform from '@/assets/lms-player-icon.png'
+import waveform from '@/assets/lyrion-icon.svg'
 import sonos from '@/assets/SONOS.svg'
 import radio from '@/assets/SqueezeRadio.svg'
 import pi from '@/assets/raspberry-pi.svg'
