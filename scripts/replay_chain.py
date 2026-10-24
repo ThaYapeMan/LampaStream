@@ -28,7 +28,9 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 import run_acceptance as acceptance  # noqa: E402
+from replay_observers import PickerObserver, ScheduleObserver  # noqa: E402
 
+from lampastream import airplay_early  # noqa: E402
 from lampastream import sync_engine as sync  # noqa: E402
 from lampastream.canonicalizer import (  # noqa: E402
     AudioCanonicalizer,
@@ -206,7 +208,10 @@ class Replay:
         self.tick = 0
         self.cursor = 0
         self.current = None
-        self.trace_candidates = {}
+        self.picker = PickerObserver(self.pipeline._beat_detector)
+        self.tick_delivered = []
+        self.tick_repeat_reads = 0
+        self.schedule = None
 
     def analyse(self, pcm, rate):
         canonicalizer = AudioCanonicalizer()
@@ -275,6 +280,14 @@ class Replay:
                        loudness_short_term_lufs=f.loudness_short_term_lufs,
                        sustained_energy=f.sustained_energy, hpss_active=int(f.hpss_active),
                        percussive_energy=f.percussive_energy, harmonic_energy=f.harmonic_energy)
+            for band in BANDS:
+                flag = f.onset if band == "all" else getattr(f, f"onset_{band}")
+                row[f"event_id_{band}"] = (f"{record.epoch}:{band}:{record.sample_pos}"
+                                           if flag else "")
+                candidate = self.picker.at(record.sample_pos, band)
+                for key in ("candidate_sample", "candidate_strength", "reported_sample",
+                            "reported_strength", "decision_sample"):
+                    row[f"{key}_{band}"] = candidate.get(key)
             self.features.append(row)
 
     def release(self):
@@ -292,6 +305,7 @@ class Replay:
                 effective_processor_ids=old.effective_processor_ids,
                 carried_spectrum_interval=old.carried_spectrum_interval)
             self.features[index]["publication_time_s"] = self.now
+            self.tick_delivered.append(old.sequence)
             count += 1
             self.cursor += 1
 
@@ -323,6 +337,7 @@ class Replay:
         def traced(features, t):
             record = self.queued.get(id(features), self.current)
             sequence = record.sequence
+            self.tick_repeat_reads += int(self.reads[sequence] > 0)
             self.reads[sequence] += 1
             self.tick_reads.append(sequence)
             scene = render(features, t)
@@ -335,10 +350,17 @@ class Replay:
                     "render_argument_s": t, "route": self.args.route,
                     "sequence": sequence, "play_time_s": features.play_monotonic
                     if self.args.route == "timestamped" else None,
+                    "scheduled_play_time_s": features.play_monotonic
+                        if self.args.route == "timestamped" else None,
+                    "schedule_target_s": max(self.now, features.play_monotonic)
+                        if self.args.route == "timestamped" else None,
+                    "event_ids": self.event_ids(sequence),
                     "high_effect": self.high.effect_type, "low_effect": self.low.effect_type,
                     "onset_consumed": int(features.onset), "channel_id": channel.channel_id,
                     "r": colour.r, "g": colour.g, "b": colour.b})
-            return TaggedScene(scene, identity, self.args.route, features.timing_generation or 0)
+            return TaggedScene(scene, identity, self.args.route,
+                               features.timing_generation if self.args.route == "timestamped"
+                               else self.output.output_generation)
 
         mixer.render = traced
 
@@ -351,7 +373,11 @@ class Replay:
             "mix_target": sync._smoothstep(selected, mixer._low, mixer._high),
             "mix": mixer.mix, "adaptive_floor": state.adaptive_floor,
             "adaptive_ceiling": state.adaptive_ceiling, "peak_envelope": state._peak_envelope,
-            "consumed_sequences": list(self.tick_reads), "render_ids": list(self.tick_renders)})
+            "consumed_sequences": list(self.tick_reads), "render_ids": list(self.tick_renders),
+            "delivered_sequences": list(self.tick_delivered),
+            "repeat_reads": self.tick_repeat_reads})
+        self.tick_delivered.clear()
+        self.tick_repeat_reads = 0
         self.tick_reads.clear()
         self.tick_renders.clear()
 
@@ -391,9 +417,14 @@ class Replay:
                 raise FinishedReplay
             self.release()
 
+        def make_schedule():
+            self.schedule = ScheduleObserver()
+            return self.schedule
+
         await self.output.start()
         try:
-            with patch.object(sync, "SEND_INTERVAL_S", interval):
+            with patch.object(sync, "SEND_INTERVAL_S", interval), patch.object(
+                    airplay_early, "SceneSchedule", make_schedule):
                 await engine.run(self.output, clock=lambda: self.now, sleep=step)
         except FinishedReplay:
             pass
@@ -403,22 +434,28 @@ class Replay:
         if self.cursor != len(self.records):
             raise RuntimeError("Replay ended with unpublished records")
 
+    def event_ids(self, sequence, band=None):
+        row = self.features[sequence - 1]
+        return [row[f"event_id_{b}"] for b in ((band,) if band else BANDS)
+                if row[f"event_id_{b}"]]
+
     def counters(self):
         sent_scenes = {row["scene_id"] for row in self.output.rows}
         sent_sequences = {self.render_records[identity] for identity in sent_scenes}
         rendered_sequences = set(self.reads)
         events = {}
         for band in BANDS:
-            key = "onset" if band == "all" else f"onset_{band}"
-            received = {r.sequence for r in self.records if getattr(r.features, key)}
-            events[band] = {"received": len(received),
-                "accepted": len(received & rendered_sequences),
-                "merged": len((received & rendered_sequences) - sent_sequences)
-                    if self.args.route == "timestamped" else 0,
-                "rendered": sum(self.reads[s] for s in received),
-                "expired": len((received & rendered_sequences) - sent_sequences)
-                    if self.args.route == "normal" else 0,
-                "lost": len(received - sent_sequences)}
+            received = {event for r in self.records for event in self.event_ids(r.sequence, band)}
+            accepted = {event for seq in rendered_sequences for event in self.event_ids(seq, band)}
+            sent = {event for seq in sent_sequences for event in self.event_ids(seq, band)}
+            coalesced = {event for identity in self.schedule.coalesced
+                         for event in self.event_ids(self.render_records[identity], band)}
+            merged = (received - sent) & coalesced
+            events[band] = {"received": len(received), "accepted": len(accepted),
+                "merged": len(merged),
+                "rendered": sum(self.reads[r.sequence] * len(self.event_ids(r.sequence, band))
+                                for r in self.records),
+                "expired": len(accepted - sent - merged), "lost": len(received - sent)}
         one = {"published": len(self.records),
             "consumed": sum(self.reads[s] == 1 for s in range(1, len(self.records) + 1)),
             "repeated": sum(self.reads[s] > 1 for s in range(1, len(self.records) + 1)),
@@ -440,12 +477,22 @@ class Replay:
         write_csv(out / "features.csv", self.features,
                   list(dict.fromkeys(acceptance.CSV_COLUMNS + list(self.features[0])
                        if self.features else acceptance.CSV_COLUMNS)))
+        for tick in self.energy:
+            delivered = tick["delivered_sequences"]
+            for key, predicate in (("consumed", lambda n: n == 1),
+                                   ("repeated", lambda n: n > 1),
+                                   ("skipped", lambda n: n == 0)):
+                sequences = [seq for seq in delivered if predicate(self.reads[seq])]
+                tick[f"{key}_count"] = len(sequences)
+                tick[f"{key}_publication_sequences"] = sequences
+        for row in self.output.rows:
+            row["event_ids"] = self.event_ids(self.render_records[row["scene_id"]])
         write_csv(out / "energy.csv", self.energy)
         write_csv(out / "renders.csv", self.renders)
         write_csv(out / "sends.csv", self.output.rows)
         counters = self.counters()
         write_json(out / "counters.json", counters)
-        write_json(out / "meta.json", {"trace_version": 1,
+        write_json(out / "meta.json", {"trace_version": 1, "quantization_decimals": 6,
             "input_sha256": digest(self.args.input.read_bytes()), "format": pcm_format,
             "duration_s": self.sample_count / RATE, "git_commit": acceptance.git_commit(ROOT),
             "config_sha256": digest(self.args.config.read_bytes()), "seed": self.args.seed,
