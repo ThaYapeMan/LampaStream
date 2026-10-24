@@ -5,6 +5,14 @@ external architecture review. The review's core corrections were checked
 against the actual codebase (not just plausible on paper) and confirmed
 sound — see "What changed from the original proposal" below.
 
+> **Learn from sonos-squeezebox first.** Before designing or building the
+> Sonos output (Phase 1) or its state handling (Phase 3), review the lessons
+> learned in `sonos-squeezebox` — the section "Reuse the behavioural lessons
+> from sonos-squeezebox" below, that project's `DEVICE-VERIFICATION.md`, and
+> its `scripts/device-test.sh` results. Most of Sonos's HTTP/UPnP behaviour
+> was only discovered on real hardware and often contradicted a plausible
+> first design. Reuse the behaviour, not the C++ code.
+
 ## Decision
 
 LampaStream remains a standalone application, reachable via multiple audio
@@ -56,7 +64,7 @@ bridge repository.
 
 ## Recommended architecture
 
-````
+```
 AirPlay ─┐
 LMS ─────┼→ AudioSession / PCM fanout ──┬──→ CanonicalAnalysisPipeline → Effects
 Spotify ─┘                              │
@@ -67,7 +75,7 @@ Spotify ─┘                              │
                                          Sonos AVTransport (play_uri)
                                                    │
                                             physical Sonos
-````
+```
 
 Key rule: **source != sink**, and **CanonicalAnalysisPipeline != playback
 transport**. One canonical analysis path (as today), one optional playback
@@ -81,14 +89,14 @@ future sources/outputs.
 LampaStream needs explicit ownership of the currently active audio source
 before Spotify is restored — otherwise source-transition races are likely.
 
-````
+```
 ActiveAudioSession
   source = AirPlay | LMS | Spotify
   epoch
   PCM format
   playback state
   sink ownership
-````
+```
 
 This doesn't need to become a large framework; its job is to answer
 concrete questions: what happens if Spotify starts while AirPlay is
@@ -99,53 +107,108 @@ epoch → analysis resets → Sonos output switches generation.)
 
 ### Bounded, non-blocking Sonos fanout
 
-````
+```
                 ┌── analysis consumer
 PCM producer ───┤
                 └── bounded Sonos queue → FLAC encoder
-````
+```
 
 Not: `PCM producer → blocking Sonos write → analysis`. If Sonos falls
 behind, use a bounded queue/ring buffer with a defined recovery policy
 (e.g. queue overflow → reset output generation → reconnect with a fresh
 stream) rather than accumulating unlimited audio in RAM.
 
+Implemented in Phase 0 as `TeePcmSource` (LampaStream commit `f5d07f1`): its
+secondary queue drops the oldest entries on overflow, including lifecycle
+events, so the Sonos consumer must tolerate a missed start/stop event.
+
 ## Reuse the behavioural lessons from sonos-squeezebox
 
-The direct Sonos sink should reuse the transport invariants already proven
-against real hardware this session, not copy the C++ code wholesale:
+Reuse the transport behaviour proven against real Sonos hardware in
+`sonos-squeezebox`, not its C++ code. Updated 2026-09-24 after scripted
+physical tests (journal + LMS events + pcap on one timeline). Where a rule
+below contradicts an older note (including the earlier "reject a duplicate
+concurrent request" rule in `spotify-connect-removal-and-sonos-inbound-plan.md`
+and the `sonos-squeezebox` README), this list wins.
 
-- Fresh FLAC header per connection.
-- Stream generations (a monotonically increasing ID, not reused).
-- Bounded encoder read-ahead (throttle a couple of seconds ahead of real
-  time, not fully buffered).
-- HTTP request lifecycle: plain `http://` URL with `play_uri()`, not
-  `x-rincon-mp3radio://` (that scheme is for MP3 icecast-style radio and
-  unproven here); a live/infinite stream rules out raw WAV, which depends
-  on a fixed total length.
-- Device-initiated pause/resume and SameURL restart behaviour — this
-  session's `sonos-squeezebox` work (held-GET invalidation, `SameURL`
-  reconnect, the resume state machine in `resume_state.h`) is the concrete
-  reference implementation.
-- **Don't reject every duplicate GET as a blanket rule.** Physical testing
-  already showed Sonos legitimately creates a HEAD probe alongside an
-  active GET, and separately opens held/speculative GETs around
-  pause/resume. Model it as: stream generation N owns an active GET, a
-  held/speculative GET, and HEAD/probe requests, and apply policy based on
-  request type + generation + transport state — exactly the model
-  `resume_state.h` had to evolve into through several iterations. Reuse
-  that design directly rather than re-deriving it.
+### Proven on hardware
+
+- **Stream format and identity.** Plain `http://` URL with `play_uri()`
+  (not `x-rincon-mp3radio://`); streaming FLAC, never raw WAV (a live stream
+  has no total length). A fresh FLAC header on every HTTP connection. A new,
+  never-reused stream ID for every new track — verified: an LMS track change
+  A→B correctly creates a new stream generation, while playing and while
+  paused.
+- **Bounded encoder read-ahead**: encode only about two seconds ahead of
+  real time.
+- **Sonos withholds its UPnP `Pause` reply until the stream connection
+  closes.** Packet-proven: the SOAP response arrives 28–31 ms after the
+  bridge's FIN, every time. So a pause must end the HTTP response *first*
+  and send `Pause` second; doing it the other way round cost ~4 s per pause.
+  After reordering (sonos-squeezebox `4fd7430`) pause latency is 2–29 ms.
+- **Never answer a Sonos audio GET with an HTTP error.** Resuming from the
+  Sonos app made the bridge cancel Sonos's own pre-opened GET and answer it
+  with `503 Service Unavailable`. Every one of those resumes (3 of 3) showed
+  the Sonos app's "could not be played" dialog, even though audio resumed on
+  Sonos's next GET 20 ms later. The first 503 is also exactly when
+  `ERROR_NO_RESOURCE` first appears in the device status. Resumes driven from
+  LMS, which never produce a 503, stayed clean.
+- **Parallel duplicate GETs happen, in either order.** At a stream start
+  Sonos sometimes opens two GETs for the same URL a few milliseconds apart
+  and closes one of them within milliseconds (2 of 9 stream starts on
+  2026-09-24, both right after Sonos-app actions). Earlier testing saw Sonos
+  close the older connection; on 2026-09-24 it closed the newer one and kept
+  the older. A rule of "newest wins" or "first wins" alone fails in one of
+  the two orders: the audio must follow the connection Sonos actually keeps.
+  In the failing case the kept connection got no audio, timed out after
+  4 s, and the speaker stopped.
+- **HEAD requests are normal.** Sonos sends a HEAD about a second after each
+  fresh GET, and while paused. Answer with headers only and attach no
+  recovery logic to them.
+- **Sonos `TransportStatus` is latched.** `ERROR_NO_RESOURCE` and
+  `ERROR_CORRUPT_FILE` persist across later successful playback (seen as
+  `ERROR_CORRUPT_FILE | PLAYING` with audio fine). It is not a live health
+  signal; judge by what is audible and whether the app shows a dialog.
+- **Feeding Sonos's own pre-opened GET directly on a device resume**, with
+  no UPnP action, triggered a HEAD probe, RST and `ERROR_CORRUPT_FILE`.
+
+### Still open (being tested in sonos-squeezebox; update here when settled)
+
+- The correct device-initiated resume. Candidates under test: the current
+  same-URL restart but ending the cancelled GET without an HTTP error
+  (silent close, or an empty 200), versus sending only UPnP `Play()` and
+  feeding the GET Sonos already opened.
+- Whether a device-initiated pause should suppress the echoed pause that
+  comes back from the source.
+
+### Not transferable
+
+The LMS player role: SlimProto `strm` commands, `resume_state.h`'s model of
+LMS intent, relaying device pause/resume back to LMS, and LMS's position
+counter (which restarts after each resume). In LampaStream, pause/resume
+intent comes from the active audio source, so the per-generation model is:
+one stream generation owns an active GET, possibly held/speculative GETs,
+and HEAD probes, plus the transport state — with the rules taken from the
+proven list above rather than copied from `resume_state.h`.
+
+### Testing method to copy
+
+Scripted scenarios that drive the source automatically and prompt for
+Sonos-app actions, capturing the service log, source events and a pcap on
+one clock, with every scenario creating its own start state and recording
+what the tester heard (sonos-squeezebox `scripts/device-test.sh`). Status
+flags alone are not a verdict.
 
 ## Multi-Sonos shape
 
 One shared HTTP server, but not one shared playback stream by default:
 
-````
+```
 SonosHttpServer
    ├── Study        (own output session / encoder / generation)
    ├── Living Room   (own output session / encoder / generation)
    └── Kitchen       (own output session / encoder / generation)
-````
+```
 
 Each physical Sonos can have different GET timing, read-ahead, HTTP
 lifecycle, pause/resume behaviour, and latency. For an actual Sonos group,
@@ -159,10 +222,10 @@ be the only source of truth for a live stream — it can be coarse, delayed,
 or intermittently stale, and not perfectly aligned to the audible sample
 position. Prefer a filtered estimator:
 
-````
+```
 source PCM sample position → encoder/bytes served → Sonos GetPositionInfo
    → filtered playout-delay estimate
-````
+```
 
 e.g. `estimated_playout_delay = source_sample_time - sonos_reported_play_time`,
 smoothed or median-filtered, with a calibrated fallback delay (the existing
@@ -177,23 +240,26 @@ configuration/UI, PCM production. Reuse those. What must not happen is
 reverting it unchanged — its PCM must enter the new session/fanout model
 from day one, not go nowhere as before:
 
-````
+```
 old Spotify implementation → reuse receiver/discovery/config/UI → PCM producer
    → new AudioSession fanout (analysis + SonosOutputSink)
-````
+```
 
 ## Phased plan
 
 **Phase 0 — audio session/fanout boundary (no Spotify work yet).** Define
 active-source ownership, PCM fanout, sink isolation, the bounded Sonos
 queue, and epoch/lifecycle behaviour. This is prerequisite infrastructure,
-not a Sonos feature.
+not a Sonos feature. *Status: PCM tee landed (`f5d07f1`); legacy mono tap
+removed (`2122692`).*
 
 **Phase 1 — direct Sonos output, proven with an existing ingress.** Build
 `AirPlay or LMS → PCM Session → SonosOutputSink → FLAC → HTTP → physical
 Sonos`, applying the reused `sonos-squeezebox` invariants above. Prove
 audible playback using AirPlay or LMS, independent of Spotify entirely —
-this validates the new output path on its own.
+this validates the new output path on its own. *Start by reviewing the
+sonos-squeezebox lessons (see the note at the top); build a device test
+script like sonos-squeezebox's before the first physical test.*
 
 **Phase 2 — restore Spotify Connect.** Revert commit `762edfa` (or
 cherry-pick `230633d` + `0728aaf` back), then route its PCM into the exact
@@ -203,7 +269,9 @@ the output path new and real.
 
 **Phase 3 — state/control synchronization.** Play/pause/volume/track
 changes/disconnect/reconnect, Sonos device-initiated state changes —
-reusing the lessons from `sonos-squeezebox`.
+reusing the lessons from `sonos-squeezebox`. *Re-check the "Still open"
+list first: the device-initiated resume must follow whatever
+sonos-squeezebox proved on hardware by then.*
 
 **Phase 4 — groups/coordinator behaviour.** Add Sonos group-awareness when
 grouped: target the group coordinator rather than independently streaming
