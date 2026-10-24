@@ -101,7 +101,7 @@ def test_sync_engine_uses_freshest_loudness_without_mutating_spectrum_publicatio
         asyncio.run(engine.run(MagicMock()))
     assert engine.last_energy_input == pytest.approx(19/22)
     assert record.features.loudness_momentary_lufs is None
-    assert record.features.full == .2
+    assert record.features.full == pytest.approx(.2)
 
 
 def peak_features(level, lufs=None):
