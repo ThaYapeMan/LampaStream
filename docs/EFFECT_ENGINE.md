@@ -24,10 +24,13 @@ consumers use sequence and the bounded queue. Carried Spectrum bars in those rec
 retain explicit provenance. See
 [audio-pipeline.md](audio-pipeline.md).
 
-Loudness/Chroma extension protocols are not production algorithms. Legacy HPSS/tap
-behavior must not be described as a shipped canonical processor. Use the actual API
-schema for available Effect/settings fields and [configuration.md](configuration.md)
-for entity ownership.
+K-weighted Loudness runs in every canonical pipeline; optional HpssAnalyzer
+publishes harmonic/percussive fractions from canonical PCM for LMS and AirPlay.
+EnergyInput can select LUFS modes while sustained energy remains the default.
+Chroma remains an extension protocol without a shipped algorithm. See
+[analyzers.md](analyzers.md) for current processors, the actual API schema for
+available Effect/settings fields, and [configuration.md](configuration.md) for
+entity ownership.
 
 Visual quality, target render backlog and realtime behavior **REQUIRE LXC VALIDATION**.
 

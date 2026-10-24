@@ -26,7 +26,8 @@ features. The frozen canonical pipeline is a subsystem within the broader model.
 
 Spectrum and Beat are independent processor families with separately configured
 algorithms; families can coexist. This does not mean every family already has a
-UI enable switch: Loudness and Chroma currently expose extension protocols only.
+UI enable switch: Loudness has a production K-weighted processor, HPSS is optional,
+and Chroma remains a protocol without a shipped algorithm.
 Effect settings also supply the current bass/mid feature boundaries to runtime
 analysis; the six-entity model is a conceptual division, not a claim that every
 analysis-related setting has already moved into Analyser.
@@ -107,6 +108,7 @@ future player ────┤
           ├── SpectrumProcessor → SpectrumEngine → V2 / CAVA Core / future
           ├── BeatDetector      → BeatAlgorithm (onset implementation)
           ├── LoudnessAnalyzer  → K-weighted momentary / short-term LUFS
+          ├── HpssAnalyzer      → optional PcmHpss separation
           └── ChromaAnalyzer    → extension protocol; future algorithm
                   ▼
          PublicationRecord
@@ -130,8 +132,9 @@ dispatches them sequentially. `SpectrumProcessor` wraps a `SpectrumEngine`;
 `BeatDetector` is independent of that engine. V2 and Beat reuse shared STFT work.
 CAVA Core receives canonical stereo PCM and owns its own FFTs and conditioning.
 K-weighted momentary/short-term Loudness runs alongside Spectrum and Beat;
-Chroma remains a future extension. Loudness is displayed for comparison and does
-not replace the existing Energy Profile blend input.
+optional HPSS publishes harmonic/percussive fractions. Chroma remains a future
+extension. Loudness is displayed and can drive the optional LUFS EnergyProfile
+modes; sustained energy remains the default blend input.
 
 `PublicationRecord` binds features to their actual audio interval, epoch and
 contributors. Delayed results remain in delivery-order publications; the live
@@ -268,6 +271,8 @@ for their stated commits only.
 
 ## Documentation
 
+- [Reproducible baseline](docs/baseline.md) · [Code and contract map](docs/code-map.md)
+- [Measurement protocol](docs/measurement-protocol.md) · [Decision log](docs/decisions.md)
 - [Frozen architecture](docs/ANALYSIS_ARCHITECTURE.md)
 - [PCM, lifecycle and publication](docs/audio-pipeline.md)
 - [Analyzers and algorithms](docs/analyzers.md)

@@ -1,4 +1,4 @@
-"""Streaming K-weighted momentary loudness (ITU-R BS.1770 / EBU R128).
+"""Streaming K-weighted momentary and short-term loudness (ITU-R BS.1770 / EBU R128).
 
 Implemented directly from the recommendation, not from pyloudnorm.  Filter
 coefficients are the exact values published in ITU-R BS.1770 Table 1 and
@@ -10,17 +10,18 @@ formulation available and the general-rate design formulas are unnecessary.
 Differences from pyloudnorm, deliberately:
 
 * Streaming, not offline.  Filter state (two direct-form-II-transposed
-  biquads per channel) and the 400 ms mean-square window persist across
+  biquads per channel) and the 400 ms / 3 s mean-square windows persist across
   feed() calls, so there is no transient at chunk boundaries.  pyloudnorm's
   ``apply_filter`` calls ``scipy.signal.lfilter`` with no ``zi`` and is only
   correct on a whole buffer at once.
-* Momentary only.  BS.1770's gating (absolute −70 LKFS, relative −10 LU,
+* Momentary and short-term.  BS.1770's gating (absolute −70 LKFS, relative −10 LU,
   two-pass block averaging) exists for *integrated programme* loudness and
   is irrelevant for a live meter; none of it is carried over.
 * Coefficients computed once, as constants.  pyloudnorm regenerates them
   on every ``.a``/``.b`` property access (twice per apply_filter call).
 * Silence is explicit.  log10(0) is never evaluated; below the absolute gate
-  the meter reports ``SILENCE_LUFS`` rather than leaking -inf downstream.
+  the meter reports the explicit ``SILENCE_LUFS`` (-inf) sentinel; the
+  HTTP/WebSocket boundary maps it to null.
 * Pure NumPy, no SciPy.  A biquad is six multiply-adds per sample; the
   vectorised per-block form below is exact and needs no external filter
   routine.

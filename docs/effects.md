@@ -31,6 +31,7 @@ sample. Time-driven motion is evaluated at the lighting render cadence.
 | `swirl` | Moving rainbow gradient across the Zone | `effect_speed`, `sensitivity`, `brightness_floor` | `full`; motion follows render time, not beat timing |
 | `wave` | Traveling brightness wave, hue slowly follows spectral centroid | `effect_speed`, `sensitivity`, `brightness_floor` | `full`, `centroid`; `effect_decay` is not used (the UI hides it) |
 | `solid` | Uniform color slowly following spectral centroid and energy | `sensitivity`, `brightness_floor` | `full`, `centroid`; not a fixed-color picker and not constant brightness |
+| `gradient` | Centroid selects a curated palette colour; energy controls brightness | `gradient_palette`, `sensitivity`, `brightness_floor` | `full`, `centroid`; optional harmonic weighting |
 | `none` | Black/off layer | None | No audio features; may still be blended with another Effect by EnergyProfile |
 
 ## Shared settings and defaults
@@ -47,17 +48,19 @@ Not every renderer consumes every field; use the table above.
 - `effect_speed` controls spatial motion for fireworks, swirl and wave.
 - Higher `effect_decay` shortens pulses/flashes/splotches in render ticks; fireworks
   uses elapsed time for exponential decay. These are not universal millisecond values.
-- `exertion_clip` configures the external-bars `BandNormaliser`; it is not extra V2
-  conditioning applied after CAVA Core, nor a per-renderer parameter.
+- `exertion_clip` configures `BandNormaliser` on external bars and, when
+  `band_normalise` is enabled, fresh canonical Spectrum bars after either engine.
+  It is separate from engine conditioning and is not a per-renderer parameter.
 - `onset_flash_intensity` lifts spectrum RGB channels or mono brightness toward white
   when an onset is observed. The dedicated onset effects use their own envelopes.
 
 When `hpss_active` is actually supplied, pulses/flashes use `percussive_energy` for
 intensity, fireworks uses it for speed, and swirl/wave/solid use `harmonic_energy`
-to weight brightness. These are conditional consumers of the existing legacy PCM-tap
-features. The canonical processor stack does not currently publish HPSS separation;
-a checkbox does not make HPSS a canonical processor. Loudness and Chroma remain
-extension protocols, not selectable shipped effects/analyzers.
+to weight brightness; gradient also uses harmonic weighting. Optional
+`HpssAnalyzer` publishes these fractions from canonical PCM for LMS and AirPlay.
+K-weighted Loudness is also a production canonical processor; its LUFS values can
+drive EnergyInput but are not directly read by these renderers. Chroma remains a
+protocol without a shipped algorithm. See [analyzers.md](analyzers.md).
 
 ## Publication and validation limits
 

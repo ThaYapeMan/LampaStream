@@ -1,5 +1,12 @@
 # HueSync Audio Architecture v1.2
 
+> Historical design candidate, not the current implementation reference. Its
+> legacy PCM-tap and proposed HPSS/status wiring describe earlier work. Current
+> canonical analysis includes K-weighted Loudness and optional HPSS for LMS and
+> AirPlay; Chroma is not delivered. Use [analyzers.md](analyzers.md),
+> [ANALYSIS_ARCHITECTURE.md](ANALYSIS_ARCHITECTURE.md) and
+> [audio-pipeline.md](audio-pipeline.md) for implemented contracts.
+
 ## Audio Feature Contract, Canonical PCM, and Source-Independent Analysis
 
 **Status:** v1.2 — FINAL CONTRACT CANDIDATE — pending GO review  

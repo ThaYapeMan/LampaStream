@@ -149,7 +149,8 @@ class AnalysisProcessor(Protocol):
     An AnalysisProcessor receives SharedAnalysisFrame per canonical PCM frame
     and returns zero or more ProcessorUpdates.  Multiple processors compose
     independently inside CanonicalAnalysisPipeline: SpectrumProcessor for bars,
-    BeatDetector for onset, and extension points for loudness/chroma.
+    BeatDetector for onset, production K-weighted loudness, optional HPSS,
+    and an extension protocol for undelivered chroma analysis.
 
     Implementations must be stateful but NOT thread-safe; CAP calls feed()
     from a single worker thread.

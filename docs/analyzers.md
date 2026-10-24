@@ -41,8 +41,10 @@ an earlier hop. Remaining PCM is consumed without inventing padded EOS readings.
 Reset clears both filters and windows. Values are `None` during warmup and `-inf`
 at silence/below −70 LUFS; WebSocket JSON maps these to `null`.
 
-Now Playing displays momentary LUFS beside Energy blend. This is observation only:
-`SustainedEnergyTracker` and `LayerMixer` retain their existing blend behavior.
+Now Playing displays momentary LUFS beside Energy blend. EnergyInput can also
+select momentary LUFS through `loudness_fixed` or `loudness_adaptive`; sustained
+energy remains the default. LayerMixer applies the existing smoothstep and EMA
+to the selected scalar.
 CAVA can have newer Spectrum intervals than shared-hop loudness; preview reads the
 latest loudness PublicationRecord separately without rewinding the Effects snapshot.
 
