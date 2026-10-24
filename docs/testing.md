@@ -381,3 +381,28 @@ plus decoder/version for ffmpeg), selected canonical `duration_s`, full `git_com
 `wall_time`. Input hash covers the whole file even when selecting a clip. It
 contains no exported credentials or absolute private paths. Keep the CSVs local;
 only synthetic reference counters/meta are committed under `docs/baseline/traces/`.
+
+### Synthetic replay fixtures
+
+Regenerate with `.venv/bin/python scripts/make_fixtures.py`. The complete set,
+sidecars and default export is **9,083,505 bytes**, below 10 decimal MB. The three
+10-second 120/128/174 BPM centre-mono click files are 48 kHz, 24-bit PCM. Clicks
+start at 0.5 s, after detector warmup, and stop before EOF. The single impulse is
+48 kHz/16-bit, at sample 240000 (5.000 s) in a six-second file. The 1 kHz stepped
+tone is 48 kHz/16-bit with two-second peak-amplitude segments at −30/−20/−10/−3
+dBFS. Silence is three seconds at 48 kHz/16-bit.
+
+The 20-second 20 Hz–10 kHz logarithmic sweep, five-second seeded Voss-McCartney
+pink noise, ten-second anti-phase and ten-second left-to-right panning click files
+use 24 kHz/16-bit PCM, deliberately exercising canonical resampling while keeping
+the committed set small. Anti-phase integer PCM satisfies L=−R exactly. No
+copyrighted recordings or external samples are used.
+
+Each same-stem JSON contains `fixture_version`, `sample_rate`, `channels`, `bits`,
+`frames`, `event_samples` (source-rate sample indices) and `description`. Click
+positions and the impulse are sparse truth; tone indices label amplitude-segment
+boundaries, not asserted detected onsets. Continuous sweep/noise and silence have
+empty sparse truth lists. They do not assert that a detector must emit no events.
+`default-config.json` is generated with production `export_configuration` from a
+fresh local Storage populated with default model entities; fixed provenance time
+and BASE-01 revision make regeneration independent of the generator's run date.

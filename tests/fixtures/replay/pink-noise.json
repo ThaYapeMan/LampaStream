@@ -1,0 +1,9 @@
+{
+  "bits": 16,
+  "channels": 1,
+  "description": "5 s Voss-McCartney pink noise; seed 20261024; no sparse event labels",
+  "event_samples": [],
+  "fixture_version": 1,
+  "frames": 120000,
+  "sample_rate": 24000
+}

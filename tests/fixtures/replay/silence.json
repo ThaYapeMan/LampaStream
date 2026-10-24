@@ -1,0 +1,9 @@
+{
+  "bits": 16,
+  "channels": 1,
+  "description": "3 s digital silence",
+  "event_samples": [],
+  "fixture_version": 1,
+  "frames": 144000,
+  "sample_rate": 48000
+}

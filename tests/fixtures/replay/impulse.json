@@ -1,0 +1,11 @@
+{
+  "bits": 16,
+  "channels": 1,
+  "description": "Single impulse at 5.000 s",
+  "event_samples": [
+    240000
+  ],
+  "fixture_version": 1,
+  "frames": 288000,
+  "sample_rate": 48000
+}

@@ -1,0 +1,14 @@
+{
+  "bits": 16,
+  "channels": 1,
+  "description": "1 kHz sine peak amplitudes -30/-20/-10/-3 dBFS, 2 s each",
+  "event_samples": [
+    0,
+    96000,
+    192000,
+    288000
+  ],
+  "fixture_version": 1,
+  "frames": 384000,
+  "sample_rate": 48000
+}

@@ -1,0 +1,354 @@
+{
+  "backup_version": 1,
+  "configuration": {
+    "active_coupling_id": null,
+    "analysers": [
+      {
+        "band_normalise": false,
+        "bar_falloff_s": 0.3,
+        "bars": 30,
+        "bars_source": "pcm_pipeline",
+        "higher_cutoff_freq": 12000,
+        "id": "analyser",
+        "lower_cutoff_freq": 50,
+        "name": "Default Analysis",
+        "onset_alpha": 0.9,
+        "onset_delta": 0.1,
+        "onset_method": "combined",
+        "spectrum_backend": "v2",
+        "superflux_lag": 2,
+        "superflux_mu": 3,
+        "use_hpss_separation": false
+      }
+    ],
+    "controllers": [
+      {
+        "app_key": "",
+        "client_key": "",
+        "host": "",
+        "id": "controller",
+        "name": "Virtual output",
+        "type": "hue"
+      }
+    ],
+    "couplings": [
+      {
+        "analyser_id": "analyser",
+        "enabled": true,
+        "energy_profile_id": "energy",
+        "id": "coupling",
+        "manual_energy_profile_id": "",
+        "manual_palette_id": "",
+        "name": "New Coupling",
+        "on_release": "restore",
+        "player_id": "player",
+        "release_after_idle_s": 30,
+        "zone_id": "zone"
+      }
+    ],
+    "effects": [
+      {
+        "band_advance": "beat",
+        "band_advance_interval_s": 2.0,
+        "band_colours": [
+          "#F42525",
+          "#25F425",
+          "#2525F4"
+        ],
+        "band_playback": "static",
+        "bass_hz": 250,
+        "brightness_floor": 0.15,
+        "effect_decay": 0.3,
+        "effect_speed": 1.0,
+        "effect_type": "spectrum_rgb",
+        "exertion_clip": 3.0,
+        "gradient_palette": "sunset",
+        "id": "high",
+        "mid_hz": 2000,
+        "name": "Default Effect",
+        "onset_flash_intensity": 0.0,
+        "palette_id": "",
+        "palette_rotation_cps": 0.0,
+        "sensitivity": 1.0
+      }
+    ],
+    "energy_profiles": [
+      {
+        "adaptation_tau_s": 60.0,
+        "blend_end": 0.7,
+        "blend_response": 0.1,
+        "blend_start": 0.3,
+        "energy_source": "sustained",
+        "high_energy_effect_id": "high",
+        "id": "energy",
+        "low_energy_effect_id": "",
+        "lufs_ceiling": -8.0,
+        "lufs_floor": -30.0,
+        "name": "Default EnergyProfile",
+        "peak_attack_s": 0.05,
+        "peak_envelope_auto": true,
+        "peak_release_s": 2.0,
+        "peak_reshape_enabled": false,
+        "peak_reshape_power": 0.4
+      }
+    ],
+    "genre_rules": [],
+    "music_settings": [],
+    "palettes": [
+      {
+        "id": "sunset",
+        "name": "Sunset",
+        "stops": [
+          {
+            "colour": "#1a0033",
+            "position": 0.0
+          },
+          {
+            "colour": "#ff5900",
+            "position": 50.0
+          },
+          {
+            "colour": "#ffcc1a",
+            "position": 100.0
+          }
+        ]
+      },
+      {
+        "id": "ocean",
+        "name": "Ocean",
+        "stops": [
+          {
+            "colour": "#000d59",
+            "position": 0.0
+          },
+          {
+            "colour": "#008c8c",
+            "position": 50.0
+          },
+          {
+            "colour": "#8cf2e6",
+            "position": 100.0
+          }
+        ]
+      },
+      {
+        "id": "neon",
+        "name": "Neon",
+        "stops": [
+          {
+            "colour": "#d900d9",
+            "position": 0.0
+          },
+          {
+            "colour": "#00d9d9",
+            "position": 50.0
+          },
+          {
+            "colour": "#99f226",
+            "position": 100.0
+          }
+        ]
+      },
+      {
+        "id": "monochrome",
+        "name": "Monochrome",
+        "stops": [
+          {
+            "colour": "#0d0d26",
+            "position": 0.0
+          },
+          {
+            "colour": "#4c598c",
+            "position": 50.0
+          },
+          {
+            "colour": "#d9e6ff",
+            "position": 100.0
+          }
+        ]
+      },
+      {
+        "id": "ember",
+        "name": "Ember",
+        "stops": [
+          {
+            "colour": "#8c1c13",
+            "position": 0.0
+          },
+          {
+            "colour": "#ff7b25",
+            "position": 50.0
+          },
+          {
+            "colour": "#ffd16b",
+            "position": 100.0
+          }
+        ]
+      },
+      {
+        "id": "candlelight",
+        "name": "Candlelight",
+        "stops": [
+          {
+            "colour": "#a84926",
+            "position": 0.0
+          },
+          {
+            "colour": "#eaa65c",
+            "position": 50.0
+          },
+          {
+            "colour": "#ffe3ae",
+            "position": 100.0
+          }
+        ]
+      },
+      {
+        "id": "glacier",
+        "name": "Glacier",
+        "stops": [
+          {
+            "colour": "#3168ba",
+            "position": 0.0
+          },
+          {
+            "colour": "#7dc4e8",
+            "position": 50.0
+          },
+          {
+            "colour": "#d7f6f5",
+            "position": 100.0
+          }
+        ]
+      },
+      {
+        "id": "forest",
+        "name": "Forest",
+        "stops": [
+          {
+            "colour": "#175c43",
+            "position": 0.0
+          },
+          {
+            "colour": "#65a35a",
+            "position": 50.0
+          },
+          {
+            "colour": "#d7d78c",
+            "position": 100.0
+          }
+        ]
+      },
+      {
+        "id": "pastel-garden",
+        "name": "Pastel garden",
+        "stops": [
+          {
+            "colour": "#f0b4d1",
+            "position": 0.0
+          },
+          {
+            "colour": "#b4d9d2",
+            "position": 50.0
+          },
+          {
+            "colour": "#d5c2f0",
+            "position": 100.0
+          }
+        ]
+      },
+      {
+        "id": "lavender",
+        "name": "Lavender",
+        "stops": [
+          {
+            "colour": "#543a86",
+            "position": 0.0
+          },
+          {
+            "colour": "#ab83c7",
+            "position": 50.0
+          },
+          {
+            "colour": "#eed2ed",
+            "position": 100.0
+          }
+        ]
+      },
+      {
+        "id": "party",
+        "name": "Party",
+        "stops": [
+          {
+            "colour": "#ff4765",
+            "position": 0.0
+          },
+          {
+            "colour": "#ffc43d",
+            "position": 33.333333333333336
+          },
+          {
+            "colour": "#46ddaa",
+            "position": 66.66666666666667
+          },
+          {
+            "colour": "#498fff",
+            "position": 100.0
+          }
+        ]
+      },
+      {
+        "id": "electric",
+        "name": "Electric",
+        "stops": [
+          {
+            "colour": "#593cff",
+            "position": 0.0
+          },
+          {
+            "colour": "#21cfff",
+            "position": 50.0
+          },
+          {
+            "colour": "#a3ff47",
+            "position": 100.0
+          }
+        ]
+      }
+    ],
+    "player_latencies": [],
+    "schema_version": 2,
+    "virtual_players": [
+      {
+        "alsa_device": "",
+        "display_name": "",
+        "follow_mode": "manual",
+        "follow_player_mac": "",
+        "head_start_ms": 500,
+        "id": "player",
+        "lms_host": "127.0.0.1",
+        "lms_port": 3483,
+        "player_mac": "",
+        "player_name": "Replay",
+        "speaker_output_delay_ms": 0,
+        "type": "LMS"
+      }
+    ],
+    "zones": [
+      {
+        "controller_id": "controller",
+        "entertainment_area_id": "",
+        "entertainment_area_name": "",
+        "id": "zone",
+        "light_count": 2,
+        "name": "Zone"
+      }
+    ]
+  },
+  "contains_secrets": true,
+  "created_at": "2026-10-24T00:00:00Z",
+  "format": "lampastream-config-backup",
+  "lampastream_commit": "562e82e684ac86dc7cd5e706197dc8fec70b63d9",
+  "lampastream_version": "0.2.0",
+  "schema_version": 2
+}

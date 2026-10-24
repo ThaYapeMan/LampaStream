@@ -1,0 +1,9 @@
+{
+  "bits": 16,
+  "channels": 1,
+  "description": "20 s logarithmic sine sweep, 20 Hz to 10 kHz",
+  "event_samples": [],
+  "fixture_version": 1,
+  "frames": 480000,
+  "sample_rate": 24000
+}
