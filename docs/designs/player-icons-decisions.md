@@ -19,3 +19,4 @@
 - Start Vite directly on localhost for browser checks: the existing 15-second npx web-server timeout expired on this filesystem; keep the repository timeout unchanged.
 - Scope the existing managed-tile colour regression to managed tiles: generic glyphs now also expose a test marker, and the new tests cover their theme colours separately.
 - Save complete raw validation output in a text appendix: retain every backend test, skip reason and warning without truncating the report.
+- Rerun the full browser suite with one worker after a parallel hold-repeat failure passed in isolation: all 65 tests then passed, with the original failure retained in the raw appendix.
