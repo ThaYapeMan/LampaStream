@@ -104,3 +104,15 @@ for contracts and [measurement-protocol.md](measurement-protocol.md) for evidenc
 - p50/p95/p99 output timing.
 - Event loss/duplication rate on the normal output route.
 - Perceptual quality.
+
+## BENCH-01 full-chain synthetic reference
+
+The phase-zero comparison baseline remains
+**3998c440f464d0cf02743633fba98e8dd990743b**. BENCH-01 adds reproducible offline
+reference numbers using executable revision
+**b36f5d97d3af2cf846208c2097e3f3ff3d1b44a3**: ten generated fixtures, both output
+routes, default-model exported configuration, synthetic two-channel room, 30 Hz,
+seed 0. [Reference counters and metadata](baseline/traces/README.md) include all
+20 runs; CSVs remain local. [Replay documentation](testing.md#replay-chain-and-trace-format)
+defines timestamps, event attribution and reproduction. These virtual traces do
+not fill in the physical or perceptual “Not measured yet” items above.
