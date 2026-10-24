@@ -168,10 +168,10 @@ export function LightTiming({ status, onOpenLatency, playersView = false, contro
           </div>
           {state === 'stable' && <p className="mt-2 text-sm text-muted-foreground">{scheduledLms ? <>Lights follow measured LMS play times for {name}.</> : airplay ? <>Lights follow measured audio play times for the AirPlay group.</> : <>Lights wait this long so they match what you hear on <b className="text-foreground">{name}</b>.</>}</p>}
         </div>
-        {state === 'stable' && <div className="flex items-center gap-3 text-xs text-muted-foreground" aria-hidden="true">
-          <span className="grid justify-items-center gap-1"><Lightbulb className="h-9 w-9 rounded-lg border bg-secondary p-2" />Lights</span>
-          <div className="relative flex-1 border-t-2 border-dashed"><span className="absolute -top-6 left-1/2 -translate-x-1/2 whitespace-nowrap font-mono text-foreground">+{seconds(applied)} s →</span><i className="timing-dot" style={{ animationDuration: `${Math.max(.1, applied / 1000)}s` }} /></div>
-          <span className="grid max-w-32 justify-items-center gap-1 text-center"><span className="grid h-9 w-9 place-items-center rounded-lg border bg-secondary p-2"><PlayerGlyph identity={{ ...metadata.find(p => p.playerid.toLowerCase() === mac?.toLowerCase()), name, type: airplay ? 'AirPlay' : undefined }} size={18} /></span>{name}</span>
+        {state === 'stable' && <div data-testid="timing-diagram" className="flex items-start gap-3 text-xs text-muted-foreground" aria-hidden="true">
+          <span className="grid justify-items-center gap-1"><Lightbulb className="h-8 w-8 text-foreground" />Lights</span>
+          <div className="relative mt-[15px] flex-1 border-t-2 border-dashed"><span className="absolute -top-6 left-1/2 -translate-x-1/2 whitespace-nowrap font-mono text-foreground">+{seconds(applied)} s →</span><i className="timing-dot" style={{ animationDuration: `${Math.max(.1, applied / 1000)}s` }} /></div>
+          <span className="grid min-w-0 max-w-32 justify-items-center gap-1 text-center text-foreground"><PlayerGlyph identity={{ ...metadata.find(p => p.playerid.toLowerCase() === mac?.toLowerCase()), name, type: airplay ? 'AirPlay' : undefined }} size={32} /><span className="w-full truncate text-muted-foreground">{name}</span></span>
         </div>}
       </div>
       {state === 'lagging' && <p className="text-sm text-muted-foreground">{lagText}</p>}
