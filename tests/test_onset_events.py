@@ -31,3 +31,21 @@ def test_queue_survives_latest_and_drains_once():
 def test_undeclared_output_uses_conservative_capabilities():
     from lampastream.types import OutputCapabilities, output_capabilities
     assert output_capabilities(object()) == OutputCapabilities()
+
+
+def test_envelope_event_time_hold_and_policies():
+    import math
+
+    from lampastream.onset_envelope import TriggerEnvelope
+    from lampastream.trace_output import load_capabilities
+    for room in ("two-channel.json", "two-channel-fast.json"):
+        from pathlib import Path
+        cap = load_capabilities(Path(__file__).parent / "fixtures/rooms" / room)
+        envelope = TriggerEnvelope(cap.min_visible_hold_s, .25)
+        envelope.trigger(1, 2)
+        assert envelope.value(1.99) == 0
+        assert envelope.value(2 + cap.min_visible_hold_s - 1e-9) == 1
+        assert envelope.value(2 + cap.min_visible_hold_s + .25) == __import__("pytest").approx(math.exp(-1))
+        assert not envelope.trigger(.5, 2.01, "ignore_during_hold")
+        envelope.trigger(.9, 2.02, "add_with_clamp")
+        assert envelope.value(2.02) == 1

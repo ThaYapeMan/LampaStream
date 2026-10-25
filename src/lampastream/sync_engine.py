@@ -44,6 +44,7 @@ from .hpss_analyzer import HpssAnalyzer
 from .latency import NoLatencyProbe
 from .loudness_analyzer import KWeightedLoudnessAnalyzer
 from .models import Profile
+from .onset_envelope import TriggerEnvelope
 from .pcm_source import WINDOW_SIZE, PcmStft
 from .spectrum_engine import (
     AnalysisProcessor,
@@ -63,6 +64,7 @@ from .types import (
     Position,
     Scene,
     UniformScene,
+    output_capabilities,
 )
 
 log = logging.getLogger(__name__)
@@ -3215,6 +3217,62 @@ class SyncEngine:
         """
         return bool(self._retiring)
 
+    def _event_view(self, features, t, *, timestamped=False):
+        """Project queued events onto scene time, independent of latest polling."""
+        due, future = [], []
+        for event in self._pending_onset_events:
+            if timestamped:
+                stamp = event.play_monotonic
+                if stamp is None:
+                    stamp = features.play_monotonic + (
+                        event.candidate_sample - self._event_sample_reference) / _CAP_SAMPLE_RATE
+                    self.event_mapping_fallbacks += 1
+                stamp -= self.profile.onset_lead_s
+            else:
+                stamp = event.received_monotonic - max(
+                    0, self._event_sample_reference - event.candidate_sample) / _CAP_SAMPLE_RATE
+            if stamp > t:
+                future.append(event)
+                continue
+            record = self.event_records[event.id]
+            record["event_time"] = stamp
+            if t-stamp > self.profile.onset_max_age_s:
+                record["disposition"] = "expired"
+                for band in event.bands | {"all"}:
+                    self.event_counters[band]["expired"] += 1
+                continue
+            due.append((event, stamp))
+        self._pending_onset_events = future
+        if due:
+            newest, newest_t = max(due, key=lambda item: item[1])
+            self._newest_onset = newest, newest_t
+            # One output peak per drain/render burst; all event identities survive.
+            strongest, stamp = max(due, key=lambda item: item[0].strength)
+            for event, _event_t in due:
+                merged = event.id != strongest.id
+                self.event_records[event.id]["disposition"] = "merged" if merged else "triggered"
+                for band in event.bands | {"all"}:
+                    self.event_counters[band]["merged" if merged else "triggered"] += 1
+            self._onset_envelopes["all"].trigger(
+                strongest.strength, stamp, self.profile.onset_retrigger)
+            for band in ("bass", "mid", "treble"):
+                candidates = [(event, stamp) for event, stamp in due if band in event.bands]
+                if candidates:
+                    event, stamp = max(candidates, key=lambda item: item[0].strength)
+                    self._onset_envelopes[band].trigger(
+                        event.strength, stamp, self.profile.onset_retrigger)
+        newest, stamp = self._newest_onset
+        return replace(features, onset=bool(due), onset_events=tuple(e for e, _ in due),
+                       onset_count_since_render=len(due),
+                       onset_strength=newest.strength if newest is not None else 0.0,
+                       onset_age_s=t-stamp if newest is not None else None,
+                       onset_bass=any("bass" in e.bands for e, _ in due),
+                       onset_mid=any("mid" in e.bands for e, _ in due),
+                       onset_treble=any("treble" in e.bands for e, _ in due),
+                       onset_envelope=self._onset_envelopes["all"].value(t),
+                       **{f"onset_envelope_{band}": self._onset_envelopes[band].value(t)
+                          for band in ("bass", "mid", "treble")})
+
     async def run(self, output: Output, *, clock=None, sleep=None) -> None:
         """Send the latest available frame at a fixed rate until cancelled.
 
@@ -3233,6 +3291,12 @@ class SyncEngine:
 
         clock = clock or time.monotonic
         sleep = sleep or asyncio.sleep
+        capabilities = output_capabilities(output)
+        self._onset_envelopes = {band: TriggerEnvelope(
+            max(self.profile.onset_hold_s, capabilities.min_visible_hold_s),
+            self.profile.onset_release_s) for band in ("all", "bass", "mid", "treble")}
+        self._newest_onset = None, 0.0
+        self._event_sample_reference = 0
         schedule = SceneSchedule()
         output_generation = getattr(output, "output_generation", 0)
         output_minimum_sequence = None
@@ -3284,8 +3348,10 @@ class SyncEngine:
                         if (f.play_monotonic is None
                                 or f.timing_generation != self._timing.tap_generation):
                             continue
-                        scene = self._effect.render(f, max(clock(),
-                                                          f.play_monotonic + trim / 1000))
+                        self._event_sample_reference = record.sample_pos
+                        scene_time = max(clock(), f.play_monotonic + trim / 1000)
+                        f = self._event_view(f, scene_time, timestamped=True)
+                        scene = self._effect.render(f, scene_time)
                         ready = clock()
                         recorder = getattr(self._timing, "scene_ready", None)
                         if recorder is not None:
@@ -3327,6 +3393,10 @@ class SyncEngine:
                                        level=self._analyser.latest_level(),
                                        loudness_momentary_lufs=momentary,
                                        loudness_short_term_lufs=short_term)
+                if isinstance(self._analyser, CanonicalAnalysisPipeline):
+                    latest = self._analyser._latest_pub
+                    self._event_sample_reference = latest.sample_end if latest else 0
+                    features = self._event_view(features, t)
                 scene: Scene = self._effect.render(features, t)
                 self._last_mix = self._effect.mix
                 self._last_energy = features.full

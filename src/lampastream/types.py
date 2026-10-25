@@ -165,6 +165,12 @@ class AudioFeatures:
     # Onset detection.  onset=True on frames where a note or drum hit starts.
     # onset_strength is the raw spectral flux value (unnormalised).
     onset_events: tuple[OnsetEvent, ...] = ()
+    onset_envelope: float = 0.0
+    onset_envelope_bass: float = 0.0
+    onset_envelope_mid: float = 0.0
+    onset_envelope_treble: float = 0.0
+    onset_count_since_render: int = 0
+    onset_age_s: float | None = None
     onset: bool = False
     onset_strength: float = 0.0
 
