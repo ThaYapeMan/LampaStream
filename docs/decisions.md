@@ -31,3 +31,9 @@ Each dated line records an owner decision or a bounded documentation choice for 
 - 2026-10-25 — Use publications-per-tick=0 for natural unrestricted delivery; positive values cap delivery and preserve backlog rather than releasing future audio early. Normal delay options do not alter timestamped trim.
 - 2026-10-25 — Require --coupling-id for multi-coupling exports instead of silently selecting an arbitrary session; accept compact API-named entities for local experiments.
 - 2026-10-25 — Retain post-input terminal snapshots through the output-tail interval and count idle/partial virtual-second send bins; these reproduce current route mechanics and make the metric denominator explicit.
+
+## REG-01 exposure audit
+
+- 2026-10-25 — No production exposure was needed: BENCH-01's offline PickerObserver already records candidate/current raw flux and positions, while the existing private EMA attribute is sufficient for a read-only normalization probe. No production or harness return shape, value or timing changes in REG-01.
+- 2026-10-25 — Input for TIME-01: OnsetDetector's public result is still only `(onset, current_flux)`; it exposes neither candidate frame nor an independent availability frame as an event record. The isolated contract probes an optional `last_event` record with candidate_frame/candidate_strength/availability_frame; this is a test-side proposed adapter, not a newly promised production API. TIME-01 must choose the representation and update/unmark that contract in the same commit.
+- 2026-10-25 — Input for TIME-01: authoritative event-window reference and numeric lookahead are not yet defined. REG-01 pins every current gap and requires constancy in the intended fixture contract without inventing a new numeric latency target; current 48 kHz candidate-window-start→availability is eight hops, while resampled 24 kHz inputs have several chunk-dependent values.
