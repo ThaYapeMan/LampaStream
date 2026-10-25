@@ -116,3 +116,134 @@ seed 0. [Reference counters and metadata](baseline/traces/README.md) include all
 20 runs; CSVs remain local. [Replay documentation](testing.md#replay-chain-and-trace-format)
 defines timestamps, event attribution and reproduction. These virtual traces do
 not fill in the physical or perceptual “Not measured yet” items above.
+
+## Phase 1 regression numbers at 135ab38563baba1f4d5a7f2dcd67e349e5f2f88d
+
+These REG-01 pins describe the unchanged production/harness behavior at the full
+commit in the heading. Seed 0; default exported configuration (combined), plus
+an explicit multiband-only override for band measurements. All numeric pins live
+in `tests/fixtures/onset-regression-numbers.json`; neither tests nor CI regenerate
+expected values. The contracts remain strict expected failures owned by TIME-01
+or EVENT-01. These are software observations, not physical timing measurements.
+
+### Isolated Dixon picker
+
+| Raw peak frames (strength) | Current report frames | Returned strength | After 500 silence frames |
+|---|---|---|---|
+| 50 (10) | 53 | 0 | 503 (0.1), 553 (0) |
+| 50 (10), 70 (10) | 53, 73 | 0, 0 | 503 (0.1), 553 (0), 573 (0) |
+| 50 (10), 52 (3) | 53 only | 0 | 503 (0.1), 553 (0) |
+
+Warmup input is 50 frames of raw ODF 0.1; the tail is zero except specified
+peaks. Normalization occurs inside the picker. Silence adds a transition onset
+when low flux resumes. A separate 50-frame ODF=0.2 priming gives EMA
+**0.198969244958536**, decaying to **2.630514327338083e-24** after 500 zero frames.
+The three-frame candidate/report gap is separate from FFT window reference.
+
+### Truth, candidate and availability
+
+Route is **both normal and timestamped**, 30 Hz, unrestricted delivery. Each
+offset cell gives **hops (samples)**, observed minus truth; max is maximum
+absolute magnitude. A/C misses and false positives use separate ±2-hop windows.
+One hop is 480 samples. Alignment misses are not necessarily missing detections.
+
+| Fixture | Method / active bands | Events | Availability median / max | Candidate median / max | A misses/FP | C misses/FP | Availability−candidate hops |
+|---|---|---:|---|---|---|---|---|
+| clicks-120 | combined/all, multiband/all, multiband/bass, multiband/mid, multiband/treble | 19 | 5 (2400) / 5 (2400) | -3 (-1440) / 4 (1920) | 19/19 | 19/19 | 8 |
+| clicks-128 | combined/all, multiband/all, multiband/bass, multiband/mid, multiband/treble | 21 | 4.625 (2220) / 5.125 (2460) | -3.375 (-1620) / 4 (1920) | 21/21 | 21/21 | 8 |
+| clicks-174 | combined/all, multiband/all, multiband/bass, multiband/mid, multiband/treble | 28 | 4.844792 (2325.5) / 5.345833 (2566) | -3.155208 (-1514.5) / 4 (1920) | 28/28 | 28/28 | 8 |
+| impulse | combined/all, multiband/all, multiband/bass, multiband/mid, multiband/treble | 1 | 4 (1920) / 4 (1920) | -4 (-1920) / 4 (1920) | 1/1 | 1/1 | 8 |
+| panning | combined/all, multiband/treble | 19 | 4.625 (2220) / 5.208333 (2500) | -3 (-1440) / 5 (2400) | 19/19 | 19/19 | {7.333333, 7.458333, 7.5, 7.625, 7.75, 7.875, 7.916667, 8.041667, 8.166667, 8.208333} |
+| panning | multiband/all | 20 | 4.625 (2220) / 5.208333 (2500) | -3 (-1440) / 4 (1920) | 19/20 | 19/20 | {7.333333, 7.458333, 7.5, 7.625, 7.75, 7.875, 7.916667, 8.041667, 8.166667, 8.208333} |
+| panning | multiband/bass, multiband/mid | 19 | 4.625 (2220) / 5.208333 (2500) | -3 (-1440) / 4 (1920) | 19/19 | 19/19 | {7.333333, 7.458333, 7.5, 7.625, 7.75, 7.875, 7.916667, 8.041667, 8.166667, 8.208333} |
+| anti-phase | combined/all, multiband/mid, multiband/treble | 19 | 4.625 (2220) / 5.208333 (2500) | -3 (-1440) / 5 (2400) | 19/19 | 19/19 | {7.333333, 7.458333, 7.5, 7.625, 7.75, 7.875, 7.916667, 8.041667, 8.166667, 8.208333} |
+| anti-phase | multiband/all | 20 | 4.625 (2220) / 5.208333 (2500) | -3 (-1440) / 4 (1920) | 19/20 | 19/20 | {7.333333, 7.458333, 7.5, 7.625, 7.75, 7.875, 7.916667, 8.041667, 8.166667, 8.208333} |
+| anti-phase | multiband/bass | 19 | 4.625 (2220) / 5.208333 (2500) | -3 (-1440) / 4 (1920) | 19/19 | 19/19 | {7.333333, 7.458333, 7.5, 7.625, 7.75, 7.875, 7.916667, 8.041667, 8.166667, 8.208333} |
+
+Default combined bass/mid/treble are unavailable: zero events, every truth
+event an alignment miss, zero false positives, no offset or lookahead reading.
+The multiband panning/anti-phase union has 20 events versus 19 truth clicks.
+At 48 kHz, candidate-window-start to availability is 3840 samples (8 hops);
+at 24 kHz the multiple gap values expose chunk-dependent availability.
+TIME-01 must choose the authoritative event reference and numeric lookahead.
+
+### Panning halves (both routes, 30 Hz)
+
+Left means truth <5 s (9 clicks), right means >=5 s (10 clicks). Medians below
+are nearest-event observations, not a claim that panning amplitudes are equal.
+
+| Method/band | Availability offset L/R hops | Candidate offset L/R hops | Candidate strength L/R | Reported strength L/R |
+|---|---|---|---|---|
+| combined/all | 4.75 / 4.625 | -3 / -3 | 271.908007 / 277.083246 | 16.725472 / 16.418587 |
+| multiband/all | 4.75 / 4.625 | -3 / -3 | 250.780489 / 255.55328 | 16.725472 / 16.418587 |
+| multiband/bass | 4.75 / 4.625 | -3 / -3 | 2.703904 / 2.755079 | 0 / 0 |
+| multiband/mid | 4.75 / 4.625 | -3 / -3 | 18.423615 / 18.774886 | 0 / 0 |
+| multiband/treble | 4.75 / 4.625 | -3 / -3 | 250.780489 / 255.55328 | 16.725472 / 16.418587 |
+
+### Strength and rank (both routes, 30 Hz)
+
+Click strengths are raw candidate ODF, first click then the identical remaining
+18 clicks. Every reported main-click strength is 0; the fraction below 10% of
+maximum candidate strength is **1.0** in each enabled band.
+
+| Method/band | Candidate first / remaining | Reported | Below-tenth fraction |
+|---|---|---|---|
+| combined/all | 175.980262 / 874.513342 | 0 | 1.0 |
+| multiband/all | 0.514213 / 2.478872 | 0 | 1.0 |
+| multiband/bass | 0.514213 / 2.478872 | 0 | 1.0 |
+| multiband/mid | 3.435347 / 16.765215 | 0 | 1.0 |
+| multiband/treble | 172.030703 / 855.269254 | 0 | 1.0 |
+
+For tone levels −30/−20/−10/−3 dBFS, startup has no detected event. Its
+presence bit is false, with zero only as a rank-calculation placeholder. The
+table lists the remaining −20/−10/−3 transients. Spearman includes all four level
+positions with tied average ranks; constant strengths have undefined rho. The
+already-correct rho=1 is preserved; its xfailed contract additionally requires
+candidate attribution rather than falsely claiming monotonicity is broken.
+
+| Method/band | Candidate at −20/−10/−3 | Reported at −20/−10/−3 | Four-level rho |
+|---|---|---|---|
+| combined/all | 12.494626 / 39.523286 / 68.250828 | 21.435945 / 67.78344 / 130.536063 | 1.0 |
+| multiband/all | 7.714525 / 24.393061 / 41.288589 | 20.713276 / 65.496758 / 125.032005 | 1.0 |
+| multiband/bass | 0.42369 / 1.339629 / 2.225437 | 0 / 0 / 0 | undefined |
+| multiband/mid | 7.714525 / 24.393061 / 41.288589 | 20.713276 / 65.496758 / 125.032005 | 1.0 |
+| multiband/treble | 4.356412 / 13.790596 / 24.736803 | 0.722669 / 2.286682 / 5.504058 | 1.0 |
+
+### Event survival
+
+Each tuple is **received/accepted/rendered/merged/expired/lost**. N=normal,
+T=timestamped; free=unrestricted publications per tick; cap1=one per tick.
+Rows group bands only when every tuple is identical. No event tolerance hides
+loss; all integer tuples are exact deterministic pins. Inactive combined bands
+are `(0,0,0,0,0,0)` throughout.
+
+| Fixture | Method/bands | N30 free | N60 free | N30 cap1 | N60 cap1 | T30 free | T60 free | T30 cap1 | T60 cap1 |
+|---|---|---|---|---|---|---|---|---|---|
+| clicks-120 | combined/all, multiband/all, multiband/bass, multiband/mid, multiband/treble | (19,0,0,0,0,19) | (19,18,18,0,0,1) | (19,19,19,0,0,0) | (19,19,19,0,0,0) | (19,19,19,1,0,1) | (19,19,19,1,0,1) | (19,19,19,1,0,1) | (19,19,19,1,0,1) |
+| clicks-128 | combined/all, multiband/all, multiband/bass, multiband/mid, multiband/treble | (21,5,5,0,0,16) | (21,12,12,0,0,9) | (21,21,21,0,0,0) | (21,21,21,0,0,0) | (21,21,21,14,0,14) | (21,21,21,9,0,9) | (21,21,21,1,0,1) | (21,21,21,2,0,2) |
+| clicks-174 | combined/all, multiband/all, multiband/bass, multiband/mid, multiband/treble | (28,8,8,0,0,20) | (28,16,16,0,0,12) | (28,28,28,0,0,0) | (28,28,28,0,0,0) | (28,28,28,20,0,20) | (28,28,28,12,0,12) | (28,28,28,1,0,1) | (28,28,28,3,0,3) |
+| impulse | combined/all, multiband/all, multiband/bass, multiband/mid, multiband/treble | (1,0,0,0,0,1) | (1,0,0,0,0,1) | (1,1,1,0,0,0) | (1,1,1,0,0,0) | (1,1,1,1,0,1) | (1,1,1,1,0,1) | (1,1,1,0,0,0) | (1,1,1,0,0,0) |
+| panning | combined/all, multiband/treble | (19,1,1,0,0,18) | (19,14,14,0,0,5) | (19,19,19,0,0,0) | (19,19,19,0,0,0) | (19,19,19,2,0,2) | (19,19,19,1,0,1) | (19,19,19,1,0,1) | (19,19,19,0,0,0) |
+| panning | multiband/all | (20,1,1,0,0,19) | (20,14,14,0,0,6) | (20,20,20,0,0,0) | (20,20,20,0,0,0) | (20,20,20,3,0,3) | (20,20,20,2,0,2) | (20,20,20,2,0,2) | (20,20,20,1,0,1) |
+| panning | multiband/bass, multiband/mid | (19,0,0,0,0,19) | (19,13,13,0,0,6) | (19,19,19,0,0,0) | (19,19,19,0,0,0) | (19,19,19,2,0,2) | (19,19,19,2,0,2) | (19,19,19,1,0,1) | (19,19,19,1,0,1) |
+| anti-phase | combined/all, multiband/mid, multiband/treble | (19,1,1,0,0,18) | (19,14,14,0,0,5) | (19,19,19,0,0,0) | (19,19,19,0,0,0) | (19,19,19,2,0,2) | (19,19,19,1,0,1) | (19,19,19,1,0,1) | (19,19,19,0,0,0) |
+| anti-phase | multiband/all | (20,1,1,0,0,19) | (20,14,14,0,0,6) | (20,20,20,0,0,0) | (20,20,20,0,0,0) | (20,20,20,3,0,3) | (20,20,20,2,0,2) | (20,20,20,2,0,2) | (20,20,20,1,0,1) |
+| anti-phase | multiband/bass | (19,0,0,0,0,19) | (19,13,13,0,0,6) | (19,19,19,0,0,0) | (19,19,19,0,0,0) | (19,19,19,2,0,2) | (19,19,19,2,0,2) | (19,19,19,1,0,1) | (19,19,19,1,0,1) |
+| tone-steps | combined/all, multiband/all, multiband/bass, multiband/mid, multiband/treble | (3,0,0,0,0,3) | (3,0,0,0,0,3) | (3,3,3,0,0,0) | (3,3,3,0,0,0) | (3,3,3,3,0,3) | (3,3,3,3,0,3) | (3,3,3,0,0,0) | (3,3,3,1,0,1) |
+
+Publication tuples below are **consumed-once/skipped/repeated** identities,
+not the number of render reads. Both methods and all fixtures in a row share
+counts. Timestamped counts are the same at both rates and caps.
+
+| Fixtures | N30 free | N60 free | N cap1 (30/60) | Timestamped (30/60, free/cap1) |
+|---|---|---|---|---|
+| clicks-120/128/174, panning, anti-phase | (298,697,1) | (597,398,1) | (995,0,1) | (996,0,0) |
+| impulse | (178,417,1) | (357,238,1) | (595,0,1) | (596,0,0) |
+| tone-steps | (238,557,1) | (477,318,1) | (795,0,1) | (796,0,0) |
+
+For every normal-route row/band, the number of never-consumed onset-flag
+publications and sole-carrier losses both equal its last (`lost`) tuple value.
+Both counts are zero on the timestamped route, whose losses instead come from
+scheduler coalescing. In particular, **19** flags in clicks-120 normal/30/free
+sit on publications never present in energy.csv consumed_sequences. This matches
+BENCH-01 exactly; no baseline discrepancy was observed.

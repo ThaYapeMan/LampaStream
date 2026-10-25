@@ -408,3 +408,85 @@ empty sparse truth lists. They do not assert that a detector must emit no events
 `default-config.json` is generated with production `export_configuration` from a
 fresh local Storage populated with default model entities; fixed provenance time
 and BASE-01 revision make regeneration independent of the generator's run date.
+
+## Regression pairs (pin_current / contract xfail)
+
+REG-01 adds `test_onset_picker_regression.py`, `test_onset_position_regression.py`,
+`test_onset_strength_regression.py` and `test_event_survival_regression.py`.
+Every behavior has two views:
+
+- `test_pin_current_<name>` asserts the measured current numbers. Its docstring
+  names TIME-01 or EVENT-01, the ticket expected to change or preserve that pin.
+- `test_contract_<name>` asserts the intended event-position/strength or survival
+  contract. Known violations use `pytest.mark.xfail(strict=True, raises=AssertionError,
+  reason="TIME-01: ...")` or `reason="EVENT-01: ..."`. An unexpected success fails
+  the suite; setup/type/runtime errors do not masquerade as expected assertion failures.
+
+When a ticket lands, inspect the old pin failure, record the measured before/after,
+update the pin to the new deliberate behavior, and remove the contract's xfail in
+**the same commit**. Preserve the contract assertion; do not delete it, weaken the
+window, or regenerate expected numbers merely to make a run green. A still-broken
+contract stays marked with its owning ticket. A universal survival contract checks
+all 30/60 Hz × unrestricted/cap-1 variants before asserting, so already-correct
+subcases are included without falsely marking them individually as failures.
+
+Numeric evidence is checked in as `tests/fixtures/onset-regression-numbers.json`;
+its measurement anchor is **135ab38563baba1f4d5a7f2dcd67e349e5f2f88d**. Tests never
+rewrite this file. Samples/counts are deterministic exact pins; hop conversions
+allow one sample (1/480 hop), and six-decimal CSV strengths allow absolute 1e-6,
+with relative tolerance disabled. Spearman uses NumPy average ranks for ties;
+constant ranks return `None`, not an invented zero correlation.
+
+Default replay configuration uses the combined detector, whose bass/mid/treble
+flags are unavailable. Those empty bands are explicitly pinned. A second variant
+changes **only** `onset_method` to multiband to measure independent band behavior.
+The generic picker probe also covers the Dixon picker shared by SuperFlux; the
+existing BENCH-01 tests still check all three processor paths without modification.
+
+Ground truth is converted from sidecar source-rate indices to 48 kHz canonical
+samples. Each truth event finds the nearest availability and nearest candidate
+**independently**, with ties choosing the earlier delivery. Signed offsets mean
+observed minus truth. Tables report signed medians and maximum absolute offsets.
+Both coordinates separately count misses and false positives outside ±2 hops.
+These are **alignment-window** misses: 19 detected clicks can still have 19 such
+misses because their candidate window starts precede the actual click by 3–4 hops.
+They must not be described as 19 failures to detect audio.
+
+Panning divides truth clicks into `<5 s` left-biased and `>=5 s` right-biased
+halves, yielding nine and ten clicks. It pins both positions and strengths rather
+than assuming equal amplitudes. Anti-phase stereo retains real detection; the
+contract also requires event-aligned candidate attribution, which remains broken.
+Tone-step level association uses the nearest transient within 100 ms of each
+step. The first level starts during warmup and has no detected onset: a separate
+presence flag is false, with zero only as a diagnostic placeholder for four-level
+rank calculation, never a fabricated event. Combined/multiband aggregate tone rho
+is already **1**; its paired contract additionally requires candidate-attributed
+strength. The multiband bass reports zero strengths and has undefined rho.
+
+Replay tests import the harness and use module-scoped access to one shared
+session cache per `(fixture, method, route, rate, delivery cap)`. DSP is computed
+once per fixture/method; route variants deep-copy the same returned records into
+fresh production publication/mixer/output state. Every pipeline is closed. CSV
+files remain in pytest temporary storage; no network, audio devices or lamps are
+used. Cache construction does not alter production or BENCH-01 source files.
+
+Runtime check (Python 3.12.15, BLAS threads=1, affinity to one CPU): **103 passed,
+133 strict xfailed in 40.34 s** for all four new modules. The position module alone
+was **23.81 s**, below its approximately 60-second budget; the combined added
+suite is below approximately 90 seconds. No slow marker or CI exclusion is needed.
+Run the four files together to retain session-cache reuse. An example one-core run:
+
+```sh
+OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 .venv/bin/python - <<'PY'
+import os
+import pytest
+os.sched_setaffinity(0, {min(os.sched_getaffinity(0))})
+raise SystemExit(pytest.main([
+    '-v', '-ra',
+    'tests/test_onset_picker_regression.py',
+    'tests/test_onset_position_regression.py',
+    'tests/test_onset_strength_regression.py',
+    'tests/test_event_survival_regression.py',
+]))
+PY
+```
