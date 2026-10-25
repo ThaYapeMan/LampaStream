@@ -25,6 +25,7 @@ class QuantisationGuard:
         base = self.baseline.get(key, (0.0,) * 3)
         previous = self.previous.get(key, base)
         guarded = tuple(min(1.0, max(value, floor + (1 << 3) * self.lsb))
+                        if value > floor else value
                         for value, floor in zip(values, base, strict=True))
         guarded = tuple(old if 0 < old-new < self.lsb else new
                         for old, new in zip(previous, guarded, strict=True))

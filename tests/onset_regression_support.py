@@ -71,7 +71,9 @@ class ReplayCache:
                 (replay.records, replay.features, replay.availability,
                  replay.sample_count, fmt) = copy.deepcopy(self.analysis[source_key])
             asyncio.run(replay.run())
-            counters = replay.save(fmt)
+            # All production rendering and sampling still run; this matrix only
+            # consumes feature/event/energy CSVs, so skip redundant channel exports.
+            counters = replay.save(fmt, write_channel_traces=False)
         finally:
             replay.pipeline.stop()
         result = {"out": out, "features": read_csv(out / "features.csv"),

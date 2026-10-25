@@ -57,7 +57,8 @@ def test_live_ties_same_interval_and_new_epoch():
         wider = _deliver(cap, ProcessorUpdate('beat_detector', 50, 110, onset=True))
         assert cap._latest_pub is first  # equal end: later start is fresher
         tied = _deliver(cap, ProcessorUpdate('beat_detector', 100, 110, onset=True))
-        assert cap._latest_pub is tied  # exact tie: later delivery wins
+        # Phase 2: Beat-only events cannot advance continuous state.
+        assert cap._latest_pub is first
         assert tied.features.bars == [0.9]
         assert tied.carried_spectrum_interval == (100, 110)
         assert tied.effective_processor_ids == ('beat_detector',)

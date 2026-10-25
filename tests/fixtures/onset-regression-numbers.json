@@ -86,7 +86,7 @@
       ]
     }
   },
-  "phase2_reason": "Candidate-attributed one-hop picker, frozen silence reference, independent event intake; triggered replaces accepted/rendered.",
+  "phase2_reason": "Candidate-attributed one-hop picker, frozen silence reference, independent event intake; triggered replaces accepted/rendered. Beat-only publications no longer replace continuous latest or advance timestamped ballistics; skipped flags survive as queued events.",
   "position": {
     "anti-phase/combined": {
       "all": {
@@ -1644,7 +1644,7 @@
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -1699,7 +1699,7 @@
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -1748,13 +1748,13 @@
         ]
       },
       "publications": [
-        587,
-        422,
-        6
+        597,
+        417,
+        1
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -1809,7 +1809,7 @@
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -1858,13 +1858,13 @@
         ]
       },
       "publications": [
-        1015,
-        0,
+        996,
+        19,
         0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -1913,13 +1913,13 @@
         ]
       },
       "publications": [
-        1015,
-        0,
+        996,
+        19,
         0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -1968,13 +1968,13 @@
         ]
       },
       "publications": [
-        1015,
-        0,
+        996,
+        19,
         0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -2023,13 +2023,13 @@
         ]
       },
       "publications": [
-        1015,
-        0,
+        996,
+        19,
         0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -2084,19 +2084,19 @@
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         }
       }
@@ -2139,19 +2139,19 @@
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         }
       }
@@ -2188,25 +2188,25 @@
         ]
       },
       "publications": [
-        587,
-        422,
-        6
+        597,
+        417,
+        1
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         }
       }
@@ -2249,19 +2249,19 @@
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         }
       }
@@ -2298,25 +2298,25 @@
         ]
       },
       "publications": [
-        1015,
-        0,
+        996,
+        19,
         0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         }
       }
@@ -2353,25 +2353,25 @@
         ]
       },
       "publications": [
-        1015,
-        0,
+        996,
+        19,
         0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         }
       }
@@ -2408,25 +2408,25 @@
         ]
       },
       "publications": [
-        1015,
-        0,
+        996,
+        19,
         0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         }
       }
@@ -2463,25 +2463,25 @@
         ]
       },
       "publications": [
-        1015,
-        0,
+        996,
+        19,
         0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         }
       }
@@ -2524,7 +2524,7 @@
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -2579,7 +2579,7 @@
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -2634,7 +2634,7 @@
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -2689,7 +2689,7 @@
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -2738,13 +2738,13 @@
         ]
       },
       "publications": [
-        1015,
-        0,
+        996,
+        19,
         0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -2793,13 +2793,13 @@
         ]
       },
       "publications": [
-        1015,
-        0,
+        996,
+        19,
         0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -2848,13 +2848,13 @@
         ]
       },
       "publications": [
-        1015,
-        0,
+        996,
+        19,
         0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -2903,13 +2903,13 @@
         ]
       },
       "publications": [
-        1015,
-        0,
+        996,
+        19,
         0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -2964,19 +2964,19 @@
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         }
       }
@@ -3019,19 +3019,19 @@
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         }
       }
@@ -3074,19 +3074,19 @@
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         }
       }
@@ -3129,19 +3129,19 @@
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         }
       }
@@ -3178,25 +3178,25 @@
         ]
       },
       "publications": [
-        1015,
-        0,
+        996,
+        19,
         0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         }
       }
@@ -3233,25 +3233,25 @@
         ]
       },
       "publications": [
-        1015,
-        0,
+        996,
+        19,
         0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         }
       }
@@ -3288,25 +3288,25 @@
         ]
       },
       "publications": [
-        1015,
-        0,
+        996,
+        19,
         0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         }
       }
@@ -3343,25 +3343,25 @@
         ]
       },
       "publications": [
-        1015,
-        0,
+        996,
+        19,
         0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         }
       }
@@ -3404,7 +3404,7 @@
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 9,
+          "never_consumed_flags": 21,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -3459,7 +3459,7 @@
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 21,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -3508,13 +3508,13 @@
         ]
       },
       "publications": [
-        587,
-        424,
-        6
+        597,
+        419,
+        1
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 21,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -3569,7 +3569,7 @@
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 21,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -3618,13 +3618,13 @@
         ]
       },
       "publications": [
-        999,
-        9,
-        9
+        996,
+        21,
+        0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 21,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -3673,13 +3673,13 @@
         ]
       },
       "publications": [
-        1017,
-        0,
+        996,
+        21,
         0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 21,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -3728,13 +3728,13 @@
         ]
       },
       "publications": [
-        1017,
-        0,
+        996,
+        21,
         0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 21,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -3783,13 +3783,13 @@
         ]
       },
       "publications": [
-        1017,
-        0,
+        996,
+        21,
         0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 21,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -3844,19 +3844,19 @@
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 10,
+          "never_consumed_flags": 21,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 10,
+          "never_consumed_flags": 21,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 10,
+          "never_consumed_flags": 21,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 10,
+          "never_consumed_flags": 21,
           "sole_carrier_skipped": 0
         }
       }
@@ -3893,25 +3893,25 @@
         ]
       },
       "publications": [
-        978,
-        19,
-        20
+        974,
+        21,
+        22
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 21,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 21,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 21,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 21,
           "sole_carrier_skipped": 0
         }
       }
@@ -3948,25 +3948,25 @@
         ]
       },
       "publications": [
-        591,
-        422,
-        4
+        597,
+        419,
+        1
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 21,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 21,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 21,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 21,
           "sole_carrier_skipped": 0
         }
       }
@@ -4003,25 +4003,25 @@
         ]
       },
       "publications": [
-        978,
-        19,
-        20
+        974,
+        21,
+        22
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 21,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 21,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 21,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 21,
           "sole_carrier_skipped": 0
         }
       }
@@ -4058,25 +4058,25 @@
         ]
       },
       "publications": [
-        997,
-        10,
-        10
+        996,
+        21,
+        0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 21,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 21,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 21,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 21,
           "sole_carrier_skipped": 0
         }
       }
@@ -4113,25 +4113,25 @@
         ]
       },
       "publications": [
-        1017,
-        0,
+        996,
+        21,
         0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 21,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 21,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 21,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 21,
           "sole_carrier_skipped": 0
         }
       }
@@ -4168,25 +4168,25 @@
         ]
       },
       "publications": [
-        1017,
-        0,
+        996,
+        21,
         0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 21,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 21,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 21,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 21,
           "sole_carrier_skipped": 0
         }
       }
@@ -4223,25 +4223,25 @@
         ]
       },
       "publications": [
-        1017,
-        0,
+        996,
+        21,
         0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 21,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 21,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 21,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 21,
           "sole_carrier_skipped": 0
         }
       }
@@ -4284,7 +4284,7 @@
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 12,
+          "never_consumed_flags": 28,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -4339,7 +4339,7 @@
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 28,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -4388,13 +4388,13 @@
         ]
       },
       "publications": [
-        585,
-        432,
-        7
+        597,
+        426,
+        1
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 28,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -4449,7 +4449,7 @@
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 28,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -4498,13 +4498,13 @@
         ]
       },
       "publications": [
-        1000,
-        12,
-        12
+        996,
+        28,
+        0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 28,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -4553,13 +4553,13 @@
         ]
       },
       "publications": [
-        1024,
-        0,
+        996,
+        28,
         0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 28,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -4608,13 +4608,13 @@
         ]
       },
       "publications": [
-        1024,
-        0,
+        996,
+        28,
         0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 28,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -4663,13 +4663,13 @@
         ]
       },
       "publications": [
-        1024,
-        0,
+        996,
+        28,
         0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 28,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -4724,19 +4724,19 @@
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 12,
+          "never_consumed_flags": 28,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 12,
+          "never_consumed_flags": 28,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 12,
+          "never_consumed_flags": 28,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 12,
+          "never_consumed_flags": 28,
           "sole_carrier_skipped": 0
         }
       }
@@ -4773,25 +4773,25 @@
         ]
       },
       "publications": [
-        969,
-        27,
-        28
+        967,
+        28,
+        29
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 28,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 28,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 28,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 28,
           "sole_carrier_skipped": 0
         }
       }
@@ -4828,25 +4828,25 @@
         ]
       },
       "publications": [
-        585,
-        432,
-        7
+        597,
+        426,
+        1
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 28,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 28,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 28,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 28,
           "sole_carrier_skipped": 0
         }
       }
@@ -4883,25 +4883,25 @@
         ]
       },
       "publications": [
-        969,
-        27,
-        28
+        967,
+        28,
+        29
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 28,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 28,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 28,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 28,
           "sole_carrier_skipped": 0
         }
       }
@@ -4938,25 +4938,25 @@
         ]
       },
       "publications": [
-        1000,
-        12,
-        12
+        996,
+        28,
+        0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 28,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 28,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 28,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 28,
           "sole_carrier_skipped": 0
         }
       }
@@ -4993,25 +4993,25 @@
         ]
       },
       "publications": [
-        1024,
-        0,
+        996,
+        28,
         0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 28,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 28,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 28,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 28,
           "sole_carrier_skipped": 0
         }
       }
@@ -5048,25 +5048,25 @@
         ]
       },
       "publications": [
-        1024,
-        0,
+        996,
+        28,
         0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 28,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 28,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 28,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 28,
           "sole_carrier_skipped": 0
         }
       }
@@ -5103,25 +5103,25 @@
         ]
       },
       "publications": [
-        1024,
-        0,
+        996,
+        28,
         0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 28,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 28,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 28,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 28,
           "sole_carrier_skipped": 0
         }
       }
@@ -5164,7 +5164,7 @@
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 1,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -5219,7 +5219,7 @@
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 1,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -5274,7 +5274,7 @@
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 1,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -5329,7 +5329,7 @@
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 1,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -5378,13 +5378,13 @@
         ]
       },
       "publications": [
-        597,
-        0,
+        596,
+        1,
         0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 1,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -5433,13 +5433,13 @@
         ]
       },
       "publications": [
-        597,
-        0,
+        596,
+        1,
         0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 1,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -5488,13 +5488,13 @@
         ]
       },
       "publications": [
-        597,
-        0,
+        596,
+        1,
         0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 1,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -5543,13 +5543,13 @@
         ]
       },
       "publications": [
-        597,
-        0,
+        596,
+        1,
         0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 1,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -5604,19 +5604,19 @@
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 1,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 1,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 1,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 1,
           "sole_carrier_skipped": 0
         }
       }
@@ -5659,19 +5659,19 @@
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 1,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 1,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 1,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 1,
           "sole_carrier_skipped": 0
         }
       }
@@ -5714,19 +5714,19 @@
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 1,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 1,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 1,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 1,
           "sole_carrier_skipped": 0
         }
       }
@@ -5769,19 +5769,19 @@
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 1,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 1,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 1,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 1,
           "sole_carrier_skipped": 0
         }
       }
@@ -5818,25 +5818,25 @@
         ]
       },
       "publications": [
-        597,
-        0,
+        596,
+        1,
         0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 1,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 1,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 1,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 1,
           "sole_carrier_skipped": 0
         }
       }
@@ -5873,25 +5873,25 @@
         ]
       },
       "publications": [
-        597,
-        0,
+        596,
+        1,
         0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 1,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 1,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 1,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 1,
           "sole_carrier_skipped": 0
         }
       }
@@ -5928,25 +5928,25 @@
         ]
       },
       "publications": [
-        597,
-        0,
+        596,
+        1,
         0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 1,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 1,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 1,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 1,
           "sole_carrier_skipped": 0
         }
       }
@@ -5983,25 +5983,25 @@
         ]
       },
       "publications": [
-        597,
-        0,
+        596,
+        1,
         0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 1,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 1,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 1,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 1,
           "sole_carrier_skipped": 0
         }
       }
@@ -6044,7 +6044,7 @@
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -6099,7 +6099,7 @@
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -6148,13 +6148,13 @@
         ]
       },
       "publications": [
-        587,
-        422,
-        6
+        597,
+        417,
+        1
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -6209,7 +6209,7 @@
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -6258,13 +6258,13 @@
         ]
       },
       "publications": [
-        1015,
-        0,
+        996,
+        19,
         0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -6313,13 +6313,13 @@
         ]
       },
       "publications": [
-        1015,
-        0,
+        996,
+        19,
         0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -6368,13 +6368,13 @@
         ]
       },
       "publications": [
-        1015,
-        0,
+        996,
+        19,
         0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -6423,13 +6423,13 @@
         ]
       },
       "publications": [
-        1015,
-        0,
+        996,
+        19,
         0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -6484,19 +6484,19 @@
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         }
       }
@@ -6539,19 +6539,19 @@
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         }
       }
@@ -6588,25 +6588,25 @@
         ]
       },
       "publications": [
-        587,
-        422,
-        6
+        597,
+        417,
+        1
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         }
       }
@@ -6649,19 +6649,19 @@
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         }
       }
@@ -6698,25 +6698,25 @@
         ]
       },
       "publications": [
-        1015,
-        0,
+        996,
+        19,
         0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         }
       }
@@ -6753,25 +6753,25 @@
         ]
       },
       "publications": [
-        1015,
-        0,
+        996,
+        19,
         0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         }
       }
@@ -6808,25 +6808,25 @@
         ]
       },
       "publications": [
-        1015,
-        0,
+        996,
+        19,
         0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         }
       }
@@ -6863,25 +6863,25 @@
         ]
       },
       "publications": [
-        1015,
-        0,
+        996,
+        19,
         0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 19,
           "sole_carrier_skipped": 0
         }
       }
@@ -6979,7 +6979,7 @@
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 3,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -7034,7 +7034,7 @@
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 3,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -7089,7 +7089,7 @@
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 3,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -7138,13 +7138,13 @@
         ]
       },
       "publications": [
-        793,
+        796,
         3,
-        3
+        0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 3,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -7193,13 +7193,13 @@
         ]
       },
       "publications": [
-        799,
-        0,
+        796,
+        3,
         0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 3,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -7248,13 +7248,13 @@
         ]
       },
       "publications": [
-        799,
-        0,
+        796,
+        3,
         0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 3,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -7303,13 +7303,13 @@
         ]
       },
       "publications": [
-        799,
-        0,
+        796,
+        3,
         0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 3,
           "sole_carrier_skipped": 0
         },
         "bass": {
@@ -7413,25 +7413,25 @@
         ]
       },
       "publications": [
-        797,
-        0,
-        1
+        793,
+        2,
+        3
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 2,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 2,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 2,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 2,
           "sole_carrier_skipped": 0
         }
       }
@@ -7523,25 +7523,25 @@
         ]
       },
       "publications": [
-        797,
-        0,
-        1
+        793,
+        2,
+        3
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 2,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 2,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 2,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 2,
           "sole_carrier_skipped": 0
         }
       }
@@ -7578,25 +7578,25 @@
         ]
       },
       "publications": [
-        794,
+        796,
         2,
-        2
+        0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 2,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 2,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 2,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 2,
           "sole_carrier_skipped": 0
         }
       }
@@ -7633,25 +7633,25 @@
         ]
       },
       "publications": [
-        798,
-        0,
+        796,
+        2,
         0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 2,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 2,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 2,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 2,
           "sole_carrier_skipped": 0
         }
       }
@@ -7688,25 +7688,25 @@
         ]
       },
       "publications": [
-        794,
+        796,
         2,
-        2
+        0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 2,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 2,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 2,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 2,
           "sole_carrier_skipped": 0
         }
       }
@@ -7743,25 +7743,25 @@
         ]
       },
       "publications": [
-        798,
-        0,
+        796,
+        2,
         0
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 2,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 2,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 2,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 0,
+          "never_consumed_flags": 2,
           "sole_carrier_skipped": 0
         }
       }

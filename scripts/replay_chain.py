@@ -372,7 +372,9 @@ class Replay:
         def traced(features, t):
             record = self.queued.get(id(features), self.current)
             if record is None and self.queued:
-                record = min(self.queued.values(), key=lambda r:
+                continuous = [r for r in self.queued.values()
+                              if r.effective_processor_ids != ("beat_detector",)]
+                record = min(continuous, key=lambda r:
                              abs((r.features.play_monotonic or 0) -
                                  (features.play_monotonic or 0)))
             sequence = record.sequence
@@ -529,7 +531,7 @@ class Replay:
             "event_queue_drops": self.pipeline.events_dropped_count,
             "event_mapping_fallbacks": self.engine.event_mapping_fallbacks}
 
-    def save(self, pcm_format):
+    def save(self, pcm_format, *, write_channel_traces=True):
         out = self.args.out
         out.mkdir(parents=True, exist_ok=True)
         columns = acceptance.CSV_COLUMNS + [f"bar_{i:02d}"
@@ -561,8 +563,9 @@ class Replay:
             "play_monotonic", "received_monotonic", "disposition", "event_time",
             "first_render_over_half_s", "first_send_s"])
         write_csv(out / "energy.csv", self.energy)
-        write_csv(out / "renders.csv", self.renders, RENDER_COLUMNS)
-        write_csv(out / "sends.csv", self.output.rows, SEND_COLUMNS)
+        if write_channel_traces:
+            write_csv(out / "renders.csv", self.renders, RENDER_COLUMNS)
+            write_csv(out / "sends.csv", self.output.rows, SEND_COLUMNS)
         counters = self.counters()
         write_json(out / "counters.json", counters)
         write_json(out / "meta.json", {"trace_version": 1, "quantization_decimals": 6,

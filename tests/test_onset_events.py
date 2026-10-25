@@ -179,3 +179,35 @@ def test_source_event_anchor_is_independent_of_drain_clock():
     assert views[0].onset_age_s == pytest.approx(.05)
     assert engine.event_records[item.id]["event_time"] == .95
     assert engine.event_records[item.id]["event"].received_monotonic == 1.0
+
+
+def test_candidate_play_mapping_uses_containing_record_then_nearest():
+    from types import SimpleNamespace
+
+    from lampastream.sync_engine import SyncEngine
+    engine = object.__new__(SyncEngine)
+    first, second = event(480), event(2400)
+    engine._pending_onset_events = [first, second]
+    engine.event_records = {item.id: {"event": item} for item in (first, second)}
+    engine.event_mapping_fallbacks = 0
+    records = [SimpleNamespace(epoch="epoch", sample_pos=480, sample_end=960,
+                               features=SimpleNamespace(play_monotonic=10.0)),
+               SimpleNamespace(epoch="epoch", sample_pos=1920, sample_end=2400,
+                               features=SimpleNamespace(play_monotonic=10.03))]
+    engine._map_event_play_times(records)
+    assert [item.play_monotonic for item in engine._pending_onset_events] == [10.0, 10.04]
+    assert engine.event_mapping_fallbacks == 1
+
+
+def test_precision_guard_preserves_unlit_channels_and_holds_subcode_decay():
+    from lampastream.output_boundary import QuantisationGuard
+    from lampastream.types import Colour, OutputCapabilities
+    guard = QuantisationGuard(OutputCapabilities(colour_depth_bits=12))
+    baseline = Colour(.1, 0, .2)
+    assert guard.colour("lamp", baseline, False) is baseline
+    lifted = guard.colour("lamp", Colour(.101, 0, .2), True)
+    assert lifted.r >= .1 + (1 << 3) * guard.lsb
+    assert lifted.g == 0
+    assert lifted.b == .2
+    peak = guard.colour("lamp", Colour(.5, 0, .2), True)
+    assert guard.colour("lamp", Colour(.5-guard.lsb/2, 0, .2), True) == peak

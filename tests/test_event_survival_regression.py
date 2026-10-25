@@ -45,7 +45,7 @@ def test_contract_survival_matrix(regression_replays, fixture, route, method):
 def test_pin_current_unconsumed_onset_flags_are_direct_cause(regression_replays):
     """EVENT-01: exactly 19 normal/30Hz click flags sit on never-consumed publications."""
     replay = regression_replays.get("clicks-120")
-    assert skipped_flags(replay) == {"never_consumed_flags": 0, "sole_carrier_skipped": 0}
+    assert skipped_flags(replay) == {"never_consumed_flags": 19, "sole_carrier_skipped": 0}
     assert replay["counters"]["events"]["all"]["lost"] == 0
 
 

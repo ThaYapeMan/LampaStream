@@ -1429,12 +1429,12 @@ class CanonicalAnalysisPipeline:
             # For equal ends, prefer the later start; exact interval ties prefer
             # this later delivery, including same-interval Beat contributions.
             latest = self._latest_pub
-            if (
+            if (effective_processor_ids != ("beat_detector",) and (
                 latest is None
                 or record.epoch != latest.epoch
                 or (record.sample_end, record.sample_pos)
                 >= (latest.sample_end, latest.sample_pos)
-            ):
+            )):
                 self._latest_pub = record
             if (features.level is not None or features.loudness_momentary_lufs is not None
                     or features.loudness_short_term_lufs is not None):
@@ -3271,6 +3271,42 @@ class SyncEngine:
         """
         return bool(self._retiring)
 
+    def _onset_lift_enabled(self):
+        profiles = [self.profile]
+        for name in ("_active", "_mellow"):
+            layer = getattr(self._effect, name, None)
+            profile = getattr(layer, "profile", None)
+            if profile is not None:
+                profiles.append(profile)
+        return any(profile.onset_flash_intensity > 0 or profile.effect_type in {
+            "flashes", "pulses", "splotches", "fireworks"} for profile in profiles)
+
+    def _map_event_play_times(self, records):
+        """Use the containing candidate interval, or count a nearest-record fallback."""
+        available = [record for record in records
+                     if record.features.play_monotonic is not None]
+        if not available:
+            return
+        mapped = []
+        for event in self._pending_onset_events:
+            if event.play_monotonic is None:
+                same_epoch = [record for record in available
+                              if getattr(record, "epoch", None) == event.epoch]
+                containing = [record for record in same_epoch
+                              if record.sample_pos <= event.candidate_sample < record.sample_end]
+                if containing:
+                    record = min(containing, key=lambda r: r.sample_end-r.sample_pos)
+                else:
+                    self.event_mapping_fallbacks += 1
+                    record = min(same_epoch or available, key=lambda r:
+                                 abs(getattr(r, "sample_pos", 0)-event.candidate_sample))
+                stamp = record.features.play_monotonic + (
+                    event.candidate_sample-getattr(record, "sample_pos", 0)) / _CAP_SAMPLE_RATE
+                event = replace(event, play_monotonic=stamp)
+                self.event_records[event.id]["event"] = event
+            mapped.append(event)
+        self._pending_onset_events = mapped
+
     def _event_view(self, features, t, *, timestamped=False):
         """Project queued events onto scene time, independent of latest polling."""
         due, future = [], []
@@ -3404,7 +3440,11 @@ class SyncEngine:
                         available = max(0, (data["lead_p5_ms"] or 0)
                                         - (data["median_processing_ms"] or 0))
                         trim = max(-available, trim)
-                    for record in self._analyser.drain_publications():
+                    records = self._analyser.drain_publications()
+                    self._map_event_play_times(records)
+                    for record in records:
+                        if getattr(record, "effective_processor_ids", ()) == ("beat_detector",):
+                            continue  # events are consumed separately, without advancing ballistics
                         f = record.features
                         if (f.play_monotonic is None
                                 or f.timing_generation != self._timing.tap_generation):
@@ -3413,7 +3453,7 @@ class SyncEngine:
                         scene_time = max(clock(), f.play_monotonic + trim / 1000)
                         f = self._event_view(f, scene_time, timestamped=True)
                         scene = self._effect.render(f, scene_time)
-                        if self.profile.onset_flash_intensity > 0:
+                        if self._onset_lift_enabled():
                             scene = GuardedScene(scene, precision_guard,
                                 f.onset_envelope > precision_guard.lsb)
                         ready = clock()
@@ -3462,7 +3502,7 @@ class SyncEngine:
                     self._event_sample_reference = latest.sample_end if latest else 0
                     features = self._event_view(features, t)
                 scene: Scene = self._effect.render(features, t)
-                if self.profile.onset_flash_intensity > 0:
+                if self._onset_lift_enabled():
                     scene = GuardedScene(scene, precision_guard,
                         features.onset_envelope > precision_guard.lsb)
                 self._last_mix = self._effect.mix
