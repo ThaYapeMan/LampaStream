@@ -11,8 +11,7 @@ Signal path (one layer at a time):
     SyncEngine      — orchestrates AudioPipeline + Renderer + Output at 30 Hz,
                       with an optional ring-buffer delay on the output
 
-Nothing in this module imports from hue_entertainment; all Hue-specific code
-lives in hue_output.py.
+Output transport details belong to drivers and their capabilities.
 """
 
 from __future__ import annotations
@@ -45,6 +44,7 @@ from .latency import NoLatencyProbe
 from .loudness_analyzer import KWeightedLoudnessAnalyzer
 from .models import Profile
 from .onset_envelope import TriggerEnvelope
+from .output_boundary import GuardedScene, QuantisationGuard
 from .pcm_source import WINDOW_SIZE, PcmStft
 from .spectrum_engine import (
     AnalysisProcessor,
@@ -67,15 +67,12 @@ from .types import (
     output_capabilities,
 )
 
+_BYTE_MAX = (1 << 8) - 1
+_BYTE_SCALE = float(_BYTE_MAX)
+
 log = logging.getLogger(__name__)
 
-# Hue Entertainment accepts up to ~50 updates/sec; cava can emit frames much
-# faster than that (its rate isn't tied to real playback speed, especially
-# with a timer-driven ALSA device like snd-dummy).  Rather than queueing every
-# frame — which overwhelms the event loop with scheduled callbacks and starves
-# the sender coroutine — the reader thread keeps the *latest* frame in a
-# lock-protected slot, and the sender polls it at a fixed interval.  Old
-# frames are simply superseded, never queued.
+# Continuous snapshots are polled at the render cadence; events use their own queue.
 SEND_INTERVAL_S = 1 / 30
 
 
@@ -149,12 +146,12 @@ class BandNormaliser:
     previously drowned out now get equal standing whenever they spike above
     their own baselines.
 
-    The result is re-encoded as bytes (0-255) so it can be fed straight
+    The result is re-encoded as bytes (0-_BYTE_MAX) so it can be fed straight
     into the existing frame_to_commands() pipeline unchanged:
 
         exertion 0.0  → byte   0  (band well below its average)
         exertion 1.0  → byte  85  (band exactly at its average, clip=3.0)
-        exertion 3.0  → byte 255  (band at three times its average, clipped)
+        exertion 3.0  → byte _BYTE_MAX  (band at three times its average, clipped)
 
     Three-layer loudness pipeline — how the settings interact:
 
@@ -186,7 +183,7 @@ class BandNormaliser:
     DEFAULT_ATTACK_TAU_S: float = 0.005   # 5 ms — near-instant rise at any frame rate
     DEFAULT_RELEASE_TAU_S: float = 0.700  # 0.70 s exponential time constant for decay
 
-    #: Mean raw bar value (0-255) below which the entire output frame is
+    #: Mean raw bar value (0-_BYTE_MAX) below which the entire output frame is
     #: zeroed.  Prevents background noise from being amplified into wild
     #: colours when the track is paused or very quiet.  The EMA still
     #: updates during silence so the baseline decays naturally.
@@ -219,7 +216,7 @@ class BandNormaliser:
         self.exertion_clip = clip
 
     def normalise(self, frame: bytes, dt: float) -> bytes:
-        """Return an exertion-normalised copy of *frame* as bytes (0-255).
+        """Return an exertion-normalised copy of *frame* as bytes (0-_BYTE_MAX).
 
         *dt* is the elapsed time in seconds since the last call.  alpha is
         computed as 1-exp(-dt/tau) so the time constant is caller-rate-independent
@@ -248,7 +245,7 @@ class BandNormaliser:
         # Updating first and reading back self._ema caused exertion to be
         # computed against a baseline already partially shifted toward the
         # current value, capping rising transients at ≈ 1/alpha_rise ≈ 1.0013×
-        # (byte 85, = 0.333 after /255) instead of the true exertion.
+        # (byte 85, = 0.333 after /_BYTE_MAX) instead of the true exertion.
         old_ema = self._ema
 
         new_ema: list[float] = []
@@ -268,7 +265,7 @@ class BandNormaliser:
             # Guard against a zero EMA (e.g. a bar that has been silent for
             # the entire session so far).
             exertion = v / max(ema, 1.0)
-            result[i] = int(min(exertion, self.exertion_clip) * (255.0 / self.exertion_clip))
+            result[i] = int(min(exertion, self.exertion_clip) * (_BYTE_SCALE / self.exertion_clip))
         return bytes(result)
 
 
@@ -1253,8 +1250,8 @@ class CanonicalAnalysisPipeline:
             previous = self._normalise_end
             dt = max(0, end - (previous if previous is not None else start)) / 48000
             self._normalise_end = end
-            raw = bytes(int(max(0.0, min(1.0, v)) * 255) for v in bars)
-            return [v / 255.0 for v in self._band_normaliser.normalise(raw, dt)]
+            raw = bytes(int(max(0.0, min(1.0, v)) * _BYTE_MAX) for v in bars)
+            return [v / _BYTE_SCALE for v in self._band_normaliser.normalise(raw, dt)]
 
     def set_bar_falloff(self, seconds: float) -> None:
         """Update a supported engine's scalar response; cavacore keeps its native fall."""
@@ -1886,7 +1883,7 @@ class CanonicalAnalysisPipeline:
 
 
 def _band_average(frame: bytes, start: float, end: float) -> float:
-    """Average of bars in a fractional slice of *frame* (bytes, 0-255 → 0.0-1.0).
+    """Average of bars in a fractional slice of *frame* (bytes, 0-_BYTE_MAX → 0.0-1.0).
 
     Kept for internal use and for the unit tests that exercise it directly.
     New code should prefer _slice_avg() which works on the float bar lists
@@ -1896,7 +1893,7 @@ def _band_average(frame: bytes, start: float, end: float) -> float:
     lo, hi = int(start * n), max(int(end * n), int(start * n) + 1)
     hi = min(hi, n)
     band = frame[lo:hi]
-    return (sum(band) / len(band)) / 255.0 if band else 0.0
+    return (sum(band) / len(band)) / _BYTE_SCALE if band else 0.0
 
 
 def _slice_avg(bars: list[float], start: float, end: float) -> float:
@@ -1991,7 +1988,7 @@ class CavaPipeline:
         self._last_normalise_t = now
         normed = self._normaliser.normalise(frame, dt)
         n = len(normed)
-        bars = [v / 255.0 for v in normed]
+        bars = [v / _BYTE_SCALE for v in normed]
         total = sum(bars)
         centroid = (
             sum(i * v for i, v in enumerate(bars)) / total / n if total > 1e-9 else 0.0
@@ -2075,8 +2072,8 @@ class _SpectrumRgbRenderer(_EffectRenderer):
         r = min(_band_avg(bars, 0, bass_hi) * sens, 1.0)
         g = min(_band_avg(bars, bass_hi, mid_hi) * sens, 1.0)
         b = min(_band_avg(bars, mid_hi, n) * sens, 1.0)
-        if features.onset:
-            fi = profile.onset_flash_intensity
+        if features.onset_envelope > 0:
+            fi = profile.onset_flash_intensity * features.onset_envelope
             if fi > 0.0:
                 r = r + fi * (1.0 - r)
                 g = g + fi * (1.0 - g)
@@ -2129,8 +2126,8 @@ class _SpectrumRgbSpatialRenderer(_EffectRenderer):
         r = min(_band_avg(bars, 0, bass_hi) * sens, 1.0)
         g = min(_band_avg(bars, bass_hi, mid_hi) * sens, 1.0)
         b = min(_band_avg(bars, mid_hi, n) * sens, 1.0)
-        if features.onset:
-            fi = profile.onset_flash_intensity
+        if features.onset_envelope > 0:
+            fi = profile.onset_flash_intensity * features.onset_envelope
             if fi > 0.0:
                 r = r + fi * (1.0 - r)
                 g = g + fi * (1.0 - g)
@@ -2167,7 +2164,7 @@ class _BandColoursRenderer(_EffectRenderer):
     def _working_colours(self, profile: Profile, onset: bool, t: float) -> list[Colour]:
         configuration = (tuple(profile.band_colours), profile.band_playback,
                          profile.band_advance, profile.band_advance_interval_s)
-        table = [Colour(*(int(c[i:i + 2], 16) / 255 for i in (1, 3, 5)))
+        table = [Colour(*(int(c[i:i + 2], 16) / _BYTE_MAX for i in (1, 3, 5)))
                  for c in profile.band_colours]
         if profile.palette_stops:
             from .palettes import Palette
@@ -2232,24 +2229,24 @@ class _BandColoursRenderer(_EffectRenderer):
                 for colour, energy in zip(colours, energies, strict=True)]
 
     @staticmethod
-    def _clip_and_flash(colour: Colour, profile: Profile, onset: bool) -> Colour:
+    def _clip_and_flash(colour: Colour, profile: Profile, onset: float) -> Colour:
         values = [min(v, 1.0) for v in (colour.r, colour.g, colour.b)]
         if onset and profile.onset_flash_intensity > 0:
-            values = [v + profile.onset_flash_intensity * (1.0 - v) for v in values]
+            values = [v + profile.onset_flash_intensity * onset * (1.0 - v) for v in values]
         return Colour(*values)
 
     def render(self, profile: Profile, features: AudioFeatures, t: float) -> Scene:
         bands = self._band_values(profile, features, t)
         colour = Colour(*(sum(getattr(band, channel) for band in bands)
                           for channel in ("r", "g", "b")))
-        return UniformScene(self._clip_and_flash(colour, profile, features.onset))
+        return UniformScene(self._clip_and_flash(colour, profile, features.onset_envelope))
 
 
 class _BandColoursSpatialRenderer(_BandColoursRenderer):
     """The same band playback, cross-faded across low-to-high room positions."""
 
     def render(self, profile: Profile, features: AudioFeatures, t: float) -> Scene:
-        return _BandColoursScene([self._clip_and_flash(c, profile, features.onset)
+        return _BandColoursScene([self._clip_and_flash(c, profile, features.onset_envelope)
                                   for c in self._band_values(profile, features, t)])
 
 
@@ -2261,8 +2258,8 @@ class _MonoPulseRenderer(_EffectRenderer):
         floor = profile.brightness_floor
         overall = min(_slice_avg(features.bars, 0.0, 1.0) * sens, 1.0)
         brightness = max(overall, floor)
-        if features.onset:
-            fi = profile.onset_flash_intensity
+        if features.onset_envelope > 0:
+            fi = profile.onset_flash_intensity * features.onset_envelope
             if fi > 0.0:
                 brightness = brightness + fi * (1.0 - brightness)
         return UniformScene(Colour(brightness, brightness, brightness))
@@ -2271,8 +2268,8 @@ class _MonoPulseRenderer(_EffectRenderer):
 class _PulsesRenderer(_EffectRenderer):
     """Onset-driven brightness pulse with spectrum-derived colour.
 
-    Snapshots the spectrum hue at each onset; applies an exponential attack
-    toward 1.0 and decays exponentially between onsets.  The hue snapshot is
+    Snapshots the spectrum tone at each onset; applies an exponential attack
+    toward 1.0 and decays exponentially between onsets.  The tone snapshot is
     only updated when bars carry real signal, preventing the near-silence white
     wash caused by normalising against a near-zero peak.
     """
@@ -2300,15 +2297,9 @@ class _PulsesRenderer(_EffectRenderer):
                 self._r = r_raw / peak
                 self._g = g_raw / peak
                 self._b = b_raw / peak
-            # HPSS: scale pulse intensity by percussive content so drum hits
-            # are brighter than harmonic note onsets.
-            if features.hpss_active:
-                target = 0.3 + 0.7 * features.percussive_energy
-                self._envelope += 0.7 * (target - self._envelope)
-            else:
-                self._envelope += 0.7 * (1.0 - self._envelope)
-        else:
-            self._envelope *= (1.0 - min(profile.effect_decay, 0.99))
+        self._envelope = features.onset_envelope
+        if features.hpss_active:
+            self._envelope *= 0.3 + 0.7 * features.percussive_energy
 
         brightness = max(self._envelope, profile.brightness_floor)
         return UniformScene(Colour(
@@ -2319,24 +2310,13 @@ class _PulsesRenderer(_EffectRenderer):
 
 
 class _FlashesRenderer(_EffectRenderer):
-    """Hard flash on onset with cooldown; very dark between flashes."""
+    """Event-time flash; timing is owned by the shared trigger envelope."""
 
-    def __init__(self) -> None:
-        self._envelope: float = 0.0
-        self._cooldown: int = 0
-
-    def render(self, profile: Profile, features: AudioFeatures, t: float) -> Scene:  # noqa: ARG002
-        if features.onset and self._cooldown == 0:
-            # HPSS: flash envelope proportional to percussive content; pure
-            # drums flash to full white, harmonic-only onsets flash at 30%.
-            if features.hpss_active:
-                self._envelope = 0.3 + 0.7 * features.percussive_energy
-            else:
-                self._envelope = 1.0
-            self._cooldown = 4
-        self._envelope *= (1.0 - min(profile.effect_decay * 2.0, 0.99))
-        self._cooldown = max(0, self._cooldown - 1)
-        brightness = max(self._envelope, profile.brightness_floor * 0.3)
+    def render(self, profile: Profile, features: AudioFeatures, t: float) -> Scene:
+        envelope = features.onset_envelope
+        if features.hpss_active:
+            envelope *= 0.3 + 0.7 * features.percussive_energy
+        brightness = max(envelope, profile.brightness_floor * 0.3)
         return UniformScene(Colour(brightness, brightness, brightness))
 
 
@@ -2367,7 +2347,7 @@ class _SplotchesRenderer(_EffectRenderer):
 
     def render(self, profile: Profile, features: AudioFeatures, t: float) -> Scene:  # noqa: ARG002
         if features.onset:
-            self._seed += 1
+            self._seed += features.onset_count_since_render
             self._envelope = 1.0
         else:
             self._envelope *= (1.0 - min(profile.effect_decay * 0.5, 0.99))
@@ -2471,8 +2451,8 @@ class _FireworksRenderer(_EffectRenderer):
         self._b: float = 1.0
 
     def render(self, profile: Profile, features: AudioFeatures, t: float) -> Scene:
-        if features.onset:
-            origin_x = math.sin(t * 127.0) * 0.9
+        for event_index in range(features.onset_count_since_render):
+            origin_x = math.sin(t * 127.0 + event_index) * 0.9
             bars = features.bars
             n = len(bars)
             lo, hi = profile.lower_cutoff_freq, profile.higher_cutoff_freq
@@ -2516,8 +2496,8 @@ class _SwirlScene:
         self._brightness = brightness
 
     def color_at(self, position: Position, t: float) -> Colour:
-        hue = (position.x * 0.4 + t * self._speed * 0.05) % 1.0
-        return _hsv_to_colour(hue, 0.8, self._brightness)
+        tone = (position.x * 0.4 + t * self._speed * 0.05) % 1.0
+        return _hsv_to_colour(tone, 0.8, self._brightness)
 
 
 class _SwirlRenderer(_EffectRenderer):
@@ -2536,10 +2516,10 @@ class _SwirlRenderer(_EffectRenderer):
 class _WaveScene:
     """Spatial scene: colour wave across positions."""
 
-    __slots__ = ("_hue", "_brightness", "_speed", "_floor")
+    __slots__ = ("_tone", "_brightness", "_speed", "_floor")
 
-    def __init__(self, hue: float, brightness: float, speed: float, floor: float) -> None:
-        self._hue = hue
+    def __init__(self, tone: float, brightness: float, speed: float, floor: float) -> None:
+        self._tone = tone
         self._brightness = brightness
         self._speed = speed
         self._floor = floor
@@ -2548,39 +2528,39 @@ class _WaveScene:
         phase = position.x * 2.0 - t * self._speed * 0.15
         wave_factor = (math.sin(phase * math.pi) + 1.0) / 2.0
         actual_brightness = self._floor + (self._brightness - self._floor) * wave_factor
-        return _hsv_to_colour(self._hue, 0.7, actual_brightness)
+        return _hsv_to_colour(self._tone, 0.7, actual_brightness)
 
 
 class _WaveRenderer(_EffectRenderer):
-    """Colour wave across positions, hue drifts with spectral centroid."""
+    """Colour wave across positions, tone drifts with spectral centroid."""
 
     def __init__(self) -> None:
-        self._hue: float = 0.0
+        self._tone: float = 0.0
 
     def render(self, profile: Profile, features: AudioFeatures, t: float) -> Scene:  # noqa: ARG002
-        self._hue = self._hue * 0.98 + features.centroid * 0.7 * 0.02
+        self._tone = self._tone * 0.98 + features.centroid * 0.7 * 0.02
         # HPSS: harmonic-weighted energy gives a smoother brightness signal.
         effective = (
             features.harmonic_energy * features.full if features.hpss_active else features.full
         )
         brightness = max(effective * profile.sensitivity, profile.brightness_floor)
-        return _WaveScene(self._hue, brightness, profile.effect_speed, profile.brightness_floor)
+        return _WaveScene(self._tone, brightness, profile.effect_speed, profile.brightness_floor)
 
 
 class _SolidRenderer(_EffectRenderer):
     """Steady colour that drifts slowly with spectral centroid."""
 
     def __init__(self) -> None:
-        self._hue: float = 0.0
+        self._tone: float = 0.0
 
     def render(self, profile: Profile, features: AudioFeatures, t: float) -> Scene:  # noqa: ARG002
-        self._hue = self._hue * 0.99 + features.centroid * 0.7 * 0.01
+        self._tone = self._tone * 0.99 + features.centroid * 0.7 * 0.01
         # HPSS: harmonic-weighted energy keeps solid colour calm during drum hits.
         effective = (
             features.harmonic_energy * features.full if features.hpss_active else features.full
         )
         brightness = max(effective * profile.sensitivity, profile.brightness_floor)
-        return UniformScene(_hsv_to_colour(self._hue, 0.7, brightness))
+        return UniformScene(_hsv_to_colour(self._tone, 0.7, brightness))
 
 
 class _GradientRenderer(_EffectRenderer):
@@ -3292,6 +3272,7 @@ class SyncEngine:
         clock = clock or time.monotonic
         sleep = sleep or asyncio.sleep
         capabilities = output_capabilities(output)
+        precision_guard = QuantisationGuard(capabilities)
         self._onset_envelopes = {band: TriggerEnvelope(
             max(self.profile.onset_hold_s, capabilities.min_visible_hold_s),
             self.profile.onset_release_s) for band in ("all", "bass", "mid", "treble")}
@@ -3352,6 +3333,8 @@ class SyncEngine:
                         scene_time = max(clock(), f.play_monotonic + trim / 1000)
                         f = self._event_view(f, scene_time, timestamped=True)
                         scene = self._effect.render(f, scene_time)
+                        scene = GuardedScene(scene, precision_guard,
+                            f.onset_envelope > 0 and self.profile.onset_flash_intensity > 0)
                         ready = clock()
                         recorder = getattr(self._timing, "scene_ready", None)
                         if recorder is not None:
@@ -3398,6 +3381,8 @@ class SyncEngine:
                     self._event_sample_reference = latest.sample_end if latest else 0
                     features = self._event_view(features, t)
                 scene: Scene = self._effect.render(features, t)
+                scene = GuardedScene(scene, precision_guard,
+                    features.onset_envelope > 0 and self.profile.onset_flash_intensity > 0)
                 self._last_mix = self._effect.mix
                 self._last_energy = features.full
                 self._last_sustained_energy = features.sustained_energy

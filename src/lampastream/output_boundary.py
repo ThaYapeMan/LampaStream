@@ -30,3 +30,16 @@ class QuantisationGuard:
                         for old, new in zip(previous, guarded, strict=True))
         self.previous[key] = guarded
         return Colour(*guarded)
+
+
+class GuardedScene:
+    """Apply precision at sampling time; retain upstream scene metadata."""
+
+    def __init__(self, scene, guard, active):
+        self.scene, self.guard, self.active = scene, guard, active
+
+    def __getattr__(self, name):
+        return getattr(self.scene, name)
+
+    def color_at(self, position, t):
+        return self.guard.colour(position, self.scene.color_at(position, t), self.active)
