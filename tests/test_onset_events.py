@@ -26,3 +26,8 @@ def test_queue_survives_latest_and_drains_once():
         assert pipeline.events_dropped_count == 0
     finally:
         pipeline.stop()
+
+
+def test_undeclared_output_uses_conservative_capabilities():
+    from lampastream.types import OutputCapabilities, output_capabilities
+    assert output_capabilities(object()) == OutputCapabilities()

@@ -55,7 +55,7 @@ from lampastream.player_manager import (  # noqa: E402
 )
 from lampastream.schema import empty_config, validate_current  # noqa: E402
 from lampastream.storage import Storage  # noqa: E402
-from lampastream.trace_output import TraceOutput, load_room  # noqa: E402
+from lampastream.trace_output import TraceOutput, load_capabilities, load_room  # noqa: E402
 
 BANDS = ("all", "bass", "mid", "treble")
 RATE = 48000
@@ -207,7 +207,7 @@ class Replay:
     def __init__(self, args):
         self.args = args
         self.high, self.low = profiles(args.config.read_bytes(), args.coupling_id)
-        self.output = TraceOutput(load_room(args.room), args.route)
+        self.output = TraceOutput(load_room(args.room), args.route, load_capabilities(args.room))
         self.pipeline = _make_canonical_pipeline(acceptance._OfflineSource(), self.high)
         self.features, self.records, self.availability = [], [], []
         self.energy, self.renders = [], []

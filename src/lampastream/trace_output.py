@@ -6,7 +6,7 @@ import math
 from dataclasses import dataclass
 from pathlib import Path
 
-from .types import Colour, Position, Scene
+from .types import Colour, OutputCapabilities, Position, Scene
 
 
 @dataclass(frozen=True)
@@ -35,6 +35,12 @@ def load_room(path: str | Path) -> list[TraceChannel]:
     return channels
 
 
+def load_capabilities(path: str | Path) -> OutputCapabilities:
+    data = json.loads(Path(path).read_text())
+    return OutputCapabilities(**data.get("capabilities", {})) if isinstance(data, dict) else (
+        OutputCapabilities())
+
+
 def wire_rgb(colour: Colour) -> tuple[int, int, int]:
     """Match hue-entertainment 0.1.2 dtls.py, including its <=255 branch.
 
@@ -49,7 +55,9 @@ def wire_rgb(colour: Colour) -> tuple[int, int, int]:
 class TraceOutput:
     """Output protocol implementation with Hue-like channels and no-op lifecycle."""
 
-    def __init__(self, channels: list[TraceChannel], route: str = "normal") -> None:
+    def __init__(self, channels: list[TraceChannel], route: str = "normal",
+                 capabilities: OutputCapabilities | None = None) -> None:
+        self.capabilities = capabilities or OutputCapabilities()
         self.channels = channels
         self.route = route
         self.output_generation = 0

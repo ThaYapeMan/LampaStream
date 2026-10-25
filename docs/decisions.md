@@ -64,3 +64,5 @@ Each dated line records an owner decision or a bounded documentation choice for 
 - 2026-10-25 — The web Analyser and Effect TypeScript interfaces will require the optional new API fields in the Styles phase; no frontend files are changed here.
 
 - 2026-10-25 — Queue overflow increments events_dropped_count rather than blocking audio; event IDs remain candidate identities, independent of publication polling. The bounded queue is 1000 records, with the same publication lock.
+- 2026-10-25 — Undeclared outputs use 30 Hz, 16-bit colour, zero estimated transport latency, two-frame minimum hold and shared channel timing. This preserves generic test outputs while making driver-specific precision and timing explicit.
+- 2026-10-25 — Quantisation guarding belongs to output_boundary.py: eight output codes above idle baseline, with sub-code decay held. Idle scenes pass through byte-identically; renderers never choose transport precision.

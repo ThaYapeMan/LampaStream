@@ -279,6 +279,29 @@ class AudioPipeline(Protocol):
 # ---------------------------------------------------------------------------
 
 
+@dataclass(frozen=True)
+class OutputCapabilities:
+    """Output timing and precision. Undeclared outputs use a 30 Hz, 16-bit
+    profile with a two-frame hold, zero transport estimate and shared timing.
+    """
+
+    update_hz: float = 30.0
+    colour_depth_bits: int = 16
+    transport_latency_s: float = 0.0
+    min_visible_hold_s: float = 2 / 30
+    supports_per_channel_timing: bool = False
+
+    def __post_init__(self):
+        if self.update_hz <= 0 or not 1 <= self.colour_depth_bits <= 32:
+            raise ValueError("Output rate and colour precision must be positive")
+        if self.transport_latency_s < 0 or self.min_visible_hold_s < 0:
+            raise ValueError("Output timing must be nonnegative")
+
+
+def output_capabilities(output: object) -> OutputCapabilities:
+    return getattr(output, "capabilities", OutputCapabilities())
+
+
 @runtime_checkable
 class Output(Protocol):
     """Sends a rendered Scene to the physical lighting system.
@@ -287,6 +310,8 @@ class Output(Protocol):
     protocol exists so SyncEngine can be tested without a real Hue bridge
     by passing any object with a matching send() signature.
     """
+
+    capabilities: OutputCapabilities
 
     def send(self, scene: Scene, t: float) -> None: ...
 

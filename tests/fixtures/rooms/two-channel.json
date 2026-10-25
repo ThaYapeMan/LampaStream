@@ -1,7 +1,28 @@
 {
   "name": "Synthetic two-channel reference; replace with exported owner-area positions",
   "channels": [
-    {"channel_id": 0, "position": [-1.0, 0.0, 0.0]},
-    {"channel_id": 1, "position": [1.0, 0.0, 0.0]}
-  ]
+    {
+      "channel_id": 0,
+      "position": [
+        -1.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "channel_id": 1,
+      "position": [
+        1.0,
+        0.0,
+        0.0
+      ]
+    }
+  ],
+  "capabilities": {
+    "update_hz": 25,
+    "colour_depth_bits": 8,
+    "transport_latency_s": 0.02,
+    "min_visible_hold_s": 0.08,
+    "supports_per_channel_timing": false
+  }
 }

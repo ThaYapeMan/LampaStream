@@ -25,7 +25,7 @@ from hue_entertainment import EntertainmentSession, HueEntertainmentAPI, LightCo
 
 from .hue_release import HueReleaseRest
 from .models import BridgeConfig
-from .types import Colour, Position, Scene
+from .types import Colour, OutputCapabilities, Position, Scene
 
 log = logging.getLogger(__name__)
 
@@ -108,6 +108,10 @@ async def get_channel_infos(bridge: BridgeConfig, area_id: str) -> list[ChannelI
 
 
 class HueDriver:
+    capabilities = OutputCapabilities(
+        update_hz=25, colour_depth_bits=8, transport_latency_s=0.02,
+        min_visible_hold_s=2/25, supports_per_channel_timing=False)
+
     """Sends rendered Scenes to a Hue Entertainment Area over DTLS/UDP.
 
     Lifecycle:
