@@ -1,0 +1,1081 @@
+{
+  "measurement_commit": "135ab38563baba1f4d5a7f2dcd67e349e5f2f88d",
+  "panning": {
+    "combined": {
+      "all": [
+        {
+          "availability_offset_median": 2280.0,
+          "candidate_offset_median": -1440.0,
+          "candidate_strength_median": 271.908007,
+          "events": 9,
+          "reported_strength_median": 16.725472
+        },
+        {
+          "availability_offset_median": 2220.0,
+          "candidate_offset_median": -1440.0,
+          "candidate_strength_median": 277.083246,
+          "events": 10,
+          "reported_strength_median": 16.418587
+        }
+      ]
+    },
+    "multiband": {
+      "all": [
+        {
+          "availability_offset_median": 2280.0,
+          "candidate_offset_median": -1440.0,
+          "candidate_strength_median": 250.780489,
+          "events": 9,
+          "reported_strength_median": 16.725472
+        },
+        {
+          "availability_offset_median": 2220.0,
+          "candidate_offset_median": -1440.0,
+          "candidate_strength_median": 255.55328000000003,
+          "events": 10,
+          "reported_strength_median": 16.418587
+        }
+      ],
+      "bass": [
+        {
+          "availability_offset_median": 2280.0,
+          "candidate_offset_median": -1440.0,
+          "candidate_strength_median": 2.703904,
+          "events": 9,
+          "reported_strength_median": 0.0
+        },
+        {
+          "availability_offset_median": 2220.0,
+          "candidate_offset_median": -1440.0,
+          "candidate_strength_median": 2.7550790000000003,
+          "events": 10,
+          "reported_strength_median": 0.0
+        }
+      ],
+      "mid": [
+        {
+          "availability_offset_median": 2280.0,
+          "candidate_offset_median": -1440.0,
+          "candidate_strength_median": 18.423615,
+          "events": 9,
+          "reported_strength_median": 0.0
+        },
+        {
+          "availability_offset_median": 2220.0,
+          "candidate_offset_median": -1440.0,
+          "candidate_strength_median": 18.774886,
+          "events": 10,
+          "reported_strength_median": 0.0
+        }
+      ],
+      "treble": [
+        {
+          "availability_offset_median": 2280.0,
+          "candidate_offset_median": -1440.0,
+          "candidate_strength_median": 250.780489,
+          "events": 9,
+          "reported_strength_median": 16.725472
+        },
+        {
+          "availability_offset_median": 2220.0,
+          "candidate_offset_median": -1440.0,
+          "candidate_strength_median": 255.55328000000003,
+          "events": 10,
+          "reported_strength_median": 16.418587
+        }
+      ]
+    }
+  },
+  "position": {
+    "anti-phase/combined": {
+      "all": {
+        "availability": {
+          "false_positives": 19,
+          "max_abs_samples": 2500,
+          "median_samples": 2220.0,
+          "misses": 19
+        },
+        "candidate": {
+          "false_positives": 19,
+          "max_abs_samples": 2400,
+          "median_samples": -1440.0,
+          "misses": 19
+        },
+        "event_count": 19,
+        "lookahead_samples": [
+          3520,
+          3580,
+          3600,
+          3660,
+          3720,
+          3780,
+          3800,
+          3860,
+          3920,
+          3940
+        ],
+        "truth_count": 19
+      },
+      "bass": {
+        "availability": {
+          "false_positives": 0,
+          "max_abs_samples": null,
+          "median_samples": null,
+          "misses": 19
+        },
+        "candidate": {
+          "false_positives": 0,
+          "max_abs_samples": null,
+          "median_samples": null,
+          "misses": 19
+        },
+        "event_count": 0,
+        "lookahead_samples": [],
+        "truth_count": 19
+      },
+      "mid": {
+        "availability": {
+          "false_positives": 0,
+          "max_abs_samples": null,
+          "median_samples": null,
+          "misses": 19
+        },
+        "candidate": {
+          "false_positives": 0,
+          "max_abs_samples": null,
+          "median_samples": null,
+          "misses": 19
+        },
+        "event_count": 0,
+        "lookahead_samples": [],
+        "truth_count": 19
+      },
+      "treble": {
+        "availability": {
+          "false_positives": 0,
+          "max_abs_samples": null,
+          "median_samples": null,
+          "misses": 19
+        },
+        "candidate": {
+          "false_positives": 0,
+          "max_abs_samples": null,
+          "median_samples": null,
+          "misses": 19
+        },
+        "event_count": 0,
+        "lookahead_samples": [],
+        "truth_count": 19
+      }
+    },
+    "anti-phase/multiband": {
+      "all": {
+        "availability": {
+          "false_positives": 20,
+          "max_abs_samples": 2500,
+          "median_samples": 2220.0,
+          "misses": 19
+        },
+        "candidate": {
+          "false_positives": 20,
+          "max_abs_samples": 1920,
+          "median_samples": -1440.0,
+          "misses": 19
+        },
+        "event_count": 20,
+        "lookahead_samples": [
+          3520,
+          3580,
+          3600,
+          3660,
+          3720,
+          3780,
+          3800,
+          3860,
+          3920,
+          3940
+        ],
+        "truth_count": 19
+      },
+      "bass": {
+        "availability": {
+          "false_positives": 19,
+          "max_abs_samples": 2500,
+          "median_samples": 2220.0,
+          "misses": 19
+        },
+        "candidate": {
+          "false_positives": 19,
+          "max_abs_samples": 1920,
+          "median_samples": -1440.0,
+          "misses": 19
+        },
+        "event_count": 19,
+        "lookahead_samples": [
+          3520,
+          3580,
+          3600,
+          3660,
+          3720,
+          3780,
+          3800,
+          3860,
+          3920,
+          3940
+        ],
+        "truth_count": 19
+      },
+      "mid": {
+        "availability": {
+          "false_positives": 19,
+          "max_abs_samples": 2500,
+          "median_samples": 2220.0,
+          "misses": 19
+        },
+        "candidate": {
+          "false_positives": 19,
+          "max_abs_samples": 2400,
+          "median_samples": -1440.0,
+          "misses": 19
+        },
+        "event_count": 19,
+        "lookahead_samples": [
+          3520,
+          3580,
+          3600,
+          3660,
+          3720,
+          3780,
+          3800,
+          3860,
+          3920,
+          3940
+        ],
+        "truth_count": 19
+      },
+      "treble": {
+        "availability": {
+          "false_positives": 19,
+          "max_abs_samples": 2500,
+          "median_samples": 2220.0,
+          "misses": 19
+        },
+        "candidate": {
+          "false_positives": 19,
+          "max_abs_samples": 2400,
+          "median_samples": -1440.0,
+          "misses": 19
+        },
+        "event_count": 19,
+        "lookahead_samples": [
+          3520,
+          3580,
+          3600,
+          3660,
+          3720,
+          3780,
+          3800,
+          3860,
+          3920,
+          3940
+        ],
+        "truth_count": 19
+      }
+    },
+    "clicks-120/combined": {
+      "all": {
+        "availability": {
+          "false_positives": 19,
+          "max_abs_samples": 2400,
+          "median_samples": 2400.0,
+          "misses": 19
+        },
+        "candidate": {
+          "false_positives": 19,
+          "max_abs_samples": 1920,
+          "median_samples": -1440.0,
+          "misses": 19
+        },
+        "event_count": 19,
+        "lookahead_samples": [
+          3840
+        ],
+        "truth_count": 19
+      },
+      "bass": {
+        "availability": {
+          "false_positives": 0,
+          "max_abs_samples": null,
+          "median_samples": null,
+          "misses": 19
+        },
+        "candidate": {
+          "false_positives": 0,
+          "max_abs_samples": null,
+          "median_samples": null,
+          "misses": 19
+        },
+        "event_count": 0,
+        "lookahead_samples": [],
+        "truth_count": 19
+      },
+      "mid": {
+        "availability": {
+          "false_positives": 0,
+          "max_abs_samples": null,
+          "median_samples": null,
+          "misses": 19
+        },
+        "candidate": {
+          "false_positives": 0,
+          "max_abs_samples": null,
+          "median_samples": null,
+          "misses": 19
+        },
+        "event_count": 0,
+        "lookahead_samples": [],
+        "truth_count": 19
+      },
+      "treble": {
+        "availability": {
+          "false_positives": 0,
+          "max_abs_samples": null,
+          "median_samples": null,
+          "misses": 19
+        },
+        "candidate": {
+          "false_positives": 0,
+          "max_abs_samples": null,
+          "median_samples": null,
+          "misses": 19
+        },
+        "event_count": 0,
+        "lookahead_samples": [],
+        "truth_count": 19
+      }
+    },
+    "clicks-120/multiband": {
+      "all": {
+        "availability": {
+          "false_positives": 19,
+          "max_abs_samples": 2400,
+          "median_samples": 2400.0,
+          "misses": 19
+        },
+        "candidate": {
+          "false_positives": 19,
+          "max_abs_samples": 1920,
+          "median_samples": -1440.0,
+          "misses": 19
+        },
+        "event_count": 19,
+        "lookahead_samples": [
+          3840
+        ],
+        "truth_count": 19
+      },
+      "bass": {
+        "availability": {
+          "false_positives": 19,
+          "max_abs_samples": 2400,
+          "median_samples": 2400.0,
+          "misses": 19
+        },
+        "candidate": {
+          "false_positives": 19,
+          "max_abs_samples": 1920,
+          "median_samples": -1440.0,
+          "misses": 19
+        },
+        "event_count": 19,
+        "lookahead_samples": [
+          3840
+        ],
+        "truth_count": 19
+      },
+      "mid": {
+        "availability": {
+          "false_positives": 19,
+          "max_abs_samples": 2400,
+          "median_samples": 2400.0,
+          "misses": 19
+        },
+        "candidate": {
+          "false_positives": 19,
+          "max_abs_samples": 1920,
+          "median_samples": -1440.0,
+          "misses": 19
+        },
+        "event_count": 19,
+        "lookahead_samples": [
+          3840
+        ],
+        "truth_count": 19
+      },
+      "treble": {
+        "availability": {
+          "false_positives": 19,
+          "max_abs_samples": 2400,
+          "median_samples": 2400.0,
+          "misses": 19
+        },
+        "candidate": {
+          "false_positives": 19,
+          "max_abs_samples": 1920,
+          "median_samples": -1440.0,
+          "misses": 19
+        },
+        "event_count": 19,
+        "lookahead_samples": [
+          3840
+        ],
+        "truth_count": 19
+      }
+    },
+    "clicks-128/combined": {
+      "all": {
+        "availability": {
+          "false_positives": 21,
+          "max_abs_samples": 2460,
+          "median_samples": 2220.0,
+          "misses": 21
+        },
+        "candidate": {
+          "false_positives": 21,
+          "max_abs_samples": 1920,
+          "median_samples": -1620.0,
+          "misses": 21
+        },
+        "event_count": 21,
+        "lookahead_samples": [
+          3840
+        ],
+        "truth_count": 21
+      },
+      "bass": {
+        "availability": {
+          "false_positives": 0,
+          "max_abs_samples": null,
+          "median_samples": null,
+          "misses": 21
+        },
+        "candidate": {
+          "false_positives": 0,
+          "max_abs_samples": null,
+          "median_samples": null,
+          "misses": 21
+        },
+        "event_count": 0,
+        "lookahead_samples": [],
+        "truth_count": 21
+      },
+      "mid": {
+        "availability": {
+          "false_positives": 0,
+          "max_abs_samples": null,
+          "median_samples": null,
+          "misses": 21
+        },
+        "candidate": {
+          "false_positives": 0,
+          "max_abs_samples": null,
+          "median_samples": null,
+          "misses": 21
+        },
+        "event_count": 0,
+        "lookahead_samples": [],
+        "truth_count": 21
+      },
+      "treble": {
+        "availability": {
+          "false_positives": 0,
+          "max_abs_samples": null,
+          "median_samples": null,
+          "misses": 21
+        },
+        "candidate": {
+          "false_positives": 0,
+          "max_abs_samples": null,
+          "median_samples": null,
+          "misses": 21
+        },
+        "event_count": 0,
+        "lookahead_samples": [],
+        "truth_count": 21
+      }
+    },
+    "clicks-128/multiband": {
+      "all": {
+        "availability": {
+          "false_positives": 21,
+          "max_abs_samples": 2460,
+          "median_samples": 2220.0,
+          "misses": 21
+        },
+        "candidate": {
+          "false_positives": 21,
+          "max_abs_samples": 1920,
+          "median_samples": -1620.0,
+          "misses": 21
+        },
+        "event_count": 21,
+        "lookahead_samples": [
+          3840
+        ],
+        "truth_count": 21
+      },
+      "bass": {
+        "availability": {
+          "false_positives": 21,
+          "max_abs_samples": 2460,
+          "median_samples": 2220.0,
+          "misses": 21
+        },
+        "candidate": {
+          "false_positives": 21,
+          "max_abs_samples": 1920,
+          "median_samples": -1620.0,
+          "misses": 21
+        },
+        "event_count": 21,
+        "lookahead_samples": [
+          3840
+        ],
+        "truth_count": 21
+      },
+      "mid": {
+        "availability": {
+          "false_positives": 21,
+          "max_abs_samples": 2460,
+          "median_samples": 2220.0,
+          "misses": 21
+        },
+        "candidate": {
+          "false_positives": 21,
+          "max_abs_samples": 1920,
+          "median_samples": -1620.0,
+          "misses": 21
+        },
+        "event_count": 21,
+        "lookahead_samples": [
+          3840
+        ],
+        "truth_count": 21
+      },
+      "treble": {
+        "availability": {
+          "false_positives": 21,
+          "max_abs_samples": 2460,
+          "median_samples": 2220.0,
+          "misses": 21
+        },
+        "candidate": {
+          "false_positives": 21,
+          "max_abs_samples": 1920,
+          "median_samples": -1620.0,
+          "misses": 21
+        },
+        "event_count": 21,
+        "lookahead_samples": [
+          3840
+        ],
+        "truth_count": 21
+      }
+    },
+    "clicks-174/combined": {
+      "all": {
+        "availability": {
+          "false_positives": 28,
+          "max_abs_samples": 2566,
+          "median_samples": 2325.5,
+          "misses": 28
+        },
+        "candidate": {
+          "false_positives": 28,
+          "max_abs_samples": 1920,
+          "median_samples": -1514.5,
+          "misses": 28
+        },
+        "event_count": 28,
+        "lookahead_samples": [
+          3840
+        ],
+        "truth_count": 28
+      },
+      "bass": {
+        "availability": {
+          "false_positives": 0,
+          "max_abs_samples": null,
+          "median_samples": null,
+          "misses": 28
+        },
+        "candidate": {
+          "false_positives": 0,
+          "max_abs_samples": null,
+          "median_samples": null,
+          "misses": 28
+        },
+        "event_count": 0,
+        "lookahead_samples": [],
+        "truth_count": 28
+      },
+      "mid": {
+        "availability": {
+          "false_positives": 0,
+          "max_abs_samples": null,
+          "median_samples": null,
+          "misses": 28
+        },
+        "candidate": {
+          "false_positives": 0,
+          "max_abs_samples": null,
+          "median_samples": null,
+          "misses": 28
+        },
+        "event_count": 0,
+        "lookahead_samples": [],
+        "truth_count": 28
+      },
+      "treble": {
+        "availability": {
+          "false_positives": 0,
+          "max_abs_samples": null,
+          "median_samples": null,
+          "misses": 28
+        },
+        "candidate": {
+          "false_positives": 0,
+          "max_abs_samples": null,
+          "median_samples": null,
+          "misses": 28
+        },
+        "event_count": 0,
+        "lookahead_samples": [],
+        "truth_count": 28
+      }
+    },
+    "clicks-174/multiband": {
+      "all": {
+        "availability": {
+          "false_positives": 28,
+          "max_abs_samples": 2566,
+          "median_samples": 2325.5,
+          "misses": 28
+        },
+        "candidate": {
+          "false_positives": 28,
+          "max_abs_samples": 1920,
+          "median_samples": -1514.5,
+          "misses": 28
+        },
+        "event_count": 28,
+        "lookahead_samples": [
+          3840
+        ],
+        "truth_count": 28
+      },
+      "bass": {
+        "availability": {
+          "false_positives": 28,
+          "max_abs_samples": 2566,
+          "median_samples": 2325.5,
+          "misses": 28
+        },
+        "candidate": {
+          "false_positives": 28,
+          "max_abs_samples": 1920,
+          "median_samples": -1514.5,
+          "misses": 28
+        },
+        "event_count": 28,
+        "lookahead_samples": [
+          3840
+        ],
+        "truth_count": 28
+      },
+      "mid": {
+        "availability": {
+          "false_positives": 28,
+          "max_abs_samples": 2566,
+          "median_samples": 2325.5,
+          "misses": 28
+        },
+        "candidate": {
+          "false_positives": 28,
+          "max_abs_samples": 1920,
+          "median_samples": -1514.5,
+          "misses": 28
+        },
+        "event_count": 28,
+        "lookahead_samples": [
+          3840
+        ],
+        "truth_count": 28
+      },
+      "treble": {
+        "availability": {
+          "false_positives": 28,
+          "max_abs_samples": 2566,
+          "median_samples": 2325.5,
+          "misses": 28
+        },
+        "candidate": {
+          "false_positives": 28,
+          "max_abs_samples": 1920,
+          "median_samples": -1514.5,
+          "misses": 28
+        },
+        "event_count": 28,
+        "lookahead_samples": [
+          3840
+        ],
+        "truth_count": 28
+      }
+    },
+    "impulse/combined": {
+      "all": {
+        "availability": {
+          "false_positives": 1,
+          "max_abs_samples": 1920,
+          "median_samples": 1920.0,
+          "misses": 1
+        },
+        "candidate": {
+          "false_positives": 1,
+          "max_abs_samples": 1920,
+          "median_samples": -1920.0,
+          "misses": 1
+        },
+        "event_count": 1,
+        "lookahead_samples": [
+          3840
+        ],
+        "truth_count": 1
+      },
+      "bass": {
+        "availability": {
+          "false_positives": 0,
+          "max_abs_samples": null,
+          "median_samples": null,
+          "misses": 1
+        },
+        "candidate": {
+          "false_positives": 0,
+          "max_abs_samples": null,
+          "median_samples": null,
+          "misses": 1
+        },
+        "event_count": 0,
+        "lookahead_samples": [],
+        "truth_count": 1
+      },
+      "mid": {
+        "availability": {
+          "false_positives": 0,
+          "max_abs_samples": null,
+          "median_samples": null,
+          "misses": 1
+        },
+        "candidate": {
+          "false_positives": 0,
+          "max_abs_samples": null,
+          "median_samples": null,
+          "misses": 1
+        },
+        "event_count": 0,
+        "lookahead_samples": [],
+        "truth_count": 1
+      },
+      "treble": {
+        "availability": {
+          "false_positives": 0,
+          "max_abs_samples": null,
+          "median_samples": null,
+          "misses": 1
+        },
+        "candidate": {
+          "false_positives": 0,
+          "max_abs_samples": null,
+          "median_samples": null,
+          "misses": 1
+        },
+        "event_count": 0,
+        "lookahead_samples": [],
+        "truth_count": 1
+      }
+    },
+    "impulse/multiband": {
+      "all": {
+        "availability": {
+          "false_positives": 1,
+          "max_abs_samples": 1920,
+          "median_samples": 1920.0,
+          "misses": 1
+        },
+        "candidate": {
+          "false_positives": 1,
+          "max_abs_samples": 1920,
+          "median_samples": -1920.0,
+          "misses": 1
+        },
+        "event_count": 1,
+        "lookahead_samples": [
+          3840
+        ],
+        "truth_count": 1
+      },
+      "bass": {
+        "availability": {
+          "false_positives": 1,
+          "max_abs_samples": 1920,
+          "median_samples": 1920.0,
+          "misses": 1
+        },
+        "candidate": {
+          "false_positives": 1,
+          "max_abs_samples": 1920,
+          "median_samples": -1920.0,
+          "misses": 1
+        },
+        "event_count": 1,
+        "lookahead_samples": [
+          3840
+        ],
+        "truth_count": 1
+      },
+      "mid": {
+        "availability": {
+          "false_positives": 1,
+          "max_abs_samples": 1920,
+          "median_samples": 1920.0,
+          "misses": 1
+        },
+        "candidate": {
+          "false_positives": 1,
+          "max_abs_samples": 1920,
+          "median_samples": -1920.0,
+          "misses": 1
+        },
+        "event_count": 1,
+        "lookahead_samples": [
+          3840
+        ],
+        "truth_count": 1
+      },
+      "treble": {
+        "availability": {
+          "false_positives": 1,
+          "max_abs_samples": 1920,
+          "median_samples": 1920.0,
+          "misses": 1
+        },
+        "candidate": {
+          "false_positives": 1,
+          "max_abs_samples": 1920,
+          "median_samples": -1920.0,
+          "misses": 1
+        },
+        "event_count": 1,
+        "lookahead_samples": [
+          3840
+        ],
+        "truth_count": 1
+      }
+    },
+    "panning/combined": {
+      "all": {
+        "availability": {
+          "false_positives": 19,
+          "max_abs_samples": 2500,
+          "median_samples": 2220.0,
+          "misses": 19
+        },
+        "candidate": {
+          "false_positives": 19,
+          "max_abs_samples": 2400,
+          "median_samples": -1440.0,
+          "misses": 19
+        },
+        "event_count": 19,
+        "lookahead_samples": [
+          3520,
+          3580,
+          3600,
+          3660,
+          3720,
+          3780,
+          3800,
+          3860,
+          3920,
+          3940
+        ],
+        "truth_count": 19
+      },
+      "bass": {
+        "availability": {
+          "false_positives": 0,
+          "max_abs_samples": null,
+          "median_samples": null,
+          "misses": 19
+        },
+        "candidate": {
+          "false_positives": 0,
+          "max_abs_samples": null,
+          "median_samples": null,
+          "misses": 19
+        },
+        "event_count": 0,
+        "lookahead_samples": [],
+        "truth_count": 19
+      },
+      "mid": {
+        "availability": {
+          "false_positives": 0,
+          "max_abs_samples": null,
+          "median_samples": null,
+          "misses": 19
+        },
+        "candidate": {
+          "false_positives": 0,
+          "max_abs_samples": null,
+          "median_samples": null,
+          "misses": 19
+        },
+        "event_count": 0,
+        "lookahead_samples": [],
+        "truth_count": 19
+      },
+      "treble": {
+        "availability": {
+          "false_positives": 0,
+          "max_abs_samples": null,
+          "median_samples": null,
+          "misses": 19
+        },
+        "candidate": {
+          "false_positives": 0,
+          "max_abs_samples": null,
+          "median_samples": null,
+          "misses": 19
+        },
+        "event_count": 0,
+        "lookahead_samples": [],
+        "truth_count": 19
+      }
+    },
+    "panning/multiband": {
+      "all": {
+        "availability": {
+          "false_positives": 20,
+          "max_abs_samples": 2500,
+          "median_samples": 2220.0,
+          "misses": 19
+        },
+        "candidate": {
+          "false_positives": 20,
+          "max_abs_samples": 1920,
+          "median_samples": -1440.0,
+          "misses": 19
+        },
+        "event_count": 20,
+        "lookahead_samples": [
+          3520,
+          3580,
+          3600,
+          3660,
+          3720,
+          3780,
+          3800,
+          3860,
+          3920,
+          3940
+        ],
+        "truth_count": 19
+      },
+      "bass": {
+        "availability": {
+          "false_positives": 19,
+          "max_abs_samples": 2500,
+          "median_samples": 2220.0,
+          "misses": 19
+        },
+        "candidate": {
+          "false_positives": 19,
+          "max_abs_samples": 1920,
+          "median_samples": -1440.0,
+          "misses": 19
+        },
+        "event_count": 19,
+        "lookahead_samples": [
+          3520,
+          3580,
+          3600,
+          3660,
+          3720,
+          3780,
+          3800,
+          3860,
+          3920,
+          3940
+        ],
+        "truth_count": 19
+      },
+      "mid": {
+        "availability": {
+          "false_positives": 19,
+          "max_abs_samples": 2500,
+          "median_samples": 2220.0,
+          "misses": 19
+        },
+        "candidate": {
+          "false_positives": 19,
+          "max_abs_samples": 1920,
+          "median_samples": -1440.0,
+          "misses": 19
+        },
+        "event_count": 19,
+        "lookahead_samples": [
+          3520,
+          3580,
+          3600,
+          3660,
+          3720,
+          3780,
+          3800,
+          3860,
+          3920,
+          3940
+        ],
+        "truth_count": 19
+      },
+      "treble": {
+        "availability": {
+          "false_positives": 19,
+          "max_abs_samples": 2500,
+          "median_samples": 2220.0,
+          "misses": 19
+        },
+        "candidate": {
+          "false_positives": 19,
+          "max_abs_samples": 2400,
+          "median_samples": -1440.0,
+          "misses": 19
+        },
+        "event_count": 19,
+        "lookahead_samples": [
+          3520,
+          3580,
+          3600,
+          3660,
+          3720,
+          3780,
+          3800,
+          3860,
+          3920,
+          3940
+        ],
+        "truth_count": 19
+      }
+    }
+  }
+}
