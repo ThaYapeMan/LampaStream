@@ -32,7 +32,7 @@ def test_pin_current_fixture_positions(regression_replays, fixture, route, metho
                 actual = measured[band][kind][key]
                 pin = expected("position")[f"{fixture}/{method}"][band][kind][key]
                 if actual is not None:
-                    assert actual / HOP == pytest.approx(pin / HOP, abs=1 / HOP)
+                    assert actual / HOP == pytest.approx(pin / HOP, abs=1 / HOP, rel=0)
 
 
 ENABLED = [("combined", "all")] + [("multiband", b) for b in BANDS]
@@ -68,7 +68,7 @@ def test_pin_current_panning_position_and_strength(regression_replays, route, me
         for actual, pin in zip(panning_halves(replay, band), expected("panning")[method][band],
                                strict=True):
             for key in actual:
-                assert actual[key] == pytest.approx(pin[key], abs=1e-6)
+                assert actual[key] == pytest.approx(pin[key], abs=1e-6, rel=0)
 
 
 @pytest.mark.parametrize("route", ["normal", "timestamped"])
@@ -83,7 +83,7 @@ def test_contract_panning_position_and_strength(regression_replays, route, metho
             candidate = int(row[f"candidate_sample_{band}"])
             assert min(abs(replay["truth"] - candidate)) <= HOP
             assert float(row[f"reported_strength_{band}"]) == pytest.approx(
-                float(row[f"candidate_strength_{band}"]), abs=1e-6)
+                float(row[f"candidate_strength_{band}"]), abs=1e-6, rel=0)
 
 
 @pytest.mark.parametrize("route", ["normal", "timestamped"])

@@ -182,3 +182,24 @@ def tone_levels(replay, band="all"):
         reported.append(float(row[f"reported_strength_{band}"]) if found else 0.)
     return {"present": present, "candidate": candidate, "reported": reported,
             "rho": spearman([-30., -20., -10., -3.], reported)}
+
+
+SURVIVAL_FIXTURES = (*POSITION_FIXTURES, "anti-phase", "tone-steps")
+EVENT_FIELDS = ("received", "accepted", "rendered", "merged", "expired", "lost")
+PUBLICATION_FIELDS = ("consumed", "skipped", "repeated")
+
+
+def skipped_flags(replay, band="all"):
+    consumed = {seq for row in replay["energy"] for seq in json.loads(row["consumed_sequences"])}
+    onsets = events(replay, band)
+    ids = {r[f"event_id_{band}"] for r in onsets}
+    surviving = {r[f"event_id_{band}"] for r in onsets if int(r["sequence"]) in consumed}
+    return {"never_consumed_flags": sum(int(r["sequence"]) not in consumed for r in onsets),
+            "sole_carrier_skipped": len(ids - surviving)}
+
+
+def survival(replay, route):
+    data = replay["counters"]
+    return {"events": {band:[data["events"][band][k] for k in EVENT_FIELDS] for band in BANDS},
+        "publications": [data["publications"][route][k] for k in PUBLICATION_FIELDS],
+        "skipped_flags": {b:skipped_flags(replay, b) for b in BANDS}}

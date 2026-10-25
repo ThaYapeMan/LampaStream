@@ -13,7 +13,7 @@ def assert_numeric(actual, pin):
         if value is None or isinstance(value, list) and not value:
             assert value == pin[key]
         else:
-            assert value == pytest.approx(pin[key], abs=1e-6)
+            assert value == pytest.approx(pin[key], abs=1e-6, rel=0)
 
 
 @pytest.mark.parametrize("fixture", ["clicks-120", "tone-steps"])
@@ -35,7 +35,7 @@ def test_contract_event_strengths(regression_replays, fixture, route, method, ba
     replay = regression_replays.get(fixture, route, method=method)
     for row in events(replay, band):
         assert float(row[f"reported_strength_{band}"]) == pytest.approx(
-            float(row[f"candidate_strength_{band}"]), abs=1e-6)
+            float(row[f"candidate_strength_{band}"]), abs=1e-6, rel=0)
 
 
 @pytest.mark.parametrize("route", ["normal", "timestamped"])
@@ -74,5 +74,5 @@ def test_contract_tone_rank_and_candidate_strength(regression_replays, route, me
     """TIME-01: rho=1 is necessary but not sufficient when strength names the wrong frame."""
     replay = regression_replays.get("tone-steps", route, method=method)
     values = tone_levels(replay, band)
-    assert values["rho"] == pytest.approx(1., abs=1e-12)
-    assert values["reported"] == pytest.approx(values["candidate"], abs=1e-6)
+    assert values["rho"] == pytest.approx(1., abs=1e-12, rel=0)
+    assert values["reported"] == pytest.approx(values["candidate"], abs=1e-6, rel=0)

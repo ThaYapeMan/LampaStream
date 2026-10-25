@@ -102,18 +102,7 @@
           "misses": 19
         },
         "event_count": 19,
-        "lookahead_samples": [
-          3520,
-          3580,
-          3600,
-          3660,
-          3720,
-          3780,
-          3800,
-          3860,
-          3920,
-          3940
-        ],
+        "lookahead_samples": [3520, 3580, 3600, 3660, 3720, 3780, 3800, 3860, 3920, 3940],
         "truth_count": 19
       },
       "bass": {
@@ -183,18 +172,7 @@
           "misses": 19
         },
         "event_count": 20,
-        "lookahead_samples": [
-          3520,
-          3580,
-          3600,
-          3660,
-          3720,
-          3780,
-          3800,
-          3860,
-          3920,
-          3940
-        ],
+        "lookahead_samples": [3520, 3580, 3600, 3660, 3720, 3780, 3800, 3860, 3920, 3940],
         "truth_count": 19
       },
       "bass": {
@@ -211,18 +189,7 @@
           "misses": 19
         },
         "event_count": 19,
-        "lookahead_samples": [
-          3520,
-          3580,
-          3600,
-          3660,
-          3720,
-          3780,
-          3800,
-          3860,
-          3920,
-          3940
-        ],
+        "lookahead_samples": [3520, 3580, 3600, 3660, 3720, 3780, 3800, 3860, 3920, 3940],
         "truth_count": 19
       },
       "mid": {
@@ -239,18 +206,7 @@
           "misses": 19
         },
         "event_count": 19,
-        "lookahead_samples": [
-          3520,
-          3580,
-          3600,
-          3660,
-          3720,
-          3780,
-          3800,
-          3860,
-          3920,
-          3940
-        ],
+        "lookahead_samples": [3520, 3580, 3600, 3660, 3720, 3780, 3800, 3860, 3920, 3940],
         "truth_count": 19
       },
       "treble": {
@@ -267,18 +223,7 @@
           "misses": 19
         },
         "event_count": 19,
-        "lookahead_samples": [
-          3520,
-          3580,
-          3600,
-          3660,
-          3720,
-          3780,
-          3800,
-          3860,
-          3920,
-          3940
-        ],
+        "lookahead_samples": [3520, 3580, 3600, 3660, 3720, 3780, 3800, 3860, 3920, 3940],
         "truth_count": 19
       }
     },
@@ -297,9 +242,7 @@
           "misses": 19
         },
         "event_count": 19,
-        "lookahead_samples": [
-          3840
-        ],
+        "lookahead_samples": [3840],
         "truth_count": 19
       },
       "bass": {
@@ -369,9 +312,7 @@
           "misses": 19
         },
         "event_count": 19,
-        "lookahead_samples": [
-          3840
-        ],
+        "lookahead_samples": [3840],
         "truth_count": 19
       },
       "bass": {
@@ -388,9 +329,7 @@
           "misses": 19
         },
         "event_count": 19,
-        "lookahead_samples": [
-          3840
-        ],
+        "lookahead_samples": [3840],
         "truth_count": 19
       },
       "mid": {
@@ -407,9 +346,7 @@
           "misses": 19
         },
         "event_count": 19,
-        "lookahead_samples": [
-          3840
-        ],
+        "lookahead_samples": [3840],
         "truth_count": 19
       },
       "treble": {
@@ -426,9 +363,7 @@
           "misses": 19
         },
         "event_count": 19,
-        "lookahead_samples": [
-          3840
-        ],
+        "lookahead_samples": [3840],
         "truth_count": 19
       }
     },
@@ -447,9 +382,7 @@
           "misses": 21
         },
         "event_count": 21,
-        "lookahead_samples": [
-          3840
-        ],
+        "lookahead_samples": [3840],
         "truth_count": 21
       },
       "bass": {
@@ -519,9 +452,7 @@
           "misses": 21
         },
         "event_count": 21,
-        "lookahead_samples": [
-          3840
-        ],
+        "lookahead_samples": [3840],
         "truth_count": 21
       },
       "bass": {
@@ -538,9 +469,7 @@
           "misses": 21
         },
         "event_count": 21,
-        "lookahead_samples": [
-          3840
-        ],
+        "lookahead_samples": [3840],
         "truth_count": 21
       },
       "mid": {
@@ -557,9 +486,7 @@
           "misses": 21
         },
         "event_count": 21,
-        "lookahead_samples": [
-          3840
-        ],
+        "lookahead_samples": [3840],
         "truth_count": 21
       },
       "treble": {
@@ -576,9 +503,7 @@
           "misses": 21
         },
         "event_count": 21,
-        "lookahead_samples": [
-          3840
-        ],
+        "lookahead_samples": [3840],
         "truth_count": 21
       }
     },
@@ -597,9 +522,7 @@
           "misses": 28
         },
         "event_count": 28,
-        "lookahead_samples": [
-          3840
-        ],
+        "lookahead_samples": [3840],
         "truth_count": 28
       },
       "bass": {
@@ -669,9 +592,7 @@
           "misses": 28
         },
         "event_count": 28,
-        "lookahead_samples": [
-          3840
-        ],
+        "lookahead_samples": [3840],
         "truth_count": 28
       },
       "bass": {
@@ -688,9 +609,7 @@
           "misses": 28
         },
         "event_count": 28,
-        "lookahead_samples": [
-          3840
-        ],
+        "lookahead_samples": [3840],
         "truth_count": 28
       },
       "mid": {
@@ -707,9 +626,7 @@
           "misses": 28
         },
         "event_count": 28,
-        "lookahead_samples": [
-          3840
-        ],
+        "lookahead_samples": [3840],
         "truth_count": 28
       },
       "treble": {
@@ -726,9 +643,7 @@
           "misses": 28
         },
         "event_count": 28,
-        "lookahead_samples": [
-          3840
-        ],
+        "lookahead_samples": [3840],
         "truth_count": 28
       }
     },
@@ -747,9 +662,7 @@
           "misses": 1
         },
         "event_count": 1,
-        "lookahead_samples": [
-          3840
-        ],
+        "lookahead_samples": [3840],
         "truth_count": 1
       },
       "bass": {
@@ -819,9 +732,7 @@
           "misses": 1
         },
         "event_count": 1,
-        "lookahead_samples": [
-          3840
-        ],
+        "lookahead_samples": [3840],
         "truth_count": 1
       },
       "bass": {
@@ -838,9 +749,7 @@
           "misses": 1
         },
         "event_count": 1,
-        "lookahead_samples": [
-          3840
-        ],
+        "lookahead_samples": [3840],
         "truth_count": 1
       },
       "mid": {
@@ -857,9 +766,7 @@
           "misses": 1
         },
         "event_count": 1,
-        "lookahead_samples": [
-          3840
-        ],
+        "lookahead_samples": [3840],
         "truth_count": 1
       },
       "treble": {
@@ -876,9 +783,7 @@
           "misses": 1
         },
         "event_count": 1,
-        "lookahead_samples": [
-          3840
-        ],
+        "lookahead_samples": [3840],
         "truth_count": 1
       }
     },
@@ -897,18 +802,7 @@
           "misses": 19
         },
         "event_count": 19,
-        "lookahead_samples": [
-          3520,
-          3580,
-          3600,
-          3660,
-          3720,
-          3780,
-          3800,
-          3860,
-          3920,
-          3940
-        ],
+        "lookahead_samples": [3520, 3580, 3600, 3660, 3720, 3780, 3800, 3860, 3920, 3940],
         "truth_count": 19
       },
       "bass": {
@@ -978,18 +872,7 @@
           "misses": 19
         },
         "event_count": 20,
-        "lookahead_samples": [
-          3520,
-          3580,
-          3600,
-          3660,
-          3720,
-          3780,
-          3800,
-          3860,
-          3920,
-          3940
-        ],
+        "lookahead_samples": [3520, 3580, 3600, 3660, 3720, 3780, 3800, 3860, 3920, 3940],
         "truth_count": 19
       },
       "bass": {
@@ -1006,18 +889,7 @@
           "misses": 19
         },
         "event_count": 19,
-        "lookahead_samples": [
-          3520,
-          3580,
-          3600,
-          3660,
-          3720,
-          3780,
-          3800,
-          3860,
-          3920,
-          3940
-        ],
+        "lookahead_samples": [3520, 3580, 3600, 3660, 3720, 3780, 3800, 3860, 3920, 3940],
         "truth_count": 19
       },
       "mid": {
@@ -1034,18 +906,7 @@
           "misses": 19
         },
         "event_count": 19,
-        "lookahead_samples": [
-          3520,
-          3580,
-          3600,
-          3660,
-          3720,
-          3780,
-          3800,
-          3860,
-          3920,
-          3940
-        ],
+        "lookahead_samples": [3520, 3580, 3600, 3660, 3720, 3780, 3800, 3860, 3920, 3940],
         "truth_count": 19
       },
       "treble": {
@@ -1062,18 +923,7 @@
           "misses": 19
         },
         "event_count": 19,
-        "lookahead_samples": [
-          3520,
-          3580,
-          3600,
-          3660,
-          3720,
-          3780,
-          3800,
-          3860,
-          3920,
-          3940
-        ],
+        "lookahead_samples": [3520, 3580, 3600, 3660, 3720, 3780, 3800, 3860, 3920, 3940],
         "truth_count": 19
       }
     }
@@ -1082,69 +932,9 @@
     "clicks-120/combined": {
       "all": {
         "below_tenth_fraction": 1.0,
-        "candidate": [
-          175.980262,
-          874.513342,
-          874.513342,
-          874.513342,
-          874.513342,
-          874.513342,
-          874.513342,
-          874.513342,
-          874.513342,
-          874.513342,
-          874.513342,
-          874.513342,
-          874.513342,
-          874.513342,
-          874.513342,
-          874.513342,
-          874.513342,
-          874.513342,
-          874.513342
-        ],
-        "candidate_samples": [
-          22080,
-          46560,
-          70560,
-          94560,
-          118560,
-          142560,
-          166560,
-          190560,
-          214560,
-          238560,
-          262560,
-          286560,
-          310560,
-          334560,
-          358560,
-          382560,
-          406560,
-          430560,
-          454560
-        ],
-        "reported": [
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0
-        ]
+        "candidate": [175.980262, 874.513342, 874.513342, 874.513342, 874.513342, 874.513342, 874.513342, 874.513342, 874.513342, 874.513342, 874.513342, 874.513342, 874.513342, 874.513342, 874.513342, 874.513342, 874.513342, 874.513342, 874.513342],
+        "candidate_samples": [22080, 46560, 70560, 94560, 118560, 142560, 166560, 190560, 214560, 238560, 262560, 286560, 310560, 334560, 358560, 382560, 406560, 430560, 454560],
+        "reported": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
       },
       "bass": {
         "below_tenth_fraction": null,
@@ -1168,287 +958,35 @@
     "clicks-120/multiband": {
       "all": {
         "below_tenth_fraction": 1.0,
-        "candidate": [
-          0.514213,
-          2.478872,
-          2.478872,
-          2.478872,
-          2.478872,
-          2.478872,
-          2.478872,
-          2.478872,
-          2.478872,
-          2.478872,
-          2.478872,
-          2.478872,
-          2.478872,
-          2.478872,
-          2.478872,
-          2.478872,
-          2.478872,
-          2.478872,
-          2.478872
-        ],
-        "candidate_samples": [
-          22080,
-          46560,
-          70560,
-          94560,
-          118560,
-          142560,
-          166560,
-          190560,
-          214560,
-          238560,
-          262560,
-          286560,
-          310560,
-          334560,
-          358560,
-          382560,
-          406560,
-          430560,
-          454560
-        ],
-        "reported": [
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0
-        ]
+        "candidate": [0.514213, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872],
+        "candidate_samples": [22080, 46560, 70560, 94560, 118560, 142560, 166560, 190560, 214560, 238560, 262560, 286560, 310560, 334560, 358560, 382560, 406560, 430560, 454560],
+        "reported": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
       },
       "bass": {
         "below_tenth_fraction": 1.0,
-        "candidate": [
-          0.514213,
-          2.478872,
-          2.478872,
-          2.478872,
-          2.478872,
-          2.478872,
-          2.478872,
-          2.478872,
-          2.478872,
-          2.478872,
-          2.478872,
-          2.478872,
-          2.478872,
-          2.478872,
-          2.478872,
-          2.478872,
-          2.478872,
-          2.478872,
-          2.478872
-        ],
-        "candidate_samples": [
-          22080,
-          46560,
-          70560,
-          94560,
-          118560,
-          142560,
-          166560,
-          190560,
-          214560,
-          238560,
-          262560,
-          286560,
-          310560,
-          334560,
-          358560,
-          382560,
-          406560,
-          430560,
-          454560
-        ],
-        "reported": [
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0
-        ]
+        "candidate": [0.514213, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872],
+        "candidate_samples": [22080, 46560, 70560, 94560, 118560, 142560, 166560, 190560, 214560, 238560, 262560, 286560, 310560, 334560, 358560, 382560, 406560, 430560, 454560],
+        "reported": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
       },
       "mid": {
         "below_tenth_fraction": 1.0,
-        "candidate": [
-          3.435347,
-          16.765215,
-          16.765215,
-          16.765215,
-          16.765215,
-          16.765215,
-          16.765215,
-          16.765215,
-          16.765215,
-          16.765215,
-          16.765215,
-          16.765215,
-          16.765215,
-          16.765215,
-          16.765215,
-          16.765215,
-          16.765215,
-          16.765215,
-          16.765215
-        ],
-        "candidate_samples": [
-          22080,
-          46560,
-          70560,
-          94560,
-          118560,
-          142560,
-          166560,
-          190560,
-          214560,
-          238560,
-          262560,
-          286560,
-          310560,
-          334560,
-          358560,
-          382560,
-          406560,
-          430560,
-          454560
-        ],
-        "reported": [
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0
-        ]
+        "candidate": [3.435347, 16.765215, 16.765215, 16.765215, 16.765215, 16.765215, 16.765215, 16.765215, 16.765215, 16.765215, 16.765215, 16.765215, 16.765215, 16.765215, 16.765215, 16.765215, 16.765215, 16.765215, 16.765215],
+        "candidate_samples": [22080, 46560, 70560, 94560, 118560, 142560, 166560, 190560, 214560, 238560, 262560, 286560, 310560, 334560, 358560, 382560, 406560, 430560, 454560],
+        "reported": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
       },
       "treble": {
         "below_tenth_fraction": 1.0,
-        "candidate": [
-          172.030703,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254
-        ],
-        "candidate_samples": [
-          22080,
-          46560,
-          70560,
-          94560,
-          118560,
-          142560,
-          166560,
-          190560,
-          214560,
-          238560,
-          262560,
-          286560,
-          310560,
-          334560,
-          358560,
-          382560,
-          406560,
-          430560,
-          454560
-        ],
-        "reported": [
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0,
-          0.0
-        ]
+        "candidate": [172.030703, 855.269254, 855.269254, 855.269254, 855.269254, 855.269254, 855.269254, 855.269254, 855.269254, 855.269254, 855.269254, 855.269254, 855.269254, 855.269254, 855.269254, 855.269254, 855.269254, 855.269254, 855.269254],
+        "candidate_samples": [22080, 46560, 70560, 94560, 118560, 142560, 166560, 190560, 214560, 238560, 262560, 286560, 310560, 334560, 358560, 382560, 406560, 430560, 454560],
+        "reported": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
       }
     },
     "tone-steps/combined": {
       "all": {
         "below_tenth_fraction": 0.0,
-        "candidate": [
-          12.494626,
-          39.523286,
-          68.250828
-        ],
-        "candidate_samples": [
-          94080,
-          190080,
-          286080
-        ],
-        "reported": [
-          21.435945,
-          67.78344,
-          130.536063
-        ]
+        "candidate": [12.494626, 39.523286, 68.250828],
+        "candidate_samples": [94080, 190080, 286080],
+        "reported": [21.435945, 67.78344, 130.536063]
       },
       "bass": {
         "below_tenth_fraction": null,
@@ -1472,248 +1010,3106 @@
     "tone-steps/multiband": {
       "all": {
         "below_tenth_fraction": 0.0,
-        "candidate": [
-          7.714525,
-          24.393061,
-          41.288589
-        ],
-        "candidate_samples": [
-          94080,
-          190080,
-          286080
-        ],
-        "reported": [
-          20.713276,
-          65.496758,
-          125.032005
-        ]
+        "candidate": [7.714525, 24.393061, 41.288589],
+        "candidate_samples": [94080, 190080, 286080],
+        "reported": [20.713276, 65.496758, 125.032005]
       },
       "bass": {
         "below_tenth_fraction": 1.0,
-        "candidate": [
-          0.42369,
-          1.339629,
-          2.225437
-        ],
-        "candidate_samples": [
-          94080,
-          190080,
-          286080
-        ],
-        "reported": [
-          0.0,
-          0.0,
-          0.0
-        ]
+        "candidate": [0.42369, 1.339629, 2.225437],
+        "candidate_samples": [94080, 190080, 286080],
+        "reported": [0.0, 0.0, 0.0]
       },
       "mid": {
         "below_tenth_fraction": 0.0,
-        "candidate": [
-          7.714525,
-          24.393061,
-          41.288589
-        ],
-        "candidate_samples": [
-          94080,
-          190080,
-          286080
-        ],
-        "reported": [
-          20.713276,
-          65.496758,
-          125.032005
-        ]
+        "candidate": [7.714525, 24.393061, 41.288589],
+        "candidate_samples": [94080, 190080, 286080],
+        "reported": [20.713276, 65.496758, 125.032005]
       },
       "treble": {
         "below_tenth_fraction": 0.6666666666666666,
-        "candidate": [
-          4.356412,
-          13.790596,
-          24.736803
-        ],
-        "candidate_samples": [
-          94080,
-          190080,
-          286080
-        ],
-        "reported": [
-          0.722669,
-          2.286682,
-          5.504058
-        ]
+        "candidate": [4.356412, 13.790596, 24.736803],
+        "candidate_samples": [94080, 190080, 286080],
+        "reported": [0.722669, 2.286682, 5.504058]
+      }
+    }
+  },
+  "survival": {
+    "anti-phase/combined/normal/30/0": {
+      "events": {
+        "all": [19, 1, 1, 0, 0, 18],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [298, 697, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 18,
+          "sole_carrier_skipped": 18
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "anti-phase/combined/normal/30/1": {
+      "events": {
+        "all": [19, 19, 19, 0, 0, 0],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [995, 0, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "anti-phase/combined/normal/60/0": {
+      "events": {
+        "all": [19, 14, 14, 0, 0, 5],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [597, 398, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 5,
+          "sole_carrier_skipped": 5
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "anti-phase/combined/normal/60/1": {
+      "events": {
+        "all": [19, 19, 19, 0, 0, 0],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [995, 0, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "anti-phase/combined/timestamped/30/0": {
+      "events": {
+        "all": [19, 19, 19, 2, 0, 2],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [996, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "anti-phase/combined/timestamped/30/1": {
+      "events": {
+        "all": [19, 19, 19, 1, 0, 1],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [996, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "anti-phase/combined/timestamped/60/0": {
+      "events": {
+        "all": [19, 19, 19, 1, 0, 1],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [996, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "anti-phase/combined/timestamped/60/1": {
+      "events": {
+        "all": [19, 19, 19, 0, 0, 0],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [996, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "anti-phase/multiband/normal/30/0": {
+      "events": {
+        "all": [20, 1, 1, 0, 0, 19],
+        "bass": [19, 0, 0, 0, 0, 19],
+        "mid": [19, 1, 1, 0, 0, 18],
+        "treble": [19, 1, 1, 0, 0, 18]
+      },
+      "publications": [298, 697, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 19,
+          "sole_carrier_skipped": 19
+        },
+        "bass": {
+          "never_consumed_flags": 19,
+          "sole_carrier_skipped": 19
+        },
+        "mid": {
+          "never_consumed_flags": 18,
+          "sole_carrier_skipped": 18
+        },
+        "treble": {
+          "never_consumed_flags": 18,
+          "sole_carrier_skipped": 18
+        }
+      }
+    },
+    "anti-phase/multiband/normal/30/1": {
+      "events": {
+        "all": [20, 20, 20, 0, 0, 0],
+        "bass": [19, 19, 19, 0, 0, 0],
+        "mid": [19, 19, 19, 0, 0, 0],
+        "treble": [19, 19, 19, 0, 0, 0]
+      },
+      "publications": [995, 0, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "anti-phase/multiband/normal/60/0": {
+      "events": {
+        "all": [20, 14, 14, 0, 0, 6],
+        "bass": [19, 13, 13, 0, 0, 6],
+        "mid": [19, 14, 14, 0, 0, 5],
+        "treble": [19, 14, 14, 0, 0, 5]
+      },
+      "publications": [597, 398, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 6,
+          "sole_carrier_skipped": 6
+        },
+        "bass": {
+          "never_consumed_flags": 6,
+          "sole_carrier_skipped": 6
+        },
+        "mid": {
+          "never_consumed_flags": 5,
+          "sole_carrier_skipped": 5
+        },
+        "treble": {
+          "never_consumed_flags": 5,
+          "sole_carrier_skipped": 5
+        }
+      }
+    },
+    "anti-phase/multiband/normal/60/1": {
+      "events": {
+        "all": [20, 20, 20, 0, 0, 0],
+        "bass": [19, 19, 19, 0, 0, 0],
+        "mid": [19, 19, 19, 0, 0, 0],
+        "treble": [19, 19, 19, 0, 0, 0]
+      },
+      "publications": [995, 0, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "anti-phase/multiband/timestamped/30/0": {
+      "events": {
+        "all": [20, 20, 20, 3, 0, 3],
+        "bass": [19, 19, 19, 2, 0, 2],
+        "mid": [19, 19, 19, 2, 0, 2],
+        "treble": [19, 19, 19, 2, 0, 2]
+      },
+      "publications": [996, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "anti-phase/multiband/timestamped/30/1": {
+      "events": {
+        "all": [20, 20, 20, 2, 0, 2],
+        "bass": [19, 19, 19, 1, 0, 1],
+        "mid": [19, 19, 19, 1, 0, 1],
+        "treble": [19, 19, 19, 1, 0, 1]
+      },
+      "publications": [996, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "anti-phase/multiband/timestamped/60/0": {
+      "events": {
+        "all": [20, 20, 20, 2, 0, 2],
+        "bass": [19, 19, 19, 2, 0, 2],
+        "mid": [19, 19, 19, 1, 0, 1],
+        "treble": [19, 19, 19, 1, 0, 1]
+      },
+      "publications": [996, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "anti-phase/multiband/timestamped/60/1": {
+      "events": {
+        "all": [20, 20, 20, 1, 0, 1],
+        "bass": [19, 19, 19, 1, 0, 1],
+        "mid": [19, 19, 19, 0, 0, 0],
+        "treble": [19, 19, 19, 0, 0, 0]
+      },
+      "publications": [996, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "clicks-120/combined/normal/30/0": {
+      "events": {
+        "all": [19, 0, 0, 0, 0, 19],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [298, 697, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 19,
+          "sole_carrier_skipped": 19
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "clicks-120/combined/normal/30/1": {
+      "events": {
+        "all": [19, 19, 19, 0, 0, 0],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [995, 0, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "clicks-120/combined/normal/60/0": {
+      "events": {
+        "all": [19, 18, 18, 0, 0, 1],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [597, 398, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 1,
+          "sole_carrier_skipped": 1
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "clicks-120/combined/normal/60/1": {
+      "events": {
+        "all": [19, 19, 19, 0, 0, 0],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [995, 0, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "clicks-120/combined/timestamped/30/0": {
+      "events": {
+        "all": [19, 19, 19, 1, 0, 1],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [996, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "clicks-120/combined/timestamped/30/1": {
+      "events": {
+        "all": [19, 19, 19, 1, 0, 1],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [996, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "clicks-120/combined/timestamped/60/0": {
+      "events": {
+        "all": [19, 19, 19, 1, 0, 1],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [996, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "clicks-120/combined/timestamped/60/1": {
+      "events": {
+        "all": [19, 19, 19, 1, 0, 1],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [996, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "clicks-120/multiband/normal/30/0": {
+      "events": {
+        "all": [19, 0, 0, 0, 0, 19],
+        "bass": [19, 0, 0, 0, 0, 19],
+        "mid": [19, 0, 0, 0, 0, 19],
+        "treble": [19, 0, 0, 0, 0, 19]
+      },
+      "publications": [298, 697, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 19,
+          "sole_carrier_skipped": 19
+        },
+        "bass": {
+          "never_consumed_flags": 19,
+          "sole_carrier_skipped": 19
+        },
+        "mid": {
+          "never_consumed_flags": 19,
+          "sole_carrier_skipped": 19
+        },
+        "treble": {
+          "never_consumed_flags": 19,
+          "sole_carrier_skipped": 19
+        }
+      }
+    },
+    "clicks-120/multiband/normal/30/1": {
+      "events": {
+        "all": [19, 19, 19, 0, 0, 0],
+        "bass": [19, 19, 19, 0, 0, 0],
+        "mid": [19, 19, 19, 0, 0, 0],
+        "treble": [19, 19, 19, 0, 0, 0]
+      },
+      "publications": [995, 0, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "clicks-120/multiband/normal/60/0": {
+      "events": {
+        "all": [19, 18, 18, 0, 0, 1],
+        "bass": [19, 18, 18, 0, 0, 1],
+        "mid": [19, 18, 18, 0, 0, 1],
+        "treble": [19, 18, 18, 0, 0, 1]
+      },
+      "publications": [597, 398, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 1,
+          "sole_carrier_skipped": 1
+        },
+        "bass": {
+          "never_consumed_flags": 1,
+          "sole_carrier_skipped": 1
+        },
+        "mid": {
+          "never_consumed_flags": 1,
+          "sole_carrier_skipped": 1
+        },
+        "treble": {
+          "never_consumed_flags": 1,
+          "sole_carrier_skipped": 1
+        }
+      }
+    },
+    "clicks-120/multiband/normal/60/1": {
+      "events": {
+        "all": [19, 19, 19, 0, 0, 0],
+        "bass": [19, 19, 19, 0, 0, 0],
+        "mid": [19, 19, 19, 0, 0, 0],
+        "treble": [19, 19, 19, 0, 0, 0]
+      },
+      "publications": [995, 0, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "clicks-120/multiband/timestamped/30/0": {
+      "events": {
+        "all": [19, 19, 19, 1, 0, 1],
+        "bass": [19, 19, 19, 1, 0, 1],
+        "mid": [19, 19, 19, 1, 0, 1],
+        "treble": [19, 19, 19, 1, 0, 1]
+      },
+      "publications": [996, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "clicks-120/multiband/timestamped/30/1": {
+      "events": {
+        "all": [19, 19, 19, 1, 0, 1],
+        "bass": [19, 19, 19, 1, 0, 1],
+        "mid": [19, 19, 19, 1, 0, 1],
+        "treble": [19, 19, 19, 1, 0, 1]
+      },
+      "publications": [996, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "clicks-120/multiband/timestamped/60/0": {
+      "events": {
+        "all": [19, 19, 19, 1, 0, 1],
+        "bass": [19, 19, 19, 1, 0, 1],
+        "mid": [19, 19, 19, 1, 0, 1],
+        "treble": [19, 19, 19, 1, 0, 1]
+      },
+      "publications": [996, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "clicks-120/multiband/timestamped/60/1": {
+      "events": {
+        "all": [19, 19, 19, 1, 0, 1],
+        "bass": [19, 19, 19, 1, 0, 1],
+        "mid": [19, 19, 19, 1, 0, 1],
+        "treble": [19, 19, 19, 1, 0, 1]
+      },
+      "publications": [996, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "clicks-128/combined/normal/30/0": {
+      "events": {
+        "all": [21, 5, 5, 0, 0, 16],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [298, 697, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 16,
+          "sole_carrier_skipped": 16
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "clicks-128/combined/normal/30/1": {
+      "events": {
+        "all": [21, 21, 21, 0, 0, 0],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [995, 0, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "clicks-128/combined/normal/60/0": {
+      "events": {
+        "all": [21, 12, 12, 0, 0, 9],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [597, 398, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 9,
+          "sole_carrier_skipped": 9
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "clicks-128/combined/normal/60/1": {
+      "events": {
+        "all": [21, 21, 21, 0, 0, 0],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [995, 0, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "clicks-128/combined/timestamped/30/0": {
+      "events": {
+        "all": [21, 21, 21, 14, 0, 14],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [996, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "clicks-128/combined/timestamped/30/1": {
+      "events": {
+        "all": [21, 21, 21, 1, 0, 1],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [996, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "clicks-128/combined/timestamped/60/0": {
+      "events": {
+        "all": [21, 21, 21, 9, 0, 9],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [996, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "clicks-128/combined/timestamped/60/1": {
+      "events": {
+        "all": [21, 21, 21, 2, 0, 2],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [996, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "clicks-128/multiband/normal/30/0": {
+      "events": {
+        "all": [21, 5, 5, 0, 0, 16],
+        "bass": [21, 5, 5, 0, 0, 16],
+        "mid": [21, 5, 5, 0, 0, 16],
+        "treble": [21, 5, 5, 0, 0, 16]
+      },
+      "publications": [298, 697, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 16,
+          "sole_carrier_skipped": 16
+        },
+        "bass": {
+          "never_consumed_flags": 16,
+          "sole_carrier_skipped": 16
+        },
+        "mid": {
+          "never_consumed_flags": 16,
+          "sole_carrier_skipped": 16
+        },
+        "treble": {
+          "never_consumed_flags": 16,
+          "sole_carrier_skipped": 16
+        }
+      }
+    },
+    "clicks-128/multiband/normal/30/1": {
+      "events": {
+        "all": [21, 21, 21, 0, 0, 0],
+        "bass": [21, 21, 21, 0, 0, 0],
+        "mid": [21, 21, 21, 0, 0, 0],
+        "treble": [21, 21, 21, 0, 0, 0]
+      },
+      "publications": [995, 0, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "clicks-128/multiband/normal/60/0": {
+      "events": {
+        "all": [21, 12, 12, 0, 0, 9],
+        "bass": [21, 12, 12, 0, 0, 9],
+        "mid": [21, 12, 12, 0, 0, 9],
+        "treble": [21, 12, 12, 0, 0, 9]
+      },
+      "publications": [597, 398, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 9,
+          "sole_carrier_skipped": 9
+        },
+        "bass": {
+          "never_consumed_flags": 9,
+          "sole_carrier_skipped": 9
+        },
+        "mid": {
+          "never_consumed_flags": 9,
+          "sole_carrier_skipped": 9
+        },
+        "treble": {
+          "never_consumed_flags": 9,
+          "sole_carrier_skipped": 9
+        }
+      }
+    },
+    "clicks-128/multiband/normal/60/1": {
+      "events": {
+        "all": [21, 21, 21, 0, 0, 0],
+        "bass": [21, 21, 21, 0, 0, 0],
+        "mid": [21, 21, 21, 0, 0, 0],
+        "treble": [21, 21, 21, 0, 0, 0]
+      },
+      "publications": [995, 0, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "clicks-128/multiband/timestamped/30/0": {
+      "events": {
+        "all": [21, 21, 21, 14, 0, 14],
+        "bass": [21, 21, 21, 14, 0, 14],
+        "mid": [21, 21, 21, 14, 0, 14],
+        "treble": [21, 21, 21, 14, 0, 14]
+      },
+      "publications": [996, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "clicks-128/multiband/timestamped/30/1": {
+      "events": {
+        "all": [21, 21, 21, 1, 0, 1],
+        "bass": [21, 21, 21, 1, 0, 1],
+        "mid": [21, 21, 21, 1, 0, 1],
+        "treble": [21, 21, 21, 1, 0, 1]
+      },
+      "publications": [996, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "clicks-128/multiband/timestamped/60/0": {
+      "events": {
+        "all": [21, 21, 21, 9, 0, 9],
+        "bass": [21, 21, 21, 9, 0, 9],
+        "mid": [21, 21, 21, 9, 0, 9],
+        "treble": [21, 21, 21, 9, 0, 9]
+      },
+      "publications": [996, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "clicks-128/multiband/timestamped/60/1": {
+      "events": {
+        "all": [21, 21, 21, 2, 0, 2],
+        "bass": [21, 21, 21, 2, 0, 2],
+        "mid": [21, 21, 21, 2, 0, 2],
+        "treble": [21, 21, 21, 2, 0, 2]
+      },
+      "publications": [996, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "clicks-174/combined/normal/30/0": {
+      "events": {
+        "all": [28, 8, 8, 0, 0, 20],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [298, 697, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 20,
+          "sole_carrier_skipped": 20
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "clicks-174/combined/normal/30/1": {
+      "events": {
+        "all": [28, 28, 28, 0, 0, 0],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [995, 0, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "clicks-174/combined/normal/60/0": {
+      "events": {
+        "all": [28, 16, 16, 0, 0, 12],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [597, 398, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 12,
+          "sole_carrier_skipped": 12
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "clicks-174/combined/normal/60/1": {
+      "events": {
+        "all": [28, 28, 28, 0, 0, 0],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [995, 0, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "clicks-174/combined/timestamped/30/0": {
+      "events": {
+        "all": [28, 28, 28, 20, 0, 20],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [996, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "clicks-174/combined/timestamped/30/1": {
+      "events": {
+        "all": [28, 28, 28, 1, 0, 1],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [996, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "clicks-174/combined/timestamped/60/0": {
+      "events": {
+        "all": [28, 28, 28, 12, 0, 12],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [996, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "clicks-174/combined/timestamped/60/1": {
+      "events": {
+        "all": [28, 28, 28, 3, 0, 3],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [996, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "clicks-174/multiband/normal/30/0": {
+      "events": {
+        "all": [28, 8, 8, 0, 0, 20],
+        "bass": [28, 8, 8, 0, 0, 20],
+        "mid": [28, 8, 8, 0, 0, 20],
+        "treble": [28, 8, 8, 0, 0, 20]
+      },
+      "publications": [298, 697, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 20,
+          "sole_carrier_skipped": 20
+        },
+        "bass": {
+          "never_consumed_flags": 20,
+          "sole_carrier_skipped": 20
+        },
+        "mid": {
+          "never_consumed_flags": 20,
+          "sole_carrier_skipped": 20
+        },
+        "treble": {
+          "never_consumed_flags": 20,
+          "sole_carrier_skipped": 20
+        }
+      }
+    },
+    "clicks-174/multiband/normal/30/1": {
+      "events": {
+        "all": [28, 28, 28, 0, 0, 0],
+        "bass": [28, 28, 28, 0, 0, 0],
+        "mid": [28, 28, 28, 0, 0, 0],
+        "treble": [28, 28, 28, 0, 0, 0]
+      },
+      "publications": [995, 0, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "clicks-174/multiband/normal/60/0": {
+      "events": {
+        "all": [28, 16, 16, 0, 0, 12],
+        "bass": [28, 16, 16, 0, 0, 12],
+        "mid": [28, 16, 16, 0, 0, 12],
+        "treble": [28, 16, 16, 0, 0, 12]
+      },
+      "publications": [597, 398, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 12,
+          "sole_carrier_skipped": 12
+        },
+        "bass": {
+          "never_consumed_flags": 12,
+          "sole_carrier_skipped": 12
+        },
+        "mid": {
+          "never_consumed_flags": 12,
+          "sole_carrier_skipped": 12
+        },
+        "treble": {
+          "never_consumed_flags": 12,
+          "sole_carrier_skipped": 12
+        }
+      }
+    },
+    "clicks-174/multiband/normal/60/1": {
+      "events": {
+        "all": [28, 28, 28, 0, 0, 0],
+        "bass": [28, 28, 28, 0, 0, 0],
+        "mid": [28, 28, 28, 0, 0, 0],
+        "treble": [28, 28, 28, 0, 0, 0]
+      },
+      "publications": [995, 0, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "clicks-174/multiband/timestamped/30/0": {
+      "events": {
+        "all": [28, 28, 28, 20, 0, 20],
+        "bass": [28, 28, 28, 20, 0, 20],
+        "mid": [28, 28, 28, 20, 0, 20],
+        "treble": [28, 28, 28, 20, 0, 20]
+      },
+      "publications": [996, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "clicks-174/multiband/timestamped/30/1": {
+      "events": {
+        "all": [28, 28, 28, 1, 0, 1],
+        "bass": [28, 28, 28, 1, 0, 1],
+        "mid": [28, 28, 28, 1, 0, 1],
+        "treble": [28, 28, 28, 1, 0, 1]
+      },
+      "publications": [996, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "clicks-174/multiband/timestamped/60/0": {
+      "events": {
+        "all": [28, 28, 28, 12, 0, 12],
+        "bass": [28, 28, 28, 12, 0, 12],
+        "mid": [28, 28, 28, 12, 0, 12],
+        "treble": [28, 28, 28, 12, 0, 12]
+      },
+      "publications": [996, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "clicks-174/multiband/timestamped/60/1": {
+      "events": {
+        "all": [28, 28, 28, 3, 0, 3],
+        "bass": [28, 28, 28, 3, 0, 3],
+        "mid": [28, 28, 28, 3, 0, 3],
+        "treble": [28, 28, 28, 3, 0, 3]
+      },
+      "publications": [996, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "impulse/combined/normal/30/0": {
+      "events": {
+        "all": [1, 0, 0, 0, 0, 1],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [178, 417, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 1,
+          "sole_carrier_skipped": 1
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "impulse/combined/normal/30/1": {
+      "events": {
+        "all": [1, 1, 1, 0, 0, 0],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [595, 0, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "impulse/combined/normal/60/0": {
+      "events": {
+        "all": [1, 0, 0, 0, 0, 1],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [357, 238, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 1,
+          "sole_carrier_skipped": 1
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "impulse/combined/normal/60/1": {
+      "events": {
+        "all": [1, 1, 1, 0, 0, 0],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [595, 0, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "impulse/combined/timestamped/30/0": {
+      "events": {
+        "all": [1, 1, 1, 1, 0, 1],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [596, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "impulse/combined/timestamped/30/1": {
+      "events": {
+        "all": [1, 1, 1, 0, 0, 0],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [596, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "impulse/combined/timestamped/60/0": {
+      "events": {
+        "all": [1, 1, 1, 1, 0, 1],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [596, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "impulse/combined/timestamped/60/1": {
+      "events": {
+        "all": [1, 1, 1, 0, 0, 0],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [596, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "impulse/multiband/normal/30/0": {
+      "events": {
+        "all": [1, 0, 0, 0, 0, 1],
+        "bass": [1, 0, 0, 0, 0, 1],
+        "mid": [1, 0, 0, 0, 0, 1],
+        "treble": [1, 0, 0, 0, 0, 1]
+      },
+      "publications": [178, 417, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 1,
+          "sole_carrier_skipped": 1
+        },
+        "bass": {
+          "never_consumed_flags": 1,
+          "sole_carrier_skipped": 1
+        },
+        "mid": {
+          "never_consumed_flags": 1,
+          "sole_carrier_skipped": 1
+        },
+        "treble": {
+          "never_consumed_flags": 1,
+          "sole_carrier_skipped": 1
+        }
+      }
+    },
+    "impulse/multiband/normal/30/1": {
+      "events": {
+        "all": [1, 1, 1, 0, 0, 0],
+        "bass": [1, 1, 1, 0, 0, 0],
+        "mid": [1, 1, 1, 0, 0, 0],
+        "treble": [1, 1, 1, 0, 0, 0]
+      },
+      "publications": [595, 0, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "impulse/multiband/normal/60/0": {
+      "events": {
+        "all": [1, 0, 0, 0, 0, 1],
+        "bass": [1, 0, 0, 0, 0, 1],
+        "mid": [1, 0, 0, 0, 0, 1],
+        "treble": [1, 0, 0, 0, 0, 1]
+      },
+      "publications": [357, 238, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 1,
+          "sole_carrier_skipped": 1
+        },
+        "bass": {
+          "never_consumed_flags": 1,
+          "sole_carrier_skipped": 1
+        },
+        "mid": {
+          "never_consumed_flags": 1,
+          "sole_carrier_skipped": 1
+        },
+        "treble": {
+          "never_consumed_flags": 1,
+          "sole_carrier_skipped": 1
+        }
+      }
+    },
+    "impulse/multiband/normal/60/1": {
+      "events": {
+        "all": [1, 1, 1, 0, 0, 0],
+        "bass": [1, 1, 1, 0, 0, 0],
+        "mid": [1, 1, 1, 0, 0, 0],
+        "treble": [1, 1, 1, 0, 0, 0]
+      },
+      "publications": [595, 0, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "impulse/multiband/timestamped/30/0": {
+      "events": {
+        "all": [1, 1, 1, 1, 0, 1],
+        "bass": [1, 1, 1, 1, 0, 1],
+        "mid": [1, 1, 1, 1, 0, 1],
+        "treble": [1, 1, 1, 1, 0, 1]
+      },
+      "publications": [596, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "impulse/multiband/timestamped/30/1": {
+      "events": {
+        "all": [1, 1, 1, 0, 0, 0],
+        "bass": [1, 1, 1, 0, 0, 0],
+        "mid": [1, 1, 1, 0, 0, 0],
+        "treble": [1, 1, 1, 0, 0, 0]
+      },
+      "publications": [596, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "impulse/multiband/timestamped/60/0": {
+      "events": {
+        "all": [1, 1, 1, 1, 0, 1],
+        "bass": [1, 1, 1, 1, 0, 1],
+        "mid": [1, 1, 1, 1, 0, 1],
+        "treble": [1, 1, 1, 1, 0, 1]
+      },
+      "publications": [596, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "impulse/multiband/timestamped/60/1": {
+      "events": {
+        "all": [1, 1, 1, 0, 0, 0],
+        "bass": [1, 1, 1, 0, 0, 0],
+        "mid": [1, 1, 1, 0, 0, 0],
+        "treble": [1, 1, 1, 0, 0, 0]
+      },
+      "publications": [596, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "panning/combined/normal/30/0": {
+      "events": {
+        "all": [19, 1, 1, 0, 0, 18],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [298, 697, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 18,
+          "sole_carrier_skipped": 18
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "panning/combined/normal/30/1": {
+      "events": {
+        "all": [19, 19, 19, 0, 0, 0],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [995, 0, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "panning/combined/normal/60/0": {
+      "events": {
+        "all": [19, 14, 14, 0, 0, 5],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [597, 398, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 5,
+          "sole_carrier_skipped": 5
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "panning/combined/normal/60/1": {
+      "events": {
+        "all": [19, 19, 19, 0, 0, 0],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [995, 0, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "panning/combined/timestamped/30/0": {
+      "events": {
+        "all": [19, 19, 19, 2, 0, 2],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [996, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "panning/combined/timestamped/30/1": {
+      "events": {
+        "all": [19, 19, 19, 1, 0, 1],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [996, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "panning/combined/timestamped/60/0": {
+      "events": {
+        "all": [19, 19, 19, 1, 0, 1],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [996, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "panning/combined/timestamped/60/1": {
+      "events": {
+        "all": [19, 19, 19, 0, 0, 0],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [996, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "panning/multiband/normal/30/0": {
+      "events": {
+        "all": [20, 1, 1, 0, 0, 19],
+        "bass": [19, 0, 0, 0, 0, 19],
+        "mid": [19, 0, 0, 0, 0, 19],
+        "treble": [19, 1, 1, 0, 0, 18]
+      },
+      "publications": [298, 697, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 19,
+          "sole_carrier_skipped": 19
+        },
+        "bass": {
+          "never_consumed_flags": 19,
+          "sole_carrier_skipped": 19
+        },
+        "mid": {
+          "never_consumed_flags": 19,
+          "sole_carrier_skipped": 19
+        },
+        "treble": {
+          "never_consumed_flags": 18,
+          "sole_carrier_skipped": 18
+        }
+      }
+    },
+    "panning/multiband/normal/30/1": {
+      "events": {
+        "all": [20, 20, 20, 0, 0, 0],
+        "bass": [19, 19, 19, 0, 0, 0],
+        "mid": [19, 19, 19, 0, 0, 0],
+        "treble": [19, 19, 19, 0, 0, 0]
+      },
+      "publications": [995, 0, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "panning/multiband/normal/60/0": {
+      "events": {
+        "all": [20, 14, 14, 0, 0, 6],
+        "bass": [19, 13, 13, 0, 0, 6],
+        "mid": [19, 13, 13, 0, 0, 6],
+        "treble": [19, 14, 14, 0, 0, 5]
+      },
+      "publications": [597, 398, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 6,
+          "sole_carrier_skipped": 6
+        },
+        "bass": {
+          "never_consumed_flags": 6,
+          "sole_carrier_skipped": 6
+        },
+        "mid": {
+          "never_consumed_flags": 6,
+          "sole_carrier_skipped": 6
+        },
+        "treble": {
+          "never_consumed_flags": 5,
+          "sole_carrier_skipped": 5
+        }
+      }
+    },
+    "panning/multiband/normal/60/1": {
+      "events": {
+        "all": [20, 20, 20, 0, 0, 0],
+        "bass": [19, 19, 19, 0, 0, 0],
+        "mid": [19, 19, 19, 0, 0, 0],
+        "treble": [19, 19, 19, 0, 0, 0]
+      },
+      "publications": [995, 0, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "panning/multiband/timestamped/30/0": {
+      "events": {
+        "all": [20, 20, 20, 3, 0, 3],
+        "bass": [19, 19, 19, 2, 0, 2],
+        "mid": [19, 19, 19, 2, 0, 2],
+        "treble": [19, 19, 19, 2, 0, 2]
+      },
+      "publications": [996, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "panning/multiband/timestamped/30/1": {
+      "events": {
+        "all": [20, 20, 20, 2, 0, 2],
+        "bass": [19, 19, 19, 1, 0, 1],
+        "mid": [19, 19, 19, 1, 0, 1],
+        "treble": [19, 19, 19, 1, 0, 1]
+      },
+      "publications": [996, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "panning/multiband/timestamped/60/0": {
+      "events": {
+        "all": [20, 20, 20, 2, 0, 2],
+        "bass": [19, 19, 19, 2, 0, 2],
+        "mid": [19, 19, 19, 2, 0, 2],
+        "treble": [19, 19, 19, 1, 0, 1]
+      },
+      "publications": [996, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "panning/multiband/timestamped/60/1": {
+      "events": {
+        "all": [20, 20, 20, 1, 0, 1],
+        "bass": [19, 19, 19, 1, 0, 1],
+        "mid": [19, 19, 19, 1, 0, 1],
+        "treble": [19, 19, 19, 0, 0, 0]
+      },
+      "publications": [996, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "tone-steps/combined/normal/30/0": {
+      "events": {
+        "all": [3, 0, 0, 0, 0, 3],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [238, 557, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 3,
+          "sole_carrier_skipped": 3
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "tone-steps/combined/normal/30/1": {
+      "events": {
+        "all": [3, 3, 3, 0, 0, 0],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [795, 0, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "tone-steps/combined/normal/60/0": {
+      "events": {
+        "all": [3, 0, 0, 0, 0, 3],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [477, 318, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 3,
+          "sole_carrier_skipped": 3
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "tone-steps/combined/normal/60/1": {
+      "events": {
+        "all": [3, 3, 3, 0, 0, 0],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [795, 0, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "tone-steps/combined/timestamped/30/0": {
+      "events": {
+        "all": [3, 3, 3, 3, 0, 3],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [796, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "tone-steps/combined/timestamped/30/1": {
+      "events": {
+        "all": [3, 3, 3, 0, 0, 0],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [796, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "tone-steps/combined/timestamped/60/0": {
+      "events": {
+        "all": [3, 3, 3, 3, 0, 3],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [796, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "tone-steps/combined/timestamped/60/1": {
+      "events": {
+        "all": [3, 3, 3, 1, 0, 1],
+        "bass": [0, 0, 0, 0, 0, 0],
+        "mid": [0, 0, 0, 0, 0, 0],
+        "treble": [0, 0, 0, 0, 0, 0]
+      },
+      "publications": [796, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "tone-steps/multiband/normal/30/0": {
+      "events": {
+        "all": [3, 0, 0, 0, 0, 3],
+        "bass": [3, 0, 0, 0, 0, 3],
+        "mid": [3, 0, 0, 0, 0, 3],
+        "treble": [3, 0, 0, 0, 0, 3]
+      },
+      "publications": [238, 557, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 3,
+          "sole_carrier_skipped": 3
+        },
+        "bass": {
+          "never_consumed_flags": 3,
+          "sole_carrier_skipped": 3
+        },
+        "mid": {
+          "never_consumed_flags": 3,
+          "sole_carrier_skipped": 3
+        },
+        "treble": {
+          "never_consumed_flags": 3,
+          "sole_carrier_skipped": 3
+        }
+      }
+    },
+    "tone-steps/multiband/normal/30/1": {
+      "events": {
+        "all": [3, 3, 3, 0, 0, 0],
+        "bass": [3, 3, 3, 0, 0, 0],
+        "mid": [3, 3, 3, 0, 0, 0],
+        "treble": [3, 3, 3, 0, 0, 0]
+      },
+      "publications": [795, 0, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "tone-steps/multiband/normal/60/0": {
+      "events": {
+        "all": [3, 0, 0, 0, 0, 3],
+        "bass": [3, 0, 0, 0, 0, 3],
+        "mid": [3, 0, 0, 0, 0, 3],
+        "treble": [3, 0, 0, 0, 0, 3]
+      },
+      "publications": [477, 318, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 3,
+          "sole_carrier_skipped": 3
+        },
+        "bass": {
+          "never_consumed_flags": 3,
+          "sole_carrier_skipped": 3
+        },
+        "mid": {
+          "never_consumed_flags": 3,
+          "sole_carrier_skipped": 3
+        },
+        "treble": {
+          "never_consumed_flags": 3,
+          "sole_carrier_skipped": 3
+        }
+      }
+    },
+    "tone-steps/multiband/normal/60/1": {
+      "events": {
+        "all": [3, 3, 3, 0, 0, 0],
+        "bass": [3, 3, 3, 0, 0, 0],
+        "mid": [3, 3, 3, 0, 0, 0],
+        "treble": [3, 3, 3, 0, 0, 0]
+      },
+      "publications": [795, 0, 1],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "tone-steps/multiband/timestamped/30/0": {
+      "events": {
+        "all": [3, 3, 3, 3, 0, 3],
+        "bass": [3, 3, 3, 3, 0, 3],
+        "mid": [3, 3, 3, 3, 0, 3],
+        "treble": [3, 3, 3, 3, 0, 3]
+      },
+      "publications": [796, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "tone-steps/multiband/timestamped/30/1": {
+      "events": {
+        "all": [3, 3, 3, 0, 0, 0],
+        "bass": [3, 3, 3, 0, 0, 0],
+        "mid": [3, 3, 3, 0, 0, 0],
+        "treble": [3, 3, 3, 0, 0, 0]
+      },
+      "publications": [796, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "tone-steps/multiband/timestamped/60/0": {
+      "events": {
+        "all": [3, 3, 3, 3, 0, 3],
+        "bass": [3, 3, 3, 3, 0, 3],
+        "mid": [3, 3, 3, 3, 0, 3],
+        "treble": [3, 3, 3, 3, 0, 3]
+      },
+      "publications": [796, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
+      }
+    },
+    "tone-steps/multiband/timestamped/60/1": {
+      "events": {
+        "all": [3, 3, 3, 1, 0, 1],
+        "bass": [3, 3, 3, 1, 0, 1],
+        "mid": [3, 3, 3, 1, 0, 1],
+        "treble": [3, 3, 3, 1, 0, 1]
+      },
+      "publications": [796, 0, 0],
+      "skipped_flags": {
+        "all": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "bass": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "mid": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        },
+        "treble": {
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
+        }
       }
     }
   },
   "tone_levels": {
     "combined": {
       "all": {
-        "candidate": [
-          0.0,
-          12.494626,
-          39.523286,
-          68.250828
-        ],
-        "present": [
-          false,
-          true,
-          true,
-          true
-        ],
-        "reported": [
-          0.0,
-          21.435945,
-          67.78344,
-          130.536063
-        ],
+        "candidate": [0.0, 12.494626, 39.523286, 68.250828],
+        "present": [false, true, true, true],
+        "reported": [0.0, 21.435945, 67.78344, 130.536063],
         "rho": 1.0
       },
       "bass": {
-        "candidate": [
-          0.0,
-          0.0,
-          0.0,
-          0.0
-        ],
-        "present": [
-          false,
-          false,
-          false,
-          false
-        ],
-        "reported": [
-          0.0,
-          0.0,
-          0.0,
-          0.0
-        ],
+        "candidate": [0.0, 0.0, 0.0, 0.0],
+        "present": [false, false, false, false],
+        "reported": [0.0, 0.0, 0.0, 0.0],
         "rho": null
       },
       "mid": {
-        "candidate": [
-          0.0,
-          0.0,
-          0.0,
-          0.0
-        ],
-        "present": [
-          false,
-          false,
-          false,
-          false
-        ],
-        "reported": [
-          0.0,
-          0.0,
-          0.0,
-          0.0
-        ],
+        "candidate": [0.0, 0.0, 0.0, 0.0],
+        "present": [false, false, false, false],
+        "reported": [0.0, 0.0, 0.0, 0.0],
         "rho": null
       },
       "treble": {
-        "candidate": [
-          0.0,
-          0.0,
-          0.0,
-          0.0
-        ],
-        "present": [
-          false,
-          false,
-          false,
-          false
-        ],
-        "reported": [
-          0.0,
-          0.0,
-          0.0,
-          0.0
-        ],
+        "candidate": [0.0, 0.0, 0.0, 0.0],
+        "present": [false, false, false, false],
+        "reported": [0.0, 0.0, 0.0, 0.0],
         "rho": null
       }
     },
     "multiband": {
       "all": {
-        "candidate": [
-          0.0,
-          7.714525,
-          24.393061,
-          41.288589
-        ],
-        "present": [
-          false,
-          true,
-          true,
-          true
-        ],
-        "reported": [
-          0.0,
-          20.713276,
-          65.496758,
-          125.032005
-        ],
+        "candidate": [0.0, 7.714525, 24.393061, 41.288589],
+        "present": [false, true, true, true],
+        "reported": [0.0, 20.713276, 65.496758, 125.032005],
         "rho": 1.0
       },
       "bass": {
-        "candidate": [
-          0.0,
-          0.42369,
-          1.339629,
-          2.225437
-        ],
-        "present": [
-          false,
-          true,
-          true,
-          true
-        ],
-        "reported": [
-          0.0,
-          0.0,
-          0.0,
-          0.0
-        ],
+        "candidate": [0.0, 0.42369, 1.339629, 2.225437],
+        "present": [false, true, true, true],
+        "reported": [0.0, 0.0, 0.0, 0.0],
         "rho": null
       },
       "mid": {
-        "candidate": [
-          0.0,
-          7.714525,
-          24.393061,
-          41.288589
-        ],
-        "present": [
-          false,
-          true,
-          true,
-          true
-        ],
-        "reported": [
-          0.0,
-          20.713276,
-          65.496758,
-          125.032005
-        ],
+        "candidate": [0.0, 7.714525, 24.393061, 41.288589],
+        "present": [false, true, true, true],
+        "reported": [0.0, 20.713276, 65.496758, 125.032005],
         "rho": 1.0
       },
       "treble": {
-        "candidate": [
-          0.0,
-          4.356412,
-          13.790596,
-          24.736803
-        ],
-        "present": [
-          false,
-          true,
-          true,
-          true
-        ],
-        "reported": [
-          0.0,
-          0.722669,
-          2.286682,
-          5.504058
-        ],
+        "candidate": [0.0, 4.356412, 13.790596, 24.736803],
+        "present": [false, true, true, true],
+        "reported": [0.0, 0.722669, 2.286682, 5.504058],
         "rho": 1.0
       }
     }
