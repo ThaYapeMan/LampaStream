@@ -54,3 +54,11 @@ Each dated line records an owner decision or a bounded documentation choice for 
 - 2026-10-25 — Share one session replay cache through module-scoped fixtures and reuse deep-copied DSP results only across route/rate variants. Fresh publication, mixer and output state preserves the production route semantics while avoiding repeated DSP work.
 - 2026-10-25 — No slow marker or CI exclusion: all four added modules took 40.34 s on one CPU (103 pins passed, 133 contracts xfailed); the position module alone took 23.81 s. Existing tests are unchanged and remain in the full suite.
 - 2026-10-25 — No discrepancy from BENCH-01: clicks-120 normal/30/free remains received=19, accepted=0, rendered=0, lost=19. Both routes' counters match the committed baseline byte-for-byte, and all eight CSVs match the original local BENCH-01 captures. Meta git revision necessarily changes and is not asserted identical.
+
+## EVENT-01 detector decisions
+
+- 2026-10-25 — Use raw-flux absolute delta 0.02 and standard-deviation floor 0.01: below the smallest fixture band transient while rejecting numerical residuals; normalized strength clips at six standard deviations.
+- 2026-10-25 — Hold statistics for three ungated frames and exclude silent windows: preserve the pre-silence reference without swallowing the first transient. The legacy raw-ODF adapter treats zero flux as silence; canonical detection gates the analysis window's spectral RMS.
+- 2026-10-25 — Confidence is margin/(margin+std), multiplied by candidate/max(candidate, alpha-decayed flux, std floor), then by the fraction of enabled bands firing. Alpha reduces confidence without suppressing peaks.
+- 2026-10-25 — Candidate sample uses the causal flux attack reference, three hops after the leading STFT window position; availability is a separate hop coordinate with explicit configured lookahead. Input batching never selects lookahead.
+- 2026-10-25 — The web Analyser and Effect TypeScript interfaces will require the optional new API fields in the Styles phase; no frontend files are changed here.

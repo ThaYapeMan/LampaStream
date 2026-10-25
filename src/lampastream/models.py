@@ -239,6 +239,10 @@ class Profile:
     # Onset detection tuning (Dixon 2006 three-condition peak-picking).
     # onset_delta: margin above the asymmetric local mean required for condition 2.
     # Higher values = fewer, more confident onsets.
+    onset_lookahead_frames: int = 1
+    onset_delta_abs: float = 0.02
+    onset_min_ioi_ms: float = 30.0
+    onset_silence_gate_dbfs: float = -60.0
     onset_delta: float = 0.1
     # onset_alpha: per-frame decay of the adaptive suppression threshold (condition 3).
     # Higher values = longer suppression after a loud onset.  Range 0–1.
@@ -292,6 +296,9 @@ class Profile:
                 f"Invalid bars_source {self.bars_source!r}; "
                 f"must be one of {sorted(_VALID_BARS_SOURCES)}"
             )
+        if (type(self.onset_lookahead_frames) is not int
+                or not 0 <= self.onset_lookahead_frames <= 3):
+            raise ValueError("onset_lookahead_frames must be an integer from 0 to 3")
         validate_bar_falloff(self.bar_falloff_s)
         if self.spectrum_backend not in _VALID_ENGINE_IDS:
             raise ValueError(
@@ -470,6 +477,10 @@ class Analyser:
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     name: str = "Default Analysis"
     onset_method: str = "combined"
+    onset_lookahead_frames: int = 1
+    onset_delta_abs: float = 0.02
+    onset_min_ioi_ms: float = 30.0
+    onset_silence_gate_dbfs: float = -60.0
     onset_delta: float = 0.1
     onset_alpha: float = 0.9
     superflux_mu: int = 3
@@ -495,6 +506,9 @@ class Analyser:
                 f"Invalid bars_source {self.bars_source!r}; "
                 f"must be one of {sorted(_VALID_BARS_SOURCES)}"
             )
+        if (type(self.onset_lookahead_frames) is not int
+                or not 0 <= self.onset_lookahead_frames <= 3):
+            raise ValueError("onset_lookahead_frames must be an integer from 0 to 3")
         validate_bar_falloff(self.bar_falloff_s)
         if self.spectrum_backend not in _VALID_ENGINE_IDS:
             raise ValueError(
@@ -507,6 +521,10 @@ class Analyser:
             "id": self.id,
             "name": self.name,
             "onset_method": self.onset_method,
+            "onset_lookahead_frames": self.onset_lookahead_frames,
+            "onset_delta_abs": self.onset_delta_abs,
+            "onset_min_ioi_ms": self.onset_min_ioi_ms,
+            "onset_silence_gate_dbfs": self.onset_silence_gate_dbfs,
             "onset_delta": self.onset_delta,
             "onset_alpha": self.onset_alpha,
             "superflux_mu": self.superflux_mu,

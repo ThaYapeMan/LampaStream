@@ -198,6 +198,10 @@ class AnalyserCreateBody(BaseModel):
 
     name: str = "Default Analysis"
     onset_method: str = "combined"
+    onset_lookahead_frames: int = 1
+    onset_delta_abs: float = 0.02
+    onset_min_ioi_ms: float = 30.0
+    onset_silence_gate_dbfs: float = -60.0
     onset_delta: float = 0.1
     onset_alpha: float = 0.9
     superflux_mu: int = 3
@@ -216,6 +220,10 @@ class AnalyserPatchBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
     name: str | None = None
     onset_method: str | None = None
+    onset_lookahead_frames: int | None = None
+    onset_delta_abs: float | None = None
+    onset_min_ioi_ms: float | None = None
+    onset_silence_gate_dbfs: float | None = None
     onset_delta: float | None = None
     onset_alpha: float | None = None
     superflux_mu: int | None = None
@@ -374,6 +382,10 @@ class CouplingPatchBody(CouplingReleaseBody):
     higher_cutoff_freq: int | None = None
     # Analyser pcm category (update_onset_pipeline)
     onset_method: str | None = None
+    onset_lookahead_frames: int | None = None
+    onset_delta_abs: float | None = None
+    onset_min_ioi_ms: float | None = None
+    onset_silence_gate_dbfs: float | None = None
     onset_delta: float | None = None
     onset_alpha: float | None = None
     superflux_mu: int | None = None
@@ -417,6 +429,8 @@ _C_SPECTRUM_FIELDS: frozenset[str] = frozenset({
     "bars", "lower_cutoff_freq", "higher_cutoff_freq",
 })
 _C_PCM_FIELDS: frozenset[str] = frozenset({
+    "onset_lookahead_frames", "onset_delta_abs",
+    "onset_min_ioi_ms", "onset_silence_gate_dbfs",
     "onset_method", "onset_delta", "onset_alpha", "superflux_mu", "superflux_lag",
     "use_hpss_separation", "bass_hz", "mid_hz",
 })
@@ -436,6 +450,8 @@ _C_PLAYER_INLINE: frozenset[str] = frozenset({
 })
 _C_ANALYSER_INLINE: frozenset[str] = frozenset({
     "bars", "lower_cutoff_freq", "higher_cutoff_freq",
+    "onset_lookahead_frames", "onset_delta_abs",
+    "onset_min_ioi_ms", "onset_silence_gate_dbfs",
     "onset_method", "onset_delta", "onset_alpha", "superflux_mu", "superflux_lag",
     "use_hpss_separation", "band_normalise", "bar_falloff_s",
 })
@@ -976,6 +992,10 @@ async def create_analyser(request: Request, body: AnalyserCreateBody):
             name=body.name,
             onset_method=body.onset_method,
             onset_delta=body.onset_delta,
+            onset_lookahead_frames=body.onset_lookahead_frames,
+            onset_delta_abs=body.onset_delta_abs,
+            onset_min_ioi_ms=body.onset_min_ioi_ms,
+            onset_silence_gate_dbfs=body.onset_silence_gate_dbfs,
             onset_alpha=body.onset_alpha,
             superflux_mu=body.superflux_mu,
             superflux_lag=body.superflux_lag,

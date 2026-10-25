@@ -113,6 +113,24 @@ class UniformScene:
 # ---------------------------------------------------------------------------
 
 
+@dataclass(frozen=True)
+class OnsetEvent:
+    """Candidate-attributed onset in canonical sample coordinates."""
+
+    id: tuple[str, str, int]
+    epoch: str
+    candidate_sample: int
+    availability_sample: int
+    lookahead_frames: int
+    strength: float
+    strength_raw: float
+    confidence: float
+    bands: frozenset[str]
+    dominant_band: str
+    play_monotonic: float | None = None
+    received_monotonic: float | None = None
+
+
 @dataclass
 class AudioFeatures:
     """Processed audio data for one analysis frame.
@@ -146,6 +164,7 @@ class AudioFeatures:
 
     # Onset detection.  onset=True on frames where a note or drum hit starts.
     # onset_strength is the raw spectral flux value (unnormalised).
+    onset_events: tuple[OnsetEvent, ...] = ()
     onset: bool = False
     onset_strength: float = 0.0
 

@@ -58,6 +58,7 @@ from .types import (
     AudioPipeline,
     Colour,
     LatencyProbe,
+    OnsetEvent,
     Output,
     Position,
     Scene,
@@ -363,130 +364,105 @@ class SustainedEnergyTracker:
 # ---------------------------------------------------------------------------
 
 
+@dataclass(frozen=True)
+class PickerEvent:
+    candidate_frame: int
+    candidate_strength: float
+    availability_frame: int
+    strength: float
+    confidence: float
+
+
 class OnsetDetector:
-    """Detects musical onsets using the peak-picking algorithm from Dixon (2006).
+    """Causal raw-flux picker; process/process_odf remain boolean adapters.
 
-    Spectral flux is normalised to mean 0, standard deviation 1 via EMA
-    statistics, then a candidate frame is declared an onset only when all
-    three conditions hold simultaneously:
-
-        1. Local maximum: f(n) >= f(k) for all k in [n-w, n+w]  (w=3)
-        2. Above asymmetric mean: f(n) >= mean(f(k), k in [n-m*w, n+w]) + delta
-           (m=3, so the window looks 3× further back than forward)
-        3. Above decaying threshold: f(n) >= g_alpha(n-1)
-           where g_alpha(n) = max(f(n), alpha*g_alpha(n-1) + (1-alpha)*f(n))
-
-    Condition 1 requires looking w frames ahead, so the detector is inherently
-    w frames (~100 ms at 30 Hz) behind real time.  This is irrelevant for
-    lighting.
-
-    Condition 3 replaces the old fixed cooldown: it suppresses re-triggering
-    adaptively — a loud onset raises the bar for longer than a quiet one.
-
-    Source: Simon Dixon, "Onset Detection Revisited", DAFx-06.
+    Confidence is the threshold margin divided by (margin + std), multiplied
+    by a soft alpha-decay ratio. Alpha never vetoes a local maximum.
+    Statistics exclude gated frames and confirmed candidates; a three-frame
+    recovery hold prevents silence from changing the reference on resumption.
     """
 
-    _W: int = 3    # local-max half-window (frames)
-    _M: int = 3    # asymmetry multiplier for condition 2
-    #: EMA factor for running flux statistics (normalisation).
-    _ALPHA_NORM: float = 0.1
-    #: Frames to wait before reporting onsets (lets EMA statistics settle).
-    _WARMUP_FRAMES: int = 30
-    #: Ring-buffer size: m*w past frames + candidate + w future frames.
-    _BUF_MAXLEN: int = _M * _W + 1 + _W   # = 13
+    _W = 3
+    _ALPHA_NORM = 0.1
+    _WARMUP_FRAMES = 30
+    _STD_FLOOR = 0.01
 
-    def __init__(self, delta: float = 0.1, alpha: float = 0.9) -> None:
-        self._delta = delta   # condition 2 margin (in normalised-flux units)
-        self._alpha = alpha   # condition 3 decay factor per frame
+    def __init__(self, delta=0.1, alpha=0.9, *, lookahead_frames=1,
+                 delta_abs=0.02, min_ioi_ms=30.0, silence_gate_dbfs=-60.0):
+        if type(lookahead_frames) is not int or not 0 <= lookahead_frames <= 3:
+            raise ValueError("onset lookahead must be an integer from 0 to 3")
+        self._delta, self._alpha = delta, alpha
+        self.lookahead_frames = lookahead_frames
+        self.delta_abs = delta_abs
+        self.min_ioi_frames = math.ceil(min_ioi_ms / 10)
+        self.silence_gate_dbfs = silence_gate_dbfs
+        self._prev_bars = None
+        self._flux_ema = self._flux_var = self._g = 0.0
+        self._history = deque(maxlen=14)
+        self._active_frames = 0
+        self._frame = -1
+        self._last_onset = -1000000
+        self._gated = False
+        self._recovery = 0
+        self.last_event = None
 
-        self._prev_bars: list[float] | None = None
-        self._flux_ema: float = 0.0
-        self._flux_var: float = 0.0
-
-        # Ring buffer of normalised flux values.  Candidate to evaluate is
-        # always at index _M*_W (= 9) — i.e. _W frames behind the newest.
-        self._buf: deque[float] = deque(maxlen=self._BUF_MAXLEN)
-
-        # g_alpha history: maxlen = W+2 so that g_hist[0] at step C+W equals
-        # g_alpha(C-1), which is what condition 3 requires.
-        self._g_hist: deque[float] = deque(
-            [0.0] * (self._W + 2), maxlen=self._W + 2
-        )
-        self._g: float = 0.0
-        self._warmup: int = self._WARMUP_FRAMES
-
-    def process(self, bars: list[float]) -> tuple[bool, float]:
-        """Return *(onset, flux_strength)* for the current bar frame.
-
-        *onset* is True on frames where a musical onset is detected.
-        *flux_strength* is the raw (unnormalised) spectral flux for this frame.
-        """
-        if self._prev_bars is None:
-            self._prev_bars = list(bars)
-            return False, 0.0
-
-        # Spectral flux: sum of positive differences only (rising energy).
-        flux = sum(max(0.0, b - p) for b, p in zip(bars, self._prev_bars, strict=True))
+    def process_event(self, bars, level_dbfs=None):
+        previous = self._prev_bars
         self._prev_bars = list(bars)
+        flux = (sum(max(0.0, b - p) for b, p in zip(bars, previous, strict=True))
+                if previous is not None else 0.0)
+        return self.process_odf_event(flux, level_dbfs)
 
-        return self._peak_pick(flux)
+    def process(self, bars):
+        event = self.process_event(bars)
+        return event is not None, event.candidate_strength if event else 0.0
 
-    def process_odf(self, odf: float) -> tuple[bool, float]:
-        """Apply Dixon peak-picking to a pre-computed ODF value.
-
-        Identical to process() but skips spectral flux computation — use when
-        the caller has already computed the ODF (e.g. SuperfluxDetector, which
-        applies max-filtering before summing).  Strength returned is the raw
-        ODF value.
-        """
+    def process_odf(self, odf):
         return self._peak_pick(odf)
 
-    def _peak_pick(self, flux: float) -> tuple[bool, float]:
-        """Normalise *flux* and apply the three Dixon peak-picking conditions."""
-        # Running mean and variance for normalisation.  Use pre-update mean so
-        # the residual is unbiased.
-        old_ema = self._flux_ema
-        self._flux_ema = old_ema + self._ALPHA_NORM * (flux - old_ema)
-        self._flux_var = self._flux_var + self._ALPHA_NORM * (
-            (flux - old_ema) ** 2 - self._flux_var
-        )
-        flux_std = math.sqrt(max(self._flux_var, 0.0))
+    def _peak_pick(self, flux):
+        event = self.process_odf_event(flux)
+        return event is not None, event.candidate_strength if event else flux
 
-        # Normalise to mean 0, std 1.
-        f_norm = (flux - old_ema) / max(flux_std, 1e-6)
-
-        # Read g_alpha(C-1) before updating, then advance the history.
-        g_prev = self._g_hist[0]
-        self._g = max(f_norm, self._alpha * self._g + (1.0 - self._alpha) * f_norm)
-        self._g_hist.append(self._g)
-
-        self._buf.append(f_norm)
-
-        if self._warmup > 0:
-            self._warmup -= 1
-            return False, flux
-
-        if len(self._buf) < self._BUF_MAXLEN:
-            return False, flux
-
-        buf = list(self._buf)
-        ci = self._M * self._W   # candidate index = 9
-        f_c = buf[ci]
-
-        # Condition 1: local maximum within ±w.
-        w = self._W
-        if any(f_c < buf[ci + k] for k in range(-w, w + 1) if k != 0):
-            return False, flux
-
-        # Condition 2: above asymmetric local mean + delta (window = entire buf).
-        if f_c < sum(buf) / len(buf) + self._delta:
-            return False, flux
-
-        # Condition 3: above decaying threshold from previous onset.
-        if f_c < g_prev:
-            return False, flux
-
-        return True, flux
+    def process_odf_event(self, flux, level_dbfs=None):
+        self._frame += 1
+        gated = (level_dbfs < self.silence_gate_dbfs if level_dbfs is not None
+                 else flux == 0.0)
+        if self._gated and not gated:
+            self._recovery = 3
+        self._gated = gated
+        self._active_frames += int(not gated or level_dbfs is not None)
+        std = max(math.sqrt(max(self._flux_var, 0.0)), self._STD_FLOOR)
+        self._history.append((self._frame, flux, std, gated))
+        history = list(self._history)
+        ci = len(history) - 1 - self.lookahead_frames
+        event = None
+        if ci >= 0:
+            n, candidate, candidate_std, silent = history[ci]
+            past = [v[1] for v in history[max(0, ci-10):ci+1]]
+            threshold = sum(past) / len(past) + max(
+                self._delta * candidate_std, self.delta_abs)
+            local = [v[1] for v in history[max(0, ci-3):]]
+            if (self._active_frames >= self._WARMUP_FRAMES and not silent
+                    and n - self._last_onset >= self.min_ioi_frames
+                    and candidate >= max(local) and candidate >= threshold
+                    and candidate >= self._flux_ema + self.delta_abs):
+                margin = max(0.0, candidate - threshold)
+                soft = candidate / max(candidate, self._g, self._STD_FLOOR)
+                event = PickerEvent(n, candidate, self._frame,
+                                    min(1.0, max(0.0, (candidate-self._flux_ema)
+                                                 / candidate_std / 6)),
+                                    margin / (margin + candidate_std) * soft)
+                self._last_onset = n
+        self._g = max(flux, self._alpha * self._g)
+        if not gated and self._recovery == 0 and event is None:
+            old = self._flux_ema
+            self._flux_ema += self._ALPHA_NORM * (flux-old)
+            self._flux_var += self._ALPHA_NORM * ((flux-old)**2-self._flux_var)
+        if not gated and self._recovery:
+            self._recovery -= 1
+        self.last_event = event
+        return event
 
 
 # ---------------------------------------------------------------------------
@@ -513,6 +489,11 @@ class StftOnsetPipeline:
     ) -> None:
         self._stft = PcmStft(sample_rate)
         self._onset = OnsetDetector(delta=delta, alpha=alpha)
+
+    def push_events(self, mag_frames, levels=None):
+        levels = levels or [None] * len(mag_frames)
+        return [self._onset.process_event(frame.tolist(), level)
+                for frame, level in zip(mag_frames, levels, strict=True)]
 
     @property
     def hop(self) -> int:
@@ -628,6 +609,13 @@ class SuperfluxStftPipeline:
         self._stft = PcmStft(sample_rate)
         self._detector = SuperfluxDetector(mu=mu, lag=lag, delta=delta, alpha=alpha)
 
+    def push_events(self, mag_frames, levels=None):
+        result = []
+        for frame in mag_frames:
+            self._detector.process(frame)
+            result.append(self._detector._picker.last_event)
+        return result
+
     @property
     def hop(self) -> int:
         return self._stft.hop
@@ -705,6 +693,15 @@ class MultibandStftPipeline:
     ) -> None:
         self._stft = PcmStft(sample_rate)
         self._detector = MultibandOnsetDetector(sample_rate, bass_hz, mid_hz, delta, alpha)
+
+    def push_events(self, mag_frames, levels=None):
+        d = self._detector
+        levels = levels or [None] * len(mag_frames)
+        return [tuple(picker.process_event(values.tolist(), level)
+                      for picker, values in ((d._bass_det, frame[:d._bass_hi]),
+                                             (d._mid_det, frame[d._bass_hi:d._mid_hi]),
+                                             (d._treble_det, frame[d._mid_hi:])))
+                for frame, level in zip(mag_frames, levels, strict=True)]
 
     @property
     def hop(self) -> int:
@@ -797,6 +794,7 @@ class _BeatState:
     superflux_lag: int
     bass_hz: int
     mid_hz: int
+    picker_options: dict
     onset_pipeline: object  # StftOnsetPipeline | MultibandStftPipeline | SuperfluxStftPipeline
 
 
@@ -828,10 +826,15 @@ class BeatDetector:
         superflux_lag: int,
         bass_hz: int,
         mid_hz: int,
+        onset_lookahead_frames: int = 1,
+        onset_delta_abs: float = 0.02,
+        onset_min_ioi_ms: float = 30.0,
+        onset_silence_gate_dbfs: float = -60.0,
     ) -> None:
         self._state: _BeatState = self._make_state(
             onset_method, onset_delta, onset_alpha,
             superflux_mu, superflux_lag, bass_hz, mid_hz,
+            onset_lookahead_frames, onset_delta_abs, onset_min_ioi_ms, onset_silence_gate_dbfs,
         )
         # Serialises reset() and rebuild() commits so a concurrent reset()
         # cannot overwrite the freshly installed state produced by rebuild().
@@ -854,6 +857,10 @@ class BeatDetector:
         superflux_lag: int,
         bass_hz: int,
         mid_hz: int,
+        onset_lookahead_frames: int = 1,
+        onset_delta_abs: float = 0.02,
+        onset_min_ioi_ms: float = 30.0,
+        onset_silence_gate_dbfs: float = -60.0,
     ) -> _BeatState:
         sr = cls._SAMPLE_RATE
         if onset_method == "multiband":
@@ -868,7 +875,19 @@ class BeatDetector:
             )
         else:
             pipeline = StftOnsetPipeline(sr, delta=onset_delta, alpha=onset_alpha)
+        options = dict(lookahead_frames=onset_lookahead_frames, delta_abs=onset_delta_abs,
+                       min_ioi_ms=onset_min_ioi_ms, silence_gate_dbfs=onset_silence_gate_dbfs)
+        if hasattr(pipeline, "_onset"):
+            pipeline._onset = OnsetDetector(delta=onset_delta, alpha=onset_alpha, **options)
+        elif hasattr(pipeline._detector, "_picker"):
+            pipeline._detector._picker = OnsetDetector(
+                delta=onset_delta, alpha=onset_alpha, **options)
+        else:
+            for band in ("bass", "mid", "treble"):
+                setattr(pipeline._detector, f"_{band}_det",
+                        OnsetDetector(delta=onset_delta, alpha=onset_alpha, **options))
         return _BeatState(
+            picker_options=options,
             onset_method=onset_method,
             onset_delta=onset_delta,
             onset_alpha=onset_alpha,
@@ -916,16 +935,40 @@ class BeatDetector:
         if not frame.mag_frames:
             return []
         pipeline = state.onset_pipeline
-        onset_frames = pipeline.push_mag(frame.mag_frames)  # type: ignore[attr-defined]
+        levels = [20 * math.log10(max(float(np.linalg.norm(mag)) / WINDOW_SIZE, 1e-12))
+                  for mag in frame.mag_frames]
+        onset_frames = pipeline.push_events(frame.mag_frames, levels)  # type: ignore[attr-defined]
         hop = pipeline.hop  # type: ignore[attr-defined]
-        updates: list[ProcessorUpdate] = []
-        for i, of in enumerate(onset_frames):
-            start = (
-                frame.hop_sample_starts[i]
-                if i < len(frame.hop_sample_starts)
-                else frame.sample_start
-            )
-            updates.append(self._parse_onset_frame(state, of, start, hop))
+        updates = []
+        for i, result in enumerate(onset_frames):
+            start = (frame.hop_sample_starts[i] if i < len(frame.hop_sample_starts)
+                     else frame.sample_start)
+            candidates = (dict(zip(("bass", "mid", "treble"), result, strict=True))
+                          if state.onset_method == "multiband" else {"all": result})
+            fired = {band: event for band, event in candidates.items() if event is not None}
+            if not fired:
+                updates.append(self._parse_onset_frame(
+                    state, ((False, 0.0),) * 3 if state.onset_method == "multiband"
+                    else (False, 0.0), start, hop))
+                continue
+            dominant = max(fired, key=lambda band: fired[band].strength)
+            chosen = fired[dominant]
+            # Raw spectral-flux maximum references the leading window. Three
+            # hops compensate its causal attack position on the fixture impulses.
+            candidate = start + (3 - chosen.availability_frame + chosen.candidate_frame) * hop
+            availability = candidate + state.picker_options["lookahead_frames"] * hop
+            event = OnsetEvent(
+                (frame.epoch_id, dominant, candidate), frame.epoch_id, candidate,
+                availability, state.picker_options["lookahead_frames"],
+                max(e.strength for e in fired.values()), chosen.candidate_strength,
+                chosen.confidence * len(fired) / len(candidates), frozenset(fired), dominant)
+            values = {f"onset_{band}": band in fired for band in ("bass", "mid", "treble")}
+            values.update({f"onset_{band}_strength": fired[band].candidate_strength
+                           if band in fired else 0.0 for band in ("bass", "mid", "treble")})
+            updates.append(ProcessorUpdate(
+                processor_id="beat_detector", sample_start=candidate, sample_end=candidate+hop,
+                availability_sample=availability, onset=True,
+                onset_strength=event.strength_raw, onset_events=(event,), **values))
         return updates
 
     def flush(self) -> list[ProcessorUpdate]:
@@ -942,6 +985,7 @@ class BeatDetector:
                 state.onset_method, state.onset_delta, state.onset_alpha,
                 state.superflux_mu, state.superflux_lag,
                 state.bass_hz, state.mid_hz,
+                *state.picker_options.values(),
             )
             self._state = new_state
 
@@ -954,6 +998,10 @@ class BeatDetector:
         superflux_lag: int,
         bass_hz: int,
         mid_hz: int,
+        onset_lookahead_frames: int = 1,
+        onset_delta_abs: float = 0.02,
+        onset_min_ioi_ms: float = 30.0,
+        onset_silence_gate_dbfs: float = -60.0,
     ) -> None:
         """Replace state atomically with new parameters.
 
@@ -964,6 +1012,7 @@ class BeatDetector:
         new_state = self._make_state(
             onset_method, onset_delta, onset_alpha,
             superflux_mu, superflux_lag, bass_hz, mid_hz,
+            onset_lookahead_frames, onset_delta_abs, onset_min_ioi_ms, onset_silence_gate_dbfs,
         )
         with self._rebuild_lock:
             self._state = new_state
@@ -1017,6 +1066,10 @@ class CanonicalAnalysisPipeline:
         band_normalise: bool = False,
         exertion_clip: float = BandNormaliser.DEFAULT_EXERTION_CLIP,
         use_hpss_separation: bool = False,
+        onset_lookahead_frames: int = 1,
+        onset_delta_abs: float = 0.02,
+        onset_min_ioi_ms: float = 30.0,
+        onset_silence_gate_dbfs: float = -60.0,
     ) -> None:
         self._normalise_lock = threading.Lock()
         self._band_normalise = band_normalise
@@ -1030,6 +1083,10 @@ class CanonicalAnalysisPipeline:
         self._beat_detector = BeatDetector(
             onset_method=onset_method,
             onset_delta=onset_delta,
+            onset_lookahead_frames=onset_lookahead_frames,
+            onset_delta_abs=onset_delta_abs,
+            onset_min_ioi_ms=onset_min_ioi_ms,
+            onset_silence_gate_dbfs=onset_silence_gate_dbfs,
             onset_alpha=onset_alpha,
             superflux_mu=superflux_mu,
             superflux_lag=superflux_lag,
@@ -1214,6 +1271,10 @@ class CanonicalAnalysisPipeline:
                 proc.rebuild(
                     onset_method=profile.onset_method,
                     onset_delta=profile.onset_delta,
+                    onset_lookahead_frames=profile.onset_lookahead_frames,
+                    onset_delta_abs=profile.onset_delta_abs,
+                    onset_min_ioi_ms=profile.onset_min_ioi_ms,
+                    onset_silence_gate_dbfs=profile.onset_silence_gate_dbfs,
                     onset_alpha=profile.onset_alpha,
                     superflux_mu=profile.superflux_mu,
                     superflux_lag=profile.superflux_lag,
@@ -1364,6 +1425,7 @@ class CanonicalAnalysisPipeline:
             mid=_slice_avg(bars, 0.0, 0.55),
             full=full,
             centroid=centroid,
+            onset_events=tuple(e for pu in onset_batch for e in pu.onset_events),
             onset=onset,
             onset_strength=onset_strength,
             onset_bass=onset_bass,

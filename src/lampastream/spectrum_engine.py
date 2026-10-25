@@ -106,6 +106,8 @@ class ProcessorUpdate:
     processor_id: str
     sample_start: int
     sample_end: int
+    availability_sample: int | None = None
+    onset_events: tuple = ()
     bars: list[float] | None = None
     onset: bool | None = None
     onset_strength: float | None = None
