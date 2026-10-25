@@ -139,3 +139,46 @@ def panning_halves(replay, band="all"):
             "reported_strength_median": float(np.median([
                 float(r[f"reported_strength_{band}"]) for r in closest]))})
     return halves
+
+
+def ranks(values):
+    """Average ranks for ties, implemented solely with NumPy."""
+    values = np.asarray(values, dtype=float)
+    _, inverse, counts = np.unique(values, return_inverse=True, return_counts=True)
+    starts = np.r_[0, np.cumsum(counts)[:-1]]
+    return (starts + (counts - 1) / 2)[inverse]
+
+
+def spearman(levels, strengths):
+    a, b = ranks(levels), ranks(strengths)
+    a, b = a - a.mean(), b - b.mean()
+    denominator = np.sqrt(np.dot(a, a) * np.dot(b, b))
+    return float(np.dot(a, b) / denominator) if denominator else None
+
+
+def strengths(replay, band="all"):
+    rows = events(replay, band)
+    candidate = [float(r[f"candidate_strength_{band}"]) for r in rows]
+    reported = [float(r[f"reported_strength_{band}"]) for r in rows]
+    return {"candidate_samples": [int(r[f"candidate_sample_{band}"]) for r in rows],
+        "candidate": candidate, "reported": reported,
+        "below_tenth_fraction": float(np.mean(np.array(reported) < .1 * max(candidate)))
+            if candidate else None}
+
+
+def tone_levels(replay, band="all"):
+    """Match a transient within 100 ms of each known amplitude step.
+
+    Startup has no post-warmup onset. Explicitly encode its missing observation
+    with presence=False and zero diagnostic strength; never invent an event ID.
+    """
+    rows = events(replay, band)
+    present, candidate, reported = [], [], []
+    for target in replay["truth"]:
+        row = min(rows, key=lambda r: abs(int(r["availability_sample"]) - target)) if rows else None
+        found = row is not None and abs(int(row["availability_sample"]) - target) <= 4800
+        present.append(bool(found))
+        candidate.append(float(row[f"candidate_strength_{band}"]) if found else 0.)
+        reported.append(float(row[f"reported_strength_{band}"]) if found else 0.)
+    return {"present": present, "candidate": candidate, "reported": reported,
+            "rho": spearman([-30., -20., -10., -3.], reported)}
