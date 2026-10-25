@@ -257,6 +257,7 @@ class EffectCreateBody(BaseModel):
     bass_hz: int = 250
     mid_hz: int = 2000
     exertion_clip: float = 3.0
+    onset_max_age_s: float = Field(default=0.5, gt=0)
     onset_flash_intensity: float = 0.0
 
 
@@ -278,6 +279,7 @@ class EffectPatchBody(BaseModel):
     bass_hz: int | None = None
     mid_hz: int | None = None
     exertion_clip: float | None = None
+    onset_max_age_s: float | None = Field(default=None, gt=0)
     onset_flash_intensity: float | None = None
 
 
@@ -1123,6 +1125,7 @@ async def create_effect_route(request: Request, body: EffectCreateBody):
         bass_hz=body.bass_hz,
         mid_hz=body.mid_hz,
         exertion_clip=body.exertion_clip,
+        onset_max_age_s=body.onset_max_age_s,
         onset_flash_intensity=body.onset_flash_intensity,
     )
     try:

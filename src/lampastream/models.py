@@ -279,6 +279,7 @@ class Profile:
     # White-flash strength applied to the Hue output on every onset frame.
     # 0.0 = no flash (default). 1.0 = full white on onset.
     # Lerps from the current colour toward white: c_out = c + fi*(1-c).
+    onset_max_age_s: float = 0.5
     onset_flash_intensity: float = 0.0
 
     enabled: bool = True
@@ -571,6 +572,7 @@ class Effect:
     bass_hz: int = 250
     mid_hz: int = 2000
     exertion_clip: float = 3.0
+    onset_max_age_s: float = 0.5
     onset_flash_intensity: float = 0.0
 
     def to_dict(self) -> dict:
@@ -592,6 +594,7 @@ class Effect:
             "bass_hz": self.bass_hz,
             "mid_hz": self.mid_hz,
             "exertion_clip": self.exertion_clip,
+            "onset_max_age_s": self.onset_max_age_s,
             "onset_flash_intensity": self.onset_flash_intensity,
         }
 

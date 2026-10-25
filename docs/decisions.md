@@ -62,3 +62,5 @@ Each dated line records an owner decision or a bounded documentation choice for 
 - 2026-10-25 — Confidence is margin/(margin+std), multiplied by candidate/max(candidate, alpha-decayed flux, std floor), then by the fraction of enabled bands firing. Alpha reduces confidence without suppressing peaks.
 - 2026-10-25 — Candidate sample uses the causal flux attack reference, three hops after the leading STFT window position; availability is a separate hop coordinate with explicit configured lookahead. Input batching never selects lookahead.
 - 2026-10-25 — The web Analyser and Effect TypeScript interfaces will require the optional new API fields in the Styles phase; no frontend files are changed here.
+
+- 2026-10-25 — Queue overflow increments events_dropped_count rather than blocking audio; event IDs remain candidate identities, independent of publication polling. The bounded queue is 1000 records, with the same publication lock.

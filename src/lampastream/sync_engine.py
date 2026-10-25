@@ -1115,6 +1115,8 @@ class CanonicalAnalysisPipeline:
         self._pub_seq: int = 0
         self._pub_lock = threading.Lock()
         self._pub_queue: deque[PublicationRecord] = deque(maxlen=1000)
+        self._event_queue: deque[OnsetEvent] = deque(maxlen=1000)
+        self._events_dropped = 0
         self._pub_dropped: int = 0
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
@@ -1327,7 +1329,17 @@ class CanonicalAnalysisPipeline:
                      if epoch == epoch_id and start <= sample_start < end), None)
         if play is not None:
             features = replace(features, play_monotonic=play[0], timing_generation=play[1])
+        if features.onset_events:
+            features = replace(features, onset_events=tuple(
+                replace(event, play_monotonic=(features.play_monotonic +
+                    (event.candidate_sample-sample_start) / _CAP_SAMPLE_RATE)
+                    if features.play_monotonic is not None else None)
+                for event in features.onset_events))
         with self._pub_lock:
+            for event in features.onset_events:
+                if len(self._event_queue) == self._event_queue.maxlen:
+                    self._events_dropped += 1
+                self._event_queue.append(event)
             self._pub_seq += 1
             seq = self._pub_seq
             record = PublicationRecord(
@@ -1715,6 +1727,18 @@ class CanonicalAnalysisPipeline:
         self._reset_dsp()
         self._canonicalizer.reset()
         return recs
+
+    @property
+    def events_dropped_count(self) -> int:
+        with self._pub_lock:
+            return self._events_dropped
+
+    def drain_events(self) -> list[OnsetEvent]:
+        """Consume every queued event once; overflow is explicitly counted."""
+        with self._pub_lock:
+            events = list(self._event_queue)
+            self._event_queue.clear()
+            return events
 
     def drain_publications(self) -> list[PublicationRecord]:
         """Drain all publications buffered since the last call.
@@ -3212,7 +3236,19 @@ class SyncEngine:
         schedule = SceneSchedule()
         output_generation = getattr(output, "output_generation", 0)
         output_minimum_sequence = None
+        self.event_counters = {band: dict(received=0, merged=0, triggered=0, expired=0, lost=0)
+                               for band in ("all", "bass", "mid", "treble")}
+        self.event_records = {}
+        self.event_mapping_fallbacks = 0
+        self._pending_onset_events = []
         while True:
+            if isinstance(self._analyser, CanonicalAnalysisPipeline):
+                for event in self._analyser.drain_events():
+                    event = replace(event, received_monotonic=clock())
+                    self._pending_onset_events.append(event)
+                    self.event_records[event.id] = {"event": event, "disposition": "received"}
+                    for band in event.bands | {"all"}:
+                        self.event_counters[band]["received"] += 1
             token = getattr(self._analyser, "pub_seq", None)
             observer = getattr(output, "observe_audio", None)
             if observer is not None:
