@@ -305,7 +305,8 @@ class OutputCapabilities:
 
 
 def output_capabilities(output: object) -> OutputCapabilities:
-    return getattr(output, "capabilities", OutputCapabilities())
+    capabilities = getattr(output, "capabilities", None)
+    return capabilities if isinstance(capabilities, OutputCapabilities) else OutputCapabilities()
 
 
 @runtime_checkable

@@ -41,8 +41,6 @@ ENABLED = [("combined", "all")] + [("multiband", b) for b in BANDS]
 @pytest.mark.parametrize("fixture", POSITION_FIXTURES)
 @pytest.mark.parametrize("route", ["normal", "timestamped"])
 @pytest.mark.parametrize("method,band", ENABLED)
-@pytest.mark.xfail(strict=True, raises=AssertionError,
-                   reason="TIME-01: candidate must identify the event, with constant lookahead")
 def test_contract_fixture_positions(regression_replays, fixture, route, method, band):
     """TIME-01 must define event reference and its constant availability lookahead."""
     replay = regression_replays.get(fixture, route, method=method)
@@ -73,8 +71,6 @@ def test_pin_current_panning_position_and_strength(regression_replays, route, me
 
 @pytest.mark.parametrize("route", ["normal", "timestamped"])
 @pytest.mark.parametrize("method", ["combined", "multiband"])
-@pytest.mark.xfail(strict=True, raises=AssertionError,
-                   reason="TIME-01: panned click event position and strength belong to candidate")
 def test_contract_panning_position_and_strength(regression_replays, route, method):
     """TIME-01 should preserve stereo detection while removing current-frame attribution."""
     replay = regression_replays.get("panning", route, method=method)
@@ -92,13 +88,11 @@ def test_pin_current_antiphase_detection(regression_replays, route, method):
     """TIME-01 preserves phase-safe detection: combined=19; multiband union=20 today."""
     replay = regression_replays.get("anti-phase", route, method=method)
     assert {b:positions(replay, b) for b in BANDS} == expected("position")[f"anti-phase/{method}"]
-    assert len(events(replay)) == (19 if method == "combined" else 20)
+    assert len(events(replay)) == 19  # Phase 2: band votes merge into one event.
 
 
 @pytest.mark.parametrize("route", ["normal", "timestamped"])
 @pytest.mark.parametrize("method", ["combined", "multiband"])
-@pytest.mark.xfail(strict=True, raises=AssertionError,
-                   reason="TIME-01: phase-safe events must also have correct candidate attribution")
 def test_contract_antiphase_detection_and_attribution(regression_replays, route, method):
     """TIME-01 retains detection of L=-R and supplies event-aligned candidates."""
     replay = regression_replays.get("anti-phase", route, method=method)

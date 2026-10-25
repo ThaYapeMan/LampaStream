@@ -1,0 +1,30 @@
+{
+  "config_sha256": "dbca573a417857e8bd51eb58887175881e1d0a00e2e10adcace1e68c9ba5ee3f",
+  "delay_ms": 0,
+  "delay_schedule": [],
+  "duration_s": 10.0,
+  "format": {
+    "bits": 24,
+    "channels": 1,
+    "encoding": "wav-pcm",
+    "sample_rate": 48000
+  },
+  "git_commit": "b36f5d9",
+  "input_sha256": "3e9c20510904804a54f77f34209c51d5a4420a2bf3085ceada9ab9160812e48b",
+  "lead_s": 1.5,
+  "numpy_version": "2.5.4",
+  "publications_per_tick": 0,
+  "python_version": "3.12.15",
+  "quantization_decimals": 6,
+  "render_hz": 30,
+  "room_sha256": "30da26876927acf135b38b2bf9cece770818b154c98f7c82ad350e99fce43b1f",
+  "route": "timestamped",
+  "seed": 0,
+  "start_s": 0,
+  "trace_version": 1,
+  "wall_time": {
+    "basis": "virtual",
+    "end_s": 11.6,
+    "start_s": 0
+  }
+}

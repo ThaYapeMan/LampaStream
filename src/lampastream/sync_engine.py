@@ -382,6 +382,7 @@ class OnsetDetector:
     """
 
     _W = 3
+    _BUF_MAXLEN = 14
     _ALPHA_NORM = 0.1
     _WARMUP_FRAMES = 30
     _STD_FLOOR = 0.01
@@ -406,6 +407,9 @@ class OnsetDetector:
         self.last_event = None
 
     def process_event(self, bars, level_dbfs=None):
+        if level_dbfs is None:
+            rms = math.sqrt(sum(v*v for v in bars) / max(1, len(bars)))
+            level_dbfs = 20 * math.log10(max(rms, 1e-12))
         previous = self._prev_bars
         self._prev_bars = list(bars)
         flux = (sum(max(0.0, b - p) for b, p in zip(bars, previous, strict=True))
@@ -414,7 +418,7 @@ class OnsetDetector:
 
     def process(self, bars):
         event = self.process_event(bars)
-        return event is not None, event.candidate_strength if event else 0.0
+        return event is not None, event.candidate_strength if event else self._last_flux
 
     def process_odf(self, odf):
         return self._peak_pick(odf)
@@ -425,6 +429,7 @@ class OnsetDetector:
 
     def process_odf_event(self, flux, level_dbfs=None):
         self._frame += 1
+        self._last_flux = flux
         gated = (level_dbfs < self.silence_gate_dbfs if level_dbfs is not None
                  else flux == 0.0)
         if self._gated and not gated:
@@ -454,10 +459,16 @@ class OnsetDetector:
                                     margin / (margin + candidate_std) * soft)
                 self._last_onset = n
         self._g = max(flux, self._alpha * self._g)
-        if not gated and self._recovery == 0 and event is None:
+        if (ci >= 0 and not gated and not history[ci][3]
+                and self._recovery == 0 and event is None):
+            value = history[ci][1]
+            if (self._active_frames >= self._WARMUP_FRAMES
+                    and value > self._flux_ema + max(self.delta_abs, 3*std)):
+                self.last_event = event
+                return event
             old = self._flux_ema
-            self._flux_ema += self._ALPHA_NORM * (flux-old)
-            self._flux_var += self._ALPHA_NORM * ((flux-old)**2-self._flux_var)
+            self._flux_ema += self._ALPHA_NORM * (value-old)
+            self._flux_var += self._ALPHA_NORM * ((value-old)**2-self._flux_var)
         if not gated and self._recovery:
             self._recovery -= 1
         self.last_event = event
@@ -564,7 +575,8 @@ class SuperfluxDetector:
 
         if len(self._frame_history) <= self._lag:
             # Not enough history for the lag yet; feed zero to the picker.
-            return self._picker.process_odf(0.0)
+            self._picker.process_odf_event(0.0, -120.0)
+            return False, 0.0
 
         # Frame from exactly lag steps ago.
         prev_frame = self._frame_history[0]  # oldest in the fixed-size deque
@@ -581,7 +593,9 @@ class SuperfluxDetector:
         # Half-wave rectified spectral difference → SuperFlux scalar.
         superflux = float(np.sum(np.maximum(0.0, frame - x_max)))
 
-        return self._picker.process_odf(superflux)
+        level = 20 * math.log10(max(float(np.linalg.norm(frame)) / WINDOW_SIZE, 1e-12))
+        event = self._picker.process_odf_event(superflux, level)
+        return event is not None, event.candidate_strength if event else superflux
 
 
 class SuperfluxStftPipeline:
@@ -794,6 +808,7 @@ class _BeatState:
     bass_hz: int
     mid_hz: int
     picker_options: dict
+    pending: list
     onset_pipeline: object  # StftOnsetPipeline | MultibandStftPipeline | SuperfluxStftPipeline
 
 
@@ -887,6 +902,7 @@ class BeatDetector:
                         OnsetDetector(delta=onset_delta, alpha=onset_alpha, **options))
         return _BeatState(
             picker_options=options,
+            pending=[],
             onset_method=onset_method,
             onset_delta=onset_delta,
             onset_alpha=onset_alpha,
@@ -950,7 +966,8 @@ class BeatDetector:
                     state, ((False, 0.0),) * 3 if state.onset_method == "multiband"
                     else (False, 0.0), start, hop))
                 continue
-            dominant = max(fired, key=lambda band: fired[band].strength)
+            dominant = max(fired, key=lambda band: (fired[band].strength,
+                                                       fired[band].candidate_strength))
             chosen = fired[dominant]
             # Raw spectral-flux maximum references the leading window. Three
             # hops compensate its causal attack position on the fixture impulses.
@@ -959,7 +976,8 @@ class BeatDetector:
             event = OnsetEvent(
                 (frame.epoch_id, dominant, candidate), frame.epoch_id, candidate,
                 availability, state.picker_options["lookahead_frames"],
-                max(e.strength for e in fired.values()), chosen.candidate_strength,
+                max(e.strength for e in fired.values()),
+                max(e.candidate_strength for e in fired.values()),
                 chosen.confidence * len(fired) / len(candidates), frozenset(fired), dominant)
             values = {f"onset_{band}": band in fired for band in ("bass", "mid", "treble")}
             values.update({f"onset_{band}_strength": fired[band].candidate_strength
@@ -968,10 +986,61 @@ class BeatDetector:
                 processor_id="beat_detector", sample_start=candidate, sample_end=candidate+hop,
                 availability_sample=availability, onset=True,
                 onset_strength=event.strength_raw, onset_events=(event,), **values))
-        return updates
+        return self._merge_band_updates(state, updates, start + 3*hop)
+
+    @staticmethod
+    def _merge_band_updates(state, updates, watermark):
+        """Merge missing-band candidates within 30 ms of the earliest sample.
+
+        A complete three-band vote is immediately final. Partial votes wait
+        until the causal watermark closes the window. No extra delay is added
+        to single-band methods. Confidence uses the maximum candidate margin
+        confidence multiplied by the enabled-band vote fraction.
+        """
+        if state.onset_method != "multiband":
+            return updates
+        result = []
+        for update in updates:
+            if not update.onset_events:
+                result.append(update)
+                continue
+            event = update.onset_events[0]
+            if state.pending and event.candidate_sample - state.pending[0].sample_start > (
+                    round(.03 * BeatDetector._SAMPLE_RATE)):
+                result.append(state.pending.pop(0))
+            if state.pending:
+                previous = state.pending.pop(0)
+                old = previous.onset_events[0]
+                bands = old.bands | event.bands
+                dominant = max((old, event), key=lambda e: (e.strength, e.strength_raw))
+                merged = replace(old, id=(old.epoch, dominant.dominant_band, old.candidate_sample),
+                                 bands=bands, dominant_band=dominant.dominant_band,
+                                 strength=max(old.strength, event.strength),
+                                 strength_raw=dominant.strength_raw,
+                                 confidence=max(old.confidence * 3/len(old.bands),
+                                                event.confidence * 3/len(event.bands))
+                                 * len(bands)/3)
+                values = {f"onset_{band}": band in bands
+                          for band in ("bass", "mid", "treble")}
+                values.update({f"onset_{band}_strength": max(
+                    getattr(previous, f"onset_{band}_strength") or 0,
+                    getattr(update, f"onset_{band}_strength") or 0)
+                    for band in ("bass", "mid", "treble")})
+                update = replace(previous, onset_events=(merged,),
+                                 onset_strength=merged.strength_raw, **values)
+            if len(update.onset_events[0].bands) == 3:
+                result.append(update)
+            else:
+                state.pending.append(update)
+        if state.pending and watermark - state.pending[0].sample_start >= round(
+                .03 * BeatDetector._SAMPLE_RATE):
+            result.append(state.pending.pop(0))
+        return result
 
     def flush(self) -> list[ProcessorUpdate]:
-        return []  # onset pipelines have no explicit carry buffer
+        pending = list(self._state.pending)
+        self._state.pending.clear()
+        return pending
 
     def reset(self) -> None:
         # Serialise with rebuild() so a concurrently-installed new state is
@@ -2470,11 +2539,13 @@ class _FireworksRenderer(_EffectRenderer):
             # launch fast wide bursts; harmonic onsets launch slower short bursts.
             perc_scale = (0.4 + 0.6 * features.percussive_energy) if features.hpss_active else 1.0
             speed = profile.effect_speed * perc_scale
-            self._particles = [
+            if event_index == 0:
+                self._particles = []
+            self._particles.extend([
                 _Particle(ox=origin_x, vel=v * speed, birth_t=t,
                           r=self._r, g=self._g, b=self._b)
                 for v in (-1.2, -0.4, 0.4, 1.2)
-            ]
+            ])
             self._birth_t = t
         # Trail: effect_decay=0.3 → decay_rate=0.9 → half-life ≈ 770 ms.
         # Flash: 2× faster, so the initial BOOM fades while particle trails are still active.
@@ -3329,12 +3400,13 @@ class SyncEngine:
                         if (f.play_monotonic is None
                                 or f.timing_generation != self._timing.tap_generation):
                             continue
-                        self._event_sample_reference = record.sample_pos
+                        self._event_sample_reference = getattr(record, "sample_pos", 0)
                         scene_time = max(clock(), f.play_monotonic + trim / 1000)
                         f = self._event_view(f, scene_time, timestamped=True)
                         scene = self._effect.render(f, scene_time)
-                        scene = GuardedScene(scene, precision_guard,
-                            f.onset_envelope > 0 and self.profile.onset_flash_intensity > 0)
+                        if self.profile.onset_flash_intensity > 0:
+                            scene = GuardedScene(scene, precision_guard,
+                                f.onset_envelope > precision_guard.lsb)
                         ready = clock()
                         recorder = getattr(self._timing, "scene_ready", None)
                         if recorder is not None:
@@ -3381,8 +3453,9 @@ class SyncEngine:
                     self._event_sample_reference = latest.sample_end if latest else 0
                     features = self._event_view(features, t)
                 scene: Scene = self._effect.render(features, t)
-                scene = GuardedScene(scene, precision_guard,
-                    features.onset_envelope > 0 and self.profile.onset_flash_intensity > 0)
+                if self.profile.onset_flash_intensity > 0:
+                    scene = GuardedScene(scene, precision_guard,
+                        features.onset_envelope > precision_guard.lsb)
                 self._last_mix = self._effect.mix
                 self._last_energy = features.full
                 self._last_sustained_energy = features.sustained_energy

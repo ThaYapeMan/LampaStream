@@ -64,7 +64,8 @@ def test_pin_current_silence_trains_reference_and_adds_transition_onset(peaks, r
     trained = picker._flux_ema
     for _ in range(500):
         picker.process_odf(0.)
-    assert trained == pytest.approx(.198969244958536, abs=1e-15)
+    # Phase 2: statistics update after the one-hop candidate decision.
+    assert trained == pytest.approx(.19885471662059553, abs=1e-15)
     assert picker._flux_ema == pytest.approx(trained, abs=1e-12)
 
 

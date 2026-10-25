@@ -164,6 +164,32 @@ class PlayerLatency:
 #: Current runtime Profile fields.
 
 
+def _validate_onset_effect(effect):
+    import math
+    for name in ("onset_hold_s", "onset_release_s", "onset_lead_s", "onset_max_age_s"):
+        value = getattr(effect, name)
+        if not math.isfinite(value) or value < 0:
+            raise ValueError(f"{name} must be finite and nonnegative")
+    if effect.onset_release_s <= 0 or effect.onset_max_age_s <= 0:
+        raise ValueError("Onset release and maximum age must be positive")
+    if effect.onset_retrigger not in {"restart", "ignore_during_hold", "add_with_clamp"}:
+        raise ValueError("Invalid onset_retrigger")
+
+
+def _validate_onset_analyser(analyser):
+    import math
+    if type(analyser.onset_lookahead_frames) is not int or not (
+            0 <= analyser.onset_lookahead_frames <= 3):
+        raise ValueError("onset_lookahead_frames must be an integer from 0 to 3")
+    for name in ("onset_delta_abs", "onset_min_ioi_ms", "onset_silence_gate_dbfs"):
+        if not math.isfinite(getattr(analyser, name)):
+            raise ValueError(f"{name} must be finite")
+    if analyser.onset_delta_abs <= 0 or analyser.onset_min_ioi_ms < 0:
+        raise ValueError("Absolute onset delta must be positive; minimum IOI nonnegative")
+    if analyser.onset_silence_gate_dbfs > 0:
+        raise ValueError("Onset silence gate must be nonpositive dBFS")
+
+
 @dataclass
 class Profile:
     """One configured 'virtual player -> Hue Entertainment Area' pairing.
@@ -289,6 +315,7 @@ class Profile:
     enabled: bool = True
 
     def __post_init__(self) -> None:
+        _validate_onset_effect(self)
         _validate_band_colours(self.band_colours, self.band_playback,
                                self.band_advance, self.band_advance_interval_s)
         _validate_energy_source(
@@ -301,9 +328,7 @@ class Profile:
                 f"Invalid bars_source {self.bars_source!r}; "
                 f"must be one of {sorted(_VALID_BARS_SOURCES)}"
             )
-        if (type(self.onset_lookahead_frames) is not int
-                or not 0 <= self.onset_lookahead_frames <= 3):
-            raise ValueError("onset_lookahead_frames must be an integer from 0 to 3")
+        _validate_onset_analyser(self)
         validate_bar_falloff(self.bar_falloff_s)
         if self.spectrum_backend not in _VALID_ENGINE_IDS:
             raise ValueError(
@@ -511,9 +536,7 @@ class Analyser:
                 f"Invalid bars_source {self.bars_source!r}; "
                 f"must be one of {sorted(_VALID_BARS_SOURCES)}"
             )
-        if (type(self.onset_lookahead_frames) is not int
-                or not 0 <= self.onset_lookahead_frames <= 3):
-            raise ValueError("onset_lookahead_frames must be an integer from 0 to 3")
+        _validate_onset_analyser(self)
         validate_bar_falloff(self.bar_falloff_s)
         if self.spectrum_backend not in _VALID_ENGINE_IDS:
             raise ValueError(
@@ -582,6 +605,9 @@ class Effect:
     onset_lead_s: float = 0.02
     onset_max_age_s: float = 0.5
     onset_flash_intensity: float = 0.0
+
+    def __post_init__(self):
+        _validate_onset_effect(self)
 
     def to_dict(self) -> dict:
         return {

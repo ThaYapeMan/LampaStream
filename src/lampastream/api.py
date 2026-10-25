@@ -198,10 +198,10 @@ class AnalyserCreateBody(BaseModel):
 
     name: str = "Default Analysis"
     onset_method: str = "combined"
-    onset_lookahead_frames: int = 1
-    onset_delta_abs: float = 0.02
-    onset_min_ioi_ms: float = 30.0
-    onset_silence_gate_dbfs: float = -60.0
+    onset_lookahead_frames: int = Field(default=1, ge=0, le=3, strict=True)
+    onset_delta_abs: float = Field(default=.02, gt=0, allow_inf_nan=False)
+    onset_min_ioi_ms: float = Field(default=30.0, ge=0, allow_inf_nan=False)
+    onset_silence_gate_dbfs: float = Field(default=-60.0, le=0, allow_inf_nan=False)
     onset_delta: float = 0.1
     onset_alpha: float = 0.9
     superflux_mu: int = 3
@@ -220,10 +220,10 @@ class AnalyserPatchBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
     name: str | None = None
     onset_method: str | None = None
-    onset_lookahead_frames: int | None = None
-    onset_delta_abs: float | None = None
-    onset_min_ioi_ms: float | None = None
-    onset_silence_gate_dbfs: float | None = None
+    onset_lookahead_frames: int | None = Field(default=None, ge=0, le=3, strict=True)
+    onset_delta_abs: float | None = Field(default=None, gt=0, allow_inf_nan=False)
+    onset_min_ioi_ms: float | None = Field(default=None, ge=0, allow_inf_nan=False)
+    onset_silence_gate_dbfs: float | None = Field(default=None, le=0, allow_inf_nan=False)
     onset_delta: float | None = None
     onset_alpha: float | None = None
     superflux_mu: int | None = None
@@ -257,10 +257,10 @@ class EffectCreateBody(BaseModel):
     bass_hz: int = 250
     mid_hz: int = 2000
     exertion_clip: float = 3.0
-    onset_hold_s: float = 0.0
-    onset_release_s: float = 0.25
-    onset_retrigger: str = "restart"
-    onset_lead_s: float = 0.02
+    onset_hold_s: float = Field(default=0.0, ge=0, allow_inf_nan=False)
+    onset_release_s: float = Field(default=0.25, gt=0, allow_inf_nan=False)
+    onset_retrigger: Literal["restart", "ignore_during_hold", "add_with_clamp"] = "restart"
+    onset_lead_s: float = Field(default=0.02, ge=0, allow_inf_nan=False)
     onset_max_age_s: float = Field(default=0.5, gt=0)
     onset_flash_intensity: float = 0.0
 
@@ -283,10 +283,10 @@ class EffectPatchBody(BaseModel):
     bass_hz: int | None = None
     mid_hz: int | None = None
     exertion_clip: float | None = None
-    onset_hold_s: float | None = None
-    onset_release_s: float | None = None
-    onset_retrigger: str | None = None
-    onset_lead_s: float | None = None
+    onset_hold_s: float | None = Field(default=None, ge=0, allow_inf_nan=False)
+    onset_release_s: float | None = Field(default=None, gt=0, allow_inf_nan=False)
+    onset_retrigger: Literal["restart", "ignore_during_hold", "add_with_clamp"] | None = None
+    onset_lead_s: float | None = Field(default=None, ge=0, allow_inf_nan=False)
     onset_max_age_s: float | None = Field(default=None, gt=0)
     onset_flash_intensity: float | None = None
 
@@ -392,10 +392,10 @@ class CouplingPatchBody(CouplingReleaseBody):
     higher_cutoff_freq: int | None = None
     # Analyser pcm category (update_onset_pipeline)
     onset_method: str | None = None
-    onset_lookahead_frames: int | None = None
-    onset_delta_abs: float | None = None
-    onset_min_ioi_ms: float | None = None
-    onset_silence_gate_dbfs: float | None = None
+    onset_lookahead_frames: int | None = Field(default=None, ge=0, le=3, strict=True)
+    onset_delta_abs: float | None = Field(default=None, gt=0, allow_inf_nan=False)
+    onset_min_ioi_ms: float | None = Field(default=None, ge=0, allow_inf_nan=False)
+    onset_silence_gate_dbfs: float | None = Field(default=None, le=0, allow_inf_nan=False)
     onset_delta: float | None = None
     onset_alpha: float | None = None
     superflux_mu: int | None = None

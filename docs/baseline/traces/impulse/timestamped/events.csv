@@ -1,0 +1,2 @@
+id,epoch,candidate_sample,availability_sample,lookahead_frames,strength,strength_raw,confidence,bands,dominant_band,play_monotonic,received_monotonic,disposition,event_time,first_render_over_half_s,first_send_s
+replay-0001:all:240000,replay-0001,240000,240480,1,1.0,457.610382,0.999975,"[""all""]",all,6.5,5.033333,triggered,6.48,5.033333,6.5

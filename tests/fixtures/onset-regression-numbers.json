@@ -4,105 +4,108 @@
     "combined": {
       "all": [
         {
-          "availability_offset_median": 2280.0,
-          "candidate_offset_median": -1440.0,
-          "candidate_strength_median": 271.908007,
+          "availability_offset_median": 480.0,
+          "candidate_offset_median": 0.0,
+          "candidate_strength_median": 282.260588,
           "events": 9,
-          "reported_strength_median": 16.725472
+          "reported_strength_median": 282.260588
         },
         {
-          "availability_offset_median": 2220.0,
-          "candidate_offset_median": -1440.0,
+          "availability_offset_median": 480.0,
+          "candidate_offset_median": 0.0,
           "candidate_strength_median": 277.083246,
           "events": 10,
-          "reported_strength_median": 16.418587
+          "reported_strength_median": 277.083246
         }
       ]
     },
     "multiband": {
       "all": [
         {
-          "availability_offset_median": 2280.0,
-          "candidate_offset_median": -1440.0,
-          "candidate_strength_median": 250.780489,
+          "availability_offset_median": 480.0,
+          "candidate_offset_median": 0.0,
+          "candidate_strength_median": 260.325916,
           "events": 9,
-          "reported_strength_median": 16.725472
+          "reported_strength_median": 260.325916
         },
         {
-          "availability_offset_median": 2220.0,
-          "candidate_offset_median": -1440.0,
+          "availability_offset_median": 480.0,
+          "candidate_offset_median": 0.0,
           "candidate_strength_median": 255.55328000000003,
           "events": 10,
-          "reported_strength_median": 16.418587
+          "reported_strength_median": 255.55328000000003
         }
       ],
       "bass": [
         {
-          "availability_offset_median": 2280.0,
-          "candidate_offset_median": -1440.0,
-          "candidate_strength_median": 2.703904,
+          "availability_offset_median": 480.0,
+          "candidate_offset_median": 0.0,
+          "candidate_strength_median": 2.807108,
           "events": 9,
-          "reported_strength_median": 0.0
+          "reported_strength_median": 2.807108
         },
         {
-          "availability_offset_median": 2220.0,
-          "candidate_offset_median": -1440.0,
+          "availability_offset_median": 480.0,
+          "candidate_offset_median": 0.0,
           "candidate_strength_median": 2.7550790000000003,
           "events": 10,
-          "reported_strength_median": 0.0
+          "reported_strength_median": 2.7550790000000003
         }
       ],
       "mid": [
         {
-          "availability_offset_median": 2280.0,
-          "candidate_offset_median": -1440.0,
-          "candidate_strength_median": 18.423615,
+          "availability_offset_median": 480.0,
+          "candidate_offset_median": 0.0,
+          "candidate_strength_median": 19.127564,
           "events": 9,
-          "reported_strength_median": 0.0
+          "reported_strength_median": 19.127564
         },
         {
-          "availability_offset_median": 2220.0,
-          "candidate_offset_median": -1440.0,
+          "availability_offset_median": 480.0,
+          "candidate_offset_median": 0.0,
           "candidate_strength_median": 18.774886,
           "events": 10,
-          "reported_strength_median": 0.0
+          "reported_strength_median": 18.774886
         }
       ],
       "treble": [
         {
-          "availability_offset_median": 2280.0,
-          "candidate_offset_median": -1440.0,
-          "candidate_strength_median": 250.780489,
+          "availability_offset_median": 480.0,
+          "candidate_offset_median": 0.0,
+          "candidate_strength_median": 260.325916,
           "events": 9,
-          "reported_strength_median": 16.725472
+          "reported_strength_median": 260.325916
         },
         {
-          "availability_offset_median": 2220.0,
-          "candidate_offset_median": -1440.0,
+          "availability_offset_median": 480.0,
+          "candidate_offset_median": 0.0,
           "candidate_strength_median": 255.55328000000003,
           "events": 10,
-          "reported_strength_median": 16.418587
+          "reported_strength_median": 255.55328000000003
         }
       ]
     }
   },
+  "phase2_reason": "Candidate-attributed one-hop picker, frozen silence reference, independent event intake; triggered replaces accepted/rendered.",
   "position": {
     "anti-phase/combined": {
       "all": {
         "availability": {
-          "false_positives": 19,
-          "max_abs_samples": 2500,
-          "median_samples": 2220.0,
-          "misses": 19
+          "false_positives": 0,
+          "max_abs_samples": 480,
+          "median_samples": 480.0,
+          "misses": 0
         },
         "candidate": {
-          "false_positives": 19,
-          "max_abs_samples": 2400,
-          "median_samples": -1440.0,
-          "misses": 19
+          "false_positives": 0,
+          "max_abs_samples": 0,
+          "median_samples": 0.0,
+          "misses": 0
         },
         "event_count": 19,
-        "lookahead_samples": [3520, 3580, 3600, 3660, 3720, 3780, 3800, 3860, 3920, 3940],
+        "lookahead_samples": [
+          480
+        ],
         "truth_count": 19
       },
       "bass": {
@@ -160,89 +163,99 @@
     "anti-phase/multiband": {
       "all": {
         "availability": {
-          "false_positives": 20,
-          "max_abs_samples": 2500,
-          "median_samples": 2220.0,
-          "misses": 19
+          "false_positives": 0,
+          "max_abs_samples": 480,
+          "median_samples": 480.0,
+          "misses": 0
         },
         "candidate": {
-          "false_positives": 20,
-          "max_abs_samples": 1920,
-          "median_samples": -1440.0,
-          "misses": 19
+          "false_positives": 0,
+          "max_abs_samples": 0,
+          "median_samples": 0.0,
+          "misses": 0
         },
-        "event_count": 20,
-        "lookahead_samples": [3520, 3580, 3600, 3660, 3720, 3780, 3800, 3860, 3920, 3940],
+        "event_count": 19,
+        "lookahead_samples": [
+          480
+        ],
         "truth_count": 19
       },
       "bass": {
         "availability": {
-          "false_positives": 19,
-          "max_abs_samples": 2500,
-          "median_samples": 2220.0,
-          "misses": 19
+          "false_positives": 0,
+          "max_abs_samples": 480,
+          "median_samples": 480.0,
+          "misses": 0
         },
         "candidate": {
-          "false_positives": 19,
-          "max_abs_samples": 1920,
-          "median_samples": -1440.0,
-          "misses": 19
+          "false_positives": 0,
+          "max_abs_samples": 0,
+          "median_samples": 0.0,
+          "misses": 0
         },
         "event_count": 19,
-        "lookahead_samples": [3520, 3580, 3600, 3660, 3720, 3780, 3800, 3860, 3920, 3940],
+        "lookahead_samples": [
+          480
+        ],
         "truth_count": 19
       },
       "mid": {
         "availability": {
-          "false_positives": 19,
-          "max_abs_samples": 2500,
-          "median_samples": 2220.0,
-          "misses": 19
+          "false_positives": 0,
+          "max_abs_samples": 480,
+          "median_samples": 480.0,
+          "misses": 0
         },
         "candidate": {
-          "false_positives": 19,
-          "max_abs_samples": 2400,
-          "median_samples": -1440.0,
-          "misses": 19
+          "false_positives": 0,
+          "max_abs_samples": 0,
+          "median_samples": 0.0,
+          "misses": 0
         },
         "event_count": 19,
-        "lookahead_samples": [3520, 3580, 3600, 3660, 3720, 3780, 3800, 3860, 3920, 3940],
+        "lookahead_samples": [
+          480
+        ],
         "truth_count": 19
       },
       "treble": {
         "availability": {
-          "false_positives": 19,
-          "max_abs_samples": 2500,
-          "median_samples": 2220.0,
-          "misses": 19
+          "false_positives": 0,
+          "max_abs_samples": 480,
+          "median_samples": 480.0,
+          "misses": 0
         },
         "candidate": {
-          "false_positives": 19,
-          "max_abs_samples": 2400,
-          "median_samples": -1440.0,
-          "misses": 19
+          "false_positives": 0,
+          "max_abs_samples": 0,
+          "median_samples": 0.0,
+          "misses": 0
         },
         "event_count": 19,
-        "lookahead_samples": [3520, 3580, 3600, 3660, 3720, 3780, 3800, 3860, 3920, 3940],
+        "lookahead_samples": [
+          480
+        ],
         "truth_count": 19
       }
     },
     "clicks-120/combined": {
       "all": {
         "availability": {
-          "false_positives": 19,
-          "max_abs_samples": 2400,
-          "median_samples": 2400.0,
-          "misses": 19
+          "false_positives": 0,
+          "max_abs_samples": 480,
+          "median_samples": 480.0,
+          "misses": 0
         },
         "candidate": {
-          "false_positives": 19,
-          "max_abs_samples": 1920,
-          "median_samples": -1440.0,
-          "misses": 19
+          "false_positives": 0,
+          "max_abs_samples": 0,
+          "median_samples": 0.0,
+          "misses": 0
         },
         "event_count": 19,
-        "lookahead_samples": [3840],
+        "lookahead_samples": [
+          480
+        ],
         "truth_count": 19
       },
       "bass": {
@@ -300,89 +313,99 @@
     "clicks-120/multiband": {
       "all": {
         "availability": {
-          "false_positives": 19,
-          "max_abs_samples": 2400,
-          "median_samples": 2400.0,
-          "misses": 19
+          "false_positives": 0,
+          "max_abs_samples": 480,
+          "median_samples": 480.0,
+          "misses": 0
         },
         "candidate": {
-          "false_positives": 19,
-          "max_abs_samples": 1920,
-          "median_samples": -1440.0,
-          "misses": 19
+          "false_positives": 0,
+          "max_abs_samples": 0,
+          "median_samples": 0.0,
+          "misses": 0
         },
         "event_count": 19,
-        "lookahead_samples": [3840],
+        "lookahead_samples": [
+          480
+        ],
         "truth_count": 19
       },
       "bass": {
         "availability": {
-          "false_positives": 19,
-          "max_abs_samples": 2400,
-          "median_samples": 2400.0,
-          "misses": 19
+          "false_positives": 0,
+          "max_abs_samples": 480,
+          "median_samples": 480.0,
+          "misses": 0
         },
         "candidate": {
-          "false_positives": 19,
-          "max_abs_samples": 1920,
-          "median_samples": -1440.0,
-          "misses": 19
+          "false_positives": 0,
+          "max_abs_samples": 0,
+          "median_samples": 0.0,
+          "misses": 0
         },
         "event_count": 19,
-        "lookahead_samples": [3840],
+        "lookahead_samples": [
+          480
+        ],
         "truth_count": 19
       },
       "mid": {
         "availability": {
-          "false_positives": 19,
-          "max_abs_samples": 2400,
-          "median_samples": 2400.0,
-          "misses": 19
+          "false_positives": 0,
+          "max_abs_samples": 480,
+          "median_samples": 480.0,
+          "misses": 0
         },
         "candidate": {
-          "false_positives": 19,
-          "max_abs_samples": 1920,
-          "median_samples": -1440.0,
-          "misses": 19
+          "false_positives": 0,
+          "max_abs_samples": 0,
+          "median_samples": 0.0,
+          "misses": 0
         },
         "event_count": 19,
-        "lookahead_samples": [3840],
+        "lookahead_samples": [
+          480
+        ],
         "truth_count": 19
       },
       "treble": {
         "availability": {
-          "false_positives": 19,
-          "max_abs_samples": 2400,
-          "median_samples": 2400.0,
-          "misses": 19
+          "false_positives": 0,
+          "max_abs_samples": 480,
+          "median_samples": 480.0,
+          "misses": 0
         },
         "candidate": {
-          "false_positives": 19,
-          "max_abs_samples": 1920,
-          "median_samples": -1440.0,
-          "misses": 19
+          "false_positives": 0,
+          "max_abs_samples": 0,
+          "median_samples": 0.0,
+          "misses": 0
         },
         "event_count": 19,
-        "lookahead_samples": [3840],
+        "lookahead_samples": [
+          480
+        ],
         "truth_count": 19
       }
     },
     "clicks-128/combined": {
       "all": {
         "availability": {
-          "false_positives": 21,
-          "max_abs_samples": 2460,
-          "median_samples": 2220.0,
-          "misses": 21
+          "false_positives": 0,
+          "max_abs_samples": 840,
+          "median_samples": 600.0,
+          "misses": 0
         },
         "candidate": {
-          "false_positives": 21,
-          "max_abs_samples": 1920,
-          "median_samples": -1620.0,
-          "misses": 21
+          "false_positives": 0,
+          "max_abs_samples": 360,
+          "median_samples": 120.0,
+          "misses": 0
         },
         "event_count": 21,
-        "lookahead_samples": [3840],
+        "lookahead_samples": [
+          480
+        ],
         "truth_count": 21
       },
       "bass": {
@@ -440,89 +463,99 @@
     "clicks-128/multiband": {
       "all": {
         "availability": {
-          "false_positives": 21,
-          "max_abs_samples": 2460,
-          "median_samples": 2220.0,
-          "misses": 21
+          "false_positives": 0,
+          "max_abs_samples": 780,
+          "median_samples": 600.0,
+          "misses": 0
         },
         "candidate": {
-          "false_positives": 21,
-          "max_abs_samples": 1920,
-          "median_samples": -1620.0,
-          "misses": 21
+          "false_positives": 0,
+          "max_abs_samples": 300,
+          "median_samples": 120.0,
+          "misses": 0
         },
         "event_count": 21,
-        "lookahead_samples": [3840],
+        "lookahead_samples": [
+          480
+        ],
         "truth_count": 21
       },
       "bass": {
         "availability": {
-          "false_positives": 21,
-          "max_abs_samples": 2460,
-          "median_samples": 2220.0,
-          "misses": 21
+          "false_positives": 0,
+          "max_abs_samples": 780,
+          "median_samples": 600.0,
+          "misses": 0
         },
         "candidate": {
-          "false_positives": 21,
-          "max_abs_samples": 1920,
-          "median_samples": -1620.0,
-          "misses": 21
+          "false_positives": 0,
+          "max_abs_samples": 300,
+          "median_samples": 120.0,
+          "misses": 0
         },
         "event_count": 21,
-        "lookahead_samples": [3840],
+        "lookahead_samples": [
+          480
+        ],
         "truth_count": 21
       },
       "mid": {
         "availability": {
-          "false_positives": 21,
-          "max_abs_samples": 2460,
-          "median_samples": 2220.0,
-          "misses": 21
+          "false_positives": 0,
+          "max_abs_samples": 780,
+          "median_samples": 600.0,
+          "misses": 0
         },
         "candidate": {
-          "false_positives": 21,
-          "max_abs_samples": 1920,
-          "median_samples": -1620.0,
-          "misses": 21
+          "false_positives": 0,
+          "max_abs_samples": 300,
+          "median_samples": 120.0,
+          "misses": 0
         },
         "event_count": 21,
-        "lookahead_samples": [3840],
+        "lookahead_samples": [
+          480
+        ],
         "truth_count": 21
       },
       "treble": {
         "availability": {
-          "false_positives": 21,
-          "max_abs_samples": 2460,
-          "median_samples": 2220.0,
-          "misses": 21
+          "false_positives": 0,
+          "max_abs_samples": 780,
+          "median_samples": 600.0,
+          "misses": 0
         },
         "candidate": {
-          "false_positives": 21,
-          "max_abs_samples": 1920,
-          "median_samples": -1620.0,
-          "misses": 21
+          "false_positives": 0,
+          "max_abs_samples": 300,
+          "median_samples": 120.0,
+          "misses": 0
         },
         "event_count": 21,
-        "lookahead_samples": [3840],
+        "lookahead_samples": [
+          480
+        ],
         "truth_count": 21
       }
     },
     "clicks-174/combined": {
       "all": {
         "availability": {
-          "false_positives": 28,
-          "max_abs_samples": 2566,
-          "median_samples": 2325.5,
-          "misses": 28
+          "false_positives": 0,
+          "max_abs_samples": 861,
+          "median_samples": 620.5,
+          "misses": 0
         },
         "candidate": {
-          "false_positives": 28,
-          "max_abs_samples": 1920,
-          "median_samples": -1514.5,
-          "misses": 28
+          "false_positives": 0,
+          "max_abs_samples": 381,
+          "median_samples": 140.5,
+          "misses": 0
         },
         "event_count": 28,
-        "lookahead_samples": [3840],
+        "lookahead_samples": [
+          480
+        ],
         "truth_count": 28
       },
       "bass": {
@@ -580,89 +613,99 @@
     "clicks-174/multiband": {
       "all": {
         "availability": {
-          "false_positives": 28,
-          "max_abs_samples": 2566,
-          "median_samples": 2325.5,
-          "misses": 28
+          "false_positives": 0,
+          "max_abs_samples": 861,
+          "median_samples": 604.0,
+          "misses": 0
         },
         "candidate": {
-          "false_positives": 28,
-          "max_abs_samples": 1920,
-          "median_samples": -1514.5,
-          "misses": 28
+          "false_positives": 0,
+          "max_abs_samples": 381,
+          "median_samples": 124.0,
+          "misses": 0
         },
         "event_count": 28,
-        "lookahead_samples": [3840],
+        "lookahead_samples": [
+          480
+        ],
         "truth_count": 28
       },
       "bass": {
         "availability": {
-          "false_positives": 28,
-          "max_abs_samples": 2566,
-          "median_samples": 2325.5,
-          "misses": 28
+          "false_positives": 0,
+          "max_abs_samples": 861,
+          "median_samples": 604.0,
+          "misses": 0
         },
         "candidate": {
-          "false_positives": 28,
-          "max_abs_samples": 1920,
-          "median_samples": -1514.5,
-          "misses": 28
+          "false_positives": 0,
+          "max_abs_samples": 381,
+          "median_samples": 124.0,
+          "misses": 0
         },
         "event_count": 28,
-        "lookahead_samples": [3840],
+        "lookahead_samples": [
+          480
+        ],
         "truth_count": 28
       },
       "mid": {
         "availability": {
-          "false_positives": 28,
-          "max_abs_samples": 2566,
-          "median_samples": 2325.5,
-          "misses": 28
+          "false_positives": 0,
+          "max_abs_samples": 861,
+          "median_samples": 604.0,
+          "misses": 0
         },
         "candidate": {
-          "false_positives": 28,
-          "max_abs_samples": 1920,
-          "median_samples": -1514.5,
-          "misses": 28
+          "false_positives": 0,
+          "max_abs_samples": 381,
+          "median_samples": 124.0,
+          "misses": 0
         },
         "event_count": 28,
-        "lookahead_samples": [3840],
+        "lookahead_samples": [
+          480
+        ],
         "truth_count": 28
       },
       "treble": {
         "availability": {
-          "false_positives": 28,
-          "max_abs_samples": 2566,
-          "median_samples": 2325.5,
-          "misses": 28
+          "false_positives": 0,
+          "max_abs_samples": 861,
+          "median_samples": 604.0,
+          "misses": 0
         },
         "candidate": {
-          "false_positives": 28,
-          "max_abs_samples": 1920,
-          "median_samples": -1514.5,
-          "misses": 28
+          "false_positives": 0,
+          "max_abs_samples": 381,
+          "median_samples": 124.0,
+          "misses": 0
         },
         "event_count": 28,
-        "lookahead_samples": [3840],
+        "lookahead_samples": [
+          480
+        ],
         "truth_count": 28
       }
     },
     "impulse/combined": {
       "all": {
         "availability": {
-          "false_positives": 1,
-          "max_abs_samples": 1920,
-          "median_samples": 1920.0,
-          "misses": 1
+          "false_positives": 0,
+          "max_abs_samples": 480,
+          "median_samples": 480.0,
+          "misses": 0
         },
         "candidate": {
-          "false_positives": 1,
-          "max_abs_samples": 1920,
-          "median_samples": -1920.0,
-          "misses": 1
+          "false_positives": 0,
+          "max_abs_samples": 0,
+          "median_samples": 0.0,
+          "misses": 0
         },
         "event_count": 1,
-        "lookahead_samples": [3840],
+        "lookahead_samples": [
+          480
+        ],
         "truth_count": 1
       },
       "bass": {
@@ -720,89 +763,99 @@
     "impulse/multiband": {
       "all": {
         "availability": {
-          "false_positives": 1,
-          "max_abs_samples": 1920,
-          "median_samples": 1920.0,
-          "misses": 1
+          "false_positives": 0,
+          "max_abs_samples": 480,
+          "median_samples": 480.0,
+          "misses": 0
         },
         "candidate": {
-          "false_positives": 1,
-          "max_abs_samples": 1920,
-          "median_samples": -1920.0,
-          "misses": 1
+          "false_positives": 0,
+          "max_abs_samples": 0,
+          "median_samples": 0.0,
+          "misses": 0
         },
         "event_count": 1,
-        "lookahead_samples": [3840],
+        "lookahead_samples": [
+          480
+        ],
         "truth_count": 1
       },
       "bass": {
         "availability": {
-          "false_positives": 1,
-          "max_abs_samples": 1920,
-          "median_samples": 1920.0,
-          "misses": 1
+          "false_positives": 0,
+          "max_abs_samples": 480,
+          "median_samples": 480.0,
+          "misses": 0
         },
         "candidate": {
-          "false_positives": 1,
-          "max_abs_samples": 1920,
-          "median_samples": -1920.0,
-          "misses": 1
+          "false_positives": 0,
+          "max_abs_samples": 0,
+          "median_samples": 0.0,
+          "misses": 0
         },
         "event_count": 1,
-        "lookahead_samples": [3840],
+        "lookahead_samples": [
+          480
+        ],
         "truth_count": 1
       },
       "mid": {
         "availability": {
-          "false_positives": 1,
-          "max_abs_samples": 1920,
-          "median_samples": 1920.0,
-          "misses": 1
+          "false_positives": 0,
+          "max_abs_samples": 480,
+          "median_samples": 480.0,
+          "misses": 0
         },
         "candidate": {
-          "false_positives": 1,
-          "max_abs_samples": 1920,
-          "median_samples": -1920.0,
-          "misses": 1
+          "false_positives": 0,
+          "max_abs_samples": 0,
+          "median_samples": 0.0,
+          "misses": 0
         },
         "event_count": 1,
-        "lookahead_samples": [3840],
+        "lookahead_samples": [
+          480
+        ],
         "truth_count": 1
       },
       "treble": {
         "availability": {
-          "false_positives": 1,
-          "max_abs_samples": 1920,
-          "median_samples": 1920.0,
-          "misses": 1
+          "false_positives": 0,
+          "max_abs_samples": 480,
+          "median_samples": 480.0,
+          "misses": 0
         },
         "candidate": {
-          "false_positives": 1,
-          "max_abs_samples": 1920,
-          "median_samples": -1920.0,
-          "misses": 1
+          "false_positives": 0,
+          "max_abs_samples": 0,
+          "median_samples": 0.0,
+          "misses": 0
         },
         "event_count": 1,
-        "lookahead_samples": [3840],
+        "lookahead_samples": [
+          480
+        ],
         "truth_count": 1
       }
     },
     "panning/combined": {
       "all": {
         "availability": {
-          "false_positives": 19,
-          "max_abs_samples": 2500,
-          "median_samples": 2220.0,
-          "misses": 19
+          "false_positives": 0,
+          "max_abs_samples": 480,
+          "median_samples": 480.0,
+          "misses": 0
         },
         "candidate": {
-          "false_positives": 19,
-          "max_abs_samples": 2400,
-          "median_samples": -1440.0,
-          "misses": 19
+          "false_positives": 0,
+          "max_abs_samples": 0,
+          "median_samples": 0.0,
+          "misses": 0
         },
         "event_count": 19,
-        "lookahead_samples": [3520, 3580, 3600, 3660, 3720, 3780, 3800, 3860, 3920, 3940],
+        "lookahead_samples": [
+          480
+        ],
         "truth_count": 19
       },
       "bass": {
@@ -860,81 +913,299 @@
     "panning/multiband": {
       "all": {
         "availability": {
-          "false_positives": 20,
-          "max_abs_samples": 2500,
-          "median_samples": 2220.0,
-          "misses": 19
+          "false_positives": 0,
+          "max_abs_samples": 480,
+          "median_samples": 480.0,
+          "misses": 0
         },
         "candidate": {
-          "false_positives": 20,
-          "max_abs_samples": 1920,
-          "median_samples": -1440.0,
-          "misses": 19
+          "false_positives": 0,
+          "max_abs_samples": 0,
+          "median_samples": 0.0,
+          "misses": 0
         },
-        "event_count": 20,
-        "lookahead_samples": [3520, 3580, 3600, 3660, 3720, 3780, 3800, 3860, 3920, 3940],
+        "event_count": 19,
+        "lookahead_samples": [
+          480
+        ],
         "truth_count": 19
       },
       "bass": {
         "availability": {
-          "false_positives": 19,
-          "max_abs_samples": 2500,
-          "median_samples": 2220.0,
-          "misses": 19
+          "false_positives": 0,
+          "max_abs_samples": 480,
+          "median_samples": 480.0,
+          "misses": 0
         },
         "candidate": {
-          "false_positives": 19,
-          "max_abs_samples": 1920,
-          "median_samples": -1440.0,
-          "misses": 19
+          "false_positives": 0,
+          "max_abs_samples": 0,
+          "median_samples": 0.0,
+          "misses": 0
         },
         "event_count": 19,
-        "lookahead_samples": [3520, 3580, 3600, 3660, 3720, 3780, 3800, 3860, 3920, 3940],
+        "lookahead_samples": [
+          480
+        ],
         "truth_count": 19
       },
       "mid": {
         "availability": {
-          "false_positives": 19,
-          "max_abs_samples": 2500,
-          "median_samples": 2220.0,
-          "misses": 19
+          "false_positives": 0,
+          "max_abs_samples": 480,
+          "median_samples": 480.0,
+          "misses": 0
         },
         "candidate": {
-          "false_positives": 19,
-          "max_abs_samples": 1920,
-          "median_samples": -1440.0,
-          "misses": 19
+          "false_positives": 0,
+          "max_abs_samples": 0,
+          "median_samples": 0.0,
+          "misses": 0
         },
         "event_count": 19,
-        "lookahead_samples": [3520, 3580, 3600, 3660, 3720, 3780, 3800, 3860, 3920, 3940],
+        "lookahead_samples": [
+          480
+        ],
         "truth_count": 19
       },
       "treble": {
         "availability": {
-          "false_positives": 19,
-          "max_abs_samples": 2500,
-          "median_samples": 2220.0,
-          "misses": 19
+          "false_positives": 0,
+          "max_abs_samples": 480,
+          "median_samples": 480.0,
+          "misses": 0
         },
         "candidate": {
-          "false_positives": 19,
-          "max_abs_samples": 2400,
-          "median_samples": -1440.0,
-          "misses": 19
+          "false_positives": 0,
+          "max_abs_samples": 0,
+          "median_samples": 0.0,
+          "misses": 0
         },
         "event_count": 19,
-        "lookahead_samples": [3520, 3580, 3600, 3660, 3720, 3780, 3800, 3860, 3920, 3940],
+        "lookahead_samples": [
+          480
+        ],
         "truth_count": 19
+      }
+    },
+    "tone-steps/combined": {
+      "all": {
+        "availability": {
+          "false_positives": 0,
+          "max_abs_samples": 96960,
+          "median_samples": 960.0,
+          "misses": 1
+        },
+        "candidate": {
+          "false_positives": 0,
+          "max_abs_samples": 96480,
+          "median_samples": 480.0,
+          "misses": 1
+        },
+        "event_count": 3,
+        "lookahead_samples": [
+          480
+        ],
+        "truth_count": 4
+      },
+      "bass": {
+        "availability": {
+          "false_positives": 0,
+          "max_abs_samples": null,
+          "median_samples": null,
+          "misses": 4
+        },
+        "candidate": {
+          "false_positives": 0,
+          "max_abs_samples": null,
+          "median_samples": null,
+          "misses": 4
+        },
+        "event_count": 0,
+        "lookahead_samples": [],
+        "truth_count": 4
+      },
+      "mid": {
+        "availability": {
+          "false_positives": 0,
+          "max_abs_samples": null,
+          "median_samples": null,
+          "misses": 4
+        },
+        "candidate": {
+          "false_positives": 0,
+          "max_abs_samples": null,
+          "median_samples": null,
+          "misses": 4
+        },
+        "event_count": 0,
+        "lookahead_samples": [],
+        "truth_count": 4
+      },
+      "treble": {
+        "availability": {
+          "false_positives": 0,
+          "max_abs_samples": null,
+          "median_samples": null,
+          "misses": 4
+        },
+        "candidate": {
+          "false_positives": 0,
+          "max_abs_samples": null,
+          "median_samples": null,
+          "misses": 4
+        },
+        "event_count": 0,
+        "lookahead_samples": [],
+        "truth_count": 4
+      }
+    },
+    "tone-steps/multiband": {
+      "all": {
+        "availability": {
+          "false_positives": 0,
+          "max_abs_samples": 96480,
+          "median_samples": 480.0,
+          "misses": 1
+        },
+        "candidate": {
+          "false_positives": 0,
+          "max_abs_samples": 96000,
+          "median_samples": 0.0,
+          "misses": 1
+        },
+        "event_count": 3,
+        "lookahead_samples": [
+          480
+        ],
+        "truth_count": 4
+      },
+      "bass": {
+        "availability": {
+          "false_positives": 0,
+          "max_abs_samples": 96480,
+          "median_samples": 480.0,
+          "misses": 1
+        },
+        "candidate": {
+          "false_positives": 0,
+          "max_abs_samples": 96000,
+          "median_samples": 0.0,
+          "misses": 1
+        },
+        "event_count": 3,
+        "lookahead_samples": [
+          480
+        ],
+        "truth_count": 4
+      },
+      "mid": {
+        "availability": {
+          "false_positives": 0,
+          "max_abs_samples": 96480,
+          "median_samples": 480.0,
+          "misses": 1
+        },
+        "candidate": {
+          "false_positives": 0,
+          "max_abs_samples": 96000,
+          "median_samples": 0.0,
+          "misses": 1
+        },
+        "event_count": 3,
+        "lookahead_samples": [
+          480
+        ],
+        "truth_count": 4
+      },
+      "treble": {
+        "availability": {
+          "false_positives": 0,
+          "max_abs_samples": 96480,
+          "median_samples": 480.0,
+          "misses": 1
+        },
+        "candidate": {
+          "false_positives": 0,
+          "max_abs_samples": 96000,
+          "median_samples": 0.0,
+          "misses": 1
+        },
+        "event_count": 3,
+        "lookahead_samples": [
+          480
+        ],
+        "truth_count": 4
       }
     }
   },
   "strength": {
     "clicks-120/combined": {
       "all": {
-        "below_tenth_fraction": 1.0,
-        "candidate": [175.980262, 874.513342, 874.513342, 874.513342, 874.513342, 874.513342, 874.513342, 874.513342, 874.513342, 874.513342, 874.513342, 874.513342, 874.513342, 874.513342, 874.513342, 874.513342, 874.513342, 874.513342, 874.513342],
-        "candidate_samples": [22080, 46560, 70560, 94560, 118560, 142560, 166560, 190560, 214560, 238560, 262560, 286560, 310560, 334560, 358560, 382560, 406560, 430560, 454560],
-        "reported": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        "below_tenth_fraction": 0.0,
+        "candidate": [
+          874.513342,
+          874.513342,
+          874.513342,
+          874.513342,
+          874.513342,
+          874.513342,
+          874.513342,
+          874.513342,
+          874.513342,
+          874.513342,
+          874.513342,
+          874.513342,
+          874.513342,
+          874.513342,
+          874.513342,
+          874.513342,
+          874.513342,
+          874.513342,
+          874.513342
+        ],
+        "candidate_samples": [
+          24000,
+          48000,
+          72000,
+          96000,
+          120000,
+          144000,
+          168000,
+          192000,
+          216000,
+          240000,
+          264000,
+          288000,
+          312000,
+          336000,
+          360000,
+          384000,
+          408000,
+          432000,
+          456000
+        ],
+        "reported": [
+          874.513342,
+          874.513342,
+          874.513342,
+          874.513342,
+          874.513342,
+          874.513342,
+          874.513342,
+          874.513342,
+          874.513342,
+          874.513342,
+          874.513342,
+          874.513342,
+          874.513342,
+          874.513342,
+          874.513342,
+          874.513342,
+          874.513342,
+          874.513342,
+          874.513342
+        ]
       },
       "bass": {
         "below_tenth_fraction": null,
@@ -957,36 +1228,288 @@
     },
     "clicks-120/multiband": {
       "all": {
-        "below_tenth_fraction": 1.0,
-        "candidate": [0.514213, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872],
-        "candidate_samples": [22080, 46560, 70560, 94560, 118560, 142560, 166560, 190560, 214560, 238560, 262560, 286560, 310560, 334560, 358560, 382560, 406560, 430560, 454560],
-        "reported": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        "below_tenth_fraction": 0.0,
+        "candidate": [
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254
+        ],
+        "candidate_samples": [
+          24000,
+          48000,
+          72000,
+          96000,
+          120000,
+          144000,
+          168000,
+          192000,
+          216000,
+          240000,
+          264000,
+          288000,
+          312000,
+          336000,
+          360000,
+          384000,
+          408000,
+          432000,
+          456000
+        ],
+        "reported": [
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254
+        ]
       },
       "bass": {
-        "below_tenth_fraction": 1.0,
-        "candidate": [0.514213, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872, 2.478872],
-        "candidate_samples": [22080, 46560, 70560, 94560, 118560, 142560, 166560, 190560, 214560, 238560, 262560, 286560, 310560, 334560, 358560, 382560, 406560, 430560, 454560],
-        "reported": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        "below_tenth_fraction": 0.0,
+        "candidate": [
+          2.478872,
+          2.478872,
+          2.478872,
+          2.478872,
+          2.478872,
+          2.478872,
+          2.478872,
+          2.478872,
+          2.478872,
+          2.478872,
+          2.478872,
+          2.478872,
+          2.478872,
+          2.478872,
+          2.478872,
+          2.478872,
+          2.478872,
+          2.478872,
+          2.478872
+        ],
+        "candidate_samples": [
+          24000,
+          48000,
+          72000,
+          96000,
+          120000,
+          144000,
+          168000,
+          192000,
+          216000,
+          240000,
+          264000,
+          288000,
+          312000,
+          336000,
+          360000,
+          384000,
+          408000,
+          432000,
+          456000
+        ],
+        "reported": [
+          2.478872,
+          2.478872,
+          2.478872,
+          2.478872,
+          2.478872,
+          2.478872,
+          2.478872,
+          2.478872,
+          2.478872,
+          2.478872,
+          2.478872,
+          2.478872,
+          2.478872,
+          2.478872,
+          2.478872,
+          2.478872,
+          2.478872,
+          2.478872,
+          2.478872
+        ]
       },
       "mid": {
-        "below_tenth_fraction": 1.0,
-        "candidate": [3.435347, 16.765215, 16.765215, 16.765215, 16.765215, 16.765215, 16.765215, 16.765215, 16.765215, 16.765215, 16.765215, 16.765215, 16.765215, 16.765215, 16.765215, 16.765215, 16.765215, 16.765215, 16.765215],
-        "candidate_samples": [22080, 46560, 70560, 94560, 118560, 142560, 166560, 190560, 214560, 238560, 262560, 286560, 310560, 334560, 358560, 382560, 406560, 430560, 454560],
-        "reported": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        "below_tenth_fraction": 0.0,
+        "candidate": [
+          16.765215,
+          16.765215,
+          16.765215,
+          16.765215,
+          16.765215,
+          16.765215,
+          16.765215,
+          16.765215,
+          16.765215,
+          16.765215,
+          16.765215,
+          16.765215,
+          16.765215,
+          16.765215,
+          16.765215,
+          16.765215,
+          16.765215,
+          16.765215,
+          16.765215
+        ],
+        "candidate_samples": [
+          24000,
+          48000,
+          72000,
+          96000,
+          120000,
+          144000,
+          168000,
+          192000,
+          216000,
+          240000,
+          264000,
+          288000,
+          312000,
+          336000,
+          360000,
+          384000,
+          408000,
+          432000,
+          456000
+        ],
+        "reported": [
+          16.765215,
+          16.765215,
+          16.765215,
+          16.765215,
+          16.765215,
+          16.765215,
+          16.765215,
+          16.765215,
+          16.765215,
+          16.765215,
+          16.765215,
+          16.765215,
+          16.765215,
+          16.765215,
+          16.765215,
+          16.765215,
+          16.765215,
+          16.765215,
+          16.765215
+        ]
       },
       "treble": {
-        "below_tenth_fraction": 1.0,
-        "candidate": [172.030703, 855.269254, 855.269254, 855.269254, 855.269254, 855.269254, 855.269254, 855.269254, 855.269254, 855.269254, 855.269254, 855.269254, 855.269254, 855.269254, 855.269254, 855.269254, 855.269254, 855.269254, 855.269254],
-        "candidate_samples": [22080, 46560, 70560, 94560, 118560, 142560, 166560, 190560, 214560, 238560, 262560, 286560, 310560, 334560, 358560, 382560, 406560, 430560, 454560],
-        "reported": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        "below_tenth_fraction": 0.0,
+        "candidate": [
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254
+        ],
+        "candidate_samples": [
+          24000,
+          48000,
+          72000,
+          96000,
+          120000,
+          144000,
+          168000,
+          192000,
+          216000,
+          240000,
+          264000,
+          288000,
+          312000,
+          336000,
+          360000,
+          384000,
+          408000,
+          432000,
+          456000
+        ],
+        "reported": [
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254,
+          855.269254
+        ]
       }
     },
     "tone-steps/combined": {
       "all": {
         "below_tenth_fraction": 0.0,
-        "candidate": [12.494626, 39.523286, 68.250828],
-        "candidate_samples": [94080, 190080, 286080],
-        "reported": [21.435945, 67.78344, 130.536063]
+        "candidate": [
+          73.093175,
+          231.130563,
+          431.950488
+        ],
+        "candidate_samples": [
+          96480,
+          192480,
+          288480
+        ],
+        "reported": [
+          73.093175,
+          231.130563,
+          431.950488
+        ]
       },
       "bass": {
         "below_tenth_fraction": null,
@@ -1010,43 +1533,119 @@
     "tone-steps/multiband": {
       "all": {
         "below_tenth_fraction": 0.0,
-        "candidate": [7.714525, 24.393061, 41.288589],
-        "candidate_samples": [94080, 190080, 286080],
-        "reported": [20.713276, 65.496758, 125.032005]
+        "candidate": [
+          66.944437,
+          211.683293,
+          396.026783
+        ],
+        "candidate_samples": [
+          96000,
+          192000,
+          287520
+        ],
+        "reported": [
+          66.944437,
+          211.683293,
+          396.026783
+        ]
       },
       "bass": {
-        "below_tenth_fraction": 1.0,
-        "candidate": [0.42369, 1.339629, 2.225437],
-        "candidate_samples": [94080, 190080, 286080],
-        "reported": [0.0, 0.0, 0.0]
+        "below_tenth_fraction": 0.0,
+        "candidate": [
+          3.279618,
+          10.370259,
+          18.08669
+        ],
+        "candidate_samples": [
+          96000,
+          192000,
+          287520
+        ],
+        "reported": [
+          3.279618,
+          10.370259,
+          18.08669
+        ]
       },
       "mid": {
         "below_tenth_fraction": 0.0,
-        "candidate": [7.714525, 24.393061, 41.288589],
-        "candidate_samples": [94080, 190080, 286080],
-        "reported": [20.713276, 65.496758, 125.032005]
+        "candidate": [
+          66.944437,
+          211.683293,
+          396.026783
+        ],
+        "candidate_samples": [
+          96000,
+          192000,
+          287520
+        ],
+        "reported": [
+          66.944437,
+          211.683293,
+          396.026783
+        ]
       },
       "treble": {
-        "below_tenth_fraction": 0.6666666666666666,
-        "candidate": [4.356412, 13.790596, 24.736803],
-        "candidate_samples": [94080, 190080, 286080],
-        "reported": [0.722669, 2.286682, 5.504058]
+        "below_tenth_fraction": 0.0,
+        "candidate": [
+          4.473971,
+          14.145273,
+          24.736803
+        ],
+        "candidate_samples": [
+          96000,
+          192000,
+          287520
+        ],
+        "reported": [
+          4.473971,
+          14.145273,
+          24.736803
+        ]
       }
     }
   },
   "survival": {
     "anti-phase/combined/normal/30/0": {
       "events": {
-        "all": [19, 1, 1, 0, 0, 18],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [298, 697, 1],
+      "publications": [
+        298,
+        716,
+        1
+      ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 18,
-          "sole_carrier_skipped": 18
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
         },
         "bass": {
           "never_consumed_flags": 0,
@@ -1064,12 +1663,40 @@
     },
     "anti-phase/combined/normal/30/1": {
       "events": {
-        "all": [19, 19, 19, 0, 0, 0],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [995, 0, 1],
+      "publications": [
+        976,
+        19,
+        20
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -1091,16 +1718,44 @@
     },
     "anti-phase/combined/normal/60/0": {
       "events": {
-        "all": [19, 14, 14, 0, 0, 5],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [597, 398, 1],
+      "publications": [
+        587,
+        422,
+        6
+      ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 5,
-          "sole_carrier_skipped": 5
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
         },
         "bass": {
           "never_consumed_flags": 0,
@@ -1118,12 +1773,40 @@
     },
     "anti-phase/combined/normal/60/1": {
       "events": {
-        "all": [19, 19, 19, 0, 0, 0],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [995, 0, 1],
+      "publications": [
+        976,
+        19,
+        20
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -1145,12 +1828,40 @@
     },
     "anti-phase/combined/timestamped/30/0": {
       "events": {
-        "all": [19, 19, 19, 2, 0, 2],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [996, 0, 0],
+      "publications": [
+        1015,
+        0,
+        0
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -1172,12 +1883,40 @@
     },
     "anti-phase/combined/timestamped/30/1": {
       "events": {
-        "all": [19, 19, 19, 1, 0, 1],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [996, 0, 0],
+      "publications": [
+        1015,
+        0,
+        0
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -1199,12 +1938,40 @@
     },
     "anti-phase/combined/timestamped/60/0": {
       "events": {
-        "all": [19, 19, 19, 1, 0, 1],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [996, 0, 0],
+      "publications": [
+        1015,
+        0,
+        0
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -1226,12 +1993,40 @@
     },
     "anti-phase/combined/timestamped/60/1": {
       "events": {
-        "all": [19, 19, 19, 0, 0, 0],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [996, 0, 0],
+      "publications": [
+        1015,
+        0,
+        0
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -1253,39 +2048,95 @@
     },
     "anti-phase/multiband/normal/30/0": {
       "events": {
-        "all": [20, 1, 1, 0, 0, 19],
-        "bass": [19, 0, 0, 0, 0, 19],
-        "mid": [19, 1, 1, 0, 0, 18],
-        "treble": [19, 1, 1, 0, 0, 18]
+        "all": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [298, 697, 1],
+      "publications": [
+        298,
+        716,
+        1
+      ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 19,
-          "sole_carrier_skipped": 19
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 19,
-          "sole_carrier_skipped": 19
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 18,
-          "sole_carrier_skipped": 18
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 18,
-          "sole_carrier_skipped": 18
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
         }
       }
     },
     "anti-phase/multiband/normal/30/1": {
       "events": {
-        "all": [20, 20, 20, 0, 0, 0],
-        "bass": [19, 19, 19, 0, 0, 0],
-        "mid": [19, 19, 19, 0, 0, 0],
-        "treble": [19, 19, 19, 0, 0, 0]
+        "all": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [995, 0, 1],
+      "publications": [
+        976,
+        19,
+        20
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -1307,39 +2158,95 @@
     },
     "anti-phase/multiband/normal/60/0": {
       "events": {
-        "all": [20, 14, 14, 0, 0, 6],
-        "bass": [19, 13, 13, 0, 0, 6],
-        "mid": [19, 14, 14, 0, 0, 5],
-        "treble": [19, 14, 14, 0, 0, 5]
+        "all": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [597, 398, 1],
+      "publications": [
+        587,
+        422,
+        6
+      ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 6,
-          "sole_carrier_skipped": 6
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 6,
-          "sole_carrier_skipped": 6
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 5,
-          "sole_carrier_skipped": 5
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 5,
-          "sole_carrier_skipped": 5
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
         }
       }
     },
     "anti-phase/multiband/normal/60/1": {
       "events": {
-        "all": [20, 20, 20, 0, 0, 0],
-        "bass": [19, 19, 19, 0, 0, 0],
-        "mid": [19, 19, 19, 0, 0, 0],
-        "treble": [19, 19, 19, 0, 0, 0]
+        "all": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [995, 0, 1],
+      "publications": [
+        976,
+        19,
+        20
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -1361,12 +2268,40 @@
     },
     "anti-phase/multiband/timestamped/30/0": {
       "events": {
-        "all": [20, 20, 20, 3, 0, 3],
-        "bass": [19, 19, 19, 2, 0, 2],
-        "mid": [19, 19, 19, 2, 0, 2],
-        "treble": [19, 19, 19, 2, 0, 2]
+        "all": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [996, 0, 0],
+      "publications": [
+        1015,
+        0,
+        0
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -1388,12 +2323,40 @@
     },
     "anti-phase/multiband/timestamped/30/1": {
       "events": {
-        "all": [20, 20, 20, 2, 0, 2],
-        "bass": [19, 19, 19, 1, 0, 1],
-        "mid": [19, 19, 19, 1, 0, 1],
-        "treble": [19, 19, 19, 1, 0, 1]
+        "all": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [996, 0, 0],
+      "publications": [
+        1015,
+        0,
+        0
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -1415,12 +2378,40 @@
     },
     "anti-phase/multiband/timestamped/60/0": {
       "events": {
-        "all": [20, 20, 20, 2, 0, 2],
-        "bass": [19, 19, 19, 2, 0, 2],
-        "mid": [19, 19, 19, 1, 0, 1],
-        "treble": [19, 19, 19, 1, 0, 1]
+        "all": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [996, 0, 0],
+      "publications": [
+        1015,
+        0,
+        0
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -1442,12 +2433,40 @@
     },
     "anti-phase/multiband/timestamped/60/1": {
       "events": {
-        "all": [20, 20, 20, 1, 0, 1],
-        "bass": [19, 19, 19, 1, 0, 1],
-        "mid": [19, 19, 19, 0, 0, 0],
-        "treble": [19, 19, 19, 0, 0, 0]
+        "all": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [996, 0, 0],
+      "publications": [
+        1015,
+        0,
+        0
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -1469,16 +2488,44 @@
     },
     "clicks-120/combined/normal/30/0": {
       "events": {
-        "all": [19, 0, 0, 0, 0, 19],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [298, 697, 1],
+      "publications": [
+        298,
+        716,
+        1
+      ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 19,
-          "sole_carrier_skipped": 19
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
         },
         "bass": {
           "never_consumed_flags": 0,
@@ -1496,12 +2543,40 @@
     },
     "clicks-120/combined/normal/30/1": {
       "events": {
-        "all": [19, 19, 19, 0, 0, 0],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [995, 0, 1],
+      "publications": [
+        976,
+        19,
+        20
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -1523,16 +2598,44 @@
     },
     "clicks-120/combined/normal/60/0": {
       "events": {
-        "all": [19, 18, 18, 0, 0, 1],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [597, 398, 1],
+      "publications": [
+        597,
+        417,
+        1
+      ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 1,
-          "sole_carrier_skipped": 1
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
         },
         "bass": {
           "never_consumed_flags": 0,
@@ -1550,12 +2653,40 @@
     },
     "clicks-120/combined/normal/60/1": {
       "events": {
-        "all": [19, 19, 19, 0, 0, 0],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [995, 0, 1],
+      "publications": [
+        976,
+        19,
+        20
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -1577,12 +2708,40 @@
     },
     "clicks-120/combined/timestamped/30/0": {
       "events": {
-        "all": [19, 19, 19, 1, 0, 1],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [996, 0, 0],
+      "publications": [
+        1015,
+        0,
+        0
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -1604,12 +2763,40 @@
     },
     "clicks-120/combined/timestamped/30/1": {
       "events": {
-        "all": [19, 19, 19, 1, 0, 1],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [996, 0, 0],
+      "publications": [
+        1015,
+        0,
+        0
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -1631,12 +2818,40 @@
     },
     "clicks-120/combined/timestamped/60/0": {
       "events": {
-        "all": [19, 19, 19, 1, 0, 1],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [996, 0, 0],
+      "publications": [
+        1015,
+        0,
+        0
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -1658,12 +2873,40 @@
     },
     "clicks-120/combined/timestamped/60/1": {
       "events": {
-        "all": [19, 19, 19, 1, 0, 1],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [996, 0, 0],
+      "publications": [
+        1015,
+        0,
+        0
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -1685,39 +2928,95 @@
     },
     "clicks-120/multiband/normal/30/0": {
       "events": {
-        "all": [19, 0, 0, 0, 0, 19],
-        "bass": [19, 0, 0, 0, 0, 19],
-        "mid": [19, 0, 0, 0, 0, 19],
-        "treble": [19, 0, 0, 0, 0, 19]
+        "all": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [298, 697, 1],
+      "publications": [
+        298,
+        716,
+        1
+      ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 19,
-          "sole_carrier_skipped": 19
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 19,
-          "sole_carrier_skipped": 19
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 19,
-          "sole_carrier_skipped": 19
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 19,
-          "sole_carrier_skipped": 19
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
         }
       }
     },
     "clicks-120/multiband/normal/30/1": {
       "events": {
-        "all": [19, 19, 19, 0, 0, 0],
-        "bass": [19, 19, 19, 0, 0, 0],
-        "mid": [19, 19, 19, 0, 0, 0],
-        "treble": [19, 19, 19, 0, 0, 0]
+        "all": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [995, 0, 1],
+      "publications": [
+        976,
+        19,
+        20
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -1739,39 +3038,95 @@
     },
     "clicks-120/multiband/normal/60/0": {
       "events": {
-        "all": [19, 18, 18, 0, 0, 1],
-        "bass": [19, 18, 18, 0, 0, 1],
-        "mid": [19, 18, 18, 0, 0, 1],
-        "treble": [19, 18, 18, 0, 0, 1]
+        "all": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [597, 398, 1],
+      "publications": [
+        597,
+        417,
+        1
+      ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 1,
-          "sole_carrier_skipped": 1
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 1,
-          "sole_carrier_skipped": 1
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 1,
-          "sole_carrier_skipped": 1
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 1,
-          "sole_carrier_skipped": 1
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
         }
       }
     },
     "clicks-120/multiband/normal/60/1": {
       "events": {
-        "all": [19, 19, 19, 0, 0, 0],
-        "bass": [19, 19, 19, 0, 0, 0],
-        "mid": [19, 19, 19, 0, 0, 0],
-        "treble": [19, 19, 19, 0, 0, 0]
+        "all": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [995, 0, 1],
+      "publications": [
+        976,
+        19,
+        20
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -1793,12 +3148,40 @@
     },
     "clicks-120/multiband/timestamped/30/0": {
       "events": {
-        "all": [19, 19, 19, 1, 0, 1],
-        "bass": [19, 19, 19, 1, 0, 1],
-        "mid": [19, 19, 19, 1, 0, 1],
-        "treble": [19, 19, 19, 1, 0, 1]
+        "all": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [996, 0, 0],
+      "publications": [
+        1015,
+        0,
+        0
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -1820,12 +3203,40 @@
     },
     "clicks-120/multiband/timestamped/30/1": {
       "events": {
-        "all": [19, 19, 19, 1, 0, 1],
-        "bass": [19, 19, 19, 1, 0, 1],
-        "mid": [19, 19, 19, 1, 0, 1],
-        "treble": [19, 19, 19, 1, 0, 1]
+        "all": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [996, 0, 0],
+      "publications": [
+        1015,
+        0,
+        0
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -1847,12 +3258,40 @@
     },
     "clicks-120/multiband/timestamped/60/0": {
       "events": {
-        "all": [19, 19, 19, 1, 0, 1],
-        "bass": [19, 19, 19, 1, 0, 1],
-        "mid": [19, 19, 19, 1, 0, 1],
-        "treble": [19, 19, 19, 1, 0, 1]
+        "all": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [996, 0, 0],
+      "publications": [
+        1015,
+        0,
+        0
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -1874,12 +3313,40 @@
     },
     "clicks-120/multiband/timestamped/60/1": {
       "events": {
-        "all": [19, 19, 19, 1, 0, 1],
-        "bass": [19, 19, 19, 1, 0, 1],
-        "mid": [19, 19, 19, 1, 0, 1],
-        "treble": [19, 19, 19, 1, 0, 1]
+        "all": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [996, 0, 0],
+      "publications": [
+        1015,
+        0,
+        0
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -1901,16 +3368,44 @@
     },
     "clicks-128/combined/normal/30/0": {
       "events": {
-        "all": [21, 5, 5, 0, 0, 16],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          21,
+          21,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [298, 697, 1],
+      "publications": [
+        298,
+        718,
+        1
+      ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 16,
-          "sole_carrier_skipped": 16
+          "never_consumed_flags": 9,
+          "sole_carrier_skipped": 0
         },
         "bass": {
           "never_consumed_flags": 0,
@@ -1928,12 +3423,40 @@
     },
     "clicks-128/combined/normal/30/1": {
       "events": {
-        "all": [21, 21, 21, 0, 0, 0],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          21,
+          21,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [995, 0, 1],
+      "publications": [
+        974,
+        21,
+        22
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -1955,16 +3478,44 @@
     },
     "clicks-128/combined/normal/60/0": {
       "events": {
-        "all": [21, 12, 12, 0, 0, 9],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          21,
+          21,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [597, 398, 1],
+      "publications": [
+        587,
+        424,
+        6
+      ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 9,
-          "sole_carrier_skipped": 9
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
         },
         "bass": {
           "never_consumed_flags": 0,
@@ -1982,12 +3533,40 @@
     },
     "clicks-128/combined/normal/60/1": {
       "events": {
-        "all": [21, 21, 21, 0, 0, 0],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          21,
+          21,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [995, 0, 1],
+      "publications": [
+        974,
+        21,
+        22
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -2009,12 +3588,40 @@
     },
     "clicks-128/combined/timestamped/30/0": {
       "events": {
-        "all": [21, 21, 21, 14, 0, 14],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          21,
+          21,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [996, 0, 0],
+      "publications": [
+        999,
+        9,
+        9
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -2036,12 +3643,40 @@
     },
     "clicks-128/combined/timestamped/30/1": {
       "events": {
-        "all": [21, 21, 21, 1, 0, 1],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          21,
+          21,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [996, 0, 0],
+      "publications": [
+        1017,
+        0,
+        0
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -2063,12 +3698,40 @@
     },
     "clicks-128/combined/timestamped/60/0": {
       "events": {
-        "all": [21, 21, 21, 9, 0, 9],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          21,
+          21,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [996, 0, 0],
+      "publications": [
+        1017,
+        0,
+        0
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -2090,12 +3753,40 @@
     },
     "clicks-128/combined/timestamped/60/1": {
       "events": {
-        "all": [21, 21, 21, 2, 0, 2],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          21,
+          21,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [996, 0, 0],
+      "publications": [
+        1017,
+        0,
+        0
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -2117,39 +3808,95 @@
     },
     "clicks-128/multiband/normal/30/0": {
       "events": {
-        "all": [21, 5, 5, 0, 0, 16],
-        "bass": [21, 5, 5, 0, 0, 16],
-        "mid": [21, 5, 5, 0, 0, 16],
-        "treble": [21, 5, 5, 0, 0, 16]
+        "all": [
+          21,
+          21,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          21,
+          21,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          21,
+          21,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          21,
+          21,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [298, 697, 1],
+      "publications": [
+        298,
+        718,
+        1
+      ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 16,
-          "sole_carrier_skipped": 16
+          "never_consumed_flags": 10,
+          "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 16,
-          "sole_carrier_skipped": 16
+          "never_consumed_flags": 10,
+          "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 16,
-          "sole_carrier_skipped": 16
+          "never_consumed_flags": 10,
+          "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 16,
-          "sole_carrier_skipped": 16
+          "never_consumed_flags": 10,
+          "sole_carrier_skipped": 0
         }
       }
     },
     "clicks-128/multiband/normal/30/1": {
       "events": {
-        "all": [21, 21, 21, 0, 0, 0],
-        "bass": [21, 21, 21, 0, 0, 0],
-        "mid": [21, 21, 21, 0, 0, 0],
-        "treble": [21, 21, 21, 0, 0, 0]
+        "all": [
+          21,
+          21,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          21,
+          21,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          21,
+          21,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          21,
+          21,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [995, 0, 1],
+      "publications": [
+        978,
+        19,
+        20
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -2171,39 +3918,95 @@
     },
     "clicks-128/multiband/normal/60/0": {
       "events": {
-        "all": [21, 12, 12, 0, 0, 9],
-        "bass": [21, 12, 12, 0, 0, 9],
-        "mid": [21, 12, 12, 0, 0, 9],
-        "treble": [21, 12, 12, 0, 0, 9]
+        "all": [
+          21,
+          21,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          21,
+          21,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          21,
+          21,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          21,
+          21,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [597, 398, 1],
+      "publications": [
+        591,
+        422,
+        4
+      ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 9,
-          "sole_carrier_skipped": 9
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 9,
-          "sole_carrier_skipped": 9
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 9,
-          "sole_carrier_skipped": 9
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 9,
-          "sole_carrier_skipped": 9
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
         }
       }
     },
     "clicks-128/multiband/normal/60/1": {
       "events": {
-        "all": [21, 21, 21, 0, 0, 0],
-        "bass": [21, 21, 21, 0, 0, 0],
-        "mid": [21, 21, 21, 0, 0, 0],
-        "treble": [21, 21, 21, 0, 0, 0]
+        "all": [
+          21,
+          21,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          21,
+          21,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          21,
+          21,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          21,
+          21,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [995, 0, 1],
+      "publications": [
+        978,
+        19,
+        20
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -2225,12 +4028,40 @@
     },
     "clicks-128/multiband/timestamped/30/0": {
       "events": {
-        "all": [21, 21, 21, 14, 0, 14],
-        "bass": [21, 21, 21, 14, 0, 14],
-        "mid": [21, 21, 21, 14, 0, 14],
-        "treble": [21, 21, 21, 14, 0, 14]
+        "all": [
+          21,
+          21,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          21,
+          21,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          21,
+          21,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          21,
+          21,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [996, 0, 0],
+      "publications": [
+        997,
+        10,
+        10
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -2252,12 +4083,40 @@
     },
     "clicks-128/multiband/timestamped/30/1": {
       "events": {
-        "all": [21, 21, 21, 1, 0, 1],
-        "bass": [21, 21, 21, 1, 0, 1],
-        "mid": [21, 21, 21, 1, 0, 1],
-        "treble": [21, 21, 21, 1, 0, 1]
+        "all": [
+          21,
+          21,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          21,
+          21,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          21,
+          21,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          21,
+          21,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [996, 0, 0],
+      "publications": [
+        1017,
+        0,
+        0
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -2279,12 +4138,40 @@
     },
     "clicks-128/multiband/timestamped/60/0": {
       "events": {
-        "all": [21, 21, 21, 9, 0, 9],
-        "bass": [21, 21, 21, 9, 0, 9],
-        "mid": [21, 21, 21, 9, 0, 9],
-        "treble": [21, 21, 21, 9, 0, 9]
+        "all": [
+          21,
+          21,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          21,
+          21,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          21,
+          21,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          21,
+          21,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [996, 0, 0],
+      "publications": [
+        1017,
+        0,
+        0
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -2306,12 +4193,40 @@
     },
     "clicks-128/multiband/timestamped/60/1": {
       "events": {
-        "all": [21, 21, 21, 2, 0, 2],
-        "bass": [21, 21, 21, 2, 0, 2],
-        "mid": [21, 21, 21, 2, 0, 2],
-        "treble": [21, 21, 21, 2, 0, 2]
+        "all": [
+          21,
+          21,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          21,
+          21,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          21,
+          21,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          21,
+          21,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [996, 0, 0],
+      "publications": [
+        1017,
+        0,
+        0
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -2333,16 +4248,44 @@
     },
     "clicks-174/combined/normal/30/0": {
       "events": {
-        "all": [28, 8, 8, 0, 0, 20],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          28,
+          28,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [298, 697, 1],
+      "publications": [
+        298,
+        725,
+        1
+      ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 20,
-          "sole_carrier_skipped": 20
+          "never_consumed_flags": 12,
+          "sole_carrier_skipped": 0
         },
         "bass": {
           "never_consumed_flags": 0,
@@ -2360,12 +4303,40 @@
     },
     "clicks-174/combined/normal/30/1": {
       "events": {
-        "all": [28, 28, 28, 0, 0, 0],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          28,
+          28,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [995, 0, 1],
+      "publications": [
+        967,
+        28,
+        29
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -2387,16 +4358,44 @@
     },
     "clicks-174/combined/normal/60/0": {
       "events": {
-        "all": [28, 16, 16, 0, 0, 12],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          28,
+          28,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [597, 398, 1],
+      "publications": [
+        585,
+        432,
+        7
+      ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 12,
-          "sole_carrier_skipped": 12
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
         },
         "bass": {
           "never_consumed_flags": 0,
@@ -2414,12 +4413,40 @@
     },
     "clicks-174/combined/normal/60/1": {
       "events": {
-        "all": [28, 28, 28, 0, 0, 0],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          28,
+          28,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [995, 0, 1],
+      "publications": [
+        967,
+        28,
+        29
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -2441,12 +4468,40 @@
     },
     "clicks-174/combined/timestamped/30/0": {
       "events": {
-        "all": [28, 28, 28, 20, 0, 20],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          28,
+          28,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [996, 0, 0],
+      "publications": [
+        1000,
+        12,
+        12
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -2468,12 +4523,40 @@
     },
     "clicks-174/combined/timestamped/30/1": {
       "events": {
-        "all": [28, 28, 28, 1, 0, 1],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          28,
+          28,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [996, 0, 0],
+      "publications": [
+        1024,
+        0,
+        0
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -2495,12 +4578,40 @@
     },
     "clicks-174/combined/timestamped/60/0": {
       "events": {
-        "all": [28, 28, 28, 12, 0, 12],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          28,
+          28,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [996, 0, 0],
+      "publications": [
+        1024,
+        0,
+        0
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -2522,12 +4633,40 @@
     },
     "clicks-174/combined/timestamped/60/1": {
       "events": {
-        "all": [28, 28, 28, 3, 0, 3],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          28,
+          28,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [996, 0, 0],
+      "publications": [
+        1024,
+        0,
+        0
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -2549,39 +4688,95 @@
     },
     "clicks-174/multiband/normal/30/0": {
       "events": {
-        "all": [28, 8, 8, 0, 0, 20],
-        "bass": [28, 8, 8, 0, 0, 20],
-        "mid": [28, 8, 8, 0, 0, 20],
-        "treble": [28, 8, 8, 0, 0, 20]
+        "all": [
+          28,
+          28,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          28,
+          28,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          28,
+          28,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          28,
+          28,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [298, 697, 1],
+      "publications": [
+        298,
+        725,
+        1
+      ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 20,
-          "sole_carrier_skipped": 20
+          "never_consumed_flags": 12,
+          "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 20,
-          "sole_carrier_skipped": 20
+          "never_consumed_flags": 12,
+          "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 20,
-          "sole_carrier_skipped": 20
+          "never_consumed_flags": 12,
+          "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 20,
-          "sole_carrier_skipped": 20
+          "never_consumed_flags": 12,
+          "sole_carrier_skipped": 0
         }
       }
     },
     "clicks-174/multiband/normal/30/1": {
       "events": {
-        "all": [28, 28, 28, 0, 0, 0],
-        "bass": [28, 28, 28, 0, 0, 0],
-        "mid": [28, 28, 28, 0, 0, 0],
-        "treble": [28, 28, 28, 0, 0, 0]
+        "all": [
+          28,
+          28,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          28,
+          28,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          28,
+          28,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          28,
+          28,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [995, 0, 1],
+      "publications": [
+        969,
+        27,
+        28
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -2603,39 +4798,95 @@
     },
     "clicks-174/multiband/normal/60/0": {
       "events": {
-        "all": [28, 16, 16, 0, 0, 12],
-        "bass": [28, 16, 16, 0, 0, 12],
-        "mid": [28, 16, 16, 0, 0, 12],
-        "treble": [28, 16, 16, 0, 0, 12]
+        "all": [
+          28,
+          28,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          28,
+          28,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          28,
+          28,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          28,
+          28,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [597, 398, 1],
+      "publications": [
+        585,
+        432,
+        7
+      ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 12,
-          "sole_carrier_skipped": 12
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 12,
-          "sole_carrier_skipped": 12
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 12,
-          "sole_carrier_skipped": 12
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 12,
-          "sole_carrier_skipped": 12
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
         }
       }
     },
     "clicks-174/multiband/normal/60/1": {
       "events": {
-        "all": [28, 28, 28, 0, 0, 0],
-        "bass": [28, 28, 28, 0, 0, 0],
-        "mid": [28, 28, 28, 0, 0, 0],
-        "treble": [28, 28, 28, 0, 0, 0]
+        "all": [
+          28,
+          28,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          28,
+          28,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          28,
+          28,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          28,
+          28,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [995, 0, 1],
+      "publications": [
+        969,
+        27,
+        28
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -2657,12 +4908,40 @@
     },
     "clicks-174/multiband/timestamped/30/0": {
       "events": {
-        "all": [28, 28, 28, 20, 0, 20],
-        "bass": [28, 28, 28, 20, 0, 20],
-        "mid": [28, 28, 28, 20, 0, 20],
-        "treble": [28, 28, 28, 20, 0, 20]
+        "all": [
+          28,
+          28,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          28,
+          28,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          28,
+          28,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          28,
+          28,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [996, 0, 0],
+      "publications": [
+        1000,
+        12,
+        12
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -2684,12 +4963,40 @@
     },
     "clicks-174/multiband/timestamped/30/1": {
       "events": {
-        "all": [28, 28, 28, 1, 0, 1],
-        "bass": [28, 28, 28, 1, 0, 1],
-        "mid": [28, 28, 28, 1, 0, 1],
-        "treble": [28, 28, 28, 1, 0, 1]
+        "all": [
+          28,
+          28,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          28,
+          28,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          28,
+          28,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          28,
+          28,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [996, 0, 0],
+      "publications": [
+        1024,
+        0,
+        0
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -2711,12 +5018,40 @@
     },
     "clicks-174/multiband/timestamped/60/0": {
       "events": {
-        "all": [28, 28, 28, 12, 0, 12],
-        "bass": [28, 28, 28, 12, 0, 12],
-        "mid": [28, 28, 28, 12, 0, 12],
-        "treble": [28, 28, 28, 12, 0, 12]
+        "all": [
+          28,
+          28,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          28,
+          28,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          28,
+          28,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          28,
+          28,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [996, 0, 0],
+      "publications": [
+        1024,
+        0,
+        0
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -2738,12 +5073,40 @@
     },
     "clicks-174/multiband/timestamped/60/1": {
       "events": {
-        "all": [28, 28, 28, 3, 0, 3],
-        "bass": [28, 28, 28, 3, 0, 3],
-        "mid": [28, 28, 28, 3, 0, 3],
-        "treble": [28, 28, 28, 3, 0, 3]
+        "all": [
+          28,
+          28,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          28,
+          28,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          28,
+          28,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          28,
+          28,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [996, 0, 0],
+      "publications": [
+        1024,
+        0,
+        0
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -2765,16 +5128,44 @@
     },
     "impulse/combined/normal/30/0": {
       "events": {
-        "all": [1, 0, 0, 0, 0, 1],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [178, 417, 1],
+      "publications": [
+        178,
+        418,
+        1
+      ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 1,
-          "sole_carrier_skipped": 1
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
         },
         "bass": {
           "never_consumed_flags": 0,
@@ -2792,12 +5183,40 @@
     },
     "impulse/combined/normal/30/1": {
       "events": {
-        "all": [1, 1, 1, 0, 0, 0],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [595, 0, 1],
+      "publications": [
+        594,
+        1,
+        2
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -2819,16 +5238,44 @@
     },
     "impulse/combined/normal/60/0": {
       "events": {
-        "all": [1, 0, 0, 0, 0, 1],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [357, 238, 1],
+      "publications": [
+        357,
+        239,
+        1
+      ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 1,
-          "sole_carrier_skipped": 1
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
         },
         "bass": {
           "never_consumed_flags": 0,
@@ -2846,12 +5293,40 @@
     },
     "impulse/combined/normal/60/1": {
       "events": {
-        "all": [1, 1, 1, 0, 0, 0],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [595, 0, 1],
+      "publications": [
+        594,
+        1,
+        2
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -2873,12 +5348,40 @@
     },
     "impulse/combined/timestamped/30/0": {
       "events": {
-        "all": [1, 1, 1, 1, 0, 1],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [596, 0, 0],
+      "publications": [
+        597,
+        0,
+        0
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -2900,12 +5403,40 @@
     },
     "impulse/combined/timestamped/30/1": {
       "events": {
-        "all": [1, 1, 1, 0, 0, 0],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [596, 0, 0],
+      "publications": [
+        597,
+        0,
+        0
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -2927,12 +5458,40 @@
     },
     "impulse/combined/timestamped/60/0": {
       "events": {
-        "all": [1, 1, 1, 1, 0, 1],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [596, 0, 0],
+      "publications": [
+        597,
+        0,
+        0
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -2954,12 +5513,40 @@
     },
     "impulse/combined/timestamped/60/1": {
       "events": {
-        "all": [1, 1, 1, 0, 0, 0],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [596, 0, 0],
+      "publications": [
+        597,
+        0,
+        0
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -2981,39 +5568,95 @@
     },
     "impulse/multiband/normal/30/0": {
       "events": {
-        "all": [1, 0, 0, 0, 0, 1],
-        "bass": [1, 0, 0, 0, 0, 1],
-        "mid": [1, 0, 0, 0, 0, 1],
-        "treble": [1, 0, 0, 0, 0, 1]
+        "all": [
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          1,
+          1,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [178, 417, 1],
+      "publications": [
+        178,
+        418,
+        1
+      ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 1,
-          "sole_carrier_skipped": 1
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 1,
-          "sole_carrier_skipped": 1
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 1,
-          "sole_carrier_skipped": 1
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 1,
-          "sole_carrier_skipped": 1
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
         }
       }
     },
     "impulse/multiband/normal/30/1": {
       "events": {
-        "all": [1, 1, 1, 0, 0, 0],
-        "bass": [1, 1, 1, 0, 0, 0],
-        "mid": [1, 1, 1, 0, 0, 0],
-        "treble": [1, 1, 1, 0, 0, 0]
+        "all": [
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          1,
+          1,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [595, 0, 1],
+      "publications": [
+        594,
+        1,
+        2
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -3035,39 +5678,95 @@
     },
     "impulse/multiband/normal/60/0": {
       "events": {
-        "all": [1, 0, 0, 0, 0, 1],
-        "bass": [1, 0, 0, 0, 0, 1],
-        "mid": [1, 0, 0, 0, 0, 1],
-        "treble": [1, 0, 0, 0, 0, 1]
+        "all": [
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          1,
+          1,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [357, 238, 1],
+      "publications": [
+        357,
+        239,
+        1
+      ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 1,
-          "sole_carrier_skipped": 1
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 1,
-          "sole_carrier_skipped": 1
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 1,
-          "sole_carrier_skipped": 1
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 1,
-          "sole_carrier_skipped": 1
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
         }
       }
     },
     "impulse/multiband/normal/60/1": {
       "events": {
-        "all": [1, 1, 1, 0, 0, 0],
-        "bass": [1, 1, 1, 0, 0, 0],
-        "mid": [1, 1, 1, 0, 0, 0],
-        "treble": [1, 1, 1, 0, 0, 0]
+        "all": [
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          1,
+          1,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [595, 0, 1],
+      "publications": [
+        594,
+        1,
+        2
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -3089,12 +5788,40 @@
     },
     "impulse/multiband/timestamped/30/0": {
       "events": {
-        "all": [1, 1, 1, 1, 0, 1],
-        "bass": [1, 1, 1, 1, 0, 1],
-        "mid": [1, 1, 1, 1, 0, 1],
-        "treble": [1, 1, 1, 1, 0, 1]
+        "all": [
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          1,
+          1,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [596, 0, 0],
+      "publications": [
+        597,
+        0,
+        0
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -3116,12 +5843,40 @@
     },
     "impulse/multiband/timestamped/30/1": {
       "events": {
-        "all": [1, 1, 1, 0, 0, 0],
-        "bass": [1, 1, 1, 0, 0, 0],
-        "mid": [1, 1, 1, 0, 0, 0],
-        "treble": [1, 1, 1, 0, 0, 0]
+        "all": [
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          1,
+          1,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [596, 0, 0],
+      "publications": [
+        597,
+        0,
+        0
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -3143,12 +5898,40 @@
     },
     "impulse/multiband/timestamped/60/0": {
       "events": {
-        "all": [1, 1, 1, 1, 0, 1],
-        "bass": [1, 1, 1, 1, 0, 1],
-        "mid": [1, 1, 1, 1, 0, 1],
-        "treble": [1, 1, 1, 1, 0, 1]
+        "all": [
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          1,
+          1,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [596, 0, 0],
+      "publications": [
+        597,
+        0,
+        0
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -3170,12 +5953,40 @@
     },
     "impulse/multiband/timestamped/60/1": {
       "events": {
-        "all": [1, 1, 1, 0, 0, 0],
-        "bass": [1, 1, 1, 0, 0, 0],
-        "mid": [1, 1, 1, 0, 0, 0],
-        "treble": [1, 1, 1, 0, 0, 0]
+        "all": [
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          1,
+          1,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          1,
+          1,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [596, 0, 0],
+      "publications": [
+        597,
+        0,
+        0
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -3197,16 +6008,44 @@
     },
     "panning/combined/normal/30/0": {
       "events": {
-        "all": [19, 1, 1, 0, 0, 18],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [298, 697, 1],
+      "publications": [
+        298,
+        716,
+        1
+      ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 18,
-          "sole_carrier_skipped": 18
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
         },
         "bass": {
           "never_consumed_flags": 0,
@@ -3224,12 +6063,40 @@
     },
     "panning/combined/normal/30/1": {
       "events": {
-        "all": [19, 19, 19, 0, 0, 0],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [995, 0, 1],
+      "publications": [
+        976,
+        19,
+        20
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -3251,16 +6118,44 @@
     },
     "panning/combined/normal/60/0": {
       "events": {
-        "all": [19, 14, 14, 0, 0, 5],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [597, 398, 1],
+      "publications": [
+        587,
+        422,
+        6
+      ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 5,
-          "sole_carrier_skipped": 5
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
         },
         "bass": {
           "never_consumed_flags": 0,
@@ -3278,12 +6173,40 @@
     },
     "panning/combined/normal/60/1": {
       "events": {
-        "all": [19, 19, 19, 0, 0, 0],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [995, 0, 1],
+      "publications": [
+        976,
+        19,
+        20
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -3305,12 +6228,40 @@
     },
     "panning/combined/timestamped/30/0": {
       "events": {
-        "all": [19, 19, 19, 2, 0, 2],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [996, 0, 0],
+      "publications": [
+        1015,
+        0,
+        0
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -3332,12 +6283,40 @@
     },
     "panning/combined/timestamped/30/1": {
       "events": {
-        "all": [19, 19, 19, 1, 0, 1],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [996, 0, 0],
+      "publications": [
+        1015,
+        0,
+        0
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -3359,12 +6338,40 @@
     },
     "panning/combined/timestamped/60/0": {
       "events": {
-        "all": [19, 19, 19, 1, 0, 1],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [996, 0, 0],
+      "publications": [
+        1015,
+        0,
+        0
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -3386,12 +6393,40 @@
     },
     "panning/combined/timestamped/60/1": {
       "events": {
-        "all": [19, 19, 19, 0, 0, 0],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [996, 0, 0],
+      "publications": [
+        1015,
+        0,
+        0
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -3413,39 +6448,95 @@
     },
     "panning/multiband/normal/30/0": {
       "events": {
-        "all": [20, 1, 1, 0, 0, 19],
-        "bass": [19, 0, 0, 0, 0, 19],
-        "mid": [19, 0, 0, 0, 0, 19],
-        "treble": [19, 1, 1, 0, 0, 18]
+        "all": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [298, 697, 1],
+      "publications": [
+        298,
+        716,
+        1
+      ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 19,
-          "sole_carrier_skipped": 19
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 19,
-          "sole_carrier_skipped": 19
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 19,
-          "sole_carrier_skipped": 19
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 18,
-          "sole_carrier_skipped": 18
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
         }
       }
     },
     "panning/multiband/normal/30/1": {
       "events": {
-        "all": [20, 20, 20, 0, 0, 0],
-        "bass": [19, 19, 19, 0, 0, 0],
-        "mid": [19, 19, 19, 0, 0, 0],
-        "treble": [19, 19, 19, 0, 0, 0]
+        "all": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [995, 0, 1],
+      "publications": [
+        976,
+        19,
+        20
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -3467,39 +6558,95 @@
     },
     "panning/multiband/normal/60/0": {
       "events": {
-        "all": [20, 14, 14, 0, 0, 6],
-        "bass": [19, 13, 13, 0, 0, 6],
-        "mid": [19, 13, 13, 0, 0, 6],
-        "treble": [19, 14, 14, 0, 0, 5]
+        "all": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [597, 398, 1],
+      "publications": [
+        587,
+        422,
+        6
+      ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 6,
-          "sole_carrier_skipped": 6
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 6,
-          "sole_carrier_skipped": 6
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 6,
-          "sole_carrier_skipped": 6
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 5,
-          "sole_carrier_skipped": 5
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
         }
       }
     },
     "panning/multiband/normal/60/1": {
       "events": {
-        "all": [20, 20, 20, 0, 0, 0],
-        "bass": [19, 19, 19, 0, 0, 0],
-        "mid": [19, 19, 19, 0, 0, 0],
-        "treble": [19, 19, 19, 0, 0, 0]
+        "all": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [995, 0, 1],
+      "publications": [
+        976,
+        19,
+        20
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -3521,12 +6668,40 @@
     },
     "panning/multiband/timestamped/30/0": {
       "events": {
-        "all": [20, 20, 20, 3, 0, 3],
-        "bass": [19, 19, 19, 2, 0, 2],
-        "mid": [19, 19, 19, 2, 0, 2],
-        "treble": [19, 19, 19, 2, 0, 2]
+        "all": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [996, 0, 0],
+      "publications": [
+        1015,
+        0,
+        0
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -3548,12 +6723,40 @@
     },
     "panning/multiband/timestamped/30/1": {
       "events": {
-        "all": [20, 20, 20, 2, 0, 2],
-        "bass": [19, 19, 19, 1, 0, 1],
-        "mid": [19, 19, 19, 1, 0, 1],
-        "treble": [19, 19, 19, 1, 0, 1]
+        "all": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [996, 0, 0],
+      "publications": [
+        1015,
+        0,
+        0
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -3575,12 +6778,40 @@
     },
     "panning/multiband/timestamped/60/0": {
       "events": {
-        "all": [20, 20, 20, 2, 0, 2],
-        "bass": [19, 19, 19, 2, 0, 2],
-        "mid": [19, 19, 19, 2, 0, 2],
-        "treble": [19, 19, 19, 1, 0, 1]
+        "all": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [996, 0, 0],
+      "publications": [
+        1015,
+        0,
+        0
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -3602,12 +6833,40 @@
     },
     "panning/multiband/timestamped/60/1": {
       "events": {
-        "all": [20, 20, 20, 1, 0, 1],
-        "bass": [19, 19, 19, 1, 0, 1],
-        "mid": [19, 19, 19, 1, 0, 1],
-        "treble": [19, 19, 19, 0, 0, 0]
+        "all": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          19,
+          19,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [996, 0, 0],
+      "publications": [
+        1015,
+        0,
+        0
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -3629,16 +6888,44 @@
     },
     "tone-steps/combined/normal/30/0": {
       "events": {
-        "all": [3, 0, 0, 0, 0, 3],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          3,
+          3,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [238, 557, 1],
+      "publications": [
+        238,
+        560,
+        1
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 3,
-          "sole_carrier_skipped": 3
+          "sole_carrier_skipped": 0
         },
         "bass": {
           "never_consumed_flags": 0,
@@ -3656,12 +6943,40 @@
     },
     "tone-steps/combined/normal/30/1": {
       "events": {
-        "all": [3, 3, 3, 0, 0, 0],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          3,
+          3,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [795, 0, 1],
+      "publications": [
+        792,
+        3,
+        4
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -3683,16 +6998,44 @@
     },
     "tone-steps/combined/normal/60/0": {
       "events": {
-        "all": [3, 0, 0, 0, 0, 3],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          3,
+          3,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [477, 318, 1],
+      "publications": [
+        477,
+        321,
+        1
+      ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 3,
-          "sole_carrier_skipped": 3
+          "never_consumed_flags": 0,
+          "sole_carrier_skipped": 0
         },
         "bass": {
           "never_consumed_flags": 0,
@@ -3710,12 +7053,40 @@
     },
     "tone-steps/combined/normal/60/1": {
       "events": {
-        "all": [3, 3, 3, 0, 0, 0],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          3,
+          3,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [795, 0, 1],
+      "publications": [
+        792,
+        3,
+        4
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -3737,12 +7108,40 @@
     },
     "tone-steps/combined/timestamped/30/0": {
       "events": {
-        "all": [3, 3, 3, 3, 0, 3],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          3,
+          3,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [796, 0, 0],
+      "publications": [
+        793,
+        3,
+        3
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -3764,12 +7163,40 @@
     },
     "tone-steps/combined/timestamped/30/1": {
       "events": {
-        "all": [3, 3, 3, 0, 0, 0],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          3,
+          3,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [796, 0, 0],
+      "publications": [
+        799,
+        0,
+        0
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -3791,12 +7218,40 @@
     },
     "tone-steps/combined/timestamped/60/0": {
       "events": {
-        "all": [3, 3, 3, 3, 0, 3],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          3,
+          3,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [796, 0, 0],
+      "publications": [
+        799,
+        0,
+        0
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -3818,12 +7273,40 @@
     },
     "tone-steps/combined/timestamped/60/1": {
       "events": {
-        "all": [3, 3, 3, 1, 0, 1],
-        "bass": [0, 0, 0, 0, 0, 0],
-        "mid": [0, 0, 0, 0, 0, 0],
-        "treble": [0, 0, 0, 0, 0, 0]
+        "all": [
+          3,
+          3,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [796, 0, 0],
+      "publications": [
+        799,
+        0,
+        0
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -3845,39 +7328,95 @@
     },
     "tone-steps/multiband/normal/30/0": {
       "events": {
-        "all": [3, 0, 0, 0, 0, 3],
-        "bass": [3, 0, 0, 0, 0, 3],
-        "mid": [3, 0, 0, 0, 0, 3],
-        "treble": [3, 0, 0, 0, 0, 3]
+        "all": [
+          3,
+          3,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          3,
+          3,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          3,
+          3,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          3,
+          3,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [238, 557, 1],
+      "publications": [
+        238,
+        559,
+        1
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 3,
-          "sole_carrier_skipped": 3
+          "sole_carrier_skipped": 0
         },
         "bass": {
           "never_consumed_flags": 3,
-          "sole_carrier_skipped": 3
+          "sole_carrier_skipped": 0
         },
         "mid": {
           "never_consumed_flags": 3,
-          "sole_carrier_skipped": 3
+          "sole_carrier_skipped": 0
         },
         "treble": {
           "never_consumed_flags": 3,
-          "sole_carrier_skipped": 3
+          "sole_carrier_skipped": 0
         }
       }
     },
     "tone-steps/multiband/normal/30/1": {
       "events": {
-        "all": [3, 3, 3, 0, 0, 0],
-        "bass": [3, 3, 3, 0, 0, 0],
-        "mid": [3, 3, 3, 0, 0, 0],
-        "treble": [3, 3, 3, 0, 0, 0]
+        "all": [
+          3,
+          3,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          3,
+          3,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          3,
+          3,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          3,
+          3,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [795, 0, 1],
+      "publications": [
+        797,
+        0,
+        1
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -3899,39 +7438,95 @@
     },
     "tone-steps/multiband/normal/60/0": {
       "events": {
-        "all": [3, 0, 0, 0, 0, 3],
-        "bass": [3, 0, 0, 0, 0, 3],
-        "mid": [3, 0, 0, 0, 0, 3],
-        "treble": [3, 0, 0, 0, 0, 3]
+        "all": [
+          3,
+          3,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          3,
+          3,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          3,
+          3,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          3,
+          3,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [477, 318, 1],
+      "publications": [
+        477,
+        320,
+        1
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 3,
-          "sole_carrier_skipped": 3
+          "sole_carrier_skipped": 0
         },
         "bass": {
           "never_consumed_flags": 3,
-          "sole_carrier_skipped": 3
+          "sole_carrier_skipped": 0
         },
         "mid": {
           "never_consumed_flags": 3,
-          "sole_carrier_skipped": 3
+          "sole_carrier_skipped": 0
         },
         "treble": {
           "never_consumed_flags": 3,
-          "sole_carrier_skipped": 3
+          "sole_carrier_skipped": 0
         }
       }
     },
     "tone-steps/multiband/normal/60/1": {
       "events": {
-        "all": [3, 3, 3, 0, 0, 0],
-        "bass": [3, 3, 3, 0, 0, 0],
-        "mid": [3, 3, 3, 0, 0, 0],
-        "treble": [3, 3, 3, 0, 0, 0]
+        "all": [
+          3,
+          3,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          3,
+          3,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          3,
+          3,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          3,
+          3,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [795, 0, 1],
+      "publications": [
+        797,
+        0,
+        1
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -3953,12 +7548,40 @@
     },
     "tone-steps/multiband/timestamped/30/0": {
       "events": {
-        "all": [3, 3, 3, 3, 0, 3],
-        "bass": [3, 3, 3, 3, 0, 3],
-        "mid": [3, 3, 3, 3, 0, 3],
-        "treble": [3, 3, 3, 3, 0, 3]
+        "all": [
+          3,
+          3,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          3,
+          3,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          3,
+          3,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          3,
+          3,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [796, 0, 0],
+      "publications": [
+        794,
+        2,
+        2
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -3980,12 +7603,40 @@
     },
     "tone-steps/multiband/timestamped/30/1": {
       "events": {
-        "all": [3, 3, 3, 0, 0, 0],
-        "bass": [3, 3, 3, 0, 0, 0],
-        "mid": [3, 3, 3, 0, 0, 0],
-        "treble": [3, 3, 3, 0, 0, 0]
+        "all": [
+          3,
+          3,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          3,
+          3,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          3,
+          3,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          3,
+          3,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [796, 0, 0],
+      "publications": [
+        798,
+        0,
+        0
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -4007,12 +7658,40 @@
     },
     "tone-steps/multiband/timestamped/60/0": {
       "events": {
-        "all": [3, 3, 3, 3, 0, 3],
-        "bass": [3, 3, 3, 3, 0, 3],
-        "mid": [3, 3, 3, 3, 0, 3],
-        "treble": [3, 3, 3, 3, 0, 3]
+        "all": [
+          3,
+          3,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          3,
+          3,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          3,
+          3,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          3,
+          3,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [796, 0, 0],
+      "publications": [
+        794,
+        2,
+        2
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -4034,12 +7713,40 @@
     },
     "tone-steps/multiband/timestamped/60/1": {
       "events": {
-        "all": [3, 3, 3, 1, 0, 1],
-        "bass": [3, 3, 3, 1, 0, 1],
-        "mid": [3, 3, 3, 1, 0, 1],
-        "treble": [3, 3, 3, 1, 0, 1]
+        "all": [
+          3,
+          3,
+          0,
+          0,
+          0
+        ],
+        "bass": [
+          3,
+          3,
+          0,
+          0,
+          0
+        ],
+        "mid": [
+          3,
+          3,
+          0,
+          0,
+          0
+        ],
+        "treble": [
+          3,
+          3,
+          0,
+          0,
+          0
+        ]
       },
-      "publications": [796, 0, 0],
+      "publications": [
+        798,
+        0,
+        0
+      ],
       "skipped_flags": {
         "all": {
           "never_consumed_flags": 0,
@@ -4063,53 +7770,110 @@
   "tone_levels": {
     "combined": {
       "all": {
-        "candidate": [0.0, 12.494626, 39.523286, 68.250828],
-        "present": [false, true, true, true],
-        "reported": [0.0, 21.435945, 67.78344, 130.536063],
+        "candidate": [
+          0.0,
+          73.093175,
+          231.130563,
+          431.950488
+        ],
+        "present": [
+          false,
+          true,
+          true,
+          true
+        ],
+        "reported": [
+          0.0,
+          73.093175,
+          231.130563,
+          431.950488
+        ],
         "rho": 1.0
-      },
-      "bass": {
-        "candidate": [0.0, 0.0, 0.0, 0.0],
-        "present": [false, false, false, false],
-        "reported": [0.0, 0.0, 0.0, 0.0],
-        "rho": null
-      },
-      "mid": {
-        "candidate": [0.0, 0.0, 0.0, 0.0],
-        "present": [false, false, false, false],
-        "reported": [0.0, 0.0, 0.0, 0.0],
-        "rho": null
-      },
-      "treble": {
-        "candidate": [0.0, 0.0, 0.0, 0.0],
-        "present": [false, false, false, false],
-        "reported": [0.0, 0.0, 0.0, 0.0],
-        "rho": null
       }
     },
     "multiband": {
       "all": {
-        "candidate": [0.0, 7.714525, 24.393061, 41.288589],
-        "present": [false, true, true, true],
-        "reported": [0.0, 20.713276, 65.496758, 125.032005],
+        "candidate": [
+          0.0,
+          66.944437,
+          211.683293,
+          396.026783
+        ],
+        "present": [
+          false,
+          true,
+          true,
+          true
+        ],
+        "reported": [
+          0.0,
+          66.944437,
+          211.683293,
+          396.026783
+        ],
         "rho": 1.0
       },
       "bass": {
-        "candidate": [0.0, 0.42369, 1.339629, 2.225437],
-        "present": [false, true, true, true],
-        "reported": [0.0, 0.0, 0.0, 0.0],
-        "rho": null
+        "candidate": [
+          0.0,
+          3.279618,
+          10.370259,
+          18.08669
+        ],
+        "present": [
+          false,
+          true,
+          true,
+          true
+        ],
+        "reported": [
+          0.0,
+          3.279618,
+          10.370259,
+          18.08669
+        ],
+        "rho": 1.0
       },
       "mid": {
-        "candidate": [0.0, 7.714525, 24.393061, 41.288589],
-        "present": [false, true, true, true],
-        "reported": [0.0, 20.713276, 65.496758, 125.032005],
+        "candidate": [
+          0.0,
+          66.944437,
+          211.683293,
+          396.026783
+        ],
+        "present": [
+          false,
+          true,
+          true,
+          true
+        ],
+        "reported": [
+          0.0,
+          66.944437,
+          211.683293,
+          396.026783
+        ],
         "rho": 1.0
       },
       "treble": {
-        "candidate": [0.0, 4.356412, 13.790596, 24.736803],
-        "present": [false, true, true, true],
-        "reported": [0.0, 0.722669, 2.286682, 5.504058],
+        "candidate": [
+          0.0,
+          4.473971,
+          14.145273,
+          24.736803
+        ],
+        "present": [
+          false,
+          true,
+          true,
+          true
+        ],
+        "reported": [
+          0.0,
+          4.473971,
+          14.145273,
+          24.736803
+        ],
         "rho": 1.0
       }
     }

@@ -1,47 +1,45 @@
 {
+  "event_mapping_fallbacks": 0,
+  "event_queue_drops": 0,
   "events": {
     "all": {
-      "accepted": 3,
       "expired": 0,
-      "lost": 3,
-      "merged": 3,
+      "lost": 0,
+      "merged": 0,
       "received": 3,
-      "rendered": 3
+      "triggered": 3
     },
     "bass": {
-      "accepted": 0,
       "expired": 0,
       "lost": 0,
       "merged": 0,
       "received": 0,
-      "rendered": 0
+      "triggered": 0
     },
     "mid": {
-      "accepted": 0,
       "expired": 0,
       "lost": 0,
       "merged": 0,
       "received": 0,
-      "rendered": 0
+      "triggered": 0
     },
     "treble": {
-      "accepted": 0,
       "expired": 0,
       "lost": 0,
       "merged": 0,
       "received": 0,
-      "rendered": 0
+      "triggered": 0
     }
   },
   "publication_queue_drops": 0,
   "publications": {
     "timestamped": {
-      "consumed": 796,
-      "published": 796,
-      "render_reads": 796,
-      "repeat_reads": 0,
-      "repeated": 0,
-      "skipped": 0
+      "consumed": 793,
+      "published": 799,
+      "render_reads": 799,
+      "repeat_reads": 3,
+      "repeated": 3,
+      "skipped": 3
     }
   },
   "sends": 240,

@@ -17,7 +17,7 @@ import sys
 import time
 import wave
 from collections import Counter
-from dataclasses import replace
+from dataclasses import asdict, replace
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
@@ -68,7 +68,9 @@ FEATURE_EXTRA = ["availability_sample", "publication_time_s", "carried_historica
                 "reported_strength", "decision_sample")]
 RENDER_COLUMNS = ["render_id", "virtual_time_s", "render_argument_s", "route", "sequence",
     "play_time_s", "scheduled_play_time_s", "schedule_target_s", "event_ids", "high_effect",
-    "low_effect", "onset_consumed", "channel_id", "r", "g", "b"]
+    "low_effect", "onset_consumed", "onset_envelope", "onset_envelope_bass",
+    "onset_envelope_mid", "onset_envelope_treble", "onset_count_since_render", "onset_age_s",
+    "channel_id", "r", "g", "b"]
 SEND_COLUMNS = ["send_id", "virtual_time_s", "route", "generation", "scene_id", "channel_id",
                 "r", "g", "b", "r8", "g8", "b8", "interval_ms", "event_ids"]
 
@@ -213,11 +215,13 @@ class Replay:
         self.energy, self.renders = [], []
         self.reads = Counter()
         self.render_records = {}
+        self.render_event_ids = {}
         self.tick_reads = []
         self.tick_renders = []
         self.now = 0.
         self.tick = 0
         self.cursor = 0
+        self.event_cursor = 0
         self.current = None
         self.picker = PickerObserver(self.pipeline._beat_detector)
         self.tick_delivered = []
@@ -253,6 +257,7 @@ class Replay:
         self.pipeline._arrival_spans.clear()
         self.pipeline._play_spans.clear()
         self.pipeline._pub_queue.clear()
+        self.pipeline._event_queue.clear()
         self.pipeline._pub_seq = 0
         self.pipeline._pub_dropped = 0
         self.pipeline._latest_pub = None
@@ -285,7 +290,9 @@ class Replay:
             if record.carried_spectrum_interval:
                 row["carried_spectrum_start"], row["carried_spectrum_end"] = \
                     record.carried_spectrum_interval
-            row.update(availability_sample=available, publication_time_s=None,
+            row.update(availability_sample=(f.onset_events[0].availability_sample
+                                             if f.onset_events else available),
+                       publication_time_s=None,
                        carried_historical=int(record.carried_spectrum_interval is not None),
                        level=f.level, loudness_momentary_lufs=f.loudness_momentary_lufs,
                        loudness_short_term_lufs=f.loudness_short_term_lufs,
@@ -297,13 +304,28 @@ class Replay:
                 flag = f.onset if band == "all" else getattr(f, f"onset_{band}")
                 row[f"event_id_{band}"] = (f"{record.epoch}:{band}:{record.sample_pos}"
                                            if flag else "")
-                candidate = self.picker.at(record.sample_pos, band)
-                for key in ("candidate_sample", "candidate_strength", "reported_sample",
-                            "reported_strength", "decision_sample"):
-                    row[f"{key}_{band}"] = candidate.get(key)
+                if flag and f.onset_events:
+                    event = f.onset_events[0]
+                    raw = (f.onset_strength if band == "all" else
+                           getattr(f, f"onset_{band}_strength"))
+                    row.update({f"candidate_sample_{band}": event.candidate_sample,
+                                f"candidate_strength_{band}": raw,
+                                f"reported_sample_{band}": event.candidate_sample,
+                                f"reported_strength_{band}": raw,
+                                f"decision_sample_{band}": event.availability_sample})
+
             self.features.append(row)
 
     def release(self):
+        # Publication delivery caps apply only to continuous snapshots. Event
+        # transport is independent and always releases every available identity.
+        while self.event_cursor < len(self.records):
+            index = self.event_cursor
+            if self.availability[index] / RATE > self.now + 1e-10:
+                break
+            with self.pipeline._pub_lock:
+                self.pipeline._event_queue.extend(self.records[index].features.onset_events)
+            self.event_cursor += 1
         count = 0
         while self.cursor < len(self.records):
             index = self.cursor
@@ -313,7 +335,7 @@ class Replay:
                 break
             old = self.records[index]
             self.pipeline._publish(epoch_id=old.epoch, sample_start=old.sample_pos,
-                sample_end=old.sample_end, features=old.features,
+                sample_end=old.sample_end, features=replace(old.features, onset_events=()),
                 effective_spectrum_backend=old.effective_spectrum_backend,
                 effective_processor_ids=old.effective_processor_ids,
                 carried_spectrum_interval=old.carried_spectrum_interval)
@@ -349,13 +371,28 @@ class Replay:
 
         def traced(features, t):
             record = self.queued.get(id(features), self.current)
+            if record is None and self.queued:
+                record = min(self.queued.values(), key=lambda r:
+                             abs((r.features.play_monotonic or 0) -
+                                 (features.play_monotonic or 0)))
             sequence = record.sequence
             self.tick_repeat_reads += int(self.reads[sequence] > 0)
             self.reads[sequence] += 1
             self.tick_reads.append(sequence)
             scene = render(features, t)
+            active_ids = []
+            if features.onset_envelope > .5:
+                for event_id, data in engine.event_records.items():
+                    stamp = data.get("event_time")
+                    if (stamp is not None and stamp <= t and
+                            t-stamp <= max(engine.profile.onset_hold_s,
+                                self.output.capabilities.min_visible_hold_s)
+                            + engine.profile.onset_release_s * math.log(2)):
+                        active_ids.append(":".join(map(str, event_id)))
+                        data.setdefault("first_render_over_half_s", self.now)
             identity = len(self.render_records) + 1
             self.render_records[identity] = sequence
+            self.render_event_ids[identity] = active_ids
             self.tick_renders.append(identity)
             for channel in self.output.channels:
                 colour = scene.color_at(channel.position, t)
@@ -367,9 +404,13 @@ class Replay:
                         if self.args.route == "timestamped" else None,
                     "schedule_target_s": max(self.now, features.play_monotonic)
                         if self.args.route == "timestamped" else None,
-                    "event_ids": self.event_ids(sequence),
+                    "event_ids": active_ids,
                     "high_effect": self.high.effect_type, "low_effect": self.low.effect_type,
-                    "onset_consumed": int(features.onset), "channel_id": channel.channel_id,
+                    "onset_consumed": int(features.onset),
+                    **{key: getattr(features, key) for key in (
+                        "onset_envelope", "onset_envelope_bass", "onset_envelope_mid",
+                        "onset_envelope_treble", "onset_count_since_render", "onset_age_s")},
+                    "channel_id": channel.channel_id,
                     "r": colour.r, "g": colour.g, "b": colour.b})
             return TaggedScene(scene, identity, self.args.route,
                                features.timing_generation if self.args.route == "timestamped"
@@ -412,6 +453,7 @@ class Replay:
         engine = sync.SyncEngine(None, self.high, analyser=self.pipeline,
             mellow_profile=self.low, probe=SimpleNamespace(current_delay_ms=delay),
             timing=timing if self.args.route == "timestamped" else None)
+        self.engine = engine
         self.observe_mixer(engine)
         # Changing the rate is isolated to this offline process/context. The
         # production default and delay-depth formula remain the same algorithm.
@@ -456,22 +498,7 @@ class Replay:
                 if row[f"event_id_{b}"]]
 
     def counters(self):
-        sent_scenes = {row["scene_id"] for row in self.output.rows}
-        sent_sequences = {self.render_records[identity] for identity in sent_scenes}
-        rendered_sequences = set(self.reads)
-        events = {}
-        for band in BANDS:
-            received = {event for r in self.records for event in self.event_ids(r.sequence, band)}
-            accepted = {event for seq in rendered_sequences for event in self.event_ids(seq, band)}
-            sent = {event for seq in sent_sequences for event in self.event_ids(seq, band)}
-            coalesced = {event for identity in self.schedule.coalesced
-                         for event in self.event_ids(self.render_records[identity], band)}
-            merged = (received - sent) & coalesced
-            events[band] = {"received": len(received), "accepted": len(accepted),
-                "merged": len(merged),
-                "rendered": sum(self.reads[r.sequence] * len(self.event_ids(r.sequence, band))
-                                for r in self.records),
-                "expired": len(accepted - sent - merged), "lost": len(received - sent)}
+        events = self.engine.event_counters
         one = {"published": len(self.records),
             "consumed": sum(self.reads[s] == 1 for s in range(1, len(self.records) + 1)),
             "repeated": sum(self.reads[s] > 1 for s in range(1, len(self.records) + 1)),
@@ -485,7 +512,9 @@ class Replay:
         return {"events": events, "publications": {self.args.route: one},
             "sends": len(sends), "sends_per_second": {
                 "p50": float(np.percentile(counts, 50)), "p95": float(np.percentile(counts, 95)),
-                "max": max(counts)}, "publication_queue_drops": self.pipeline.pub_dropped_count}
+                "max": max(counts)}, "publication_queue_drops": self.pipeline.pub_dropped_count,
+            "event_queue_drops": self.pipeline.events_dropped_count,
+            "event_mapping_fallbacks": self.engine.event_mapping_fallbacks}
 
     def save(self, pcm_format):
         out = self.args.out
@@ -502,7 +531,22 @@ class Replay:
                 tick[f"{key}_count"] = len(sequences)
                 tick[f"{key}_publication_sequences"] = sequences
         for row in self.output.rows:
-            row["event_ids"] = self.event_ids(self.render_records[row["scene_id"]])
+            row["event_ids"] = self.render_event_ids[row["scene_id"]]
+            for data in self.engine.event_records.values():
+                if ":".join(map(str, data["event"].id)) in row["event_ids"]:
+                    data.setdefault("first_send_s", row["virtual_time_s"])
+        event_rows = []
+        for data in self.engine.event_records.values():
+            event_row = asdict(data["event"])
+            event_row["bands"] = sorted(event_row["bands"])
+            event_row["id"] = ":".join(map(str, event_row["id"]))
+            event_row.update({key: value for key, value in data.items() if key != "event"})
+            event_rows.append(event_row)
+        write_csv(out / "events.csv", event_rows, [
+            "id", "epoch", "candidate_sample", "availability_sample", "lookahead_frames",
+            "strength", "strength_raw", "confidence", "bands", "dominant_band",
+            "play_monotonic", "received_monotonic", "disposition", "event_time",
+            "first_render_over_half_s", "first_send_s"])
         write_csv(out / "energy.csv", self.energy)
         write_csv(out / "renders.csv", self.renders, RENDER_COLUMNS)
         write_csv(out / "sends.csv", self.output.rows, SEND_COLUMNS)

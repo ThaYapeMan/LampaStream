@@ -28,8 +28,6 @@ def test_pin_current_event_strengths(regression_replays, fixture, route, method,
 @pytest.mark.parametrize("fixture", ["clicks-120", "tone-steps"])
 @pytest.mark.parametrize("route", ["normal", "timestamped"])
 @pytest.mark.parametrize("method,band", ENABLED)
-@pytest.mark.xfail(strict=True, raises=AssertionError,
-                   reason="TIME-01: onset strength must be the candidate's raw flux")
 def test_contract_event_strengths(regression_replays, fixture, route, method, band):
     """TIME-01 removes the candidate/current ODF mismatch without re-scaling raw strength."""
     replay = regression_replays.get(fixture, route, method=method)
@@ -45,13 +43,11 @@ def test_pin_current_click_strength_below_tenth_fraction(regression_replays, rou
     replay = regression_replays.get("clicks-120", route, method=method)
     actual = strengths(replay, band)["below_tenth_fraction"]
     assert actual == expected("strength")[f"clicks-120/{method}"][band]["below_tenth_fraction"]
-    assert actual == 1.
+    assert actual == 0.  # Phase 2: candidate strengths replace confirmation-frame zero.
 
 
 @pytest.mark.parametrize("route", ["normal", "timestamped"])
 @pytest.mark.parametrize("method,band", ENABLED)
-@pytest.mark.xfail(strict=True, raises=AssertionError,
-                   reason="TIME-01: click strength must not collapse to current-frame zero")
 def test_contract_click_strength_below_tenth_fraction(regression_replays, route, method, band):
     """TIME-01's candidate-attributed clicks should not have zero reported strengths."""
     assert strengths(regression_replays.get("clicks-120", route, method=method), band)[
@@ -68,8 +64,6 @@ def test_pin_current_tone_rank_and_candidate_strength(regression_replays, route,
 
 @pytest.mark.parametrize("route", ["normal", "timestamped"])
 @pytest.mark.parametrize("method,band", ENABLED)
-@pytest.mark.xfail(strict=True, raises=AssertionError,
-                   reason="TIME-01: tone strength must be monotonic AND candidate-attributed")
 def test_contract_tone_rank_and_candidate_strength(regression_replays, route, method, band):
     """TIME-01: rho=1 is necessary but not sufficient when strength names the wrong frame."""
     replay = regression_replays.get("tone-steps", route, method=method)

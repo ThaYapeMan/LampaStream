@@ -222,3 +222,17 @@ existing context and colour decisions.
    Preserve the v1 prefix and coherent generation/gap/absolute-position contract;
    optional YNPT timing is a 64-byte tail, not a replacement PCM ABI
    (`pcm_source.py:143`, `player_clock.py:13`; [SHM ABI](../squeezelite/README.md)).
+
+## EVENT-01 phase 2 additions
+
+`types.py` defines immutable OnsetEvent candidate/confirmation/play coordinates and
+OutputCapabilities. `OnsetDetector.process_event` and process_odf_event expose
+candidate metadata; the boolean methods remain compatibility adapters. BeatDetector
+emits candidate-hop ProcessorUpdates and combines band votes over 30 ms.
+CanonicalAnalysisPipeline owns drain_events beside the continuous publication queue.
+SyncEngine drains events on both routes and projects them onto each scene's clock.
+`onset_envelope.py` contains TriggerEnvelope hold/release and retrigger policies.
+`output_boundary.py` guards output precision at scene sampling, outside renderers.
+`trace_output.py` loads capabilities from room JSON; replay_chain exports events.csv
+and independent event-disposition counters. The baseline sections above retain their
+original revision anchor; these additions replace its boolean onset path only.

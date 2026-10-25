@@ -1,8 +1,6 @@
 """Non-mutating offline observers of current picker and schedule decisions."""
 from __future__ import annotations
 
-from collections import deque
-
 from lampastream.airplay_early import SceneSchedule
 
 
@@ -35,22 +33,22 @@ class PickerObserver:
         beat.feed = observed
 
     def attach(self, band, picker):
-        history = deque(maxlen=picker._W + 1)
-        original = picker._peak_pick
+        original = picker.process_odf_event
 
-        def observed(flux):
-            history.append((self.position, flux))
-            result = original(flux)
-            if len(history) == history.maxlen:
-                candidate, strength = history[0]
-                self.rows[self.position, band] = {
-                    "candidate_sample": candidate, "candidate_strength": strength,
-                    "reported_sample": self.position, "reported_strength": result[1],
-                    "decision_sample": self.position + 2048,
-                }
-            return result
+        def observed(flux, level_dbfs=None):
+            event = original(flux, level_dbfs)
+            if event is not None:
+                candidate = self.position + (3 - event.availability_frame
+                                             + event.candidate_frame) * 480
+                self.rows[candidate, band] = {
+                    "candidate_sample": candidate,
+                    "candidate_strength": event.candidate_strength,
+                    "reported_sample": candidate,
+                    "reported_strength": event.candidate_strength,
+                    "decision_sample": candidate + picker.lookahead_frames * 480}
+            return event
 
-        picker._peak_pick = observed
+        picker.process_odf_event = observed
 
     def at(self, position, band):
         row = self.rows.get((position, band))

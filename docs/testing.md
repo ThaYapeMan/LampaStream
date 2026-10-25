@@ -490,3 +490,41 @@ raise SystemExit(pytest.main([
 ]))
 PY
 ```
+
+### Phase 2 event traces
+
+`events.csv` is authoritative for onset identity. Each row records all OnsetEvent
+fields: `id` (epoch:dominant_band:candidate_sample), `epoch`, `candidate_sample`,
+`availability_sample`, `lookahead_frames`, normalized `strength`, candidate raw
+`strength_raw`, `confidence`, JSON `bands`, `dominant_band`, `play_monotonic` and
+`received_monotonic`. `event_time` is the envelope anchor on the scene clock.
+`disposition` is triggered, merged or expired after intake; received means pending.
+`first_render_over_half_s` is the render-call clock for the first scene whose
+onset envelope exceeds 0.5; `first_send_s` is the first send carrying that envelope.
+Those columns describe software envelopes, including when flash intensity is zero;
+they do not claim a visible lamp response in the default configuration.
+
+`renders.csv` additionally records onset_envelope and onset_envelope_bass/mid/treble,
+onset_count_since_render and onset_age_s. `features.csv` strengths are now
+candidate-attributed raw flux. For event rows, availability_sample is the detector's
+confirmation coordinate, not the input-chunk frontier; publication_time_s retains
+the delivery clock. Candidate sample includes the documented causal attack reference.
+
+`counters.json` events.B counts unique event IDs for all/bass/mid/treble: received,
+triggered, merged, expired, lost. A same-render burst is max-merged; every identity
+is assigned exactly one disposition. The former accepted/rendered publication-flag
+semantics are retired. Publication read counters remain separate diagnostics;
+latest polling can skip continuous publications without losing their onset events.
+Output room objects accept a capabilities object matching OutputCapabilities;
+two-channel-fast.json provides the alternative output rate and precision.
+
+Phase 2 writes seven files. Phase-zero counters and metadata are preserved under
+baseline/traces-phase0; baseline/traces contains phase-two counters, metadata and
+event rows for every synthetic fixture and both routes. Full per-channel CSVs are
+regenerated with the same command above, with events.csv added to hash comparisons.
+
+The confirmation-hop coordinate must not be mistaken for the wall-clock instant
+at which the full STFT window became available. `publication_time_s` and
+received_monotonic retain that distinction. EVENT-01's queue survival contracts
+are separate from the tighter phase-error acceptance budget; see Decisions for
+the remaining shared-window acquisition delay.

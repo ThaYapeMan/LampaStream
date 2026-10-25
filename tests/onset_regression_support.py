@@ -74,7 +74,7 @@ class ReplayCache:
             replay.pipeline.stop()
         result = {"out": out, "features": read_csv(out / "features.csv"),
                   "energy": read_csv(out / "energy.csv"), "counters": counters,
-                  "truth": truth(fixture)}
+                  "events": read_csv(out / "events.csv"), "truth": truth(fixture)}
         self.outputs[key] = result
         return result
 
@@ -185,17 +185,17 @@ def tone_levels(replay, band="all"):
 
 
 SURVIVAL_FIXTURES = (*POSITION_FIXTURES, "anti-phase", "tone-steps")
-EVENT_FIELDS = ("received", "accepted", "rendered", "merged", "expired", "lost")
+EVENT_FIELDS = ("received", "triggered", "merged", "expired", "lost")
 PUBLICATION_FIELDS = ("consumed", "skipped", "repeated")
 
 
 def skipped_flags(replay, band="all"):
     consumed = {seq for row in replay["energy"] for seq in json.loads(row["consumed_sequences"])}
     onsets = events(replay, band)
-    ids = {r[f"event_id_{band}"] for r in onsets}
-    surviving = {r[f"event_id_{band}"] for r in onsets if int(r["sequence"]) in consumed}
     return {"never_consumed_flags": sum(int(r["sequence"]) not in consumed for r in onsets),
-            "sole_carrier_skipped": len(ids - surviving)}
+            "sole_carrier_skipped": sum(
+                event["disposition"] == "received" for event in replay["events"]
+                if band == "all" or band in json.loads(event["bands"]))}
 
 
 def survival(replay, route):
