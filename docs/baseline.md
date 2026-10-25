@@ -248,7 +248,7 @@ scheduler coalescing. In particular, **19** flags in clicks-120 normal/30/free
 sit on publications never present in energy.csv consumed_sequences. This matches
 BENCH-01 exactly; no baseline discrepancy was observed.
 
-## Phase 2 numbers at a2de502
+## Phase 2 numbers at 757de73
 
 EVENT-01 reference code, default combined analyser, synthetic two-channel room,
 seed 0, 30 Hz, unrestricted publications. The phase-one table above remains an
@@ -286,6 +286,10 @@ must not be reported as one hop of end-to-end processing latency.
 
 The clean pre-change full suite at e03f1a8 passed 1,921 tests, skipped 93 and xfailed
 133 in 190.95 s. The first all-green phase-two full run passed 2,062 tests, skipped
-93 and xfailed zero in 176.45 s; final verification adds five focused cases and is
+93 and xfailed zero in 176.45 s; final verification adds nine focused cases and is
 reported with the task transcript. No frontend rebuild, deployment or physical
 source/output access was performed.
+
+Final full verification: **2,071 passed, 93 skipped, zero xfails, five warnings in
+210.59 s**, versus the clean pre-change 190.95 s. The measured final run is 19.64 s
+slower; the requested wall-time acceptance is not demonstrated. Ruff passes.

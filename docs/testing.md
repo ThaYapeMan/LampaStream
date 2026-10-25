@@ -252,7 +252,7 @@ snapshot while the tail is rendered.
 
 ### Deterministic encoding and clocks
 
-Version 1 writes six files, stable column order, UTF-8, LF newlines, sorted JSON
+Phase 2 writes seven files, stable column order, UTF-8, LF newlines, sorted JSON
 keys, six-decimal finite floats and empty CSV cells/JSON null for absent or
 nonfinite values. Per-channel CSVs have one row **per channel**, with a shared
 render/send ID; count IDs, not rows. List-valued cells contain compact JSON.
@@ -295,26 +295,25 @@ above 30 bars):
 | `bar_00` … `bar_29` | Normalized Spectrum values, normally [0,1]; absent bars are blank, not fabricated future bars. |
 | `bass`, `mid`, `full`, `centroid` | Production scalar aggregates/normalized centroid. |
 | `onset`, `onset_bass`, `onset_mid`, `onset_treble` | Reported flags, 0/1; aggregate is independent from band identities. |
-| `onset_strength`, `onset_bass_strength`, `onset_mid_strength`, `onset_treble_strength` | Existing current-frame raw ODF values, not corrected candidate strengths. |
+| `onset_strength`, `onset_bass_strength`, `onset_mid_strength`, `onset_treble_strength` | Candidate-attributed raw ODF values; the render view separately carries the newest normalized event strength. |
 | `relative_exertion` | Existing alias of full energy. |
 | `peak_ema`, `bars_smooth_mean`, `bars_smooth_max` | V2 diagnostic peak reference and falling-bar state at feed; zero when unavailable. |
 | `sequence`, `epoch`, `sample_start`, `sample_end` | Delivery sequence, normalized epoch, exact canonical reporting interval. |
 | `effective_processor_ids` | Semicolon-separated fresh contributors. |
 | `carried_spectrum_start`, `carried_spectrum_end`, `carried_historical` | Historical bars' interval (blank if absent) and 0/1 carried marker; carried bars are not fresh contributions. |
-| `availability_sample` | Canonical input frontier when feed/EOS returned this record; source-frame availability boundary before delivery batching. Does not measure resampler/CPU latency. |
+| `availability_sample` | For an event, the candidate-referenced confirmation hop; otherwise the canonical input frontier. Publication/receipt clocks retain acquisition and delivery latency. |
 | `publication_time_s` | Virtual tick at which the record was released to consumers, after any delivery cap/backlog. |
 | `received_time_s`, `play_time_s`, `timing_generation` | Original source-read/play provenance and generation; these are not detection/publication times. |
 | `level`, `loudness_momentary_lufs`, `loudness_short_term_lufs` | Raw stereo RMS and K-weighted LUFS; blank for unavailable/nonfinite readings. |
 | `sustained_energy`, `hpss_active`, `percussive_energy`, `harmonic_energy` | Existing sustained scalar, 0/1 HPSS validity and fractions. |
-| `event_id_B` | For B=`all,bass,mid,treble`: one ID `epoch:band:reported_sample` for each positive flag, blank otherwise. Aggregate and band events must not be summed as distinct physical clicks. |
-| `candidate_sample_B`, `candidate_strength_B` | Buffered peak-candidate window start (canonical sample) and its own raw ODF, observed without changing the picker. Blank before observer history is ready or when that band is not implemented. |
-| `reported_sample_B`, `reported_strength_B` | Current shared-hop start and raw ODF returned today; intentionally retain the candidate/current-frame mismatch. |
-| `decision_sample_B` | Current window completion (`reported_sample+2048`), distinct from candidate start and rounded feed availability. |
+| `event_id_B` | For B=`all,bass,mid,treble`: one ID `epoch:band:candidate_sample` for each positive flag, blank otherwise. Aggregate and band events must not be summed as distinct physical clicks. |
+| `candidate_sample_B`, `candidate_strength_B` | Candidate causal attack reference (canonical sample) and its own raw ODF. Blank on non-event rows or inactive bands. |
+| `reported_sample_B`, `reported_strength_B` | Candidate sample and candidate raw ODF returned by the compatibility adapter; equal to the candidate columns. |
+| `decision_sample_B` | Confirmation-hop coordinate; equals candidate_sample plus configured lookahead in hops, not the wall-clock window-completion time. |
 
-For multiband, `all` candidate diagnostics follow the band with maximum current
-raw strength, matching the existing aggregate-strength convention. Picker
-diagnostics on non-onset rows are context, not extra detected events. Ground
-truth remains in fixture sidecars and is not substituted for detector decisions.
+For multiband, aggregate raw strength is the maximum candidate band flux;
+dominant_band follows normalized flux, with raw strength breaking clipped ties.
+Ground truth remains in fixture sidecars and never replaces detector decisions.
 
 ### energy.csv — one row per output-loop tick
 
@@ -341,8 +340,10 @@ This prevents repeated flags from disappearing behind an ambiguous count.
 | `render_id`, `sequence`, `channel_id` | One-based scene/render identity, consumed publication and room channel. Both layers render once per mixer invocation. |
 | `virtual_time_s`, `render_argument_s`, `route` | Actual virtual invocation time, time argument passed to the renderer, route. For early rendering the argument can be future play time; it is not detection availability. |
 | `play_time_s`, `scheduled_play_time_s`, `schedule_target_s` | Timestamped intended play time (two explicit aliases) and `max(ready,play)` target with zero replay trim; blank on normal route. Sending is quantized to the first tick at/after target, not guaranteed within half a tick. |
-| `event_ids`, `onset_consumed` | IDs carried by this render and aggregate flag 0/1; repeated flags remain visible. |
+| `event_ids`, `onset_consumed` | IDs whose event envelopes exceed 0.5 in this scene, and the lossless since-previous-render event latch (0/1). |
 | `high_effect`, `low_effect` | Effect type identifiers used by the two layers. |
+| `onset_envelope`, `onset_envelope_bass`, `onset_envelope_mid`, `onset_envelope_treble` | Scene-time envelope values in [0,1]. |
+| `onset_count_since_render`, `onset_age_s` | Number of consumed events and age of the newest event; age is blank before any event. |
 | `r`, `g`, `b` | Scene Colour sampled at this room position and render argument, in floating RGB units before driver clamping. |
 
 ### sends.csv — one row per actual virtual send and room channel
@@ -354,20 +355,20 @@ This prevents repeated flags from disappearing behind an ambiguous count.
 | `r`, `g`, `b` | Scene sampled at send time, as HueDriver does; can differ from render-time colours for moving scenes. |
 | `r8`, `g8`, `b8` | Effective bytes in Hue RGB 0x00: clamp/convert to 16-bit via Colour.to_16bit, then `v>>8` if v>255, otherwise v, with upper clamp 255; dependency duplicates each byte into two wire bytes. |
 | `interval_ms` | Time since preceding **send**, not preceding channel row; blank for first send, zero for same-tick bursts. |
-| `event_ids` | Originating publication's flag IDs, for correlation even when final light brightness hides an event. |
+| `event_ids` | Event envelope IDs carried by the originating scene, including when configured flash intensity is zero. |
 
 A carried ID is attribution, not proof of an observable flash. Normal delay shrink
 bursts and timestamped coalescing are observed, not repaired.
 
 ### counters.json and meta.json
 
-`counters.events` has entries `all,bass,mid,treble`. For each, `received` is unique
-positive flag IDs published, `accepted` unique IDs reaching the mixer, `rendered`
-counts render occurrences (including repeats), `merged` counts unsent IDs whose
-scenes were coalesced by the timestamped scheduler, `expired` counts other accepted
-but unsent IDs, and `lost` counts received IDs absent from every sent scene.
-An ID seen in any sent scene is not merged/expired/lost even if another copy was
-coalesced. Rejected picker candidates are not counted as received events.
+`counters.events` has entries `all,bass,mid,treble`. Counts are recomputed from
+unique event IDs, independently of publication read counts: received, triggered,
+merged, expired, lost. Triggered means an identity drives the envelope; a same-render
+burst max-merges its other IDs; expired means scene time exceeds onset_max_age_s.
+Missing or still-pending identities count as lost. Scheduler coalescing does not
+lose an event held by later scenes. The old accepted/rendered flag-read semantics
+are retired. Rejected picker candidates are not received events.
 
 `publications[route]` contains `published`, the disjoint `consumed/repeated/skipped`
 identity counts, `render_reads` and `repeat_reads`. `sends` counts send calls;

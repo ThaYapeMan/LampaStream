@@ -9,7 +9,7 @@
     "encoding": "wav-pcm",
     "sample_rate": 48000
   },
-  "git_commit": "1143057",
+  "git_commit": "757de73",
   "input_sha256": "16f010916155d9d581359c70141f35fb71704dcfdf81618b6ed38c404f62d5ac",
   "lead_s": 1.5,
   "numpy_version": "2.5.4",

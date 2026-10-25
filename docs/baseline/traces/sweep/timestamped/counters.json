@@ -34,12 +34,12 @@
   "publication_queue_drops": 0,
   "publications": {
     "timestamped": {
-      "consumed": 2073,
+      "consumed": 1996,
       "published": 2305,
-      "render_reads": 2305,
-      "repeat_reads": 116,
-      "repeated": 116,
-      "skipped": 116
+      "render_reads": 1996,
+      "repeat_reads": 0,
+      "repeated": 0,
+      "skipped": 309
     }
   },
   "sends": 600,
