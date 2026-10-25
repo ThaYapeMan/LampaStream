@@ -5,6 +5,7 @@ import asyncio
 import copy
 import csv
 import json
+from functools import cache
 from pathlib import Path
 
 import numpy as np
@@ -20,6 +21,7 @@ CLICK_FIXTURES = ("clicks-120", "clicks-128", "clicks-174", "panning", "anti-pha
 POSITION_FIXTURES = ("clicks-120", "clicks-128", "clicks-174", "impulse", "panning")
 
 
+@cache
 def expected(section):
     return json.loads(NUMBERS.read_text())[section]
 

@@ -247,3 +247,45 @@ Both counts are zero on the timestamped route, whose losses instead come from
 scheduler coalescing. In particular, **19** flags in clicks-120 normal/30/free
 sit on publications never present in energy.csv consumed_sequences. This matches
 BENCH-01 exactly; no baseline discrepancy was observed.
+
+## Phase 2 numbers at 1143057
+
+EVENT-01 reference code, default combined analyser, synthetic two-channel room,
+seed 0, 30 Hz, unrestricted publications. The phase-one table above remains an
+unchanged historical record. Phase-two counters use unique event identities and
+trigger dispositions; accepted/rendered flag-read counts are retired. Full counters,
+metadata and event rows are in [traces](baseline/traces/README.md); the original
+set is retained in [traces-phase0](baseline/traces-phase0/README.md).
+
+| Fixture / route | Phase 1 received / lost | Phase 2 received / triggered / merged / expired / lost |
+|---|---:|---:|
+| clicks-120 / normal | 19 / 19 | 19 / 19 / 0 / 0 / 0 |
+| clicks-120 / timestamped | 19 / 1 | 19 / 19 / 0 / 0 / 0 |
+| clicks-174 / normal | 28 / 20 | 28 / 28 / 0 / 0 / 0 |
+| clicks-174 / timestamped | 28 / 20 | 28 / 28 / 0 / 0 / 0 |
+| tone-steps / normal | 3 / 3 | 3 / 3 / 0 / 0 / 0 |
+| tone-steps / timestamped | 3 / 3 | 3 / 3 / 0 / 0 / 0 |
+
+| Detector quantity | Phase 1 | Phase 2 |
+|---|---|---|
+| clicks-120 candidate median / maximum absolute error | −1440 / 1920 samples | 0 / 0 samples |
+| clicks-174 candidate median / maximum absolute error | −1514.5 / 1920 samples | 140.5 / 381 samples |
+| Confirmation − candidate | 8 hops at 48 kHz; chunk-dependent after resampling | 1 hop, including resampled fixtures |
+| Candidate-attributed tone strength, combined | No | Yes; Spearman rho = 1 |
+| Silence reference after 500 zero frames | EMA decays to 2.630514327338083e-24 | EMA frozen at 0.19885471662059553 |
+| Low-flux resumption transition event | Yes | No |
+| REG-01 strict contract xfails | 133 | 0 (236 regression tests pass) |
+
+These are detector coordinates and software event survival, not physical light
+measurements. The tighter phase acceptance remains unmet: clicks-174 normal/30
+first sends range approximately +31 to +66 ms, and timestamped sends approximately
+−21 to +18 ms relative to truth plus playback lead. The event queue removes loss,
+but the shared complete STFT window still adds acquisition delay and timestamped
+hop/render quantization remains. A candidate/confirmation coordinate gap of one hop
+must not be reported as one hop of end-to-end processing latency.
+
+The clean pre-change full suite at e03f1a8 passed 1,921 tests, skipped 93 and xfailed
+133 in 190.95 s. The first all-green phase-two full run passed 2,062 tests, skipped
+93 and xfailed zero in 176.45 s; final verification adds five focused cases and is
+reported with the task transcript. No frontend rebuild, deployment or physical
+source/output access was performed.

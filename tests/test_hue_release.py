@@ -341,6 +341,9 @@ def test_early_tap_release_discards_old_scenes_and_keeps_tap_generation(monkeypa
         def pub_seq(self):
             return self.seq
 
+        def drain_events(self):
+            return []
+
         def drain_publications(self):
             records, self.records = self.records, []
             return records

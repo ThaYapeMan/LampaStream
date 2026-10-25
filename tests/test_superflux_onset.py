@@ -105,7 +105,9 @@ def test_vibrato_suppressed_by_superflux_but_not_by_plain_flux() -> None:
 
         # Per-bin positive spectral flux (same as OnsetDetector.process() internals).
         flux = float(np.sum(np.maximum(0.0, frame - prev_frame)))
-        plain_on, _ = plain_detector.process_odf(flux)
+        # Zero novelty in a sounding window is not acoustic silence.
+        level = 20 * np.log10(max(float(np.linalg.norm(frame)) / WINDOW_SIZE, 1e-12))
+        plain_on = plain_detector.process_odf_event(flux, level_dbfs=level) is not None
         plain_results.append(plain_on)
         prev_frame = frame.copy()
 
@@ -190,8 +192,9 @@ def test_process_odf_is_equivalent_to_process_for_scalar_bars() -> None:
         # process() with [f] as bars: flux = max(0, f - prev)
         onset_p, _ = det_process.process([f])
         # process_odf() with the same effective flux value
-        flux_val = max(0.0, f - prev)
-        onset_o, _ = det_odf.process_odf(flux_val)
+        flux_val = max(0.0, f - prev) if results_process else 0.0
+        level = 20 * np.log10(max(abs(f), 1e-12))
+        onset_o = det_odf.process_odf_event(flux_val, level_dbfs=level) is not None
         results_process.append(onset_p)
         results_odf.append(onset_o)
         prev = f

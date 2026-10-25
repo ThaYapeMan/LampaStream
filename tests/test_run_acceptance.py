@@ -326,7 +326,8 @@ def test_write_meta_analysed_duration(tmp_path: Path, sine_wav: Path, sine_raw_p
 
 
 def test_timestamps_monotonically_increasing(rows_from_sine: list[dict]) -> None:
-    timestamps = [float(r["t_s"]) for r in rows_from_sine]
+    timestamps = [float(r["t_s"]) for r in rows_from_sine
+                  if "v2" in r["effective_processor_ids"]]
     for i in range(1, len(timestamps)):
         assert timestamps[i] >= timestamps[i - 1], (
             f"Timestamp not monotonic at index {i}: {timestamps[i]} < {timestamps[i-1]}"
@@ -343,7 +344,8 @@ def test_timestamps_sample_derived_spacing(rows_from_sine: list[dict]) -> None:
     # (HOP=480 canonical samples = 10 ms at 48 kHz).  What proves sample-derivation
     # is the extremely low variance: wall-clock spacing has high jitter;
     # sample-derived spacing has coefficient-of-variation < 1 %.
-    timestamps = [float(r["t_s"]) for r in rows_from_sine]
+    timestamps = [float(r["t_s"]) for r in rows_from_sine
+                  if "v2" in r["effective_processor_ids"]]
     diffs = [timestamps[i] - timestamps[i - 1] for i in range(1, len(timestamps))]
     if len(diffs) < 5:
         pytest.skip("Too few rows to check spacing")
@@ -366,7 +368,8 @@ def test_timestamps_sample_derived_spacing(rows_from_sine: list[dict]) -> None:
 
 def test_timestamps_one_hop_cadence(rows_from_sine: list[dict]) -> None:
     """After re-chunking, mean row spacing must be close to exactly one STFT hop."""
-    timestamps = [float(r["t_s"]) for r in rows_from_sine]
+    timestamps = [float(r["t_s"]) for r in rows_from_sine
+                  if "v2" in r["effective_processor_ids"]]
     diffs = [timestamps[i] - timestamps[i - 1] for i in range(1, len(timestamps))]
     if len(diffs) < 10:
         pytest.skip("Too few rows to check cadence")
@@ -440,6 +443,8 @@ def test_row_count_3s_signal(sine_raw_pcm: bytes) -> None:
               (144000-2048)/480 ≈ 296 STFT frames.
     """
     rows, _ = analyse_pcm(sine_raw_pcm)
+    # Phase 2: candidate-time Beat records are separate delayed contributions.
+    rows = [row for row in rows if "v2" in row["effective_processor_ids"]]
     assert len(rows) >= 250, (
         f"Expected ≥250 rows for 3 s signal (re-chunking fix); got {len(rows)} — "
         f"row count ≈160 indicates the re-chunking fix was not applied"

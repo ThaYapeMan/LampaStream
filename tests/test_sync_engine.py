@@ -129,6 +129,7 @@ def test_onset_flash_intensity_brightens_on_onset():
     bars = [0.2] * 30
     features_onset = _make_features(bars)
     features_onset.onset = True
+    features_onset.onset_envelope = 1.0
 
     profile_no_flash = Profile(
         effect_type="spectrum_rgb", onset_flash_intensity=0.0, bars=30
@@ -178,6 +179,7 @@ def test_onset_flash_intensity_full_white_at_1():
     bars = [0.1] * 30  # dark input
     features_onset = _make_features(bars)
     features_onset.onset = True
+    features_onset.onset_envelope = 1.0
 
     profile = Profile(
         effect_type="spectrum_rgb", onset_flash_intensity=1.0, sensitivity=1.0, bars=30
@@ -647,7 +649,7 @@ def test_onset_fires_at_peak_not_rising_edge():
     any frame on the rising slope.  alpha=0.0 disables condition 3 so this test
     isolates conditions 1 and 2.
     """
-    w = OnsetDetector._W  # 3
+    w = 1  # Phase 2: explicit default lookahead, independent of past-max width.
     detector = OnsetDetector(delta=0.1, alpha=0.0)
     n_bars = 30
     _alternating_warm_up(detector, n_bars)
@@ -1123,6 +1125,7 @@ def _ef(onset: bool = False, full: float = 0.5, centroid: float = 0.5) -> AudioF
         bars=[0.5] * 30, bass=full * 0.8, mid=full * 0.9,
         full=full, centroid=centroid,
         onset=onset, onset_strength=1.0 if onset else 0.0,
+        onset_envelope=float(onset), onset_count_since_render=int(onset),
     )
 
 
@@ -1318,7 +1321,7 @@ def test_pulses_colour_follows_spectrum():
     bars = [1.0] * 8 + [0.1] * 22  # heavy bass, quiet mids and treble
     features = AudioFeatures(
         bars=bars, bass=0.9, mid=0.2, full=0.5, centroid=0.1,
-        onset=True, onset_strength=1.0,
+        onset=True, onset_strength=1.0, onset_envelope=1.0, onset_count_since_render=1,
     )
     effect = ColourModeEffect(_prof(effect_type="pulses"))
     c = effect.render(features, 0.0).color_at(_ORIGIN, 0.0)
@@ -1397,20 +1400,15 @@ def test_fireworks_bright_at_onset_regardless_of_position():
     )
 
 
-def test_pulses_attack_is_not_instant():
-    """Onset rise must be an exponential approach, not an instant 0→1 spike."""
+def test_pulses_attack_uses_event_envelope():
+    """Phase 2: the renderer reproduces the held event peak without per-tick attack."""
     from lampastream.sync_engine import ColourModeEffect
 
     effect = ColourModeEffect(_prof(effect_type="pulses", effect_decay=0.3))
     before = effect.render(_ef(onset=False, full=0.0), 0.0).color_at(_ORIGIN, 0.0)
     after = effect.render(_ef(onset=True, full=0.0), 0.0).color_at(_ORIGIN, 0.0)
     delta = after.r - before.r
-    assert delta < 1.0 - 1e-6, (
-        f"Pulses: onset must not be an instant 0→1 jump; got delta={delta:.4f}"
-    )
-    assert delta > 0.3, (
-        f"Pulses: onset attack must make visible progress in one frame; got delta={delta:.4f}"
-    )
+    assert delta == pytest.approx(1.0)
 
 
 def test_fireworks_colour_follows_spectrum():
@@ -1421,7 +1419,7 @@ def test_fireworks_colour_follows_spectrum():
     bars = [1.0] * 8 + [0.1] * 22  # heavy bass, quiet mids and treble
     features = AudioFeatures(
         bars=bars, bass=0.9, mid=0.2, full=0.5, centroid=0.1,
-        onset=True, onset_strength=1.0,
+        onset=True, onset_strength=1.0, onset_envelope=1.0, onset_count_since_render=1,
     )
     effect = ColourModeEffect(_prof(effect_type="fireworks", effect_speed=1.0))
     # onset at t=0; origin_x = sin(0) * 0.9 = 0.0; particles near x=0.0 at t=0.05

@@ -238,6 +238,9 @@ def test_timed_output_renders_every_publication_without_latest_sampling(monkeypa
         def __init__(self):
             self.records = records
 
+        def drain_events(self):
+            return []
+
         def drain_publications(self):
             result, self.records = self.records, []
             return result
@@ -272,7 +275,8 @@ def test_timed_output_renders_every_publication_without_latest_sampling(monkeypa
             pass
     asyncio.run(run())
     assert effect.render.call_count == 3
-    assert effect.render.call_args_list[1].args[0].onset is True
+    assert effect.render.call_args_list[1].args[0].onset is False
+        # Publication booleans cannot fabricate events; intake owns the latch.
     output.send.assert_called_once()
     assert output.send.call_args.args[1] >= 10.5
 

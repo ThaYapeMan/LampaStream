@@ -20,7 +20,8 @@ ORIGIN = Position(0, 0, 0)
 
 
 def frame(bars=(.2, .4, .6), onset=False):
-    return AudioFeatures(list(bars), 0, 0, 0, .5, onset=onset)
+    return AudioFeatures(list(bars), 0, 0, 0, .5, onset=onset, onset_envelope=float(onset),
+                         onset_count_since_render=int(onset))
 
 
 def rgb(colour):

@@ -73,7 +73,8 @@ def test_stft_onset_pipeline_detects_transient() -> None:
     )
 
     # Onset must not fire during the silence region.
-    earliest_valid = transient_start // hop
+    # Phase 2: frame indices reference leading windows; availability requires the full FFT.
+    earliest_valid = (transient_start - WINDOW_SIZE) // hop + 1
     assert min(onset_frames) >= earliest_valid, (
         f"onset fired at frame {min(onset_frames)} "
         f"(≈ sample {min(onset_frames) * hop}) "

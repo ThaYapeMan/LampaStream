@@ -1399,7 +1399,10 @@ class CanonicalAnalysisPipeline:
             features = replace(features, play_monotonic=play[0], timing_generation=play[1])
         if features.onset_events:
             features = replace(features, onset_events=tuple(
-                replace(event, play_monotonic=(features.play_monotonic +
+                replace(event, received_monotonic=(received +
+                    (event.candidate_sample-sample_start) / _CAP_SAMPLE_RATE)
+                    if received is not None else None,
+                    play_monotonic=(features.play_monotonic +
                     (event.candidate_sample-sample_start) / _CAP_SAMPLE_RATE)
                     if features.play_monotonic is not None else None)
                 for event in features.onset_events))
@@ -3280,8 +3283,10 @@ class SyncEngine:
                     self.event_mapping_fallbacks += 1
                 stamp -= self.profile.onset_lead_s
             else:
-                stamp = event.received_monotonic - max(
-                    0, self._event_sample_reference - event.candidate_sample) / _CAP_SAMPLE_RATE
+                stamp = self._event_source_times.get(event.id)
+                if stamp is None:
+                    stamp = event.received_monotonic - max(
+                        0, self._event_sample_reference - event.candidate_sample) / _CAP_SAMPLE_RATE
             if stamp > t:
                 future.append(event)
                 continue
@@ -3357,9 +3362,13 @@ class SyncEngine:
         self.event_records = {}
         self.event_mapping_fallbacks = 0
         self._pending_onset_events = []
+        self._event_source_times = {}
         while True:
             if isinstance(self._analyser, CanonicalAnalysisPipeline):
                 for event in self._analyser.drain_events():
+                    if event.id in self.event_records:
+                        continue
+                    self._event_source_times[event.id] = event.received_monotonic
                     event = replace(event, received_monotonic=clock())
                     self._pending_onset_events.append(event)
                     self.event_records[event.id] = {"event": event, "disposition": "received"}

@@ -498,7 +498,20 @@ class Replay:
                 if row[f"event_id_{b}"]]
 
     def counters(self):
-        events = self.engine.event_counters
+        events = {}
+        # Count identities independently of producer/consumer increment counters.
+        # An emitted identity absent from the intake is a real lost event.
+        emitted = {event.id: event for record in self.records
+                   for event in record.features.onset_events}
+        for band in BANDS:
+            identities = {identity for identity, event in emitted.items()
+                          if band == "all" or band in event.bands}
+            dispositions = Counter(self.engine.event_records.get(identity, {}).get(
+                "disposition", "lost") for identity in identities)
+            events[band] = {"received": len(identities),
+                            **{key: dispositions[key] for key in
+                               ("triggered", "merged", "expired")},
+                            "lost": dispositions["lost"] + dispositions["received"]}
         one = {"published": len(self.records),
             "consumed": sum(self.reads[s] == 1 for s in range(1, len(self.records) + 1)),
             "repeated": sum(self.reads[s] > 1 for s in range(1, len(self.records) + 1)),

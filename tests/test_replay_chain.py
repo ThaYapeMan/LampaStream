@@ -100,7 +100,8 @@ def test_all_trace_files_byte_identical_across_processes(tmp_path, effect, playb
             config=config)
     assert hashes(tmp_path / "one") == hashes(tmp_path / "two")
     assert set(hashes(tmp_path / "one")) == {
-        "features.csv", "energy.csv", "renders.csv", "sends.csv", "counters.json", "meta.json"}
+        "features.csv", "events.csv", "energy.csv", "renders.csv", "sends.csv",
+        "counters.json", "meta.json"}
 
 
 def test_pins_current_normal_delay_shrink_burst_not_a_fix(tmp_path):
@@ -113,12 +114,12 @@ def test_pins_current_normal_delay_shrink_burst_not_a_fix(tmp_path):
     assert len({r["virtual_time_s"] for r in burst}) == 1
 
 
-def test_pins_current_repeated_terminal_onset_flags_not_a_fix(tmp_path):
+def test_terminal_event_is_consumed_once(tmp_path):
     out = tmp_path / "repeated"
     counters = run(out, "--duration", "0.54")
     renders = [r for r in rows(out, "renders.csv")
                if r["channel_id"] == "0" and r["onset_consumed"] == "1"]
-    assert len(renders) > 1
+    assert len(renders) == 1  # Phase 2: event consumption is independent of repeated latest reads.
     assert len({r["sequence"] for r in renders}) == 1
     assert counters["publications"]["normal"]["repeat_reads"] > 0
 

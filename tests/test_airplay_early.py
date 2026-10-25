@@ -381,6 +381,9 @@ def test_production_output_loop_obeys_targets_and_flush(monkeypatch, lead, flush
         def __init__(self):
             self.records = [SimpleNamespace(features=features)]
 
+        def drain_events(self):
+            return []
+
         def drain_publications(self):
             result, self.records = self.records, []
             return result
