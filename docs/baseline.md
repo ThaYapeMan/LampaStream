@@ -248,7 +248,7 @@ scheduler coalescing. In particular, **19** flags in clicks-120 normal/30/free
 sit on publications never present in energy.csv consumed_sequences. This matches
 BENCH-01 exactly; no baseline discrepancy was observed.
 
-## Phase 2 numbers at 1143057
+## Phase 2 numbers at a2de502
 
 EVENT-01 reference code, default combined analyser, synthetic two-channel room,
 seed 0, 30 Hz, unrestricted publications. The phase-one table above remains an

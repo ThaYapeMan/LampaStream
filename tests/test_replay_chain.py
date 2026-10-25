@@ -214,7 +214,8 @@ def test_delivery_cap_room_and_compact_api_fields(tmp_path):
     energy = rows(out, "energy.csv")
     assert max(len(json.loads(r["delivered_sequences"])) for r in energy) == 3
     assert all(r["energy_source"] == "peak_envelope" for r in energy)
-    assert counters["publications"]["timestamped"]["skipped"] == 0
+    # Phase 2: the one Beat-only publication bypasses continuous rendering.
+    assert counters["publications"]["timestamped"]["skipped"] == 1
 
 
 def test_subwindow_wav_still_has_complete_empty_trace_headers(tmp_path):

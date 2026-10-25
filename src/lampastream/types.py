@@ -10,6 +10,7 @@ imports from hue_entertainment — that is confined to hue_output.py.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from typing import ClassVar, Protocol, runtime_checkable
 
@@ -294,13 +295,18 @@ class OutputCapabilities:
     update_hz: float = 30.0
     colour_depth_bits: int = 16
     transport_latency_s: float = 0.0
-    min_visible_hold_s: float = 2 / 30
+    min_visible_hold_s: float | None = None
     supports_per_channel_timing: bool = False
 
     def __post_init__(self):
-        if self.update_hz <= 0 or not 1 <= self.colour_depth_bits <= 32:
+        if (not math.isfinite(self.update_hz) or self.update_hz <= 0
+                or type(self.colour_depth_bits) is not int
+                or not 1 <= self.colour_depth_bits <= 32):
             raise ValueError("Output rate and colour precision must be positive")
-        if self.transport_latency_s < 0 or self.min_visible_hold_s < 0:
+        if self.min_visible_hold_s is None:
+            object.__setattr__(self, "min_visible_hold_s", 2 / self.update_hz)
+        if (not math.isfinite(self.transport_latency_s) or self.transport_latency_s < 0
+                or not math.isfinite(self.min_visible_hold_s) or self.min_visible_hold_s < 0):
             raise ValueError("Output timing must be nonnegative")
 
 

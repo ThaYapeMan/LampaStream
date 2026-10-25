@@ -211,3 +211,10 @@ def test_precision_guard_preserves_unlit_channels_and_holds_subcode_decay():
     assert lifted.b == .2
     peak = guard.colour("lamp", Colour(.5, 0, .2), True)
     assert guard.colour("lamp", Colour(.5-guard.lsb/2, 0, .2), True) == peak
+
+
+def test_capability_hold_default_tracks_declared_output_rate():
+    from lampastream.types import OutputCapabilities
+    assert OutputCapabilities(update_hz=60).min_visible_hold_s == 2/60
+    with pytest.raises(ValueError):
+        OutputCapabilities(update_hz=float("nan"))
