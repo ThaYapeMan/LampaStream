@@ -1889,3 +1889,24 @@ def test_bar_falloff_restart_endpoint_live_and_rollback(client):
     response = client.post(path, json={'bar_falloff_s': 0.2, 'lower_cutoff_freq': 100})
     assert response.status_code == 200
     assert client._manager.replace_pcm_analyser.call_args.args[0].bar_falloff_s == 0.2
+
+
+@pytest.mark.parametrize("name", ["Study (Sonos)", "Study", "MBR", "Sonos Port"])
+def test_yeney_follow_targets_and_saved_aliases_use_mac(client, monkeypatch, name):
+    from lampastream import api as api_module
+
+    managed_mac = "aa:bb:cc:dd:ee:01"
+    external_mac = "aa:bb:cc:dd:ee:02"
+    client._storage.save_virtual_player(VirtualPlayer(
+        player_name=name, player_mac=managed_mac.upper(), lms_host="fixture.invalid",
+    ))
+    external = {"playerid": external_mac, "name": name, "modelname": "YeneY"}
+    monkeypatch.setattr(api_module, "list_lms_players", lambda host: [
+        {"playerid": managed_mac, "name": name, "modelname": "YeneY"}, external,
+    ])
+    alias = {"player_mac": external_mac, "name": "Favourite room", "strategy": "fixed"}
+    assert client.post("/api/player-latencies", json=alias).status_code == 201
+    assert client.get("/api/lms/players?host=fixture.invalid").json() == [external]
+    saved = client.get("/api/player-latencies").json()
+    assert saved[0]["name"] == "Favourite room"
+    assert saved[0]["player_mac"] == external_mac

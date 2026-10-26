@@ -327,11 +327,11 @@ it('edits and saves the two LMS timing fields with steppers', async () => {
 })
 
 
-it('renders model icons in the Players list and the selected detail header', async () => {
+it.each(['Study (Sonos)', 'Study', 'MBR', 'Sonos Port'])('renders model icons with saved aliases and LMS name %s', async name => {
   players = [{ ...lms, follow_player_mac: '' }, airplay]
   entries = [timing('sonos', 'Sonos Study'), timing('radio', 'Radio Red'), timing('pi', 'piCorePlayer'), timing('unknown', 'Unknown')]
   vi.mocked(api.listLmsPlayers).mockResolvedValue([
-    { playerid: 'sonos', name: 'Study (Sonos)', modelname: 'YeneY' },
+    { playerid: 'sonos', name, modelname: 'YeneY' },
     { playerid: 'radio', name: 'Radio Red', model: 'baby' },
     { playerid: 'pi', name: 'piCorePlayer', modelname: 'SqueezeLite-pCP' },
   ])

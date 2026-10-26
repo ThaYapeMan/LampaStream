@@ -16,6 +16,7 @@ from pytest import approx
 
 from lampastream.lms_status import (
     LmsPlayerStatus,
+    _parse_players,
     _parse_status,
     _parse_sync_response,
     query_lms_status,
@@ -235,3 +236,12 @@ def test_query_lms_sync_peers_raises_on_empty_host():
     """Same contract for query_lms_sync_peers."""
     with pytest.raises(ValueError, match="LMS host is not configured"):
         query_lms_sync_peers("", "aa:bb:cc:dd:ee:ff")
+
+
+@pytest.mark.parametrize("name", ["Study (Sonos)", "Study", "MBR", "Sonos Port"])
+def test_yeney_discovery_preserves_model_and_name_without_suffix(name):
+    fields = ["playerid:aa:bb:cc:dd:ee:ff", f"name:{name}", "modelname:YeneY"]
+    response = "players 0 100 " + " ".join(quote(field, safe="") for field in fields)
+    assert _parse_players(response) == [{
+        "playerid": "aa:bb:cc:dd:ee:ff", "name": name, "modelname": "YeneY",
+    }]
