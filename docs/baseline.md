@@ -318,3 +318,31 @@ window acquisition falls 20→10 ms; clicks-128/174 typically lose 20 ms. The
 remaining render wait can absorb that gain (clicks-120 still sends at 33.333 ms).
 Raw pink-noise event counts 79→82 motivated log-filtered short flux (80 events);
 sweep changes 309→303. No detector threshold was increased.
+
+### LAT-01 lookahead decision
+
+Combined log-filtered short front end; normal 30 Hz. Match within two hops,
+count unmatched events and extra events assigned to an already matched truth.
+Tone-step startup remains a warmup miss; noise/sweep have empty sparse truth.
+| Fixture | Lookahead | Events | Misses | False positives | Double hits |
+|---|---:|---:|---:|---:|---:|
+| anti-phase | 0 | 19 | 0 | 0 | 0 |
+| anti-phase | 1 | 19 | 0 | 0 | 0 |
+| clicks-120 | 0 | 19 | 0 | 0 | 0 |
+| clicks-120 | 1 | 19 | 0 | 0 | 0 |
+| clicks-128 | 0 | 21 | 0 | 0 | 0 |
+| clicks-128 | 1 | 21 | 0 | 0 | 0 |
+| clicks-174 | 0 | 28 | 0 | 0 | 0 |
+| clicks-174 | 1 | 28 | 0 | 0 | 0 |
+| impulse | 0 | 1 | 0 | 0 | 0 |
+| impulse | 1 | 1 | 0 | 0 | 0 |
+| panning | 0 | 19 | 0 | 0 | 0 |
+| panning | 1 | 19 | 0 | 0 | 0 |
+| pink-noise | 0 | 82 | 0 | 82 | 0 |
+| pink-noise | 1 | 80 | 0 | 80 | 0 |
+| silence | 0 | 0 | 0 | 0 | 0 |
+| silence | 1 | 0 | 0 | 0 | 0 |
+| sweep | 0 | 308 | 0 | 308 | 0 |
+| sweep | 1 | 303 | 0 | 303 | 0 |
+| tone-steps | 0 | 3 | 1 | 0 | 0 |
+| tone-steps | 1 | 3 | 1 | 0 | 0 |
