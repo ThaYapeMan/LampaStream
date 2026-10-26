@@ -3455,6 +3455,7 @@ class SyncEngine:
         self._event_source_times = {}
         interval = 1 / self.profile.output_render_hz
         next_tick = clock()
+        timestamped_tick = clock()
         last_send = -float("inf")
         last_extra = -float("inf")
         extra_requested = False
@@ -3462,7 +3463,8 @@ class SyncEngine:
 
         async def wait_for_work():
             # Audio workers own DSP; bounded polling only drains immutable events.
-            await sleep(max(0.000001, min(.005, max(next_tick, last_extra+minimum_interval)-clock())))
+            deadline = max(next_tick, last_extra+minimum_interval)
+            await sleep(max(0.000001, min(.005, deadline-clock())))
 
         while True:
             if isinstance(self._analyser, CanonicalAnalysisPipeline):
@@ -3508,15 +3510,30 @@ class SyncEngine:
                         trim = max(-available, trim)
                     records = self._analyser.drain_publications()
                     self._map_event_play_times(records)
-                    for record in records:
-                        if getattr(record, "effective_processor_ids", ()) == ("beat_detector",):
-                            continue  # events are consumed separately, without advancing ballistics
+                    continuous = [r for r in records
+                        if getattr(r, "effective_processor_ids", ()) != ("beat_detector",)
+                        and r.features.play_monotonic is not None
+                        and r.features.timing_generation == self._timing.tap_generation]
+                    jobs = [(r.features.play_monotonic + trim/1000, r, False)
+                            for r in continuous]
+                    # Event boundaries are independent of the continuous hop grid.
+                    # Render one held lift exactly at its lead-adjusted play time.
+                    for event in self._pending_onset_events:
+                        if event.play_monotonic is None or not continuous:
+                            continue
+                        target = event.play_monotonic-self.profile.onset_lead_s
+                        record = min(continuous, key=lambda r:
+                                     abs(r.features.play_monotonic-target))
+                        jobs.append((target, record, True))
+                    for target, record, event_boundary in sorted(jobs, key=lambda job: job[0]):
                         f = record.features
                         if (f.play_monotonic is None
                                 or f.timing_generation != self._timing.tap_generation):
                             continue
                         self._event_sample_reference = getattr(record, "sample_pos", 0)
-                        scene_time = max(clock(), f.play_monotonic + trim / 1000)
+                        scene_time = max(clock(), target)
+                        if event_boundary:
+                            f = replace(f, play_monotonic=scene_time)
                         f = self._event_view(f, scene_time, timestamped=True)
                         scene = self._effect.render(f, scene_time)
                         if self._onset_lift_enabled():
@@ -3529,7 +3546,7 @@ class SyncEngine:
                         self._last_bars, self._last_onset = f.bars, f.onset
                         self._last_mix, self._last_energy = self._effect.mix, f.full
                         self._last_sustained_energy = f.sustained_energy
-                        schedule.add(scene, f.play_monotonic, ready, f.timing_generation, trim,
+                        schedule.add(scene, target, ready, f.timing_generation, 0,
                                      (f.received_monotonic, ready))
                     due = schedule.due(clock(), self._timing.tap_generation)
                     if due is not None:
@@ -3541,7 +3558,13 @@ class SyncEngine:
                             self._timing.processing(*provenance, sent)
                     self._delay_buffer.clear()
                     self._scene_timing.clear()
-                    await sleep(interval)
+                    now = clock()
+                    while timestamped_tick <= now+1e-10:
+                        timestamped_tick += interval
+                    deadline = schedule.next_due(self._timing.tap_generation)
+                    wake = (min(timestamped_tick, deadline)
+                            if deadline is not None else timestamped_tick)
+                    await sleep(max(.000001, wake-now))
                     continue
                 schedule.queue.clear()
             now = clock()

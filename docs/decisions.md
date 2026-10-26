@@ -117,3 +117,5 @@ short-hop publications were removed after this measurement.
 | clicks-174 | timestamped | 30 | 0.795 | 0.419 / 0.639 | 9.0 | 11.11× | 0 | 0 / 0 |
 | clicks-174 | timestamped | 50 | 0.778 | 0.252 / 1.410 | 9.0 | 11.15× | 0 | 0 / 0 |
 | clicks-174 | timestamped | 60 | 0.797 | 0.246 / 1.369 | 9.2 | 10.88× | 0 | 0 / 0 |
+- 2026-10-26 — Timestamped scenes wake at min(next cadence deadline, next scheduled deadline), retaining SceneSchedule coalescing and generation fencing. Add explicit event-boundary renders at candidate playback minus onset_lead_s, because merely waking accurately still leaves continuous-hop quantisation. Positive onset_lead_s retains its existing meaning: advance light before audio, not delay it.
+- 2026-10-26 — Exact scheduling is measured against the candidate's lead-adjusted playback clock; candidate-to-truth uncertainty is separately visible in latency.csv. The scheduler does not use fixture truth. Accept only 1e-10 seconds of comparison tolerance at heap deadlines to avoid a floating-point boundary causing a spurious microsecond wake.

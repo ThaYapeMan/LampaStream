@@ -27,3 +27,16 @@ def test_long_stft_unchanged():
     expected = [np.abs(np.fft.rfft(pcm[i:i+2048] * np.hamming(2048).astype(np.float32)))
                 .astype(np.float32) for i in range(0, len(pcm)-2048+1, 480)]
     np.testing.assert_array_equal(frames, expected)
+
+
+def test_schedule_next_deadline_and_generation():
+    from lampastream.airplay_early import SceneSchedule
+
+    schedule = SceneSchedule()
+    schedule.add('a', 1.012, 0, 1)
+    schedule.add('b', 1.017, 0, 1)
+    assert schedule.next_due(1) == 1.012
+    assert schedule.due(1.011, 1) is None
+    assert schedule.due(1.012, 1) == ('a', None)
+    assert schedule.next_due(1) == 1.017
+    assert schedule.next_due(2) is None

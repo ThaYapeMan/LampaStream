@@ -353,10 +353,15 @@ class SceneSchedule:
         if len(self.queue) > self.capacity:
             heapq.heappop(self.queue)
 
+    def next_due(self, generation):
+        """Earliest deadline on the monotonic clock, after generation fencing."""
+        self.reset(generation)
+        return self.queue[0][0] if self.queue else None
+
     def due(self, now, generation):
         self.reset(generation)
         result = None
-        while self.queue and self.queue[0][0] <= now:
+        while self.queue and self.queue[0][0] <= now + 1e-10:
             _, _, scene, provenance = heapq.heappop(self.queue)
             result = scene, provenance
         return result
