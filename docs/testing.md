@@ -28,6 +28,42 @@ repeated manager teardown with a blocked reader and an owned follower task, veri
 cleanup errors propagate, and checks subsequent activation. Historical Beat records
 must survive in the queue; they need not replace a newer live Spectrum snapshot.
 
+## Native cavacore tests
+
+After installing the shared native prerequisites from
+`scripts/native-build-packages.txt` and the `.[dev]` extra, build the editable
+checkout's library from the repository root:
+
+```sh
+python scripts/build_native.py
+pytest -v -m native
+LAMPASTREAM_REQUIRE_NATIVE=1 pytest -v
+```
+
+`python scripts/build_native.py` writes
+`src/lampastream/cavacore/_libcavacore.so` using the same compiler function as
+Hatch's wheel build. An editable install does not put that library in the source
+checkout. The generated library is ignored by Git.
+
+The `native` marker covers every cavacore-gated case, including the 12
+`test_onset_same_regardless_of_backend_context` cases, the HPSS cavacore
+parameters, and native audit/metadata checks. `pytest -v -m native` gives a visible
+native-only execution count: currently **88 passed** when the library is available.
+An unrelated optional module can also report a collection skip with this command;
+that skip is not a cavacore case.
+
+One shared fixture checks that the library exists, loads, and resolves its required
+symbols. With the flag unset, an unavailable library skips native tests. With
+`LAMPASTREAM_REQUIRE_NATIVE=1`, the same condition fails their setup with the same
+message and pytest exits nonzero. CI sets this flag for all three Python versions,
+builds the checkout library before tests, and checks that its wheel also contains
+a nonempty `_libcavacore.so`. Native skips do not count as successful execution.
+
+Each xdist worker uses its own temporary application config, even when it inherits
+`LAMPASTREAM_CONFIG` from the controller. This prevents concurrent import-time
+Storage initialization from racing on the same `config.tmp`; production storage
+behavior is unchanged.
+
 ## Producer checks without deployment
 
 Initialize and build the pinned producer without deployment:
@@ -78,7 +114,8 @@ stubbed test or historical benchmark substitutes for these checks.
 
 Start with [development setup](development.md#environment), including the shared
 native system prerequisites and `pip install -e '.[dev]'`. CI runs Ruff and the
-complete pytest suite on Python 3.11/3.12/3.13, and also builds a native wheel.
+complete pytest suite on Python 3.11/3.12/3.13 with native execution required,
+and also builds and inspects a native wheel.
 The `build-frontend` job uses Node 22.22.2 and runs these commands in `web/`,
 in this order:
 

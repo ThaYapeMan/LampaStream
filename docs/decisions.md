@@ -164,3 +164,30 @@ Affinity: [7]
 | clicks-174 | timestamped | 60 | 0.710 | 0.239 / 1.420 | 8.4 | 11.86× | 0 | 0 / 0 |
 
 - 2026-10-26 — Final evidence anchors implementation c5e6a7e; the final follow-up commit only records provenance, raw ledgers and transcripts. Force-track the two latency CSV artifacts because the repository generally ignores generated CSV files. Full runs use cold session caches and separate CPU affinity for the one/four-core measurements.
+
+
+## CI-01 — native test coverage and worker isolation (2026-10-26)
+
+- Diagnose runner failures from the GitHub job log. Run 40303173668 failed during
+  Python 3.11 collection: workers shared the controller's application config and
+  raced on `config.tmp` replacement. Give each worker a private config path;
+  retain production Storage behavior and all assertions. No retry is added.
+- Five fresh-environment Python 3.11.17 runs with four workers and no native library
+  each passed (2114 passed, 93 skipped). The full-suite collection race did not
+  reproduce locally. A targeted inherited-config regression fails before worker
+  isolation and passes afterward; distinguish that evidence from reproducing the
+  intermittent runner exception.
+- Keep one standard-library-only compiler function in `scripts/build_native.py`,
+  called by its command-line entry point and Hatch's build hook. The hook loads
+  the script by source-root path so archived installer builds also work. CI builds
+  the checkout library explicitly and checks the wheel contains a nonempty library.
+  Compiler flags, sources, linking, and production behavior remain unchanged.
+- Mark every cavacore-gated test `native` and centralize real library availability
+  checks in one fixture. Local runs retain skips; `LAMPASTREAM_REQUIRE_NATIVE=1`
+  makes unavailable libraries fail setup. Set it at CI test-job scope for every
+  Python matrix entry. No runtime dependency is added.
+- Use the documented `pytest -v -m native` command for native coverage visibility.
+  Local validation ran all 88 native cases, including all 12 backend-context parity
+  cases. Removing the library yields 88 native skips without the flag and 88 setup
+  failures with it; restoring it yields 88 passes in both modes. The full required
+  run passed with 2203 passed and 5 unrelated skips.
