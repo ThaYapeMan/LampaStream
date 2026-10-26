@@ -70,7 +70,8 @@ RENDER_COLUMNS = ["render_id", "virtual_time_s", "render_argument_s", "route", "
     "play_time_s", "scheduled_play_time_s", "schedule_target_s", "event_ids", "high_effect",
     "low_effect", "onset_consumed", "onset_envelope", "onset_envelope_bass",
     "onset_envelope_mid", "onset_envelope_treble", "onset_count_since_render", "onset_age_s",
-    "channel_id", "r", "g", "b"]
+    "channel_id", "r", "g", "b", "accent_value", "accent_mode",
+    "pre_r", "pre_g", "pre_b", "post_r", "post_g", "post_b"]
 SEND_COLUMNS = ["send_id", "virtual_time_s", "route", "generation", "scene_id", "channel_id",
                 "r", "g", "b", "r8", "g8", "b8", "interval_ms", "event_ids"]
 
@@ -374,7 +375,7 @@ class Replay:
             rng = getattr(layer._renderer, "_rng", None)
             if rng is not None:
                 rng.seed(self.args.seed + index)
-        render = mixer.render
+        render = engine._render_scene
 
         def traced(features, t):
             record = self.queued.get(id(features), self.current)
@@ -405,6 +406,7 @@ class Replay:
             self.tick_renders.append(identity)
             for channel in self.output.channels:
                 colour = scene.color_at(channel.position, t)
+                before = getattr(scene, "scene", scene).color_at(channel.position, t)
                 self.renders.append({"render_id": identity, "virtual_time_s": self.now,
                     "render_argument_s": t, "route": self.args.route,
                     "sequence": sequence, "play_time_s": features.play_monotonic
@@ -420,12 +422,16 @@ class Replay:
                         "onset_envelope", "onset_envelope_bass", "onset_envelope_mid",
                         "onset_envelope_treble", "onset_count_since_render", "onset_age_s")},
                     "channel_id": channel.channel_id,
-                    "r": colour.r, "g": colour.g, "b": colour.b})
+                    "r": colour.r, "g": colour.g, "b": colour.b,
+                    "accent_value": getattr(scene, "accent_value", 0.),
+                    "accent_mode": engine.profile.accent_mode,
+                    "pre_r": before.r, "pre_g": before.g, "pre_b": before.b,
+                    "post_r": colour.r, "post_g": colour.g, "post_b": colour.b})
             return TaggedScene(scene, identity, self.args.route,
                                features.timing_generation if self.args.route == "timestamped"
                                else self.output.output_generation)
 
-        mixer.render = traced
+        engine._render_scene = traced
 
     def finish_tick(self, engine):
         mixer = engine._effect
@@ -531,7 +537,15 @@ class Replay:
                  self.output.channels[0].channel_id]
         bins = Counter(math.floor(row["virtual_time_s"]) for row in sends)
         counts = [bins[i] for i in range(max(1, math.ceil(self.now)))]
-        return {"events": events, "publications": {self.args.route: one},
+        codes = (1 << self.output.capabilities.colour_depth_bits)-1
+        accent_stats = {
+            "events_accented": sum(r["onset_count_since_render"] for r in self.renders
+                if r["channel_id"] == self.output.channels[0].channel_id and r["accent_value"] > 0),
+            "max_lift_lsb": max((max(r[f"post_{c}"]-r[f"pre_{c}"] for c in "rgb")*codes
+                                 for r in self.renders), default=0),
+            "clipped_channels_count": sum(any(r[f"post_{c}"] >= 1 for c in "rgb")
+                                           for r in self.renders)}
+        return {"accent": accent_stats, "events": events, "publications": {self.args.route: one},
             "sends": len(sends), "sends_per_second": {
                 "p50": float(np.percentile(counts, 50)), "p95": float(np.percentile(counts, 95)),
                 "max": max(counts)}, "publication_queue_drops": self.pipeline.pub_dropped_count,

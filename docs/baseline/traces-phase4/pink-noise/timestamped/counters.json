@@ -1,0 +1,92 @@
+{
+  "accent": {
+    "clipped_channels_count": 0,
+    "events_accented": 80,
+    "max_lift_lsb": 82.421349
+  },
+  "event_mapping_fallbacks": 0,
+  "event_queue_drops": 0,
+  "events": {
+    "all": {
+      "expired": 0,
+      "lost": 0,
+      "merged": 0,
+      "received": 80,
+      "triggered": 80
+    },
+    "bass": {
+      "expired": 0,
+      "lost": 0,
+      "merged": 0,
+      "received": 0,
+      "triggered": 0
+    },
+    "mid": {
+      "expired": 0,
+      "lost": 0,
+      "merged": 0,
+      "received": 0,
+      "triggered": 0
+    },
+    "treble": {
+      "expired": 0,
+      "lost": 0,
+      "merged": 0,
+      "received": 0,
+      "triggered": 0
+    }
+  },
+  "extra_sends": {
+    "max_per_drain": 0,
+    "minimum_interval_s": 0.02,
+    "sends": 0,
+    "smallest_gap_s": null
+  },
+  "latency": {
+    "timestamped": {
+      "availability_ms": null,
+      "candidate_ms": null,
+      "first_render_ms": null,
+      "first_send_ms": null,
+      "hop_ms": null,
+      "lookahead_ms": {
+        "max": 10.0,
+        "median": 10.0,
+        "p95": 10.0
+      },
+      "schedule_error_ms": {
+        "max": 240.0,
+        "median": 60.0,
+        "p95": 210.5
+      },
+      "schedule_wait_ms": {
+        "max": 1465.0,
+        "median": 1446.666667,
+        "p95": 1460.0
+      },
+      "tick_wait_ms": {
+        "max": 255.833333,
+        "median": 80.0,
+        "p95": 226.208333
+      },
+      "window_acquisition_ms": null
+    }
+  },
+  "publication_queue_drops": 0,
+  "publications": {
+    "timestamped": {
+      "consumed": 416,
+      "published": 576,
+      "render_reads": 576,
+      "repeat_reads": 80,
+      "repeated": 80,
+      "skipped": 80
+    }
+  },
+  "sends": 230,
+  "sends_per_second": {
+    "max": 48,
+    "p50": 46.0,
+    "p95": 47.7
+  }
+}

@@ -1,0 +1,4 @@
+id,epoch,candidate_sample,availability_sample,lookahead_frames,strength,strength_raw,confidence,bands,dominant_band,play_monotonic,received_monotonic,disposition,event_time,first_render_over_half_s,first_send_s
+replay-0001:all:96000,replay-0001,96000,96480,1,1.0,1.704008,0.993503,"[""all""]",all,3.5,2.02,triggered,2.0,2.02,2.020001
+replay-0001:all:192000,replay-0001,192000,192480,1,1.0,2.763192,0.996003,"[""all""]",all,5.5,4.02,triggered,4.0,4.02,4.02
+replay-0001:all:288000,replay-0001,288000,288480,1,1.0,2.829724,0.996098,"[""all""]",all,7.5,6.02,triggered,6.0,6.02,6.02

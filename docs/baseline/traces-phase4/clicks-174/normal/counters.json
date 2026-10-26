@@ -1,0 +1,112 @@
+{
+  "accent": {
+    "clipped_channels_count": 0,
+    "events_accented": 28,
+    "max_lift_lsb": 127.164814
+  },
+  "event_mapping_fallbacks": 0,
+  "event_queue_drops": 0,
+  "events": {
+    "all": {
+      "expired": 0,
+      "lost": 0,
+      "merged": 0,
+      "received": 28,
+      "triggered": 28
+    },
+    "bass": {
+      "expired": 0,
+      "lost": 0,
+      "merged": 0,
+      "received": 0,
+      "triggered": 0
+    },
+    "mid": {
+      "expired": 0,
+      "lost": 0,
+      "merged": 0,
+      "received": 0,
+      "triggered": 0
+    },
+    "treble": {
+      "expired": 0,
+      "lost": 0,
+      "merged": 0,
+      "received": 0,
+      "triggered": 0
+    }
+  },
+  "extra_sends": {
+    "max_per_drain": 1,
+    "minimum_interval_s": 0.02,
+    "sends": 25,
+    "smallest_gap_s": 0.02
+  },
+  "latency": {
+    "normal": {
+      "availability_ms": {
+        "max": 10.0,
+        "median": 5.34375,
+        "p95": 9.529167
+      },
+      "candidate_ms": {
+        "max": 0.0,
+        "median": -4.65625,
+        "p95": -0.470833
+      },
+      "first_render_ms": {
+        "max": 22.645833,
+        "median": 16.375,
+        "p95": 22.175
+      },
+      "first_send_ms": {
+        "max": 34.9375,
+        "median": 19.052583,
+        "p95": 31.435767
+      },
+      "hop_ms": {
+        "max": 9.645833,
+        "median": 4.822917,
+        "p95": 9.188542
+      },
+      "lookahead_ms": {
+        "max": 10.0,
+        "median": 10.0,
+        "p95": 10.0
+      },
+      "schedule_error_ms": null,
+      "schedule_wait_ms": {
+        "max": 15.001,
+        "median": 0.0,
+        "p95": 13.25035
+      },
+      "tick_wait_ms": {
+        "max": 3.333333,
+        "median": 1.666667,
+        "p95": 3.333333
+      },
+      "window_acquisition_ms": {
+        "max": 10.0,
+        "median": 0.0,
+        "p95": 0.0
+      }
+    }
+  },
+  "publication_queue_drops": 24,
+  "publications": {
+    "normal": {
+      "consumed": 311,
+      "published": 1024,
+      "render_reads": 326,
+      "repeat_reads": 8,
+      "repeated": 7,
+      "skipped": 706
+    }
+  },
+  "sends": 326,
+  "sends_per_second": {
+    "max": 34,
+    "p50": 32.0,
+    "p95": 33.5
+  }
+}

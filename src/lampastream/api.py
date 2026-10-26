@@ -1133,6 +1133,10 @@ async def create_effect_route(request: Request, body: EffectCreateBody):
         raise HTTPException(
             status_code=422, detail=f"Unknown gradient palette: {body.gradient_palette!r}"
         )
+    try:
+        Effect(**body.model_dump())
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     effect = Effect(
         name=body.name,
         palette_id=body.palette_id,
@@ -1191,6 +1195,10 @@ async def patch_effect_route(effect_id: str, request: Request, body: EffectPatch
     if effect is None:
         raise HTTPException(status_code=404, detail="Effect not found")
     updates = body.model_dump(exclude_unset=True)
+    try:
+        Effect.from_dict({**effect.to_dict(), **updates})
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     if "name" in updates:
         _assert_name_unique(
             updates["name"],

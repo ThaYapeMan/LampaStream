@@ -47,7 +47,7 @@ class AccentScene:
         elif self.profile.accent_mode == "pop":
             s += (1-s)*amount
         # Interpolate peak intensity in linear light, then scale the encoded
-        # components together: HSV hue and saturation are preserved exactly.
+        # components together: HSV angle and saturation are preserved exactly.
         peak = _encoded(_linear(v) + (1-_linear(v))*amount)
         return Colour(*colorsys.hsv_to_rgb(h, s, min(1., peak)))
 

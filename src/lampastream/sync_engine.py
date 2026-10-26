@@ -3338,6 +3338,13 @@ class SyncEngine:
         """
         return bool(self._retiring)
 
+    def _render_scene(self, features, t):
+        scene = self._effect.render(features, t)
+        scene = self._accent.render(scene, features, self.profile, self._accent_positions)
+        self.last_accent_features = features
+        self.last_accent_value = self._accent.last_value
+        return scene
+
     def _onset_lift_enabled(self):
         profiles = [self.profile]
         for name in ("_active", "_mellow"):
@@ -3461,8 +3468,8 @@ class SyncEngine:
         from .accent import AccentLayer
 
         precision_guard = QuantisationGuard(capabilities)
-        accent = AccentLayer()
-        positions = tuple(ch.position for ch in getattr(output, "channels", ()))
+        self._accent = AccentLayer()
+        self._accent_positions = tuple(ch.position for ch in getattr(output, "channels", ()))
         self._onset_envelopes = {band: TriggerEnvelope(
             max(self.profile.onset_hold_s, capabilities.min_visible_hold_s),
             self.profile.onset_release_s) for band in ("all", "bass", "mid", "treble")}
@@ -3581,10 +3588,7 @@ class SyncEngine:
                         if event_boundary:
                             f = replace(f, play_monotonic=scene_time)
                         f = self._event_view(f, scene_time, timestamped=True)
-                        scene = self._effect.render(f, scene_time)
-                        scene = accent.render(scene, f, self.profile, positions)
-                        self.last_accent_features = f
-                        self.last_accent_value = accent.last_value
+                        scene = self._render_scene(f, scene_time)
                         if self._onset_lift_enabled():
                             scene = GuardedScene(scene, precision_guard,
                                 f.onset_envelope > precision_guard.lsb)
@@ -3676,10 +3680,7 @@ class SyncEngine:
                     latest = self._analyser._latest_pub
                     self._event_sample_reference = latest.sample_end if latest else 0
                     features = self._event_view(features, t)
-                scene: Scene = self._effect.render(features, t)
-                scene = accent.render(scene, features, self.profile, positions)
-                self.last_accent_features = features
-                self.last_accent_value = accent.last_value
+                scene: Scene = self._render_scene(features, t)
                 if self._onset_lift_enabled():
                     scene = GuardedScene(scene, precision_guard,
                         features.onset_envelope > precision_guard.lsb)
