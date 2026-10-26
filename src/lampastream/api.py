@@ -264,6 +264,13 @@ class EffectCreateBody(BaseModel):
     onset_retrigger: Literal["restart", "ignore_during_hold", "add_with_clamp"] = "restart"
     onset_lead_s: float = Field(default=0.02, ge=0, allow_inf_nan=False)
     onset_max_age_s: float = Field(default=0.5, gt=0)
+    accent_mode: Literal["lift", "pop", "palette_step", "off"] = "lift"
+    accent_amount: float = Field(default=0.35, ge=0, le=1, allow_inf_nan=False)
+    accent_band_weights: dict[str, float] = Field(
+        default_factory=lambda: {"bass": 1.0, "mid": 0.6, "treble": 0.4})
+    accent_strength_curve: float = Field(default=1.0, gt=0, allow_inf_nan=False)
+    accent_spatial: Literal["uniform", "by_band"] = "uniform"
+    accent_palette_step: float = Field(default=0.1, ge=0, le=1, allow_inf_nan=False)
     onset_flash_intensity: float = 0.0
 
 
@@ -290,6 +297,12 @@ class EffectPatchBody(BaseModel):
     onset_retrigger: Literal["restart", "ignore_during_hold", "add_with_clamp"] | None = None
     onset_lead_s: float | None = Field(default=None, ge=0, allow_inf_nan=False)
     onset_max_age_s: float | None = Field(default=None, gt=0)
+    accent_mode: Literal["lift", "pop", "palette_step", "off"] | None = None
+    accent_amount: float | None = Field(default=None, ge=0, le=1, allow_inf_nan=False)
+    accent_band_weights: dict[str, float] | None = None
+    accent_strength_curve: float | None = Field(default=None, gt=0, allow_inf_nan=False)
+    accent_spatial: Literal["uniform", "by_band"] | None = None
+    accent_palette_step: float | None = Field(default=None, ge=0, le=1, allow_inf_nan=False)
     onset_flash_intensity: float | None = None
 
 
@@ -1143,8 +1156,16 @@ async def create_effect_route(request: Request, body: EffectCreateBody):
         onset_lead_s=body.onset_lead_s,
         onset_max_age_s=body.onset_max_age_s,
         onset_flash_intensity=body.onset_flash_intensity,
+        accent_mode=body.accent_mode,
+        accent_amount=body.accent_amount,
+        accent_band_weights=body.accent_band_weights,
+        accent_strength_curve=body.accent_strength_curve,
+        accent_spatial=body.accent_spatial,
+        accent_palette_step=body.accent_palette_step,
+
     )
     try:
+        effect.__post_init__()
         _validate_band_colours(effect.band_colours, effect.band_playback,
                                effect.band_advance, effect.band_advance_interval_s)
     except ValueError as exc:
@@ -1188,6 +1209,7 @@ async def patch_effect_route(effect_id: str, request: Request, body: EffectPatch
             )
         setattr(effect, field, value)
     try:
+        effect.__post_init__()
         _validate_band_colours(effect.band_colours, effect.band_playback,
                                effect.band_advance, effect.band_advance_interval_s)
     except ValueError as exc:

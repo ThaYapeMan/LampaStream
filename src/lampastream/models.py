@@ -166,6 +166,24 @@ class PlayerLatency:
 
 def _validate_onset_effect(effect):
     import math
+    if effect.accent_mode not in {"lift", "pop", "palette_step", "off"}:
+        raise ValueError("Invalid accent_mode")
+    if effect.accent_spatial not in {"uniform", "by_band"}:
+        raise ValueError("Invalid accent_spatial")
+    for name in ("accent_amount", "accent_palette_step", "accent_strength_curve"):
+        value = getattr(effect, name)
+        if type(value) not in (int, float) or not math.isfinite(value) or value < 0:
+            raise ValueError(f"Invalid {name}")
+    if (effect.accent_amount > 1 or effect.accent_palette_step > 1
+            or effect.accent_strength_curve <= 0):
+        raise ValueError("Accent amount/step must be 0..1 and curve positive")
+    weights = effect.accent_band_weights
+    if not isinstance(weights, dict) or set(weights) != {"bass", "mid", "treble"} or any(
+        type(v) not in (int, float) or not math.isfinite(v) or not 0 <= v <= 1
+        for v in weights.values()
+    ):
+        raise ValueError("Accent band weights must contain bass, mid, treble in 0..1")
+    import math
     for name in ("onset_hold_s", "onset_release_s", "onset_lead_s", "onset_max_age_s"):
         value = getattr(effect, name)
         if not math.isfinite(value) or value < 0:
@@ -314,6 +332,13 @@ class Profile:
     onset_lead_s: float = 0.02
     onset_max_age_s: float = 0.5
     onset_flash_intensity: float = 0.0
+    accent_mode: str = "lift"
+    accent_amount: float = 0.35
+    accent_band_weights: dict[str, float] = field(
+        default_factory=lambda: {"bass": 1.0, "mid": 0.6, "treble": 0.4})
+    accent_strength_curve: float = 1.0
+    accent_spatial: str = "uniform"
+    accent_palette_step: float = 0.1
 
     enabled: bool = True
 
@@ -610,6 +635,13 @@ class Effect:
     onset_lead_s: float = 0.02
     onset_max_age_s: float = 0.5
     onset_flash_intensity: float = 0.0
+    accent_mode: str = "lift"
+    accent_amount: float = 0.35
+    accent_band_weights: dict[str, float] = field(
+        default_factory=lambda: {"bass": 1.0, "mid": 0.6, "treble": 0.4})
+    accent_strength_curve: float = 1.0
+    accent_spatial: str = "uniform"
+    accent_palette_step: float = 0.1
 
     def __post_init__(self):
         _validate_onset_effect(self)
@@ -639,6 +671,13 @@ class Effect:
             "onset_lead_s": self.onset_lead_s,
             "onset_max_age_s": self.onset_max_age_s,
             "onset_flash_intensity": self.onset_flash_intensity,
+            "accent_mode": self.accent_mode,
+            "accent_amount": self.accent_amount,
+            "accent_band_weights": self.accent_band_weights,
+            "accent_strength_curve": self.accent_strength_curve,
+            "accent_spatial": self.accent_spatial,
+            "accent_palette_step": self.accent_palette_step,
+
         }
 
     @classmethod
