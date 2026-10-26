@@ -236,3 +236,31 @@ SyncEngine drains events on both routes and projects them onto each scene's cloc
 `trace_output.py` loads capabilities from room JSON; replay_chain exports events.csv
 and independent event-disposition counters. The baseline sections above retain their
 original revision anchor; these additions replace its boolean onset path only.
+
+### LAT-01 additions
+
+`pcm_source.ONSET_WINDOW_SIZE` selects the independent 512-sample onset STFT;
+`PcmStft` supports 256/512/1024/2048 and an optional right-aligned hop clock.
+`CanonicalAnalysisPipeline` computes both stereo magnitude streams once per hop;
+`SharedAnalysisFrame.mag_frames_short` and `hop_sample_starts_short` preserve the
+independent short clock. SpectrumProcessor and bass use the original long stream.
+BeatDetector applies log-filtered short flux to combined/SuperFlux and short
+mid/treble slices to multiband, retaining candidate hop coordinates and long bass.
+
+`SyncEngine.run` owns one output coroutine: configurable `output_render_hz`
+(default 30), ≤5 ms event drains, capability-based inter-send spacing, independent
+extra scene scheduling and exact timestamped event deadlines. `SceneSchedule.next_due`
+exposes the earliest fenced heap deadline. Continuous timestamped scenes keep
+cadence quantisation. Zero-delay continuous output coalesces when its cadence
+exceeds the capability-based send ceiling; delay-shrink bursts remain measurable.
+
+`replay_chain.Replay.latency_rows` joins sidecar truth to actual event/render/send
+clocks and writes latency.csv. `counters.extra_sends` exposes minimum spacing and
+maximum sends per drain. `tests/replay_cache_support.DiskReplays` shares analysis
+and replay artifacts under session temporary storage using per-key file locks;
+regression helpers and replay-chain references consume the same session fixture.
+`test_latency_regression.py` asserts software timing, spacing, band alignment and
+phase-two idle-colour hashes; `test_latency_frontend.py` covers window/chunk clocks.
+
+`scripts/benchmark_replay.py` measures analysis/output CPU cost with optional
+single-core affinity and reports virtual backlog and separate queue-drop classes.

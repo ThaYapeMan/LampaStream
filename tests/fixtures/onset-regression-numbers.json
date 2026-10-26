@@ -1,52 +1,52 @@
 {
-  "measurement_commit": "757de73",
+  "measurement_commit": "acc1bcb",
   "panning": {
     "combined": {
       "all": [
         {
-          "availability_offset_median": 480.0,
-          "candidate_offset_median": 0.0,
-          "candidate_strength_median": 282.260588,
+          "availability_offset_median": 0.0,
+          "candidate_offset_median": -480.0,
+          "candidate_strength_median": 1.870075,
           "events": 9,
-          "reported_strength_median": 282.260588
+          "reported_strength_median": 1.870075
         },
         {
-          "availability_offset_median": 480.0,
-          "candidate_offset_median": 0.0,
-          "candidate_strength_median": 277.083246,
+          "availability_offset_median": 0.0,
+          "candidate_offset_median": -480.0,
+          "candidate_strength_median": 1.836823,
           "events": 10,
-          "reported_strength_median": 277.083246
+          "reported_strength_median": 1.836823
         }
       ]
     },
     "multiband": {
       "all": [
         {
-          "availability_offset_median": 480.0,
-          "candidate_offset_median": 0.0,
-          "candidate_strength_median": 260.325916,
+          "availability_offset_median": 0.0,
+          "candidate_offset_median": -480.0,
+          "candidate_strength_median": 11.168447,
           "events": 9,
-          "reported_strength_median": 260.325916
+          "reported_strength_median": 11.168447
         },
         {
-          "availability_offset_median": 480.0,
-          "candidate_offset_median": 0.0,
-          "candidate_strength_median": 255.55328000000003,
+          "availability_offset_median": 0.0,
+          "candidate_offset_median": -480.0,
+          "candidate_strength_median": 10.963674000000001,
           "events": 10,
-          "reported_strength_median": 255.55328000000003
+          "reported_strength_median": 10.963674000000001
         }
       ],
       "bass": [
         {
-          "availability_offset_median": 480.0,
-          "candidate_offset_median": 0.0,
+          "availability_offset_median": 0.0,
+          "candidate_offset_median": -480.0,
           "candidate_strength_median": 2.807108,
           "events": 9,
           "reported_strength_median": 2.807108
         },
         {
-          "availability_offset_median": 480.0,
-          "candidate_offset_median": 0.0,
+          "availability_offset_median": 0.0,
+          "candidate_offset_median": -480.0,
           "candidate_strength_median": 2.7550790000000003,
           "events": 10,
           "reported_strength_median": 2.7550790000000003
@@ -54,52 +54,53 @@
       ],
       "mid": [
         {
-          "availability_offset_median": 480.0,
-          "candidate_offset_median": 0.0,
-          "candidate_strength_median": 19.127564,
+          "availability_offset_median": 0.0,
+          "candidate_offset_median": -480.0,
+          "candidate_strength_median": 0.644805,
           "events": 9,
-          "reported_strength_median": 19.127564
+          "reported_strength_median": 0.644805
         },
         {
-          "availability_offset_median": 480.0,
-          "candidate_offset_median": 0.0,
-          "candidate_strength_median": 18.774886,
+          "availability_offset_median": 0.0,
+          "candidate_offset_median": -480.0,
+          "candidate_strength_median": 0.6329845000000001,
           "events": 10,
-          "reported_strength_median": 18.774886
+          "reported_strength_median": 0.6329845000000001
         }
       ],
       "treble": [
         {
-          "availability_offset_median": 480.0,
-          "candidate_offset_median": 0.0,
-          "candidate_strength_median": 260.325916,
+          "availability_offset_median": 0.0,
+          "candidate_offset_median": -480.0,
+          "candidate_strength_median": 11.168447,
           "events": 9,
-          "reported_strength_median": 260.325916
+          "reported_strength_median": 11.168447
         },
         {
-          "availability_offset_median": 480.0,
-          "candidate_offset_median": 0.0,
-          "candidate_strength_median": 255.55328000000003,
+          "availability_offset_median": 0.0,
+          "candidate_offset_median": -480.0,
+          "candidate_strength_median": 10.963674000000001,
           "events": 10,
-          "reported_strength_median": 255.55328000000003
+          "reported_strength_median": 10.963674000000001
         }
       ]
     }
   },
   "phase2_reason": "Candidate-attributed one-hop picker, frozen silence reference, independent event intake; triggered replaces accepted/rendered. Beat-only publications no longer replace continuous latest or advance timestamped ballistics; skipped flags survive as queued events.",
+  "phase3_reason": "LAT-01: independent short log flux, unchanged long bass/spectrum, event sends between cadence ticks, exact timestamped event deadlines; deliberate exact publication and detector pins.",
   "position": {
     "anti-phase/combined": {
       "all": {
         "availability": {
           "false_positives": 0,
-          "max_abs_samples": 480,
-          "median_samples": 480.0,
+          "max_abs_samples": 0,
+          "median_samples": 0.0,
           "misses": 0
         },
         "candidate": {
           "false_positives": 0,
-          "max_abs_samples": 0,
-          "median_samples": 0.0,
+          "max_abs_samples": 480,
+          "median_samples": -480.0,
           "misses": 0
         },
         "event_count": 19,
@@ -164,14 +165,14 @@
       "all": {
         "availability": {
           "false_positives": 0,
-          "max_abs_samples": 480,
-          "median_samples": 480.0,
+          "max_abs_samples": 0,
+          "median_samples": 0.0,
           "misses": 0
         },
         "candidate": {
           "false_positives": 0,
-          "max_abs_samples": 0,
-          "median_samples": 0.0,
+          "max_abs_samples": 480,
+          "median_samples": -480.0,
           "misses": 0
         },
         "event_count": 19,
@@ -183,14 +184,14 @@
       "bass": {
         "availability": {
           "false_positives": 0,
-          "max_abs_samples": 480,
-          "median_samples": 480.0,
+          "max_abs_samples": 0,
+          "median_samples": 0.0,
           "misses": 0
         },
         "candidate": {
           "false_positives": 0,
-          "max_abs_samples": 0,
-          "median_samples": 0.0,
+          "max_abs_samples": 480,
+          "median_samples": -480.0,
           "misses": 0
         },
         "event_count": 19,
@@ -202,14 +203,14 @@
       "mid": {
         "availability": {
           "false_positives": 0,
-          "max_abs_samples": 480,
-          "median_samples": 480.0,
+          "max_abs_samples": 0,
+          "median_samples": 0.0,
           "misses": 0
         },
         "candidate": {
           "false_positives": 0,
-          "max_abs_samples": 0,
-          "median_samples": 0.0,
+          "max_abs_samples": 480,
+          "median_samples": -480.0,
           "misses": 0
         },
         "event_count": 19,
@@ -221,14 +222,14 @@
       "treble": {
         "availability": {
           "false_positives": 0,
-          "max_abs_samples": 480,
-          "median_samples": 480.0,
+          "max_abs_samples": 0,
+          "median_samples": 0.0,
           "misses": 0
         },
         "candidate": {
           "false_positives": 0,
-          "max_abs_samples": 0,
-          "median_samples": 0.0,
+          "max_abs_samples": 480,
+          "median_samples": -480.0,
           "misses": 0
         },
         "event_count": 19,
@@ -392,14 +393,14 @@
       "all": {
         "availability": {
           "false_positives": 0,
-          "max_abs_samples": 840,
-          "median_samples": 600.0,
+          "max_abs_samples": 480,
+          "median_samples": 240.0,
           "misses": 0
         },
         "candidate": {
           "false_positives": 0,
-          "max_abs_samples": 360,
-          "median_samples": 120.0,
+          "max_abs_samples": 420,
+          "median_samples": -240.0,
           "misses": 0
         },
         "event_count": 21,
@@ -464,14 +465,14 @@
       "all": {
         "availability": {
           "false_positives": 0,
-          "max_abs_samples": 780,
-          "median_samples": 600.0,
+          "max_abs_samples": 480,
+          "median_samples": 240.0,
           "misses": 0
         },
         "candidate": {
           "false_positives": 0,
-          "max_abs_samples": 300,
-          "median_samples": 120.0,
+          "max_abs_samples": 420,
+          "median_samples": -240.0,
           "misses": 0
         },
         "event_count": 21,
@@ -483,14 +484,14 @@
       "bass": {
         "availability": {
           "false_positives": 0,
-          "max_abs_samples": 780,
-          "median_samples": 600.0,
+          "max_abs_samples": 480,
+          "median_samples": 240.0,
           "misses": 0
         },
         "candidate": {
           "false_positives": 0,
-          "max_abs_samples": 300,
-          "median_samples": 120.0,
+          "max_abs_samples": 420,
+          "median_samples": -240.0,
           "misses": 0
         },
         "event_count": 21,
@@ -502,14 +503,14 @@
       "mid": {
         "availability": {
           "false_positives": 0,
-          "max_abs_samples": 780,
-          "median_samples": 600.0,
+          "max_abs_samples": 480,
+          "median_samples": 240.0,
           "misses": 0
         },
         "candidate": {
           "false_positives": 0,
-          "max_abs_samples": 300,
-          "median_samples": 120.0,
+          "max_abs_samples": 420,
+          "median_samples": -240.0,
           "misses": 0
         },
         "event_count": 21,
@@ -521,14 +522,14 @@
       "treble": {
         "availability": {
           "false_positives": 0,
-          "max_abs_samples": 780,
-          "median_samples": 600.0,
+          "max_abs_samples": 480,
+          "median_samples": 240.0,
           "misses": 0
         },
         "candidate": {
           "false_positives": 0,
-          "max_abs_samples": 300,
-          "median_samples": 120.0,
+          "max_abs_samples": 420,
+          "median_samples": -240.0,
           "misses": 0
         },
         "event_count": 21,
@@ -542,14 +543,14 @@
       "all": {
         "availability": {
           "false_positives": 0,
-          "max_abs_samples": 861,
-          "median_samples": 620.5,
+          "max_abs_samples": 480,
+          "median_samples": 256.5,
           "misses": 0
         },
         "candidate": {
           "false_positives": 0,
-          "max_abs_samples": 381,
-          "median_samples": 140.5,
+          "max_abs_samples": 463,
+          "median_samples": -223.5,
           "misses": 0
         },
         "event_count": 28,
@@ -614,14 +615,14 @@
       "all": {
         "availability": {
           "false_positives": 0,
-          "max_abs_samples": 861,
-          "median_samples": 604.0,
+          "max_abs_samples": 480,
+          "median_samples": 256.5,
           "misses": 0
         },
         "candidate": {
           "false_positives": 0,
-          "max_abs_samples": 381,
-          "median_samples": 124.0,
+          "max_abs_samples": 463,
+          "median_samples": -223.5,
           "misses": 0
         },
         "event_count": 28,
@@ -633,14 +634,14 @@
       "bass": {
         "availability": {
           "false_positives": 0,
-          "max_abs_samples": 861,
-          "median_samples": 604.0,
+          "max_abs_samples": 480,
+          "median_samples": 256.5,
           "misses": 0
         },
         "candidate": {
           "false_positives": 0,
-          "max_abs_samples": 381,
-          "median_samples": 124.0,
+          "max_abs_samples": 463,
+          "median_samples": -223.5,
           "misses": 0
         },
         "event_count": 28,
@@ -652,14 +653,14 @@
       "mid": {
         "availability": {
           "false_positives": 0,
-          "max_abs_samples": 861,
-          "median_samples": 604.0,
+          "max_abs_samples": 480,
+          "median_samples": 256.5,
           "misses": 0
         },
         "candidate": {
           "false_positives": 0,
-          "max_abs_samples": 381,
-          "median_samples": 124.0,
+          "max_abs_samples": 463,
+          "median_samples": -223.5,
           "misses": 0
         },
         "event_count": 28,
@@ -671,14 +672,14 @@
       "treble": {
         "availability": {
           "false_positives": 0,
-          "max_abs_samples": 861,
-          "median_samples": 604.0,
+          "max_abs_samples": 480,
+          "median_samples": 256.5,
           "misses": 0
         },
         "candidate": {
           "false_positives": 0,
-          "max_abs_samples": 381,
-          "median_samples": 124.0,
+          "max_abs_samples": 463,
+          "median_samples": -223.5,
           "misses": 0
         },
         "event_count": 28,
@@ -842,14 +843,14 @@
       "all": {
         "availability": {
           "false_positives": 0,
-          "max_abs_samples": 480,
-          "median_samples": 480.0,
+          "max_abs_samples": 0,
+          "median_samples": 0.0,
           "misses": 0
         },
         "candidate": {
           "false_positives": 0,
-          "max_abs_samples": 0,
-          "median_samples": 0.0,
+          "max_abs_samples": 480,
+          "median_samples": -480.0,
           "misses": 0
         },
         "event_count": 19,
@@ -914,14 +915,14 @@
       "all": {
         "availability": {
           "false_positives": 0,
-          "max_abs_samples": 480,
-          "median_samples": 480.0,
+          "max_abs_samples": 0,
+          "median_samples": 0.0,
           "misses": 0
         },
         "candidate": {
           "false_positives": 0,
-          "max_abs_samples": 0,
-          "median_samples": 0.0,
+          "max_abs_samples": 480,
+          "median_samples": -480.0,
           "misses": 0
         },
         "event_count": 19,
@@ -933,14 +934,14 @@
       "bass": {
         "availability": {
           "false_positives": 0,
-          "max_abs_samples": 480,
-          "median_samples": 480.0,
+          "max_abs_samples": 0,
+          "median_samples": 0.0,
           "misses": 0
         },
         "candidate": {
           "false_positives": 0,
-          "max_abs_samples": 0,
-          "median_samples": 0.0,
+          "max_abs_samples": 480,
+          "median_samples": -480.0,
           "misses": 0
         },
         "event_count": 19,
@@ -952,14 +953,14 @@
       "mid": {
         "availability": {
           "false_positives": 0,
-          "max_abs_samples": 480,
-          "median_samples": 480.0,
+          "max_abs_samples": 0,
+          "median_samples": 0.0,
           "misses": 0
         },
         "candidate": {
           "false_positives": 0,
-          "max_abs_samples": 0,
-          "median_samples": 0.0,
+          "max_abs_samples": 480,
+          "median_samples": -480.0,
           "misses": 0
         },
         "event_count": 19,
@@ -971,14 +972,14 @@
       "treble": {
         "availability": {
           "false_positives": 0,
-          "max_abs_samples": 480,
-          "median_samples": 480.0,
+          "max_abs_samples": 0,
+          "median_samples": 0.0,
           "misses": 0
         },
         "candidate": {
           "false_positives": 0,
-          "max_abs_samples": 0,
-          "median_samples": 0.0,
+          "max_abs_samples": 480,
+          "median_samples": -480.0,
           "misses": 0
         },
         "event_count": 19,
@@ -992,14 +993,14 @@
       "all": {
         "availability": {
           "false_positives": 0,
-          "max_abs_samples": 96960,
-          "median_samples": 960.0,
+          "max_abs_samples": 96480,
+          "median_samples": 480.0,
           "misses": 1
         },
         "candidate": {
           "false_positives": 0,
-          "max_abs_samples": 96480,
-          "median_samples": 480.0,
+          "max_abs_samples": 96000,
+          "median_samples": 0.0,
           "misses": 1
         },
         "event_count": 3,
@@ -1144,25 +1145,25 @@
       "all": {
         "below_tenth_fraction": 0.0,
         "candidate": [
-          874.513342,
-          874.513342,
-          874.513342,
-          874.513342,
-          874.513342,
-          874.513342,
-          874.513342,
-          874.513342,
-          874.513342,
-          874.513342,
-          874.513342,
-          874.513342,
-          874.513342,
-          874.513342,
-          874.513342,
-          874.513342,
-          874.513342,
-          874.513342,
-          874.513342
+          2.00735,
+          2.00735,
+          2.00735,
+          2.00735,
+          2.00735,
+          2.00735,
+          2.00735,
+          2.00735,
+          2.00735,
+          2.00735,
+          2.00735,
+          2.00735,
+          2.00735,
+          2.00735,
+          2.00735,
+          2.00735,
+          2.00735,
+          2.00735,
+          2.00735
         ],
         "candidate_samples": [
           24000,
@@ -1186,25 +1187,25 @@
           456000
         ],
         "reported": [
-          874.513342,
-          874.513342,
-          874.513342,
-          874.513342,
-          874.513342,
-          874.513342,
-          874.513342,
-          874.513342,
-          874.513342,
-          874.513342,
-          874.513342,
-          874.513342,
-          874.513342,
-          874.513342,
-          874.513342,
-          874.513342,
-          874.513342,
-          874.513342,
-          874.513342
+          2.00735,
+          2.00735,
+          2.00735,
+          2.00735,
+          2.00735,
+          2.00735,
+          2.00735,
+          2.00735,
+          2.00735,
+          2.00735,
+          2.00735,
+          2.00735,
+          2.00735,
+          2.00735,
+          2.00735,
+          2.00735,
+          2.00735,
+          2.00735,
+          2.00735
         ]
       },
       "bass": {
@@ -1230,25 +1231,25 @@
       "all": {
         "below_tenth_fraction": 0.0,
         "candidate": [
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291
         ],
         "candidate_samples": [
           24000,
@@ -1272,25 +1273,25 @@
           456000
         ],
         "reported": [
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291
         ]
       },
       "bass": {
@@ -1362,25 +1363,25 @@
       "mid": {
         "below_tenth_fraction": 0.0,
         "candidate": [
-          16.765215,
-          16.765215,
-          16.765215,
-          16.765215,
-          16.765215,
-          16.765215,
-          16.765215,
-          16.765215,
-          16.765215,
-          16.765215,
-          16.765215,
-          16.765215,
-          16.765215,
-          16.765215,
-          16.765215,
-          16.765215,
-          16.765215,
-          16.765215,
-          16.765215
+          0.832825,
+          0.832825,
+          0.832825,
+          0.832825,
+          0.832825,
+          0.832825,
+          0.832825,
+          0.832825,
+          0.832825,
+          0.832825,
+          0.832825,
+          0.832825,
+          0.832825,
+          0.832825,
+          0.832825,
+          0.832825,
+          0.832825,
+          0.832825,
+          0.832825
         ],
         "candidate_samples": [
           24000,
@@ -1404,49 +1405,49 @@
           456000
         ],
         "reported": [
-          16.765215,
-          16.765215,
-          16.765215,
-          16.765215,
-          16.765215,
-          16.765215,
-          16.765215,
-          16.765215,
-          16.765215,
-          16.765215,
-          16.765215,
-          16.765215,
-          16.765215,
-          16.765215,
-          16.765215,
-          16.765215,
-          16.765215,
-          16.765215,
-          16.765215
+          0.832825,
+          0.832825,
+          0.832825,
+          0.832825,
+          0.832825,
+          0.832825,
+          0.832825,
+          0.832825,
+          0.832825,
+          0.832825,
+          0.832825,
+          0.832825,
+          0.832825,
+          0.832825,
+          0.832825,
+          0.832825,
+          0.832825,
+          0.832825,
+          0.832825
         ]
       },
       "treble": {
         "below_tenth_fraction": 0.0,
         "candidate": [
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291
         ],
         "candidate_samples": [
           24000,
@@ -1470,25 +1471,25 @@
           456000
         ],
         "reported": [
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254,
-          855.269254
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291,
+          61.393291
         ]
       }
     },
@@ -1496,19 +1497,19 @@
       "all": {
         "below_tenth_fraction": 0.0,
         "candidate": [
-          73.093175,
-          231.130563,
-          431.950488
+          1.704008,
+          2.763192,
+          2.829724
         ],
         "candidate_samples": [
-          96480,
-          192480,
-          288480
+          96000,
+          192000,
+          288000
         ],
         "reported": [
-          73.093175,
-          231.130563,
-          431.950488
+          1.704008,
+          2.763192,
+          2.829724
         ]
       },
       "bass": {
@@ -1534,19 +1535,19 @@
       "all": {
         "below_tenth_fraction": 0.0,
         "candidate": [
-          66.944437,
-          211.683293,
-          396.026783
+          18.328066,
+          57.953941,
+          104.617752
         ],
         "candidate_samples": [
           96000,
           192000,
-          287520
+          288000
         ],
         "reported": [
-          66.944437,
-          211.683293,
-          396.026783
+          18.328066,
+          57.953941,
+          104.617752
         ]
       },
       "bass": {
@@ -1559,7 +1560,7 @@
         "candidate_samples": [
           96000,
           192000,
-          287520
+          288000
         ],
         "reported": [
           3.279618,
@@ -1570,37 +1571,37 @@
       "mid": {
         "below_tenth_fraction": 0.0,
         "candidate": [
-          66.944437,
-          211.683293,
-          396.026783
+          18.328066,
+          57.953941,
+          104.617752
         ],
         "candidate_samples": [
           96000,
           192000,
-          287520
+          288000
         ],
         "reported": [
-          66.944437,
-          211.683293,
-          396.026783
+          18.328066,
+          57.953941,
+          104.617752
         ]
       },
       "treble": {
         "below_tenth_fraction": 0.0,
         "candidate": [
-          4.473971,
-          14.145273,
-          24.736803
+          1.021135,
+          3.228827,
+          5.995355
         ],
         "candidate_samples": [
           96000,
           192000,
-          287520
+          288000
         ],
         "reported": [
-          4.473971,
-          14.145273,
-          24.736803
+          1.021135,
+          3.228827,
+          5.995355
         ]
       }
     }
@@ -1638,8 +1639,8 @@
         ]
       },
       "publications": [
-        298,
-        716,
+        317,
+        697,
         1
       ],
       "skipped_flags": {
@@ -1693,9 +1694,9 @@
         ]
       },
       "publications": [
-        976,
-        19,
-        20
+        957,
+        20,
+        38
       ],
       "skipped_flags": {
         "all": {
@@ -1748,9 +1749,9 @@
         ]
       },
       "publications": [
-        597,
-        417,
-        1
+        593,
+        411,
+        11
       ],
       "skipped_flags": {
         "all": {
@@ -1803,9 +1804,9 @@
         ]
       },
       "publications": [
-        976,
-        19,
-        20
+        959,
+        20,
+        36
       ],
       "skipped_flags": {
         "all": {
@@ -1858,9 +1859,9 @@
         ]
       },
       "publications": [
-        996,
+        977,
         19,
-        0
+        19
       ],
       "skipped_flags": {
         "all": {
@@ -1913,9 +1914,9 @@
         ]
       },
       "publications": [
-        996,
+        977,
         19,
-        0
+        19
       ],
       "skipped_flags": {
         "all": {
@@ -1968,9 +1969,9 @@
         ]
       },
       "publications": [
-        996,
+        977,
         19,
-        0
+        19
       ],
       "skipped_flags": {
         "all": {
@@ -2023,9 +2024,9 @@
         ]
       },
       "publications": [
-        996,
+        977,
         19,
-        0
+        19
       ],
       "skipped_flags": {
         "all": {
@@ -2078,9 +2079,9 @@
         ]
       },
       "publications": [
-        298,
-        716,
-        1
+        290,
+        713,
+        12
       ],
       "skipped_flags": {
         "all": {
@@ -2133,9 +2134,9 @@
         ]
       },
       "publications": [
-        976,
-        19,
-        20
+        961,
+        20,
+        34
       ],
       "skipped_flags": {
         "all": {
@@ -2188,9 +2189,9 @@
         ]
       },
       "publications": [
-        597,
-        417,
-        1
+        589,
+        414,
+        12
       ],
       "skipped_flags": {
         "all": {
@@ -2243,9 +2244,9 @@
         ]
       },
       "publications": [
-        976,
-        19,
-        20
+        961,
+        20,
+        34
       ],
       "skipped_flags": {
         "all": {
@@ -2298,9 +2299,9 @@
         ]
       },
       "publications": [
-        996,
+        977,
         19,
-        0
+        19
       ],
       "skipped_flags": {
         "all": {
@@ -2353,9 +2354,9 @@
         ]
       },
       "publications": [
-        996,
+        977,
         19,
-        0
+        19
       ],
       "skipped_flags": {
         "all": {
@@ -2408,9 +2409,9 @@
         ]
       },
       "publications": [
-        996,
+        977,
         19,
-        0
+        19
       ],
       "skipped_flags": {
         "all": {
@@ -2463,9 +2464,9 @@
         ]
       },
       "publications": [
-        996,
+        977,
         19,
-        0
+        19
       ],
       "skipped_flags": {
         "all": {
@@ -2518,8 +2519,8 @@
         ]
       },
       "publications": [
-        298,
-        716,
+        317,
+        697,
         1
       ],
       "skipped_flags": {
@@ -2573,9 +2574,9 @@
         ]
       },
       "publications": [
-        976,
-        19,
-        20
+        957,
+        20,
+        38
       ],
       "skipped_flags": {
         "all": {
@@ -2628,8 +2629,8 @@
         ]
       },
       "publications": [
-        597,
-        417,
+        616,
+        398,
         1
       ],
       "skipped_flags": {
@@ -2683,9 +2684,9 @@
         ]
       },
       "publications": [
-        976,
+        957,
         19,
-        20
+        39
       ],
       "skipped_flags": {
         "all": {
@@ -2738,9 +2739,9 @@
         ]
       },
       "publications": [
-        996,
+        977,
         19,
-        0
+        19
       ],
       "skipped_flags": {
         "all": {
@@ -2793,9 +2794,9 @@
         ]
       },
       "publications": [
-        996,
+        977,
         19,
-        0
+        19
       ],
       "skipped_flags": {
         "all": {
@@ -2848,9 +2849,9 @@
         ]
       },
       "publications": [
-        996,
+        977,
         19,
-        0
+        19
       ],
       "skipped_flags": {
         "all": {
@@ -2903,9 +2904,9 @@
         ]
       },
       "publications": [
-        996,
+        977,
         19,
-        0
+        19
       ],
       "skipped_flags": {
         "all": {
@@ -2958,9 +2959,9 @@
         ]
       },
       "publications": [
-        298,
+        279,
         716,
-        1
+        20
       ],
       "skipped_flags": {
         "all": {
@@ -3013,9 +3014,9 @@
         ]
       },
       "publications": [
-        976,
-        19,
-        20
+        956,
+        20,
+        39
       ],
       "skipped_flags": {
         "all": {
@@ -3068,9 +3069,9 @@
         ]
       },
       "publications": [
-        597,
+        578,
         417,
-        1
+        20
       ],
       "skipped_flags": {
         "all": {
@@ -3123,9 +3124,9 @@
         ]
       },
       "publications": [
-        976,
+        958,
         19,
-        20
+        38
       ],
       "skipped_flags": {
         "all": {
@@ -3178,9 +3179,9 @@
         ]
       },
       "publications": [
-        996,
+        977,
         19,
-        0
+        19
       ],
       "skipped_flags": {
         "all": {
@@ -3233,9 +3234,9 @@
         ]
       },
       "publications": [
-        996,
+        977,
         19,
-        0
+        19
       ],
       "skipped_flags": {
         "all": {
@@ -3288,9 +3289,9 @@
         ]
       },
       "publications": [
-        996,
+        977,
         19,
-        0
+        19
       ],
       "skipped_flags": {
         "all": {
@@ -3343,9 +3344,9 @@
         ]
       },
       "publications": [
-        996,
+        977,
         19,
-        0
+        19
       ],
       "skipped_flags": {
         "all": {
@@ -3398,9 +3399,9 @@
         ]
       },
       "publications": [
-        298,
-        718,
-        1
+        311,
+        702,
+        4
       ],
       "skipped_flags": {
         "all": {
@@ -3453,9 +3454,9 @@
         ]
       },
       "publications": [
-        974,
-        21,
-        22
+        955,
+        22,
+        40
       ],
       "skipped_flags": {
         "all": {
@@ -3508,9 +3509,9 @@
         ]
       },
       "publications": [
-        597,
-        419,
-        1
+        599,
+        410,
+        8
       ],
       "skipped_flags": {
         "all": {
@@ -3563,9 +3564,9 @@
         ]
       },
       "publications": [
-        974,
+        959,
         21,
-        22
+        37
       ],
       "skipped_flags": {
         "all": {
@@ -3618,9 +3619,9 @@
         ]
       },
       "publications": [
-        996,
+        975,
         21,
-        0
+        21
       ],
       "skipped_flags": {
         "all": {
@@ -3673,9 +3674,9 @@
         ]
       },
       "publications": [
-        996,
+        975,
         21,
-        0
+        21
       ],
       "skipped_flags": {
         "all": {
@@ -3728,9 +3729,9 @@
         ]
       },
       "publications": [
-        996,
+        975,
         21,
-        0
+        21
       ],
       "skipped_flags": {
         "all": {
@@ -3783,9 +3784,9 @@
         ]
       },
       "publications": [
-        996,
+        975,
         21,
-        0
+        21
       ],
       "skipped_flags": {
         "all": {
@@ -3838,9 +3839,9 @@
         ]
       },
       "publications": [
-        298,
-        718,
-        1
+        307,
+        704,
+        6
       ],
       "skipped_flags": {
         "all": {
@@ -3893,9 +3894,9 @@
         ]
       },
       "publications": [
-        974,
-        21,
-        22
+        954,
+        22,
+        41
       ],
       "skipped_flags": {
         "all": {
@@ -3948,9 +3949,9 @@
         ]
       },
       "publications": [
-        597,
-        419,
-        1
+        595,
+        411,
+        11
       ],
       "skipped_flags": {
         "all": {
@@ -4003,9 +4004,9 @@
         ]
       },
       "publications": [
-        974,
+        956,
         21,
-        22
+        40
       ],
       "skipped_flags": {
         "all": {
@@ -4058,9 +4059,9 @@
         ]
       },
       "publications": [
-        996,
+        975,
         21,
-        0
+        21
       ],
       "skipped_flags": {
         "all": {
@@ -4113,9 +4114,9 @@
         ]
       },
       "publications": [
-        996,
+        975,
         21,
-        0
+        21
       ],
       "skipped_flags": {
         "all": {
@@ -4168,9 +4169,9 @@
         ]
       },
       "publications": [
-        996,
+        975,
         21,
-        0
+        21
       ],
       "skipped_flags": {
         "all": {
@@ -4223,9 +4224,9 @@
         ]
       },
       "publications": [
-        996,
+        975,
         21,
-        0
+        21
       ],
       "skipped_flags": {
         "all": {
@@ -4278,9 +4279,9 @@
         ]
       },
       "publications": [
-        298,
-        725,
-        1
+        311,
+        706,
+        7
       ],
       "skipped_flags": {
         "all": {
@@ -4333,9 +4334,9 @@
         ]
       },
       "publications": [
-        967,
-        28,
-        29
+        942,
+        29,
+        53
       ],
       "skipped_flags": {
         "all": {
@@ -4389,8 +4390,8 @@
       },
       "publications": [
         597,
-        426,
-        1
+        415,
+        12
       ],
       "skipped_flags": {
         "all": {
@@ -4443,9 +4444,9 @@
         ]
       },
       "publications": [
-        967,
+        946,
         28,
-        29
+        50
       ],
       "skipped_flags": {
         "all": {
@@ -4498,9 +4499,9 @@
         ]
       },
       "publications": [
-        996,
+        968,
         28,
-        0
+        28
       ],
       "skipped_flags": {
         "all": {
@@ -4553,9 +4554,9 @@
         ]
       },
       "publications": [
-        996,
+        968,
         28,
-        0
+        28
       ],
       "skipped_flags": {
         "all": {
@@ -4608,9 +4609,9 @@
         ]
       },
       "publications": [
-        996,
+        968,
         28,
-        0
+        28
       ],
       "skipped_flags": {
         "all": {
@@ -4663,9 +4664,9 @@
         ]
       },
       "publications": [
-        996,
+        968,
         28,
-        0
+        28
       ],
       "skipped_flags": {
         "all": {
@@ -4718,9 +4719,9 @@
         ]
       },
       "publications": [
-        298,
-        725,
-        1
+        310,
+        707,
+        7
       ],
       "skipped_flags": {
         "all": {
@@ -4773,9 +4774,9 @@
         ]
       },
       "publications": [
-        967,
-        28,
-        29
+        942,
+        29,
+        53
       ],
       "skipped_flags": {
         "all": {
@@ -4828,9 +4829,9 @@
         ]
       },
       "publications": [
-        597,
-        426,
-        1
+        596,
+        416,
+        12
       ],
       "skipped_flags": {
         "all": {
@@ -4883,9 +4884,9 @@
         ]
       },
       "publications": [
-        967,
+        948,
         28,
-        29
+        48
       ],
       "skipped_flags": {
         "all": {
@@ -4938,9 +4939,9 @@
         ]
       },
       "publications": [
-        996,
+        968,
         28,
-        0
+        28
       ],
       "skipped_flags": {
         "all": {
@@ -4993,9 +4994,9 @@
         ]
       },
       "publications": [
-        996,
+        968,
         28,
-        0
+        28
       ],
       "skipped_flags": {
         "all": {
@@ -5048,9 +5049,9 @@
         ]
       },
       "publications": [
-        996,
+        968,
         28,
-        0
+        28
       ],
       "skipped_flags": {
         "all": {
@@ -5103,9 +5104,9 @@
         ]
       },
       "publications": [
-        996,
+        968,
         28,
-        0
+        28
       ],
       "skipped_flags": {
         "all": {
@@ -5158,8 +5159,8 @@
         ]
       },
       "publications": [
-        178,
-        418,
+        179,
+        417,
         1
       ],
       "skipped_flags": {
@@ -5213,9 +5214,9 @@
         ]
       },
       "publications": [
-        594,
-        1,
-        2
+        592,
+        2,
+        3
       ],
       "skipped_flags": {
         "all": {
@@ -5268,8 +5269,8 @@
         ]
       },
       "publications": [
-        357,
-        239,
+        358,
+        238,
         1
       ],
       "skipped_flags": {
@@ -5323,9 +5324,9 @@
         ]
       },
       "publications": [
-        594,
+        593,
         1,
-        2
+        3
       ],
       "skipped_flags": {
         "all": {
@@ -5378,9 +5379,9 @@
         ]
       },
       "publications": [
-        596,
+        595,
         1,
-        0
+        1
       ],
       "skipped_flags": {
         "all": {
@@ -5433,9 +5434,9 @@
         ]
       },
       "publications": [
-        596,
+        595,
         1,
-        0
+        1
       ],
       "skipped_flags": {
         "all": {
@@ -5488,9 +5489,9 @@
         ]
       },
       "publications": [
-        596,
+        595,
         1,
-        0
+        1
       ],
       "skipped_flags": {
         "all": {
@@ -5543,9 +5544,9 @@
         ]
       },
       "publications": [
-        596,
+        595,
         1,
-        0
+        1
       ],
       "skipped_flags": {
         "all": {
@@ -5598,9 +5599,9 @@
         ]
       },
       "publications": [
-        178,
+        177,
         418,
-        1
+        2
       ],
       "skipped_flags": {
         "all": {
@@ -5653,9 +5654,9 @@
         ]
       },
       "publications": [
-        594,
-        1,
-        2
+        592,
+        2,
+        3
       ],
       "skipped_flags": {
         "all": {
@@ -5708,9 +5709,9 @@
         ]
       },
       "publications": [
-        357,
+        356,
         239,
-        1
+        2
       ],
       "skipped_flags": {
         "all": {
@@ -5763,9 +5764,9 @@
         ]
       },
       "publications": [
-        594,
+        593,
         1,
-        2
+        3
       ],
       "skipped_flags": {
         "all": {
@@ -5818,9 +5819,9 @@
         ]
       },
       "publications": [
-        596,
+        595,
         1,
-        0
+        1
       ],
       "skipped_flags": {
         "all": {
@@ -5873,9 +5874,9 @@
         ]
       },
       "publications": [
-        596,
+        595,
         1,
-        0
+        1
       ],
       "skipped_flags": {
         "all": {
@@ -5928,9 +5929,9 @@
         ]
       },
       "publications": [
-        596,
+        595,
         1,
-        0
+        1
       ],
       "skipped_flags": {
         "all": {
@@ -5983,9 +5984,9 @@
         ]
       },
       "publications": [
-        596,
+        595,
         1,
-        0
+        1
       ],
       "skipped_flags": {
         "all": {
@@ -6038,8 +6039,8 @@
         ]
       },
       "publications": [
-        298,
-        716,
+        317,
+        697,
         1
       ],
       "skipped_flags": {
@@ -6093,9 +6094,9 @@
         ]
       },
       "publications": [
-        976,
-        19,
-        20
+        957,
+        20,
+        38
       ],
       "skipped_flags": {
         "all": {
@@ -6148,9 +6149,9 @@
         ]
       },
       "publications": [
-        597,
-        417,
-        1
+        593,
+        411,
+        11
       ],
       "skipped_flags": {
         "all": {
@@ -6203,9 +6204,9 @@
         ]
       },
       "publications": [
-        976,
-        19,
-        20
+        959,
+        20,
+        36
       ],
       "skipped_flags": {
         "all": {
@@ -6258,9 +6259,9 @@
         ]
       },
       "publications": [
-        996,
+        977,
         19,
-        0
+        19
       ],
       "skipped_flags": {
         "all": {
@@ -6313,9 +6314,9 @@
         ]
       },
       "publications": [
-        996,
+        977,
         19,
-        0
+        19
       ],
       "skipped_flags": {
         "all": {
@@ -6368,9 +6369,9 @@
         ]
       },
       "publications": [
-        996,
+        977,
         19,
-        0
+        19
       ],
       "skipped_flags": {
         "all": {
@@ -6423,9 +6424,9 @@
         ]
       },
       "publications": [
-        996,
+        977,
         19,
-        0
+        19
       ],
       "skipped_flags": {
         "all": {
@@ -6478,9 +6479,9 @@
         ]
       },
       "publications": [
-        298,
-        716,
-        1
+        290,
+        713,
+        12
       ],
       "skipped_flags": {
         "all": {
@@ -6533,9 +6534,9 @@
         ]
       },
       "publications": [
-        976,
-        19,
-        20
+        961,
+        20,
+        34
       ],
       "skipped_flags": {
         "all": {
@@ -6588,9 +6589,9 @@
         ]
       },
       "publications": [
-        597,
-        417,
-        1
+        589,
+        414,
+        12
       ],
       "skipped_flags": {
         "all": {
@@ -6643,9 +6644,9 @@
         ]
       },
       "publications": [
-        976,
-        19,
-        20
+        961,
+        20,
+        34
       ],
       "skipped_flags": {
         "all": {
@@ -6698,9 +6699,9 @@
         ]
       },
       "publications": [
-        996,
+        977,
         19,
-        0
+        19
       ],
       "skipped_flags": {
         "all": {
@@ -6753,9 +6754,9 @@
         ]
       },
       "publications": [
-        996,
+        977,
         19,
-        0
+        19
       ],
       "skipped_flags": {
         "all": {
@@ -6808,9 +6809,9 @@
         ]
       },
       "publications": [
-        996,
+        977,
         19,
-        0
+        19
       ],
       "skipped_flags": {
         "all": {
@@ -6863,9 +6864,9 @@
         ]
       },
       "publications": [
-        996,
+        977,
         19,
-        0
+        19
       ],
       "skipped_flags": {
         "all": {
@@ -6918,8 +6919,8 @@
         ]
       },
       "publications": [
-        238,
-        560,
+        241,
+        557,
         1
       ],
       "skipped_flags": {
@@ -6973,9 +6974,9 @@
         ]
       },
       "publications": [
-        792,
-        3,
-        4
+        788,
+        4,
+        7
       ],
       "skipped_flags": {
         "all": {
@@ -7028,8 +7029,8 @@
         ]
       },
       "publications": [
-        477,
-        321,
+        480,
+        318,
         1
       ],
       "skipped_flags": {
@@ -7083,9 +7084,9 @@
         ]
       },
       "publications": [
-        792,
+        789,
         3,
-        4
+        7
       ],
       "skipped_flags": {
         "all": {
@@ -7138,9 +7139,9 @@
         ]
       },
       "publications": [
-        796,
+        793,
         3,
-        0
+        3
       ],
       "skipped_flags": {
         "all": {
@@ -7193,9 +7194,9 @@
         ]
       },
       "publications": [
-        796,
+        793,
         3,
-        0
+        3
       ],
       "skipped_flags": {
         "all": {
@@ -7248,9 +7249,9 @@
         ]
       },
       "publications": [
-        796,
+        793,
         3,
-        0
+        3
       ],
       "skipped_flags": {
         "all": {
@@ -7303,9 +7304,9 @@
         ]
       },
       "publications": [
-        796,
+        793,
         3,
-        0
+        3
       ],
       "skipped_flags": {
         "all": {
@@ -7358,9 +7359,9 @@
         ]
       },
       "publications": [
-        238,
-        559,
-        1
+        235,
+        560,
+        4
       ],
       "skipped_flags": {
         "all": {
@@ -7413,25 +7414,25 @@
         ]
       },
       "publications": [
-        793,
-        2,
-        3
+        788,
+        4,
+        7
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 2,
+          "never_consumed_flags": 3,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 2,
+          "never_consumed_flags": 3,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 2,
+          "never_consumed_flags": 3,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 2,
+          "never_consumed_flags": 3,
           "sole_carrier_skipped": 0
         }
       }
@@ -7468,9 +7469,9 @@
         ]
       },
       "publications": [
-        477,
-        320,
-        1
+        474,
+        321,
+        4
       ],
       "skipped_flags": {
         "all": {
@@ -7523,25 +7524,25 @@
         ]
       },
       "publications": [
-        793,
-        2,
-        3
+        789,
+        3,
+        7
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 2,
+          "never_consumed_flags": 3,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 2,
+          "never_consumed_flags": 3,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 2,
+          "never_consumed_flags": 3,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 2,
+          "never_consumed_flags": 3,
           "sole_carrier_skipped": 0
         }
       }
@@ -7578,25 +7579,25 @@
         ]
       },
       "publications": [
-        796,
-        2,
-        0
+        793,
+        3,
+        3
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 2,
+          "never_consumed_flags": 3,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 2,
+          "never_consumed_flags": 3,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 2,
+          "never_consumed_flags": 3,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 2,
+          "never_consumed_flags": 3,
           "sole_carrier_skipped": 0
         }
       }
@@ -7633,25 +7634,25 @@
         ]
       },
       "publications": [
-        796,
-        2,
-        0
+        793,
+        3,
+        3
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 2,
+          "never_consumed_flags": 3,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 2,
+          "never_consumed_flags": 3,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 2,
+          "never_consumed_flags": 3,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 2,
+          "never_consumed_flags": 3,
           "sole_carrier_skipped": 0
         }
       }
@@ -7688,25 +7689,25 @@
         ]
       },
       "publications": [
-        796,
-        2,
-        0
+        793,
+        3,
+        3
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 2,
+          "never_consumed_flags": 3,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 2,
+          "never_consumed_flags": 3,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 2,
+          "never_consumed_flags": 3,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 2,
+          "never_consumed_flags": 3,
           "sole_carrier_skipped": 0
         }
       }
@@ -7743,25 +7744,25 @@
         ]
       },
       "publications": [
-        796,
-        2,
-        0
+        793,
+        3,
+        3
       ],
       "skipped_flags": {
         "all": {
-          "never_consumed_flags": 2,
+          "never_consumed_flags": 3,
           "sole_carrier_skipped": 0
         },
         "bass": {
-          "never_consumed_flags": 2,
+          "never_consumed_flags": 3,
           "sole_carrier_skipped": 0
         },
         "mid": {
-          "never_consumed_flags": 2,
+          "never_consumed_flags": 3,
           "sole_carrier_skipped": 0
         },
         "treble": {
-          "never_consumed_flags": 2,
+          "never_consumed_flags": 3,
           "sole_carrier_skipped": 0
         }
       }
@@ -7772,9 +7773,9 @@
       "all": {
         "candidate": [
           0.0,
-          73.093175,
-          231.130563,
-          431.950488
+          1.704008,
+          2.763192,
+          2.829724
         ],
         "present": [
           false,
@@ -7784,9 +7785,9 @@
         ],
         "reported": [
           0.0,
-          73.093175,
-          231.130563,
-          431.950488
+          1.704008,
+          2.763192,
+          2.829724
         ],
         "rho": 1.0
       }
@@ -7795,9 +7796,9 @@
       "all": {
         "candidate": [
           0.0,
-          66.944437,
-          211.683293,
-          396.026783
+          18.328066,
+          57.953941,
+          104.617752
         ],
         "present": [
           false,
@@ -7807,9 +7808,9 @@
         ],
         "reported": [
           0.0,
-          66.944437,
-          211.683293,
-          396.026783
+          18.328066,
+          57.953941,
+          104.617752
         ],
         "rho": 1.0
       },
@@ -7837,9 +7838,9 @@
       "mid": {
         "candidate": [
           0.0,
-          66.944437,
-          211.683293,
-          396.026783
+          18.328066,
+          57.953941,
+          104.617752
         ],
         "present": [
           false,
@@ -7849,18 +7850,18 @@
         ],
         "reported": [
           0.0,
-          66.944437,
-          211.683293,
-          396.026783
+          18.328066,
+          57.953941,
+          104.617752
         ],
         "rho": 1.0
       },
       "treble": {
         "candidate": [
           0.0,
-          4.473971,
-          14.145273,
-          24.736803
+          1.021135,
+          3.228827,
+          5.995355
         ],
         "present": [
           false,
@@ -7870,9 +7871,9 @@
         ],
         "reported": [
           0.0,
-          4.473971,
-          14.145273,
-          24.736803
+          1.021135,
+          3.228827,
+          5.995355
         ],
         "rho": 1.0
       }

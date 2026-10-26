@@ -346,3 +346,54 @@ Tone-step startup remains a warmup miss; noise/sweep have empty sparse truth.
 | sweep | 1 | 303 | 0 | 303 | 0 |
 | tone-steps | 0 | 3 | 1 | 0 | 0 |
 | tone-steps | 1 | 3 | 1 | 0 | 0 |
+
+## Phase 3 (LAT-01) numbers at implementation under verification
+
+Default combined analyser, synthetic room, seed 0, unrestricted delivery, 30 Hz.
+[Raw per-event ledgers and counters](baseline/lat01/README.md) preserve both runs.
+The phase-two section and its unmet acceptance remain historical evidence.
+
+| Fixture | Route | Before median / p95 / max (ms) | After median / p95 / max (ms) |
+|---|---|---:|---:|
+| clicks-120 | normal | 33.333 / 33.333 / 33.333 | 20.000 / 20.001 / 20.001 |
+| clicks-120 | timestamped | 20.000 / 20.000 / 20.000 | 5.000 / 5.000 / 5.000 |
+| clicks-128 | normal | 47.917 / 62.500 / 62.500 | 17.917 / 30.417 / 36.667 |
+| clicks-128 | timestamped | 17.917 / 40.833 / 45.000 | 0.000 / 5.000 / 5.000 |
+| clicks-174 | normal | 48.844 / 62.807 / 65.521 | 19.053 / 31.436 / 34.938 |
+| clicks-174 | timestamped | 18.281 / 36.040 / 38.396 | 0.344 / 4.529 / 5.000 |
+| impulse | normal | 33.333 / 33.333 / 33.333 | 20.000 / 20.000 / 20.000 |
+| impulse | timestamped | 20.000 / 20.000 / 20.000 | 5.000 / 5.000 / 5.000 |
+| panning | normal | 33.333 / 33.333 / 33.333 | 20.000 / 20.001 / 20.001 |
+| panning | timestamped | 20.000 / 20.000 / 20.000 | -5.000 / -5.000 / -5.000 |
+
+Normal values: truth → first lifted send. Timestamped values: signed error
+from truth + 1500 ms playback lead − 20 ms light advance. Both at 30 Hz.
+The latency tests also cover 60 Hz. Timestamped absolute truth error is ≤5 ms.
+
+| clicks-120 normal 30 Hz term | Before median / p95 / max (ms) | After median / p95 / max (ms) |
+|---|---:|---:|
+| window_acquisition_ms | 20.000 / 20.000 / 20.000 | 10.000 / 10.000 / 10.000 |
+| hop_ms | 0.000 / 0.000 / 0.000 | 0.000 / 0.000 / 0.000 |
+| lookahead_ms | 10.000 / 10.000 / 10.000 | 10.000 / 10.000 / 10.000 |
+| tick_wait_ms | 3.333 / 3.333 / 3.333 | 0.000 / 0.000 / 0.000 |
+| schedule_wait_ms | 0.000 / 0.000 / 0.000 | 0.000 / 0.001 / 0.001 |
+
+The 512-sample right-aligned front end reduces acquisition, while event-triggered
+sends remove cadence wait. One-hop lookahead remains the default after the table
+above showed extra noise/sweep events at zero lookahead. Timestamped event
+boundaries use a half-hop playback estimate and exact heap deadlines; positive
+onset_lead_s still advances light before audio. No physical transport delay is
+measured here. Tests assert median ≤30 ms and max ≤40 ms on the normal route,
+and ±5 ms against truth plus playback lead minus light advance on the timestamped
+route, for all three BPM fixtures and impulse at both 30 and 60 Hz.
+
+Phase-two idle-colour comparisons pass on silence, sweep and pink noise, on both
+routes, with onset detection explicitly disabled on both revisions. Complete
+send times, floating RGB traces and effective output bytes match their immutable
+phase-two hashes. No intensity or threshold default was increased.
+
+The normal delay-shrink burst test remains unchanged and passes. The extra-send
+spacing tests include a render that takes longer than the minimum send interval,
+so one-extra-per-drain is enforced explicitly rather than assumed from CPU speed.
+
+Final full-suite timing and commit provenance are recorded below after verification.

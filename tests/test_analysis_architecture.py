@@ -504,7 +504,8 @@ def test_cap_publication_record_has_new_fields():
     assert isinstance(rec.sample_end, int)
     assert rec.sample_end > rec.sample_pos
     assert "v2" in rec.effective_processor_ids
-    assert "beat_detector" in rec.effective_processor_ids
+    # LAT-01: independent short hops publish only positive event contributions.
+    assert "beat_detector" not in rec.effective_processor_ids
 
 
 def test_cap_effective_spectrum_backend_matches_spectrum_processor():
@@ -1288,29 +1289,21 @@ def test_beat_only_publication():
     must contain the BeatDetector but MUST NOT contain the SpectrumProcessor.
     """
     cap = _make_cap(engine=_NullSpectrumEngine())
-    # Feed enough energetic PCM to trigger onsets after STFT warmup.
-    rng = np.random.default_rng(0xBEEF)
-    onset_seen = False
-    beat_only_seen = False
-    for i in range(30):
-        noise = rng.standard_normal((_HOP, 2)).astype(np.float32) * 0.4
-        frame = AnalysisPcmFrame(
-            samples=noise, sample_pos=i * _HOP,
-            epoch_id="ep-beat", source_id="t", over_range=False,
-        )
-        recs = cap.feed(frame)
-        for rec in recs:
-            # SpectrumProcessor must never appear in the contributors.
-            assert "null_spectrum" not in rec.effective_processor_ids
-            if "beat_detector" in rec.effective_processor_ids:
-                beat_only_seen = True
-                if rec.features.onset:
-                    onset_seen = True
-    assert beat_only_seen, "expected at least one BeatDetector-only publication"
-    # Onset may or may not fire depending on the random signal; the key
-    # invariant is that publications happen and effective_processor_ids
-    # is truthful.
-    _ = onset_seen
+    # A real transient after warmup must publish independently of Spectrum.
+    for i in range(40):
+        cap.feed(AnalysisPcmFrame(np.zeros((_HOP, 2), dtype=np.float32), i*_HOP,
+                                 "ep-beat", "t", False))
+    publications = []
+    for i in range(40, 45):
+        samples = np.zeros((_HOP, 2), dtype=np.float32)
+        if i == 40:
+            samples[0] = .9
+        publications.extend(cap.feed(AnalysisPcmFrame(samples, i*_HOP, "ep-beat", "t", False)))
+    beat = [r for r in publications if "beat_detector" in r.effective_processor_ids]
+    assert len(beat) == 1
+    assert beat[0].features.onset
+    assert "null_spectrum" not in beat[0].effective_processor_ids
+
 
 
 class _DummyLoudnessProcessor:

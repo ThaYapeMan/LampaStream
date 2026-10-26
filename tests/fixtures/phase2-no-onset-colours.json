@@ -1,0 +1,39 @@
+{
+  "columns": [
+    "channel_id",
+    "virtual_time_s",
+    "r",
+    "g",
+    "b",
+    "r8",
+    "g8",
+    "b8"
+  ],
+  "measurement_commit": "542b9ed",
+  "traces": {
+    "pink-noise/normal": {
+      "rows": 302,
+      "sha256": "4e32ac8f41de9eead8b55ac9936da7ac4dc38b4eb842d1732bf1c65bfabb4cdb"
+    },
+    "pink-noise/timestamped": {
+      "rows": 300,
+      "sha256": "3f9dfd9e7b7cd9becb3aeaa89f6e4662a66826290dc29e3a4e5f5c0eb9883ec7"
+    },
+    "silence/normal": {
+      "rows": 182,
+      "sha256": "cd4437d3e1037cb5fd1120cfe36632507059f0ea9037bf8cf7dbed093f67686a"
+    },
+    "silence/timestamped": {
+      "rows": 180,
+      "sha256": "b26d1eb43e6abc2cb8a150e7664fc801891f754f48260eb0048bd4a3ea1d0ff2"
+    },
+    "sweep/normal": {
+      "rows": 1202,
+      "sha256": "4e5ed45a6e74a78a9ee3c4e5dbcddda0da7fbf018f0a2495287f61ec1a585866"
+    },
+    "sweep/timestamped": {
+      "rows": 1200,
+      "sha256": "e9ccd6db282cad834459d80d3c2d23176afe36c28e20d55a062248564c8ae509"
+    }
+  }
+}

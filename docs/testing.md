@@ -232,9 +232,10 @@ TraceOutput samples the same Scene protocol as HueDriver and matches
 hue-entertainment 0.1.2's command-to-wire conversion, including its unusual
 pass-through branch for 16-bit command values <=255.
 
-`--render-hz` accepts 20, 30 (default), 50 or 60. Only the offline process scopes
-SEND_INTERVAL_S to this rate; production still defaults to 1/30. Sleep advances a
-fixed tick index, not an accumulating float or real asyncio timer. DSP runs in
+`--render-hz` accepts 20, 30 (default), 50 or 60 and sets the production
+`output_render_hz` profile setting. Injected sleep advances the virtual clock by
+the requested deadline interval, including event drains
+and exact scene deadlines; it never sleeps in real time. DSP runs in
 fixed source chunks with at most one shared hop per feed; publications are then
 released through the pipeline's real publication method into the output loop.
 Epoch UUID labels are normalized to `replay-0001`; no DSP algorithm is replaced.
@@ -339,7 +340,7 @@ This prevents repeated flags from disappearing behind an ambiguous count.
 |---|---|
 | `render_id`, `sequence`, `channel_id` | One-based scene/render identity, consumed publication and room channel. Both layers render once per mixer invocation. |
 | `virtual_time_s`, `render_argument_s`, `route` | Actual virtual invocation time, time argument passed to the renderer, route. For early rendering the argument can be future play time; it is not detection availability. |
-| `play_time_s`, `scheduled_play_time_s`, `schedule_target_s` | Timestamped intended play time (two explicit aliases) and `max(ready,play)` target with zero replay trim; blank on normal route. Sending is quantized to the first tick at/after target, not guaranteed within half a tick. |
+| `play_time_s`, `scheduled_play_time_s`, `schedule_target_s` | Timestamped intended play time (two explicit aliases) and `max(ready,play)` target with zero replay trim; blank on normal route. Continuous sends retain cadence quantisation; timestamped event-boundary scenes wake at their exact deadline. |
 | `event_ids`, `onset_consumed` | IDs whose event envelopes exceed 0.5 in this scene, and the lossless since-previous-render event latch (0/1). |
 | `high_effect`, `low_effect` | Effect type identifiers used by the two layers. |
 | `onset_envelope`, `onset_envelope_bass`, `onset_envelope_mid`, `onset_envelope_treble` | Scene-time envelope values in [0,1]. |
@@ -560,3 +561,22 @@ pipeline/output/mixer state per option tuple. Tests never cache or rewrite expec
 numeric pins. Full channel traces are retained for the shared click references;
 other regression matrix entries execute all sends but omit unused channel CSVs.
 The cache is session-local and requires no cleanup of owner files.
+
+LAT-01 timing contracts live in `test_latency_regression.py`: all click rates and
+impulse on both routes at 30/60 Hz, exact five-term ledger decomposition, extra
+send spacing/counts and shared long-bass/short-treble alignment. Playback
+quantisation uses the short hop midpoint while candidate_sample keeps the hop
+start. Timestamped truth targets use playback lead minus positive light advance.
+`test_latency_frontend.py` also exercises a render slower than the minimum
+inter-send interval, preventing two extras in one drain under compute pressure.
+
+Reproduce headroom separately from full-suite timing (choose an allowed CPU):
+
+```sh
+OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 .venv/bin/python \
+  scripts/benchmark_replay.py --cpu 7 --out /tmp/lat01-headroom.txt
+```
+
+The report measures DSP CPU milliseconds per hop, loop p95/max execution cost,
+CPU fraction, virtual backlog and distinct publication/event drops. Trace export
+is excluded; no physical I/O or live OS wake-lateness simulation is claimed.

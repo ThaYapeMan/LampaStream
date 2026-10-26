@@ -26,7 +26,8 @@ class DiskReplays:
                                   sorted((ROOT/'src/lampastream').glob('*.py'))))
         self.revision = subprocess.check_output(
             ['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()
-        self.harness = sha((ROOT/'scripts/replay_chain.py').read_bytes())
+        self.harness = sha((ROOT/'scripts/replay_chain.py').read_bytes()
+                           + (ROOT/'scripts/replay_observers.py').read_bytes())
 
     def run(self, args):
         options = {k: v for k, v in vars(args).items()
@@ -61,7 +62,7 @@ class DiskReplays:
                                          replay.sample_count, fmt), stream,
                                         protocol=pickle.HIGHEST_PROTOCOL)
                 asyncio.run(replay.run())
-                channels = (args.input.stem == "clicks-120" and
+                channels = (args.input.stem in {"clicks-120", "silence", "sweep", "pink-noise"} and
                             args.publications_per_tick == 0)
                 replay.save(fmt, write_channel_traces=channels)
             finally:

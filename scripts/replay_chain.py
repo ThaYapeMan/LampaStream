@@ -479,7 +479,7 @@ class Replay:
         async def step(_interval):
             self.finish_tick(engine)
             self.tick += 1
-            self.now = round(self.now + _interval, 12)
+            self.now += _interval
             if self.now > end + 1e-10:
                 raise FinishedReplay
             self.release()
@@ -536,7 +536,8 @@ class Replay:
                 "p50": float(np.percentile(counts, 50)), "p95": float(np.percentile(counts, 95)),
                 "max": max(counts)}, "publication_queue_drops": self.pipeline.pub_dropped_count,
             "event_queue_drops": self.pipeline.events_dropped_count,
-            "event_mapping_fallbacks": self.engine.event_mapping_fallbacks}
+            "event_mapping_fallbacks": self.engine.event_mapping_fallbacks,
+            "extra_sends": self.engine.extra_send_stats}
 
     def latency_rows(self):
         """Join detected identities to sparse truth without changing detector decisions.
@@ -623,10 +624,15 @@ class Replay:
             write_csv(out / "renders.csv", self.renders, RENDER_COLUMNS)
             write_csv(out / "sends.csv", self.output.rows, SEND_COLUMNS)
         latency = self.latency_rows()
-        write_csv(out / "latency.csv", latency)
+        write_csv(out / "latency.csv", latency, [
+            "id", "route", "truth_sample", "candidate_sample", "availability_sample",
+            "candidate_ms", "availability_ms", "first_render_ms", "first_send_ms",
+            "window_acquisition_ms", "hop_ms", "lookahead_ms", "tick_wait_ms",
+            "schedule_wait_ms", "schedule_error_ms"])
         counters = self.counters()
         counters["latency"] = {self.args.route: {}}
-        for field in ("first_send_ms", "schedule_error_ms", "window_acquisition_ms",
+        for field in ("candidate_ms", "availability_ms", "first_render_ms",
+                      "first_send_ms", "schedule_error_ms", "window_acquisition_ms",
                       "hop_ms", "lookahead_ms", "tick_wait_ms", "schedule_wait_ms"):
             values = [row[field] for row in latency if row[field] is not None]
             counters["latency"][self.args.route][field] = ({

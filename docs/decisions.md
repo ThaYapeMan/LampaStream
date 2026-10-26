@@ -125,3 +125,40 @@ short-hop publications were removed after this measurement.
 - 2026-10-26 — Publication delivery caps remain per render interval despite the new intermediate wakes; event release remains independent. Otherwise cap-1 replay would silently become a faster delivery configuration.
 
 - 2026-10-26 — GitHub rejected the CI workflow edit because the configured token lacks workflow scope. Configure pytest addopts=-n auto instead: the existing CI pytest command inherits parallelism, while -n 0 keeps one-core runs possible. Cap auto at four workers and respect affinity to avoid oversubscribing shared build hosts. No new credentials or permissions requested.
+
+- 2026-10-26 — At high requested cadence, apply the capability-based ceiling to pending zero-delay continuous sends as well as extras, retaining only the newest pending continuous scene. Without this, 60 Hz continuous sends starve every legal extra send on the declared slower trace output. Render cadence remains selectable; the unchanged delay-shrink case remains intentionally bursty.
+- 2026-10-26 — Compare phase-two idle colours with onset_delta_abs=1e9 on both revisions: sweep and pink noise have no sparse truth but do emit detector events by default. The comparison explicitly verifies zero emitted events, preserving both floating RGB traces and output bytes/timestamps rather than mislabelling noise events as absent.
+- 2026-10-26 — Keep exact pins for changed detector strength/positions and publication accounting; preserve all existing ≤one-hop, survival and candidate-attribution contracts. Store six phase-two idle-colour hashes separately as immutable expectations.
+
+- 2026-10-26 — Short-window candidates retain their containing hop's start coordinate; timestamped playback uses that hop's midpoint to bound within-hop truth uncertainty to ±5 ms. Pure long-window bass keeps its existing attack clock. The estimator uses no fixture truth; latency tests now assert both exact candidate deadlines and ±5 ms against click/impulse truth with the configured playback lead and light advance.
+- 2026-10-26 — Mid/treble decisions use compressed short-window flux, but exported candidate strength_raw preserves the uncompressed band flux at that same candidate. Log differences saturate on successive tone-level increases (mid rho 0.8); preserving raw candidate magnitude restores the existing rho=1 contract without changing thresholds or picker decisions.
+- 2026-10-26 — Keep SceneSchedule's strict due comparison. Advance the injected replay clock by the requested sleep directly: rounding the clock down could create a needless microsecond wake, while comparison tolerance could send a scene fractionally before its declared target.
+- 2026-10-26 — Replace the architecture probe's random pre-warmup stream with a deterministic post-warmup impulse to verify a positive Beat-only publication; empty Beat contributions are deliberately absent under the new independent hop clocks.
+
+- 2026-10-26 — The injected-clock early-output test stops after two cadence intervals, independent of the latest requested sleep. Exact deadlines can request a sub-frame sleep; using that duration as the entire test grace period cancelled the coroutine before its due send. Existing send/flush assertions remain unchanged.
+
+- 2026-10-26 — Render continuous features at their requested cadence even when an extra send has just occurred; defer/coalesce the pending continuous send behind the capability ceiling. Enforce one extra per drain explicitly, including a deliberately slow-render test.
+- 2026-10-26 — Use process-specific temporary method-config filenames with shared content hashes, avoiding simultaneous xdist config writes; include observer code in the replay cache fence.
+
+Final LAT-01 headroom (one core, BLAS threads=1; CSV export excluded). Core
+percentage includes analysis and output-loop execution. Backlog is the virtual
+eligible publication backlog, not a claim about live OS wake jitter. Normal
+publication evictions are unused continuous snapshots; all event drop counts
+remain zero. Default cadence stays 30 Hz despite >11× CPU margin at 50 Hz.
+
+Affinity: [7]
+
+| Fixture | Route | Hz | DSP CPU ms/hop | Loop p95 / max ms | Core % | Margin | Virtual backlog | Pub / event drops |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| pink-noise | normal | 30 | 0.641 | 0.115 / 0.547 | 7.2 | 13.97× | 0 | 0 / 0 |
+| pink-noise | normal | 50 | 0.623 | 0.127 / 0.892 | 7.1 | 14.07× | 0 | 0 / 0 |
+| pink-noise | normal | 60 | 0.628 | 0.110 / 0.757 | 7.3 | 13.78× | 0 | 0 / 0 |
+| pink-noise | timestamped | 30 | 0.634 | 0.417 / 1.361 | 7.6 | 13.12× | 0 | 0 / 0 |
+| pink-noise | timestamped | 50 | 0.627 | 0.311 / 0.476 | 7.6 | 13.11× | 0 | 0 / 0 |
+| pink-noise | timestamped | 60 | 0.630 | 0.263 / 0.976 | 7.8 | 12.86× | 0 | 0 / 0 |
+| clicks-174 | normal | 30 | 0.741 | 0.118 / 0.868 | 8.0 | 12.57× | 0 | 24 / 0 |
+| clicks-174 | normal | 50 | 0.701 | 0.127 / 0.962 | 7.8 | 12.89× | 0 | 24 / 0 |
+| clicks-174 | normal | 60 | 0.698 | 0.108 / 1.025 | 7.8 | 12.77× | 0 | 24 / 0 |
+| clicks-174 | timestamped | 30 | 0.699 | 0.354 / 1.679 | 8.1 | 12.42× | 0 | 0 / 0 |
+| clicks-174 | timestamped | 50 | 0.735 | 0.225 / 0.949 | 8.5 | 11.73× | 0 | 0 / 0 |
+| clicks-174 | timestamped | 60 | 0.686 | 0.221 / 1.062 | 8.1 | 12.34× | 0 | 0 / 0 |

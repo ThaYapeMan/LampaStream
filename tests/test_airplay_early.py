@@ -401,7 +401,7 @@ def test_production_output_loop_obeys_targets_and_flush(monkeypatch, lead, flush
             clock[0] += dt
             if flush and clock[0] >= 10.12:
                 diagnostics.tap_generation = 2
-            if clock[0] > max(10.098, 10 + lead) + dt * 2:
+            if clock[0] > max(10.098, 10 + lead) + SEND_INTERVAL_S * 2:
                 raise asyncio.CancelledError
 
         monkeypatch.setattr(

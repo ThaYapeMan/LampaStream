@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import csv
 import json
+import os
 from functools import cache
 from pathlib import Path
 
@@ -49,7 +50,7 @@ class ReplayCache:
             return self.outputs[key]
         config = FIXTURES / "default-config.json"
         if method != "combined":
-            config = self.base / f"{method}.json"
+            config = self.base / f"{method}-{os.getpid()}.json"
             if not config.exists():
                 data = json.loads((FIXTURES / "default-config.json").read_text())
                 data["configuration"]["analysers"][0]["onset_method"] = method

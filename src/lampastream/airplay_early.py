@@ -361,7 +361,7 @@ class SceneSchedule:
     def due(self, now, generation):
         self.reset(generation)
         result = None
-        while self.queue and self.queue[0][0] <= now + 1e-10:
+        while self.queue and self.queue[0][0] <= now:
             _, _, scene, provenance = heapq.heappop(self.queue)
             result = scene, provenance
         return result

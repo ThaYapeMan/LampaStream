@@ -1,0 +1,1412 @@
+{
+  "clicks-120/normal": {
+    "counters": {
+      "event_mapping_fallbacks": 0,
+      "event_queue_drops": 0,
+      "events": {
+        "all": {
+          "expired": 0,
+          "lost": 0,
+          "merged": 0,
+          "received": 19,
+          "triggered": 19
+        },
+        "bass": {
+          "expired": 0,
+          "lost": 0,
+          "merged": 0,
+          "received": 0,
+          "triggered": 0
+        },
+        "mid": {
+          "expired": 0,
+          "lost": 0,
+          "merged": 0,
+          "received": 0,
+          "triggered": 0
+        },
+        "treble": {
+          "expired": 0,
+          "lost": 0,
+          "merged": 0,
+          "received": 0,
+          "triggered": 0
+        }
+      },
+      "extra_sends": {
+        "max_per_drain": 1,
+        "minimum_interval_s": 0.02,
+        "sends": 19,
+        "smallest_gap_s": 0.02
+      },
+      "latency": {
+        "normal": {
+          "availability_ms": {
+            "max": 10.0,
+            "median": 10.0,
+            "p95": 10.0
+          },
+          "candidate_ms": {
+            "max": 0.0,
+            "median": 0.0,
+            "p95": 0.0
+          },
+          "first_render_ms": {
+            "max": 20.0,
+            "median": 20.0,
+            "p95": 20.0
+          },
+          "first_send_ms": {
+            "max": 20.001,
+            "median": 20.0,
+            "p95": 20.001
+          },
+          "hop_ms": {
+            "max": 0.0,
+            "median": 0.0,
+            "p95": 0.0
+          },
+          "lookahead_ms": {
+            "max": 10.0,
+            "median": 10.0,
+            "p95": 10.0
+          },
+          "schedule_error_ms": null,
+          "schedule_wait_ms": {
+            "max": 0.001,
+            "median": 0.0,
+            "p95": 0.001
+          },
+          "tick_wait_ms": {
+            "max": 0.0,
+            "median": -0.0,
+            "p95": 0.0
+          },
+          "window_acquisition_ms": {
+            "max": 10.0,
+            "median": 10.0,
+            "p95": 10.0
+          }
+        }
+      },
+      "publication_queue_drops": 15,
+      "publications": {
+        "normal": {
+          "consumed": 317,
+          "published": 1015,
+          "render_reads": 320,
+          "repeat_reads": 2,
+          "repeated": 1,
+          "skipped": 697
+        }
+      },
+      "sends": 320,
+      "sends_per_second": {
+        "max": 33,
+        "p50": 32.0,
+        "p95": 32.5
+      }
+    },
+    "meta": {
+      "config_sha256": "f891260984d0c31c81209b6431f9d229db7c04b83ba3514f68d0af9f6415e34c",
+      "delay_ms": 0,
+      "delay_schedule": [],
+      "duration_s": 10.0,
+      "format": {
+        "bits": 24,
+        "channels": 1,
+        "encoding": "wav-pcm",
+        "sample_rate": 48000
+      },
+      "git_commit": "acc1bcb",
+      "input_sha256": "3e9c20510904804a54f77f34209c51d5a4420a2bf3085ceada9ab9160812e48b",
+      "lead_s": 1.5,
+      "numpy_version": "2.5.4",
+      "publications_per_tick": 0,
+      "python_version": "3.12.15",
+      "quantization_decimals": 6,
+      "render_hz": 30,
+      "room_sha256": "b8aa6a0510b5747c6e19d2ade0d5f4eeeab06cdeb35bc8e04c0f12b80b50f6a5",
+      "route": "normal",
+      "seed": 0,
+      "start_s": 0,
+      "trace_version": 1,
+      "wall_time": {
+        "basis": "virtual",
+        "end_s": 10.071667,
+        "start_s": 0
+      }
+    }
+  },
+  "clicks-120/timestamped": {
+    "counters": {
+      "event_mapping_fallbacks": 0,
+      "event_queue_drops": 0,
+      "events": {
+        "all": {
+          "expired": 0,
+          "lost": 0,
+          "merged": 0,
+          "received": 19,
+          "triggered": 19
+        },
+        "bass": {
+          "expired": 0,
+          "lost": 0,
+          "merged": 0,
+          "received": 0,
+          "triggered": 0
+        },
+        "mid": {
+          "expired": 0,
+          "lost": 0,
+          "merged": 0,
+          "received": 0,
+          "triggered": 0
+        },
+        "treble": {
+          "expired": 0,
+          "lost": 0,
+          "merged": 0,
+          "received": 0,
+          "triggered": 0
+        }
+      },
+      "extra_sends": {
+        "max_per_drain": 0,
+        "minimum_interval_s": 0.02,
+        "sends": 0,
+        "smallest_gap_s": null
+      },
+      "latency": {
+        "timestamped": {
+          "availability_ms": {
+            "max": 10.0,
+            "median": 10.0,
+            "p95": 10.0
+          },
+          "candidate_ms": {
+            "max": 0.0,
+            "median": 0.0,
+            "p95": 0.0
+          },
+          "first_render_ms": {
+            "max": 33.333333,
+            "median": 33.333333,
+            "p95": 33.333333
+          },
+          "first_send_ms": {
+            "max": 1485.0,
+            "median": 1485.0,
+            "p95": 1485.0
+          },
+          "hop_ms": {
+            "max": 0.0,
+            "median": 0.0,
+            "p95": 0.0
+          },
+          "lookahead_ms": {
+            "max": 10.0,
+            "median": 10.0,
+            "p95": 10.0
+          },
+          "schedule_error_ms": {
+            "max": 0.0,
+            "median": 0.0,
+            "p95": 0.0
+          },
+          "schedule_wait_ms": {
+            "max": 1451.666667,
+            "median": 1451.666667,
+            "p95": 1451.666667
+          },
+          "tick_wait_ms": {
+            "max": 13.333333,
+            "median": 13.333333,
+            "p95": 13.333333
+          },
+          "window_acquisition_ms": {
+            "max": 10.0,
+            "median": 10.0,
+            "p95": 10.0
+          }
+        }
+      },
+      "publication_queue_drops": 0,
+      "publications": {
+        "timestamped": {
+          "consumed": 977,
+          "published": 1015,
+          "render_reads": 1015,
+          "repeat_reads": 19,
+          "repeated": 19,
+          "skipped": 19
+        }
+      },
+      "sends": 319,
+      "sends_per_second": {
+        "max": 32,
+        "p50": 32.0,
+        "p95": 32.0
+      }
+    },
+    "meta": {
+      "config_sha256": "f891260984d0c31c81209b6431f9d229db7c04b83ba3514f68d0af9f6415e34c",
+      "delay_ms": 0,
+      "delay_schedule": [],
+      "duration_s": 10.0,
+      "format": {
+        "bits": 24,
+        "channels": 1,
+        "encoding": "wav-pcm",
+        "sample_rate": 48000
+      },
+      "git_commit": "acc1bcb",
+      "input_sha256": "3e9c20510904804a54f77f34209c51d5a4420a2bf3085ceada9ab9160812e48b",
+      "lead_s": 1.5,
+      "numpy_version": "2.5.4",
+      "publications_per_tick": 0,
+      "python_version": "3.12.15",
+      "quantization_decimals": 6,
+      "render_hz": 30,
+      "room_sha256": "b8aa6a0510b5747c6e19d2ade0d5f4eeeab06cdeb35bc8e04c0f12b80b50f6a5",
+      "route": "timestamped",
+      "seed": 0,
+      "start_s": 0,
+      "trace_version": 1,
+      "wall_time": {
+        "basis": "virtual",
+        "end_s": 11.6,
+        "start_s": 0
+      }
+    }
+  },
+  "clicks-128/normal": {
+    "counters": {
+      "event_mapping_fallbacks": 0,
+      "event_queue_drops": 0,
+      "events": {
+        "all": {
+          "expired": 0,
+          "lost": 0,
+          "merged": 0,
+          "received": 21,
+          "triggered": 21
+        },
+        "bass": {
+          "expired": 0,
+          "lost": 0,
+          "merged": 0,
+          "received": 0,
+          "triggered": 0
+        },
+        "mid": {
+          "expired": 0,
+          "lost": 0,
+          "merged": 0,
+          "received": 0,
+          "triggered": 0
+        },
+        "treble": {
+          "expired": 0,
+          "lost": 0,
+          "merged": 0,
+          "received": 0,
+          "triggered": 0
+        }
+      },
+      "extra_sends": {
+        "max_per_drain": 1,
+        "minimum_interval_s": 0.02,
+        "sends": 19,
+        "smallest_gap_s": 0.02
+      },
+      "latency": {
+        "normal": {
+          "availability_ms": {
+            "max": 10.0,
+            "median": 5.0,
+            "p95": 10.0
+          },
+          "candidate_ms": {
+            "max": 0.0,
+            "median": -5.0,
+            "p95": 0.0
+          },
+          "first_render_ms": {
+            "max": 22.083333,
+            "median": 16.666667,
+            "p95": 21.666667
+          },
+          "first_send_ms": {
+            "max": 36.666667,
+            "median": 17.916667,
+            "p95": 30.416667
+          },
+          "hop_ms": {
+            "max": 8.75,
+            "median": 3.75,
+            "p95": 8.75
+          },
+          "lookahead_ms": {
+            "max": 10.0,
+            "median": 10.0,
+            "p95": 10.0
+          },
+          "schedule_error_ms": null,
+          "schedule_wait_ms": {
+            "max": 15.0,
+            "median": 0.0,
+            "p95": 15.0
+          },
+          "tick_wait_ms": {
+            "max": 3.333333,
+            "median": 1.666667,
+            "p95": 3.333333
+          },
+          "window_acquisition_ms": {
+            "max": 10.0,
+            "median": 0.0,
+            "p95": 10.0
+          }
+        }
+      },
+      "publication_queue_drops": 17,
+      "publications": {
+        "normal": {
+          "consumed": 311,
+          "published": 1017,
+          "render_reads": 320,
+          "repeat_reads": 5,
+          "repeated": 4,
+          "skipped": 702
+        }
+      },
+      "sends": 320,
+      "sends_per_second": {
+        "max": 33,
+        "p50": 32.0,
+        "p95": 33.0
+      }
+    },
+    "meta": {
+      "config_sha256": "f891260984d0c31c81209b6431f9d229db7c04b83ba3514f68d0af9f6415e34c",
+      "delay_ms": 0,
+      "delay_schedule": [],
+      "duration_s": 10.0,
+      "format": {
+        "bits": 24,
+        "channels": 1,
+        "encoding": "wav-pcm",
+        "sample_rate": 48000
+      },
+      "git_commit": "acc1bcb",
+      "input_sha256": "16f010916155d9d581359c70141f35fb71704dcfdf81618b6ed38c404f62d5ac",
+      "lead_s": 1.5,
+      "numpy_version": "2.5.4",
+      "publications_per_tick": 0,
+      "python_version": "3.12.15",
+      "quantization_decimals": 6,
+      "render_hz": 30,
+      "room_sha256": "b8aa6a0510b5747c6e19d2ade0d5f4eeeab06cdeb35bc8e04c0f12b80b50f6a5",
+      "route": "normal",
+      "seed": 0,
+      "start_s": 0,
+      "trace_version": 1,
+      "wall_time": {
+        "basis": "virtual",
+        "end_s": 10.071667,
+        "start_s": 0
+      }
+    }
+  },
+  "clicks-128/timestamped": {
+    "counters": {
+      "event_mapping_fallbacks": 0,
+      "event_queue_drops": 0,
+      "events": {
+        "all": {
+          "expired": 0,
+          "lost": 0,
+          "merged": 0,
+          "received": 21,
+          "triggered": 21
+        },
+        "bass": {
+          "expired": 0,
+          "lost": 0,
+          "merged": 0,
+          "received": 0,
+          "triggered": 0
+        },
+        "mid": {
+          "expired": 0,
+          "lost": 0,
+          "merged": 0,
+          "received": 0,
+          "triggered": 0
+        },
+        "treble": {
+          "expired": 0,
+          "lost": 0,
+          "merged": 0,
+          "received": 0,
+          "triggered": 0
+        }
+      },
+      "extra_sends": {
+        "max_per_drain": 0,
+        "minimum_interval_s": 0.02,
+        "sends": 0,
+        "smallest_gap_s": null
+      },
+      "latency": {
+        "timestamped": {
+          "availability_ms": {
+            "max": 10.0,
+            "median": 5.0,
+            "p95": 10.0
+          },
+          "candidate_ms": {
+            "max": 0.0,
+            "median": -5.0,
+            "p95": 0.0
+          },
+          "first_render_ms": {
+            "max": 50.0,
+            "median": 29.166667,
+            "p95": 43.75
+          },
+          "first_send_ms": {
+            "max": 1485.0,
+            "median": 1480.0,
+            "p95": 1485.0
+          },
+          "hop_ms": {
+            "max": 8.75,
+            "median": 3.75,
+            "p95": 8.75
+          },
+          "lookahead_ms": {
+            "max": 10.0,
+            "median": 10.0,
+            "p95": 10.0
+          },
+          "schedule_error_ms": {
+            "max": 0.0,
+            "median": 0.0,
+            "p95": 0.0
+          },
+          "schedule_wait_ms": {
+            "max": 1465.0,
+            "median": 1451.666667,
+            "p95": 1465.0
+          },
+          "tick_wait_ms": {
+            "max": 30.0,
+            "median": 13.333333,
+            "p95": 30.0
+          },
+          "window_acquisition_ms": {
+            "max": 10.0,
+            "median": 0.0,
+            "p95": 10.0
+          }
+        }
+      },
+      "publication_queue_drops": 0,
+      "publications": {
+        "timestamped": {
+          "consumed": 975,
+          "published": 1017,
+          "render_reads": 1017,
+          "repeat_reads": 21,
+          "repeated": 21,
+          "skipped": 21
+        }
+      },
+      "sends": 321,
+      "sends_per_second": {
+        "max": 33,
+        "p50": 32.0,
+        "p95": 32.45
+      }
+    },
+    "meta": {
+      "config_sha256": "f891260984d0c31c81209b6431f9d229db7c04b83ba3514f68d0af9f6415e34c",
+      "delay_ms": 0,
+      "delay_schedule": [],
+      "duration_s": 10.0,
+      "format": {
+        "bits": 24,
+        "channels": 1,
+        "encoding": "wav-pcm",
+        "sample_rate": 48000
+      },
+      "git_commit": "acc1bcb",
+      "input_sha256": "16f010916155d9d581359c70141f35fb71704dcfdf81618b6ed38c404f62d5ac",
+      "lead_s": 1.5,
+      "numpy_version": "2.5.4",
+      "publications_per_tick": 0,
+      "python_version": "3.12.15",
+      "quantization_decimals": 6,
+      "render_hz": 30,
+      "room_sha256": "b8aa6a0510b5747c6e19d2ade0d5f4eeeab06cdeb35bc8e04c0f12b80b50f6a5",
+      "route": "timestamped",
+      "seed": 0,
+      "start_s": 0,
+      "trace_version": 1,
+      "wall_time": {
+        "basis": "virtual",
+        "end_s": 11.6,
+        "start_s": 0
+      }
+    }
+  },
+  "clicks-174/normal": {
+    "counters": {
+      "event_mapping_fallbacks": 0,
+      "event_queue_drops": 0,
+      "events": {
+        "all": {
+          "expired": 0,
+          "lost": 0,
+          "merged": 0,
+          "received": 28,
+          "triggered": 28
+        },
+        "bass": {
+          "expired": 0,
+          "lost": 0,
+          "merged": 0,
+          "received": 0,
+          "triggered": 0
+        },
+        "mid": {
+          "expired": 0,
+          "lost": 0,
+          "merged": 0,
+          "received": 0,
+          "triggered": 0
+        },
+        "treble": {
+          "expired": 0,
+          "lost": 0,
+          "merged": 0,
+          "received": 0,
+          "triggered": 0
+        }
+      },
+      "extra_sends": {
+        "max_per_drain": 1,
+        "minimum_interval_s": 0.02,
+        "sends": 25,
+        "smallest_gap_s": 0.02
+      },
+      "latency": {
+        "normal": {
+          "availability_ms": {
+            "max": 10.0,
+            "median": 5.34375,
+            "p95": 9.529167
+          },
+          "candidate_ms": {
+            "max": 0.0,
+            "median": -4.65625,
+            "p95": -0.470833
+          },
+          "first_render_ms": {
+            "max": 22.645833,
+            "median": 16.375,
+            "p95": 22.175
+          },
+          "first_send_ms": {
+            "max": 34.9375,
+            "median": 19.052583,
+            "p95": 31.435767
+          },
+          "hop_ms": {
+            "max": 9.645833,
+            "median": 4.822917,
+            "p95": 9.188542
+          },
+          "lookahead_ms": {
+            "max": 10.0,
+            "median": 10.0,
+            "p95": 10.0
+          },
+          "schedule_error_ms": null,
+          "schedule_wait_ms": {
+            "max": 15.001,
+            "median": 0.0,
+            "p95": 13.25035
+          },
+          "tick_wait_ms": {
+            "max": 3.333333,
+            "median": 1.666667,
+            "p95": 3.333333
+          },
+          "window_acquisition_ms": {
+            "max": 10.0,
+            "median": 0.0,
+            "p95": 0.0
+          }
+        }
+      },
+      "publication_queue_drops": 24,
+      "publications": {
+        "normal": {
+          "consumed": 311,
+          "published": 1024,
+          "render_reads": 326,
+          "repeat_reads": 8,
+          "repeated": 7,
+          "skipped": 706
+        }
+      },
+      "sends": 326,
+      "sends_per_second": {
+        "max": 34,
+        "p50": 32.0,
+        "p95": 33.5
+      }
+    },
+    "meta": {
+      "config_sha256": "f891260984d0c31c81209b6431f9d229db7c04b83ba3514f68d0af9f6415e34c",
+      "delay_ms": 0,
+      "delay_schedule": [],
+      "duration_s": 10.0,
+      "format": {
+        "bits": 24,
+        "channels": 1,
+        "encoding": "wav-pcm",
+        "sample_rate": 48000
+      },
+      "git_commit": "acc1bcb",
+      "input_sha256": "37e8b7dbb5334f6b43ed86971ceda00c969b1c142d95cdd4cb98794d066a1b4a",
+      "lead_s": 1.5,
+      "numpy_version": "2.5.4",
+      "publications_per_tick": 0,
+      "python_version": "3.12.15",
+      "quantization_decimals": 6,
+      "render_hz": 30,
+      "room_sha256": "b8aa6a0510b5747c6e19d2ade0d5f4eeeab06cdeb35bc8e04c0f12b80b50f6a5",
+      "route": "normal",
+      "seed": 0,
+      "start_s": 0,
+      "trace_version": 1,
+      "wall_time": {
+        "basis": "virtual",
+        "end_s": 10.071667,
+        "start_s": 0
+      }
+    }
+  },
+  "clicks-174/timestamped": {
+    "counters": {
+      "event_mapping_fallbacks": 0,
+      "event_queue_drops": 0,
+      "events": {
+        "all": {
+          "expired": 0,
+          "lost": 0,
+          "merged": 0,
+          "received": 28,
+          "triggered": 28
+        },
+        "bass": {
+          "expired": 0,
+          "lost": 0,
+          "merged": 0,
+          "received": 0,
+          "triggered": 0
+        },
+        "mid": {
+          "expired": 0,
+          "lost": 0,
+          "merged": 0,
+          "received": 0,
+          "triggered": 0
+        },
+        "treble": {
+          "expired": 0,
+          "lost": 0,
+          "merged": 0,
+          "received": 0,
+          "triggered": 0
+        }
+      },
+      "extra_sends": {
+        "max_per_drain": 0,
+        "minimum_interval_s": 0.02,
+        "sends": 0,
+        "smallest_gap_s": null
+      },
+      "latency": {
+        "timestamped": {
+          "availability_ms": {
+            "max": 10.0,
+            "median": 5.34375,
+            "p95": 9.529167
+          },
+          "candidate_ms": {
+            "max": 0.0,
+            "median": -4.65625,
+            "p95": -0.470833
+          },
+          "first_render_ms": {
+            "max": 48.270833,
+            "median": 29.302083,
+            "p95": 44.76875
+          },
+          "first_send_ms": {
+            "max": 1485.0,
+            "median": 1480.34375,
+            "p95": 1484.529167
+          },
+          "hop_ms": {
+            "max": 9.645833,
+            "median": 4.822917,
+            "p95": 9.188542
+          },
+          "lookahead_ms": {
+            "max": 10.0,
+            "median": 10.0,
+            "p95": 10.0
+          },
+          "schedule_error_ms": {
+            "max": 0.0,
+            "median": 0.0,
+            "p95": 0.0
+          },
+          "schedule_wait_ms": {
+            "max": 1465.0,
+            "median": 1451.666667,
+            "p95": 1465.0
+          },
+          "tick_wait_ms": {
+            "max": 30.0,
+            "median": 13.333333,
+            "p95": 28.833333
+          },
+          "window_acquisition_ms": {
+            "max": 10.0,
+            "median": 0.0,
+            "p95": 0.0
+          }
+        }
+      },
+      "publication_queue_drops": 0,
+      "publications": {
+        "timestamped": {
+          "consumed": 968,
+          "published": 1024,
+          "render_reads": 1024,
+          "repeat_reads": 28,
+          "repeated": 28,
+          "skipped": 28
+        }
+      },
+      "sends": 328,
+      "sends_per_second": {
+        "max": 33,
+        "p50": 33.0,
+        "p95": 33.0
+      }
+    },
+    "meta": {
+      "config_sha256": "f891260984d0c31c81209b6431f9d229db7c04b83ba3514f68d0af9f6415e34c",
+      "delay_ms": 0,
+      "delay_schedule": [],
+      "duration_s": 10.0,
+      "format": {
+        "bits": 24,
+        "channels": 1,
+        "encoding": "wav-pcm",
+        "sample_rate": 48000
+      },
+      "git_commit": "acc1bcb",
+      "input_sha256": "37e8b7dbb5334f6b43ed86971ceda00c969b1c142d95cdd4cb98794d066a1b4a",
+      "lead_s": 1.5,
+      "numpy_version": "2.5.4",
+      "publications_per_tick": 0,
+      "python_version": "3.12.15",
+      "quantization_decimals": 6,
+      "render_hz": 30,
+      "room_sha256": "b8aa6a0510b5747c6e19d2ade0d5f4eeeab06cdeb35bc8e04c0f12b80b50f6a5",
+      "route": "timestamped",
+      "seed": 0,
+      "start_s": 0,
+      "trace_version": 1,
+      "wall_time": {
+        "basis": "virtual",
+        "end_s": 11.6,
+        "start_s": 0
+      }
+    }
+  },
+  "impulse/normal": {
+    "counters": {
+      "event_mapping_fallbacks": 0,
+      "event_queue_drops": 0,
+      "events": {
+        "all": {
+          "expired": 0,
+          "lost": 0,
+          "merged": 0,
+          "received": 1,
+          "triggered": 1
+        },
+        "bass": {
+          "expired": 0,
+          "lost": 0,
+          "merged": 0,
+          "received": 0,
+          "triggered": 0
+        },
+        "mid": {
+          "expired": 0,
+          "lost": 0,
+          "merged": 0,
+          "received": 0,
+          "triggered": 0
+        },
+        "treble": {
+          "expired": 0,
+          "lost": 0,
+          "merged": 0,
+          "received": 0,
+          "triggered": 0
+        }
+      },
+      "extra_sends": {
+        "max_per_drain": 1,
+        "minimum_interval_s": 0.02,
+        "sends": 1,
+        "smallest_gap_s": 0.02
+      },
+      "latency": {
+        "normal": {
+          "availability_ms": {
+            "max": 10.0,
+            "median": 10.0,
+            "p95": 10.0
+          },
+          "candidate_ms": {
+            "max": 0.0,
+            "median": 0.0,
+            "p95": 0.0
+          },
+          "first_render_ms": {
+            "max": 20.0,
+            "median": 20.0,
+            "p95": 20.0
+          },
+          "first_send_ms": {
+            "max": 20.0,
+            "median": 20.0,
+            "p95": 20.0
+          },
+          "hop_ms": {
+            "max": 0.0,
+            "median": 0.0,
+            "p95": 0.0
+          },
+          "lookahead_ms": {
+            "max": 10.0,
+            "median": 10.0,
+            "p95": 10.0
+          },
+          "schedule_error_ms": null,
+          "schedule_wait_ms": {
+            "max": 0.0,
+            "median": 0.0,
+            "p95": 0.0
+          },
+          "tick_wait_ms": {
+            "max": -0.0,
+            "median": -0.0,
+            "p95": -0.0
+          },
+          "window_acquisition_ms": {
+            "max": 10.0,
+            "median": 10.0,
+            "p95": 10.0
+          }
+        }
+      },
+      "publication_queue_drops": 0,
+      "publications": {
+        "normal": {
+          "consumed": 179,
+          "published": 597,
+          "render_reads": 182,
+          "repeat_reads": 2,
+          "repeated": 1,
+          "skipped": 417
+        }
+      },
+      "sends": 182,
+      "sends_per_second": {
+        "max": 31,
+        "p50": 30.0,
+        "p95": 31.0
+      }
+    },
+    "meta": {
+      "config_sha256": "f891260984d0c31c81209b6431f9d229db7c04b83ba3514f68d0af9f6415e34c",
+      "delay_ms": 0,
+      "delay_schedule": [],
+      "duration_s": 6.0,
+      "format": {
+        "bits": 16,
+        "channels": 1,
+        "encoding": "wav-pcm",
+        "sample_rate": 48000
+      },
+      "git_commit": "acc1bcb",
+      "input_sha256": "609da8dce6a62bcfd748cac8426c55173daa466fc9f76d8a6db2ac73cf0b2909",
+      "lead_s": 1.5,
+      "numpy_version": "2.5.4",
+      "publications_per_tick": 0,
+      "python_version": "3.12.15",
+      "quantization_decimals": 6,
+      "render_hz": 30,
+      "room_sha256": "b8aa6a0510b5747c6e19d2ade0d5f4eeeab06cdeb35bc8e04c0f12b80b50f6a5",
+      "route": "normal",
+      "seed": 0,
+      "start_s": 0,
+      "trace_version": 1,
+      "wall_time": {
+        "basis": "virtual",
+        "end_s": 6.071667,
+        "start_s": 0
+      }
+    }
+  },
+  "impulse/timestamped": {
+    "counters": {
+      "event_mapping_fallbacks": 0,
+      "event_queue_drops": 0,
+      "events": {
+        "all": {
+          "expired": 0,
+          "lost": 0,
+          "merged": 0,
+          "received": 1,
+          "triggered": 1
+        },
+        "bass": {
+          "expired": 0,
+          "lost": 0,
+          "merged": 0,
+          "received": 0,
+          "triggered": 0
+        },
+        "mid": {
+          "expired": 0,
+          "lost": 0,
+          "merged": 0,
+          "received": 0,
+          "triggered": 0
+        },
+        "treble": {
+          "expired": 0,
+          "lost": 0,
+          "merged": 0,
+          "received": 0,
+          "triggered": 0
+        }
+      },
+      "extra_sends": {
+        "max_per_drain": 0,
+        "minimum_interval_s": 0.02,
+        "sends": 0,
+        "smallest_gap_s": null
+      },
+      "latency": {
+        "timestamped": {
+          "availability_ms": {
+            "max": 10.0,
+            "median": 10.0,
+            "p95": 10.0
+          },
+          "candidate_ms": {
+            "max": 0.0,
+            "median": 0.0,
+            "p95": 0.0
+          },
+          "first_render_ms": {
+            "max": 33.333333,
+            "median": 33.333333,
+            "p95": 33.333333
+          },
+          "first_send_ms": {
+            "max": 1485.0,
+            "median": 1485.0,
+            "p95": 1485.0
+          },
+          "hop_ms": {
+            "max": 0.0,
+            "median": 0.0,
+            "p95": 0.0
+          },
+          "lookahead_ms": {
+            "max": 10.0,
+            "median": 10.0,
+            "p95": 10.0
+          },
+          "schedule_error_ms": {
+            "max": 0.0,
+            "median": 0.0,
+            "p95": 0.0
+          },
+          "schedule_wait_ms": {
+            "max": 1451.666667,
+            "median": 1451.666667,
+            "p95": 1451.666667
+          },
+          "tick_wait_ms": {
+            "max": 13.333333,
+            "median": 13.333333,
+            "p95": 13.333333
+          },
+          "window_acquisition_ms": {
+            "max": 10.0,
+            "median": 10.0,
+            "p95": 10.0
+          }
+        }
+      },
+      "publication_queue_drops": 0,
+      "publications": {
+        "timestamped": {
+          "consumed": 595,
+          "published": 597,
+          "render_reads": 597,
+          "repeat_reads": 1,
+          "repeated": 1,
+          "skipped": 1
+        }
+      },
+      "sends": 181,
+      "sends_per_second": {
+        "max": 31,
+        "p50": 30.0,
+        "p95": 30.65
+      }
+    },
+    "meta": {
+      "config_sha256": "f891260984d0c31c81209b6431f9d229db7c04b83ba3514f68d0af9f6415e34c",
+      "delay_ms": 0,
+      "delay_schedule": [],
+      "duration_s": 6.0,
+      "format": {
+        "bits": 16,
+        "channels": 1,
+        "encoding": "wav-pcm",
+        "sample_rate": 48000
+      },
+      "git_commit": "acc1bcb",
+      "input_sha256": "609da8dce6a62bcfd748cac8426c55173daa466fc9f76d8a6db2ac73cf0b2909",
+      "lead_s": 1.5,
+      "numpy_version": "2.5.4",
+      "publications_per_tick": 0,
+      "python_version": "3.12.15",
+      "quantization_decimals": 6,
+      "render_hz": 30,
+      "room_sha256": "b8aa6a0510b5747c6e19d2ade0d5f4eeeab06cdeb35bc8e04c0f12b80b50f6a5",
+      "route": "timestamped",
+      "seed": 0,
+      "start_s": 0,
+      "trace_version": 1,
+      "wall_time": {
+        "basis": "virtual",
+        "end_s": 7.6,
+        "start_s": 0
+      }
+    }
+  },
+  "panning/normal": {
+    "counters": {
+      "event_mapping_fallbacks": 0,
+      "event_queue_drops": 0,
+      "events": {
+        "all": {
+          "expired": 0,
+          "lost": 0,
+          "merged": 0,
+          "received": 19,
+          "triggered": 19
+        },
+        "bass": {
+          "expired": 0,
+          "lost": 0,
+          "merged": 0,
+          "received": 0,
+          "triggered": 0
+        },
+        "mid": {
+          "expired": 0,
+          "lost": 0,
+          "merged": 0,
+          "received": 0,
+          "triggered": 0
+        },
+        "treble": {
+          "expired": 0,
+          "lost": 0,
+          "merged": 0,
+          "received": 0,
+          "triggered": 0
+        }
+      },
+      "extra_sends": {
+        "max_per_drain": 1,
+        "minimum_interval_s": 0.02,
+        "sends": 19,
+        "smallest_gap_s": 0.02
+      },
+      "latency": {
+        "normal": {
+          "availability_ms": {
+            "max": 0.0,
+            "median": 0.0,
+            "p95": 0.0
+          },
+          "candidate_ms": {
+            "max": -10.0,
+            "median": -10.0,
+            "p95": -10.0
+          },
+          "first_render_ms": {
+            "max": 20.0,
+            "median": 15.0,
+            "p95": 20.0
+          },
+          "first_send_ms": {
+            "max": 20.001,
+            "median": 20.0,
+            "p95": 20.001
+          },
+          "hop_ms": {
+            "max": 0.0,
+            "median": 0.0,
+            "p95": 0.0
+          },
+          "lookahead_ms": {
+            "max": 10.0,
+            "median": 10.0,
+            "p95": 10.0
+          },
+          "schedule_error_ms": null,
+          "schedule_wait_ms": {
+            "max": 10.001,
+            "median": 5.0,
+            "p95": 10.0001
+          },
+          "tick_wait_ms": {
+            "max": 4.583333,
+            "median": 2.083333,
+            "p95": 4.208333
+          },
+          "window_acquisition_ms": {
+            "max": 8.75,
+            "median": 4.166667,
+            "p95": 8.75
+          }
+        }
+      },
+      "publication_queue_drops": 15,
+      "publications": {
+        "normal": {
+          "consumed": 317,
+          "published": 1015,
+          "render_reads": 320,
+          "repeat_reads": 2,
+          "repeated": 1,
+          "skipped": 697
+        }
+      },
+      "sends": 320,
+      "sends_per_second": {
+        "max": 33,
+        "p50": 32.0,
+        "p95": 32.5
+      }
+    },
+    "meta": {
+      "config_sha256": "f891260984d0c31c81209b6431f9d229db7c04b83ba3514f68d0af9f6415e34c",
+      "delay_ms": 0,
+      "delay_schedule": [],
+      "duration_s": 10.0,
+      "format": {
+        "bits": 16,
+        "channels": 2,
+        "encoding": "wav-pcm",
+        "sample_rate": 24000
+      },
+      "git_commit": "acc1bcb",
+      "input_sha256": "23162c3b0d6f01f86263210795fdb1ba8409c30b8e39b9b5795c9ca1b55e1294",
+      "lead_s": 1.5,
+      "numpy_version": "2.5.4",
+      "publications_per_tick": 0,
+      "python_version": "3.12.15",
+      "quantization_decimals": 6,
+      "render_hz": 30,
+      "room_sha256": "b8aa6a0510b5747c6e19d2ade0d5f4eeeab06cdeb35bc8e04c0f12b80b50f6a5",
+      "route": "normal",
+      "seed": 0,
+      "start_s": 0,
+      "trace_version": 1,
+      "wall_time": {
+        "basis": "virtual",
+        "end_s": 10.071667,
+        "start_s": 0
+      }
+    }
+  },
+  "panning/timestamped": {
+    "counters": {
+      "event_mapping_fallbacks": 0,
+      "event_queue_drops": 0,
+      "events": {
+        "all": {
+          "expired": 0,
+          "lost": 0,
+          "merged": 0,
+          "received": 19,
+          "triggered": 19
+        },
+        "bass": {
+          "expired": 0,
+          "lost": 0,
+          "merged": 0,
+          "received": 0,
+          "triggered": 0
+        },
+        "mid": {
+          "expired": 0,
+          "lost": 0,
+          "merged": 0,
+          "received": 0,
+          "triggered": 0
+        },
+        "treble": {
+          "expired": 0,
+          "lost": 0,
+          "merged": 0,
+          "received": 0,
+          "triggered": 0
+        }
+      },
+      "extra_sends": {
+        "max_per_drain": 0,
+        "minimum_interval_s": 0.02,
+        "sends": 0,
+        "smallest_gap_s": null
+      },
+      "latency": {
+        "timestamped": {
+          "availability_ms": {
+            "max": 0.0,
+            "median": 0.0,
+            "p95": 0.0
+          },
+          "candidate_ms": {
+            "max": -10.0,
+            "median": -10.0,
+            "p95": -10.0
+          },
+          "first_render_ms": {
+            "max": 33.333333,
+            "median": 33.333333,
+            "p95": 33.333333
+          },
+          "first_send_ms": {
+            "max": 1475.0,
+            "median": 1475.0,
+            "p95": 1475.0
+          },
+          "hop_ms": {
+            "max": 0.0,
+            "median": 0.0,
+            "p95": 0.0
+          },
+          "lookahead_ms": {
+            "max": 10.0,
+            "median": 10.0,
+            "p95": 10.0
+          },
+          "schedule_error_ms": {
+            "max": 0.0,
+            "median": 0.0,
+            "p95": 0.0
+          },
+          "schedule_wait_ms": {
+            "max": 1441.666667,
+            "median": 1441.666667,
+            "p95": 1441.666667
+          },
+          "tick_wait_ms": {
+            "max": 23.333333,
+            "median": 19.166667,
+            "p95": 23.333333
+          },
+          "window_acquisition_ms": {
+            "max": 8.75,
+            "median": 4.166667,
+            "p95": 8.75
+          }
+        }
+      },
+      "publication_queue_drops": 0,
+      "publications": {
+        "timestamped": {
+          "consumed": 977,
+          "published": 1015,
+          "render_reads": 1015,
+          "repeat_reads": 19,
+          "repeated": 19,
+          "skipped": 19
+        }
+      },
+      "sends": 319,
+      "sends_per_second": {
+        "max": 32,
+        "p50": 32.0,
+        "p95": 32.0
+      }
+    },
+    "meta": {
+      "config_sha256": "f891260984d0c31c81209b6431f9d229db7c04b83ba3514f68d0af9f6415e34c",
+      "delay_ms": 0,
+      "delay_schedule": [],
+      "duration_s": 10.0,
+      "format": {
+        "bits": 16,
+        "channels": 2,
+        "encoding": "wav-pcm",
+        "sample_rate": 24000
+      },
+      "git_commit": "acc1bcb",
+      "input_sha256": "23162c3b0d6f01f86263210795fdb1ba8409c30b8e39b9b5795c9ca1b55e1294",
+      "lead_s": 1.5,
+      "numpy_version": "2.5.4",
+      "publications_per_tick": 0,
+      "python_version": "3.12.15",
+      "quantization_decimals": 6,
+      "render_hz": 30,
+      "room_sha256": "b8aa6a0510b5747c6e19d2ade0d5f4eeeab06cdeb35bc8e04c0f12b80b50f6a5",
+      "route": "timestamped",
+      "seed": 0,
+      "start_s": 0,
+      "trace_version": 1,
+      "wall_time": {
+        "basis": "virtual",
+        "end_s": 11.6,
+        "start_s": 0
+      }
+    }
+  }
+}

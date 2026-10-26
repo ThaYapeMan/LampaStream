@@ -10,6 +10,7 @@ class PickerObserver:
     def __init__(self, beat):
         self.rows = {}
         self.position = 0
+        self.positions = {}
         pipeline = beat._state.onset_pipeline
         if hasattr(pipeline, "_onset"):
             pickers = {"all": pipeline._onset}
@@ -28,6 +29,11 @@ class PickerObserver:
                 raise ValueError("Picker observer requires canonical chunks of at most one hop")
             if frame.hop_sample_starts:
                 self.position = frame.hop_sample_starts[0]
+            self.positions = {band: (self.position, 3)
+                              for band in ("all", "bass", "mid", "treble")}
+            if frame.mag_frames_short is not None and frame.hop_sample_starts_short:
+                for band in ("all", "mid", "treble"):
+                    self.positions[band] = frame.hop_sample_starts_short[0], 0
             return feed(frame)
 
         beat.feed = observed
@@ -38,8 +44,9 @@ class PickerObserver:
         def observed(flux, level_dbfs=None):
             event = original(flux, level_dbfs)
             if event is not None:
-                candidate = self.position + (3 - event.availability_frame
-                                             + event.candidate_frame) * 480
+                start, attack = self.positions.get(band, (self.position, 3))
+                candidate = start + (attack - event.availability_frame
+                                     + event.candidate_frame) * 480
                 self.rows[candidate, band] = {
                     "candidate_sample": candidate,
                     "candidate_strength": event.candidate_strength,
