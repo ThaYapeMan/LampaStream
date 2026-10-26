@@ -14,6 +14,7 @@ import json
 import math
 import shutil
 import sys
+import tempfile
 import wave
 from collections.abc import Iterator
 from pathlib import Path
@@ -58,8 +59,10 @@ def _tmp_accept_dir() -> Iterator[Path]:
     Cleaned up at the end of the test session; .gitignore prevents stale files
     from appearing in git status if a session crashes.
     """
-    d = Path(__file__).parent / "tmp_accept"
-    d.mkdir(exist_ok=True)
+    base = Path(__file__).parent / "tmp_accept"
+    base.mkdir(exist_ok=True)
+    # Every xdist worker/session owns its directory and removes only that one.
+    d = Path(tempfile.mkdtemp(prefix="worker-", dir=base))
     yield d
     shutil.rmtree(d, ignore_errors=True)
 

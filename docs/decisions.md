@@ -231,3 +231,10 @@ Affinity: [7]
   diagnostics through status so Light timing does not create a second socket.
   Preserve latest diagnostic fields when periodic status metadata arrives. Build
   and commit the frontend bundle with the pinned Node 22.22.2.
+
+- Final GitHub verification exposed an existing xdist WAV-fixture race in job
+  121577855373 (Python 3.11): another worker deleted the shared
+  tests/tmp_accept/sine_440_harness_test.wav before metadata hashing. Give each
+  worker/session a unique owned directory beneath the same ignored repository
+  parent, preserving Windows ffmpeg visibility and deleting only its own files.
+  Production behavior and every assertion remain unchanged; no retry is added.
