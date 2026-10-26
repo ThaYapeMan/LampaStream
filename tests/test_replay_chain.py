@@ -42,13 +42,12 @@ def hashes(out):
 
 
 @pytest.fixture(scope="module")
-def references(tmp_path_factory):
-    base = tmp_path_factory.mktemp("replay-references")
+def references(replay_cache):
     result = {}
     for route in ("normal", "timestamped"):
         for hz in (30, 60):
-            out = base / f"{route}-{hz}"
-            counters = run(out, "--route", route, "--render-hz", str(hz))
+            replay = replay_cache.get("clicks-120", route, hz)
+            out, counters = replay["out"], replay["counters"]
             result[route, hz] = out, counters
     return result
 
@@ -101,7 +100,7 @@ def test_all_trace_files_byte_identical_across_processes(tmp_path, effect, playb
     assert hashes(tmp_path / "one") == hashes(tmp_path / "two")
     assert set(hashes(tmp_path / "one")) == {
         "features.csv", "events.csv", "energy.csv", "renders.csv", "sends.csv",
-        "counters.json", "meta.json"}
+        "counters.json", "meta.json", "latency.csv"}
 
 
 def test_pins_current_normal_delay_shrink_burst_not_a_fix(tmp_path):

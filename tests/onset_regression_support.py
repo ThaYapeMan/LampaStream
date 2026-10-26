@@ -1,8 +1,6 @@
 """Shared in-process replay cache and explicit numeric regression measurements."""
 from __future__ import annotations
 
-import asyncio
-import copy
 import csv
 import json
 from functools import cache
@@ -10,7 +8,8 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-from replay_chain import Replay, decode, parser
+from replay_cache_support import DiskReplays
+from replay_chain import parser
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURES = ROOT / "tests/fixtures/replay"
@@ -41,7 +40,7 @@ class ReplayCache:
 
     def __init__(self, base):
         self.base = base
-        self.analysis = {}
+        self.disk = DiskReplays(base)
         self.outputs = {}
 
     def get(self, fixture, route="normal", hz=30, cap=0, method="combined"):
@@ -59,40 +58,25 @@ class ReplayCache:
         args = parser().parse_args(["--input", str(FIXTURES / f"{fixture}.wav"),
             "--config", str(config), "--route", route, "--render-hz", str(hz),
             "--publications-per-tick", str(cap), "--seed", "0", "--out", str(out)])
-        replay = Replay(args)
-        source_key = (fixture, method)
-        try:
-            if source_key not in self.analysis:
-                pcm, rate, fmt = decode(args.input)
-                replay.analyse(pcm, rate)
-                self.analysis[source_key] = copy.deepcopy((replay.records, replay.features,
-                    replay.availability, replay.sample_count, fmt))
-            else:
-                (replay.records, replay.features, replay.availability,
-                 replay.sample_count, fmt) = copy.deepcopy(self.analysis[source_key])
-            asyncio.run(replay.run())
-            # All production rendering and sampling still run; this matrix only
-            # consumes feature/event/energy CSVs, so skip redundant channel exports.
-            counters = replay.save(fmt, write_channel_traces=False)
-        finally:
-            replay.pipeline.stop()
-        result = {"out": out, "features": read_csv(out / "features.csv"),
-                  "energy": read_csv(out / "energy.csv"), "counters": counters,
+        out = self.disk.run(args)
+        counters = json.loads((out / "counters.json").read_text())
+        result = {"out": out, "features": [{k:v for k,v in row.items()
+                                if k in {"sequence", "availability_sample"}
+                                or any(k.startswith(prefix) for prefix in (
+                                    "event_id_", "candidate_sample_", "candidate_strength_",
+                                    "reported_strength_"))}
+                               for row in read_csv(out / "features.csv")],
+                  "energy": [{"consumed_sequences": r["consumed_sequences"]}
+                             for r in read_csv(out / "energy.csv")], "counters": counters,
                   "events": read_csv(out / "events.csv"), "truth": truth(fixture)}
         self.outputs[key] = result
         return result
 
 
-_CACHE = None
-
-
-@pytest.fixture(scope="module")
-def regression_replays(tmp_path_factory):
-    """Module-scoped access, shared session cache: each parameter tuple runs once."""
-    global _CACHE
-    if _CACHE is None:
-        _CACHE = ReplayCache(tmp_path_factory.mktemp("onset-regressions"))
-    return _CACHE
+@pytest.fixture(scope="session")
+def regression_replays(replay_cache):
+    """One disk-backed session cache, including all xdist workers."""
+    return replay_cache
 
 
 def truth(fixture):

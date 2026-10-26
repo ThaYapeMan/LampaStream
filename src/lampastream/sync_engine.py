@@ -3456,6 +3456,7 @@ class SyncEngine:
         interval = 1 / self.profile.output_render_hz
         next_tick = clock()
         timestamped_tick = clock()
+        cadence_origin = timestamped_tick
         last_send = -float("inf")
         last_extra = -float("inf")
         extra_requested = False
@@ -3546,7 +3547,12 @@ class SyncEngine:
                         self._last_bars, self._last_onset = f.bars, f.onset
                         self._last_mix, self._last_energy = self._effect.mix, f.full
                         self._last_sustained_energy = f.sustained_energy
-                        schedule.add(scene, target, ready, f.timing_generation, 0,
+                        slot = math.floor((target-cadence_origin)*self.profile.output_render_hz)
+                        if cadence_origin+slot/self.profile.output_render_hz < target:
+                            slot += 1
+                        send_target = (target if event_boundary else
+                                       cadence_origin+slot/self.profile.output_render_hz)
+                        schedule.add(scene, send_target, ready, f.timing_generation, 0,
                                      (f.received_monotonic, ready))
                     due = schedule.due(clock(), self._timing.tap_generation)
                     if due is not None:

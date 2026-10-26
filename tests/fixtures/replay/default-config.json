@@ -19,6 +19,7 @@
         "onset_method": "combined",
         "onset_min_ioi_ms": 30.0,
         "onset_silence_gate_dbfs": -60.0,
+        "output_render_hz": 30.0,
         "spectrum_backend": "v2",
         "superflux_lag": 2,
         "superflux_mu": 3,

@@ -328,7 +328,11 @@ class Replay:
             with self.pipeline._pub_lock:
                 self.pipeline._event_queue.extend(self.records[index].features.onset_events)
             self.event_cursor += 1
-        count = 0
+        delivery_tick = math.floor((self.now+1e-10)*self.args.render_hz)
+        if getattr(self, "delivery_tick", None) != delivery_tick:
+            self.delivery_tick = delivery_tick
+            self.delivery_count = 0
+        count = self.delivery_count
         while self.cursor < len(self.records):
             index = self.cursor
             if self.availability[index] / RATE > self.now + 1e-10:
@@ -344,6 +348,7 @@ class Replay:
             self.features[index]["publication_time_s"] = self.now
             self.tick_delivered.append(old.sequence)
             count += 1
+            self.delivery_count = count
             self.cursor += 1
 
     def observe_reads(self):

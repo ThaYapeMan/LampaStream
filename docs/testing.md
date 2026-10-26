@@ -542,3 +542,21 @@ rounding and configured lookahead; `hop_ms` rounds truth up to the 10 ms grid.
 to truth-to-send latency. `schedule_error_ms` measures send minus the event's
 lead-adjusted envelope time on the timestamped route. Counters summarize each
 term with median, linear p95 and maximum, grouped by route. Empty sets are null.
+
+### Parallel replay cache (LAT-01)
+
+Install `.[dev]`, then use `pytest -n auto` (CI) or `pytest -n 0` for one core. Pytest defaults to `-n auto`, so the
+existing CI `pytest -v` invocation also runs workers; auto is capped at four
+and respects a smaller CPU affinity.
+Limit process affinity to four CPUs before `-n auto` for the four-core measurement;
+set OPENBLAS_NUM_THREADS=1 and OMP_NUM_THREADS=1 to avoid nested BLAS threads.
+All onset/event regression modules and replay-chain reference tests use one
+session-scoped disk cache under pytest's temporary directory, shared by xdist
+workers via advisory file locks. Keys include input SHA-256, config SHA-256,
+`git rev-parse HEAD:src`, room SHA-256, route/rate/config/options and harness SHA-256.
+A working-source digest also fences uncommitted development edits; HEAD fences
+metadata revision changes. DSP snapshots are pickled once, then loaded into fresh
+pipeline/output/mixer state per option tuple. Tests never cache or rewrite expected
+numeric pins. Full channel traces are retained for the shared click references;
+other regression matrix entries execute all sends but omit unused channel CSVs.
+The cache is session-local and requires no cleanup of owner files.
