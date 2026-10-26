@@ -1,0 +1,216 @@
+LAT-01 affinity: [5]; workers: 0
+============================= test session starts ==============================
+platform linux -- Python 3.12.15, pytest-9.1.1, pluggy-1.7.0
+rootdir: /home/codex/src/LampaStream
+configfile: pyproject.toml
+testpaths: tests
+plugins: anyio-4.15.1, xdist-3.8.0
+collected 2206 items / 1 skipped
+
+tests/test_airplay_early.py ....................................         [  1%]
+tests/test_airplay_timing.py ........................................... [  3%]
+.......                                                                  [  3%]
+tests/test_album_art_lamps.py ...............                            [  4%]
+tests/test_analyse_energy.py ..........................................  [  6%]
+tests/test_analysis_architecture.py .................................... [  8%]
+................................s...                                     [  9%]
+tests/test_api.py ...................................................... [ 12%]
+........................................................................ [ 15%]
+.....................................................                    [ 17%]
+tests/test_audio_contracts.py .......................................... [ 19%]
+............................                                             [ 21%]
+tests/test_audit_blockers_v2.py ..............ss                         [ 21%]
+tests/test_audit_blockers_v3.py ................                         [ 22%]
+tests/test_auto_latency.py ..................................            [ 24%]
+tests/test_backup.py ...................................                 [ 25%]
+tests/test_band_colours.py ..............................                [ 26%]
+tests/test_band_normalise.py ....                                        [ 27%]
+tests/test_bar_falloff.py .............                                  [ 27%]
+tests/test_calib_alignment.py ......................                     [ 28%]
+tests/test_calibrate_energy.py ..............                            [ 29%]
+tests/test_canonical_hpss.py .s.s.s.s.s                                  [ 29%]
+tests/test_capture_energy.py ..................                          [ 30%]
+tests/test_cavacore_backend.py ssssssssssssssssssssssssssssssssssssss    [ 32%]
+tests/test_cavacore_pipeline.py ssssssssssssssssssssssssssssssssssssssss [ 34%]
+ss                                                                       [ 34%]
+tests/test_dsp_phase2a.py ..........................................sss  [ 36%]
+tests/test_energy_input.py ............................................. [ 38%]
+........................................                                 [ 40%]
+tests/test_enum_fields.py ....                                           [ 40%]
+tests/test_event_survival_regression.py ................................ [ 41%]
+..........................                                               [ 42%]
+tests/test_hue_output.py ............                                    [ 43%]
+tests/test_hue_release.py .............................................. [ 45%]
+...                                                                      [ 45%]
+tests/test_installer.py ........................................         [ 47%]
+tests/test_latency_frontend.py ......                                    [ 47%]
+tests/test_latency_regression.py .............................           [ 49%]
+tests/test_latency_retirement.py .....                                   [ 49%]
+tests/test_lifecycle.py .........                                        [ 49%]
+tests/test_live_snapshot_cleanup.py ......                               [ 50%]
+tests/test_lms_discovery.py .......                                      [ 50%]
+tests/test_lms_follower.py ..........................................    [ 52%]
+tests/test_lms_readiness.py ..............                               [ 52%]
+tests/test_lms_status.py ..........................                      [ 54%]
+tests/test_lms_sync_group.py ....                                        [ 54%]
+tests/test_lms_timing.py ........................................        [ 56%]
+tests/test_loudness.py .......                                           [ 56%]
+tests/test_migration_a72893b.py ........................................ [ 58%]
+................................................                         [ 60%]
+tests/test_migration_canonical_pcm.py ...................                [ 61%]
+tests/test_migration_history.py .........                                [ 61%]
+tests/test_models_v2.py ....................................             [ 63%]
+tests/test_multiband_onset.py ......                                     [ 63%]
+tests/test_music_api.py .......                                          [ 63%]
+tests/test_music_colours.py ............................................ [ 65%]
+.                                                                        [ 65%]
+tests/test_onset_events.py .................                             [ 66%]
+tests/test_onset_methods.py ....                                         [ 66%]
+tests/test_onset_picker_regression.py ............                       [ 67%]
+tests/test_onset_position_regression.py ................................ [ 68%]
+......................................................                   [ 71%]
+tests/test_onset_strength_regression.py ................................ [ 72%]
+................................................                         [ 74%]
+tests/test_pcm_source.py ....................................            [ 76%]
+tests/test_phase2.py ................................................... [ 78%]
+.                                                                        [ 78%]
+tests/test_phase3.py ................................................... [ 81%]
+......                                                                   [ 81%]
+tests/test_player_clock.py ..........................                    [ 82%]
+tests/test_player_manager.py ........................................... [ 84%]
+.......                                                                  [ 84%]
+tests/test_reference_deletion.py ......................                  [ 85%]
+tests/test_release_cleanup.py .......                                    [ 86%]
+tests/test_replay_chain.py ........................                      [ 87%]
+tests/test_repository_installer.py s.................................... [ 89%]
+........                                                                 [ 89%]
+tests/test_run_acceptance.py ..........................                  [ 90%]
+tests/test_schema_migration.py ..................                        [ 91%]
+tests/test_spectrum_engine.py .........................                  [ 92%]
+tests/test_stft_onset.py ..                                              [ 92%]
+tests/test_storage.py ..                                                 [ 92%]
+tests/test_superflux_onset.py ....                                       [ 92%]
+tests/test_sync_engine.py .............................................. [ 94%]
+.........................................................                [ 97%]
+tests/test_tee_pcm_source.py .....                                       [ 97%]
+tests/test_track_position.py ..............                              [ 98%]
+tests/test_types.py ............                                         [ 98%]
+tests/test_v2_pink_compensation.py ...........                           [ 99%]
+tests/test_yeney_player.py ............                                  [100%]
+
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/fastapi/testclient.py:1
+  /home/codex/src/LampaStream/.venv/lib/python3.12/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+src/lampastream/app.py:42
+  /home/codex/src/LampaStream/src/lampastream/app.py:42: DeprecationWarning: 
+          on_event is deprecated, use lifespan event handlers instead.
+  
+          Read more about it in the
+          [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+          
+    @app.on_event("startup")
+
+.venv/lib/python3.12/site-packages/fastapi/applications.py:4723
+.venv/lib/python3.12/site-packages/fastapi/applications.py:4723
+  /home/codex/src/LampaStream/.venv/lib/python3.12/site-packages/fastapi/applications.py:4723: DeprecationWarning: 
+          on_event is deprecated, use lifespan event handlers instead.
+  
+          Read more about it in the
+          [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+          
+    return self.router.on_event(event_type)  # ty: ignore[deprecated]
+
+src/lampastream/app.py:61
+  /home/codex/src/LampaStream/src/lampastream/app.py:61: DeprecationWarning: 
+          on_event is deprecated, use lifespan event handlers instead.
+  
+          Read more about it in the
+          [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+          
+    @app.on_event("shutdown")
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+SKIPPED [1] tests/test_calib_audio.py:242: soundfile not installed
+SKIPPED [1] tests/test_analysis_architecture.py:1659: cavacore native library not available
+SKIPPED [1] tests/test_audit_blockers_v2.py:606: cavacore native lib unavailable
+SKIPPED [1] tests/test_audit_blockers_v2.py:623: cavacore native lib unavailable
+SKIPPED [3] tests/test_canonical_hpss.py:40: cavacore native library not built
+SKIPPED [1] tests/test_canonical_hpss.py:72: cavacore native library not built
+SKIPPED [1] tests/test_canonical_hpss.py:99: cavacore native library not built
+SKIPPED [1] tests/test_cavacore_backend.py:69: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_backend.py:75: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_backend.py:80: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_backend.py:86: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_backend.py:91: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_backend.py:96: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_backend.py:101: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_backend.py:106: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_backend.py:116: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_backend.py:123: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_backend.py:130: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_backend.py:140: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_backend.py:155: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_backend.py:171: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_backend.py:190: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_backend.py:204: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_backend.py:218: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_backend.py:237: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_backend.py:258: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_backend.py:287: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_backend.py:295: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_backend.py:301: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_backend.py:314: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_backend.py:321: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_backend.py:341: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_backend.py:349: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_backend.py:358: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_backend.py:398: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_backend.py:408: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_backend.py:423: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_backend.py:429: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_backend.py:438: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_backend.py:450: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_backend.py:457: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_backend.py:468: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_backend.py:478: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_backend.py:486: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_backend.py:499: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_pipeline.py:121: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_pipeline.py:131: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_pipeline.py:145: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_pipeline.py:158: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_pipeline.py:173: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_pipeline.py:189: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_pipeline.py:219: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_pipeline.py:242: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_pipeline.py:257: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_pipeline.py:271: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_pipeline.py:304: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_pipeline.py:338: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [12] tests/test_cavacore_pipeline.py:362: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_pipeline.py:400: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_pipeline.py:415: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_pipeline.py:427: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_pipeline.py:477: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_pipeline.py:510: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_pipeline.py:536: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_pipeline.py:560: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_pipeline.py:580: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_pipeline.py:592: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_pipeline.py:613: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_pipeline.py:626: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_pipeline.py:632: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_pipeline.py:643: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_pipeline.py:657: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_pipeline.py:671: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_cavacore_pipeline.py:690: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [2] tests/test_cavacore_pipeline.py:711: cavacore native library not built — run: pip install . (needs libfftw3-dev)
+SKIPPED [1] tests/test_dsp_phase2a.py:762: cava binary not installed
+SKIPPED [1] tests/test_dsp_phase2a.py:795: cava binary not installed
+SKIPPED [1] tests/test_dsp_phase2a.py:808: cava binary not installed
+SKIPPED [1] tests/test_repository_installer.py:28: This failure test runs only on unsupported review hosts
+=========== 2114 passed, 93 skipped, 5 warnings in 142.48s (0:02:22) ===========
+LAT-01 full-suite wall time: 142.726 s

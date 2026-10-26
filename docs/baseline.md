@@ -347,7 +347,7 @@ Tone-step startup remains a warmup miss; noise/sweep have empty sparse truth.
 | tone-steps | 0 | 3 | 1 | 0 | 0 |
 | tone-steps | 1 | 3 | 1 | 0 | 0 |
 
-## Phase 3 (LAT-01) numbers at implementation under verification
+## Phase 3 (LAT-01) numbers at c5e6a7e
 
 Default combined analyser, synthetic room, seed 0, unrestricted delivery, 30 Hz.
 [Raw per-event ledgers and counters](baseline/lat01/README.md) preserve both runs.
@@ -396,4 +396,17 @@ The normal delay-shrink burst test remains unchanged and passes. The extra-send
 spacing tests include a render that takes longer than the minimum send interval,
 so one-extra-per-drain is enforced explicitly rather than assumed from CPU speed.
 
-Final full-suite timing and commit provenance are recorded below after verification.
+Final verification at c5e6a7e (Python 3.12.15, BLAS threads=1): **2,114 passed,
+93 skipped, 5 warnings in 142.48 s; measured wall 142.726 s** on CPU 5. Four-worker
+`-n auto` on CPUs 5/7/13/15: **2,114 passed, 93 skipped, 20 warnings in 60.76 s;
+measured wall 60.996 s**. Both runs start with cold session-local replay caches.
+The unchanged native/host-dependent skips remain explicit in the complete
+[one-core transcript](baseline/lat01/pytest-one-core.txt) and
+[four-core transcript](baseline/lat01/pytest-four-core.txt). Both ≤190 s one-core
+and ≤90 s four-core targets pass; `ruff check .` passes. The additional four-core
+warnings are worker-local repetitions of the same existing warnings.
+
+Final [headroom](baseline/lat01/headroom.md), [lookahead comparison](baseline/lat01/lookahead.md)
+and [phase-two colour hash checks](baseline/lat01/colour-check.md) are retained
+alongside the raw event ledgers. No frontend build, deployment or physical
+source/output access was performed.

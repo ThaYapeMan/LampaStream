@@ -150,15 +150,17 @@ Affinity: [7]
 
 | Fixture | Route | Hz | DSP CPU ms/hop | Loop p95 / max ms | Core % | Margin | Virtual backlog | Pub / event drops |
 |---|---|---:|---:|---:|---:|---:|---:|---:|
-| pink-noise | normal | 30 | 0.641 | 0.115 / 0.547 | 7.2 | 13.97× | 0 | 0 / 0 |
-| pink-noise | normal | 50 | 0.623 | 0.127 / 0.892 | 7.1 | 14.07× | 0 | 0 / 0 |
-| pink-noise | normal | 60 | 0.628 | 0.110 / 0.757 | 7.3 | 13.78× | 0 | 0 / 0 |
-| pink-noise | timestamped | 30 | 0.634 | 0.417 / 1.361 | 7.6 | 13.12× | 0 | 0 / 0 |
-| pink-noise | timestamped | 50 | 0.627 | 0.311 / 0.476 | 7.6 | 13.11× | 0 | 0 / 0 |
-| pink-noise | timestamped | 60 | 0.630 | 0.263 / 0.976 | 7.8 | 12.86× | 0 | 0 / 0 |
-| clicks-174 | normal | 30 | 0.741 | 0.118 / 0.868 | 8.0 | 12.57× | 0 | 24 / 0 |
-| clicks-174 | normal | 50 | 0.701 | 0.127 / 0.962 | 7.8 | 12.89× | 0 | 24 / 0 |
-| clicks-174 | normal | 60 | 0.698 | 0.108 / 1.025 | 7.8 | 12.77× | 0 | 24 / 0 |
-| clicks-174 | timestamped | 30 | 0.699 | 0.354 / 1.679 | 8.1 | 12.42× | 0 | 0 / 0 |
-| clicks-174 | timestamped | 50 | 0.735 | 0.225 / 0.949 | 8.5 | 11.73× | 0 | 0 / 0 |
-| clicks-174 | timestamped | 60 | 0.686 | 0.221 / 1.062 | 8.1 | 12.34× | 0 | 0 / 0 |
+| pink-noise | normal | 30 | 0.640 | 0.115 / 0.658 | 7.1 | 14.00× | 0 | 0 / 0 |
+| pink-noise | normal | 50 | 0.634 | 0.128 / 1.053 | 7.2 | 13.81× | 0 | 0 / 0 |
+| pink-noise | normal | 60 | 0.631 | 0.110 / 0.898 | 7.3 | 13.72× | 0 | 0 / 0 |
+| pink-noise | timestamped | 30 | 0.640 | 0.424 / 1.244 | 7.7 | 12.99× | 0 | 0 / 0 |
+| pink-noise | timestamped | 50 | 0.635 | 0.325 / 0.470 | 7.8 | 12.90× | 0 | 0 / 0 |
+| pink-noise | timestamped | 60 | 0.644 | 0.265 / 1.100 | 7.9 | 12.59× | 0 | 0 / 0 |
+| clicks-174 | normal | 30 | 0.742 | 0.120 / 0.953 | 8.0 | 12.54× | 0 | 24 / 0 |
+| clicks-174 | normal | 50 | 0.716 | 0.132 / 1.391 | 8.0 | 12.56× | 0 | 24 / 0 |
+| clicks-174 | normal | 60 | 0.704 | 0.115 / 1.208 | 7.9 | 12.64× | 0 | 24 / 0 |
+| clicks-174 | timestamped | 30 | 0.707 | 0.361 / 1.610 | 8.1 | 12.28× | 0 | 0 / 0 |
+| clicks-174 | timestamped | 50 | 0.753 | 0.231 / 1.034 | 8.8 | 11.42× | 0 | 0 / 0 |
+| clicks-174 | timestamped | 60 | 0.710 | 0.239 / 1.420 | 8.4 | 11.86× | 0 | 0 / 0 |
+
+- 2026-10-26 — Final evidence anchors implementation c5e6a7e; the final follow-up commit only records provenance, raw ledgers and transcripts. Force-track the two latency CSV artifacts because the repository generally ignores generated CSV files. Full runs use cold session caches and separate CPU affinity for the one/four-core measurements.

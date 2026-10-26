@@ -1,7 +1,7 @@
 # LAT-01 software latency evidence
 
 Before: phase-two code at 542b9ed with the part-1 observer ledger added.
-After: LAT-01 implementation, default analyser and output room, seed 0,
+After: LAT-01 implementation `c5e6a7eb735e09a31e66e3194be2bee787019229`, default analyser and output room, seed 0,
 unrestricted delivery, 30 Hz. Each CSV row retains fixture/route/event identity,
 truth coordinates, detector coordinates, first-render/send offsets and terms.
 The JSON files preserve complete per-run counters and provenance metadata.
@@ -19,3 +19,8 @@ OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 .venv/bin/python scripts/replay_chain.p
 ```
 
 The trace is software-only; it never opens a player, bridge or lamp.
+
+The full-suite transcripts, final one-core headroom report, lookahead comparison
+and immutable phase-two colour comparison are included here. These are measured
+software artifacts; no physical latency or live event-loop wake-jitter result is
+inferred from the virtual replay.
