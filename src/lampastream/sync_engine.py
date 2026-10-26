@@ -1002,6 +1002,8 @@ class BeatDetector:
                           if state.onset_method == "multiband" else {"all": result})
             fired = {band: event for band, event in candidates.items() if event is not None}
             if not fired:
+                if frame.mag_frames_short is not None:
+                    continue  # continuous snapshots already carry cleared onset fields
                 updates.append(self._parse_onset_frame(
                     state, ((False, 0.0),) * 3 if state.onset_method == "multiband"
                     else (False, 0.0), start, hop))
@@ -3451,11 +3453,23 @@ class SyncEngine:
         self.event_mapping_fallbacks = 0
         self._pending_onset_events = []
         self._event_source_times = {}
+        interval = 1 / self.profile.output_render_hz
+        next_tick = clock()
+        last_send = -float("inf")
+        last_extra = -float("inf")
+        extra_requested = False
+        minimum_interval = 1 / (2 * capabilities.update_hz)
+
+        async def wait_for_work():
+            # Audio workers own DSP; bounded polling only drains immutable events.
+            await sleep(max(0.000001, min(.005, max(next_tick, last_extra+minimum_interval)-clock())))
+
         while True:
             if isinstance(self._analyser, CanonicalAnalysisPipeline):
                 for event in self._analyser.drain_events():
                     if event.id in self.event_records:
                         continue
+                    extra_requested = True
                     self._event_source_times[event.id] = event.received_monotonic
                     event = replace(event, received_monotonic=clock())
                     self._pending_onset_events.append(event)
@@ -3478,7 +3492,7 @@ class SyncEngine:
                 self._scene_timing.clear()
                 if isinstance(self._analyser, CanonicalAnalysisPipeline):
                     self._analyser.drain_publications()
-                await sleep(SEND_INTERVAL_S)
+                await sleep(interval)
                 continue
             if self._timing is not None:
                 schedule.reset(self._timing.tap_generation)
@@ -3527,9 +3541,29 @@ class SyncEngine:
                             self._timing.processing(*provenance, sent)
                     self._delay_buffer.clear()
                     self._scene_timing.clear()
-                    await sleep(SEND_INTERVAL_S)
+                    await sleep(interval)
                     continue
                 schedule.queue.clear()
+            now = clock()
+            # Extra event scenes preserve configured delay without advancing its
+            # cadence-sized slot buffer. Coalescing retains held event envelopes.
+            if schedule.queue and now-last_send >= minimum_interval-1e-10:
+                due = schedule.due(now, generation)
+                if due is not None:
+                    scene, _ = due
+                    output.send(scene, now)
+                    self._shown_scene, self._shown_t = scene, now
+                    last_send = last_extra = now
+            cadence = now >= next_tick-1e-10
+            extra = extra_requested and now-last_send >= minimum_interval-1e-10
+            if ((not cadence and not extra)
+                    or now-last_extra < minimum_interval-1e-10):
+                await wait_for_work()
+                continue
+            if cadence:
+                while next_tick <= now+1e-10:
+                    next_tick += interval
+            extra_requested = False
             features = self._analyser.latest()
             if (output_minimum_sequence is not None and isinstance(token, int)
                     and token <= output_minimum_sequence):
@@ -3560,11 +3594,16 @@ class SyncEngine:
                 self._last_mix = self._effect.mix
                 self._last_energy = features.full
                 self._last_sustained_energy = features.sustained_energy
-                self._scene_timing.append(
+                if cadence:
+                    self._scene_timing.append(
                     (features.received_monotonic, clock())
                     if self._timing is not None and features.received_monotonic is not None
                     else None)
-                self._delay_buffer.append(scene)
+                if cadence:
+                    self._delay_buffer.append(scene)
+                else:
+                    schedule.add(scene, t+self._probe.current_delay_ms()/1000,
+                                 t, generation)
                 self._diag_frame += 1
                 if self._diag_frame % 60 == 0:
                     bars = features.bars
@@ -3595,14 +3634,14 @@ class SyncEngine:
                         _band_avg(bars, bass_hi, mid_hi),
                         _band_avg(bars, mid_hi, n),
                     )
-            else:
+            elif cadence:
                 # None slot: advances the buffer in time without sending,
                 # so the delay stays consistent even during silent passages.
                 self._delay_buffer.append(None)
                 self._scene_timing.append(None)
 
             delay_frames = max(
-                0, round(self._probe.current_delay_ms() / 1000.0 / SEND_INTERVAL_S)
+                0, round(self._probe.current_delay_ms() / 1000.0 / interval)
             )
             while len(self._delay_buffer) > delay_frames:
                 entry = self._delay_buffer.popleft()
@@ -3610,8 +3649,16 @@ class SyncEngine:
                 if entry is not None:
                     sent = clock()
                     output.send(entry, sent)
+                    last_send = sent
                     self._shown_scene, self._shown_t = entry, sent
                     if provenance is not None and self._timing is not None:
                         self._timing.processing(*provenance, sent)
 
-            await sleep(SEND_INTERVAL_S)
+            if not cadence and schedule.queue and clock()-last_send >= minimum_interval-1e-10:
+                due = schedule.due(clock(), generation)
+                if due is not None:
+                    scene, _ = due
+                    output.send(scene, clock())
+                    self._shown_scene, self._shown_t = scene, clock()
+                    last_send = last_extra = clock()
+            await wait_for_work()

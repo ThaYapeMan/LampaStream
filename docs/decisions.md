@@ -93,3 +93,27 @@ Each dated line records an owner decision or a bounded documentation choice for 
 - 2026-10-26 — The short front end emits one right-aligned frame at each 10 ms boundary, with zero history only at epoch start; its hop coordinate is the preceding hop start. Long-window bass retains its three-hop attack reference. Existing callers without short frames retain their legacy analysis path.
 - 2026-10-26 — Raw short-window pink-noise detections rose 79→82, so use 24-band/octave mean magnitude followed by log10(1+X), collapsing unresolved duplicate bin boundaries. This reduced the count to 80 (77 trigger groups), without increasing thresholds; sweep 309→303. Sparse empty truth labels all noise events as unmatched, not proven perceptual false alarms.
 - 2026-10-26 — Retain lookahead 1 as default: lookahead 0 adds two unmatched pink-noise events (82 vs 80) and five sweep events (308 vs 303). Click recall and double hits are unchanged; both 0 and 1 remain selectable. No threshold adjustment.
+- 2026-10-26 — Keep default cadence 30 Hz despite measured >11× one-core margin at 50 Hz: extra sends already meet the normal latency goal and continuous effect ballistics remain cadence-dependent until RENDER-01. output_render_hz is a validated 20–60 Hz analyser/profile setting; the harness sets it explicitly.
+- 2026-10-26 — Poll the lossless event queue every ≤5 ms between cadence deadlines; this bounds software wake delay without cross-thread loop callbacks or a second output task. Deferred extras coalesce through SceneSchedule and obey 1/(2×output.update_hz); delayed continuous slots retain the historical delay-shrink behavior.
+- 2026-10-26 — Omit empty short-front-end BeatDetector updates: they only duplicated cleared compatibility flags on independent intervals, increasing queue churn. Continuous snapshots keep their cleared defaults; positive candidate publications remain explicit.
+
+LAT-01 preliminary one-core trace headroom, BLAS threads=1. Loop times include
+observer overhead, measured between injected sleeps; total core % includes DSP.
+Backlog is pending replay publications at completion; publication evictions on the
+normal route are unused snapshots, distinct from event drops. The redundant empty
+short-hop publications were removed after this measurement.
+
+| Fixture | Route | Hz | DSP ms/hop | Loop p95 / max ms | Total core % | Margin | Backlog | Pub / event drops |
+|---|---|---:|---:|---:|---:|---:|---:|---:|
+| pink-noise | normal | 30 | 0.707 | 0.133 / 0.777 | 7.8 | 12.78× | 0 | 0 / 0 |
+| pink-noise | normal | 50 | 0.687 | 0.131 / 0.972 | 7.7 | 12.98× | 0 | 0 / 0 |
+| pink-noise | normal | 60 | 0.685 | 0.126 / 1.040 | 7.8 | 12.79× | 0 | 0 / 0 |
+| pink-noise | timestamped | 30 | 0.683 | 0.409 / 1.175 | 7.9 | 12.70× | 0 | 0 / 0 |
+| pink-noise | timestamped | 50 | 0.693 | 0.295 / 0.412 | 8.1 | 12.38× | 0 | 0 / 0 |
+| pink-noise | timestamped | 60 | 0.767 | 0.261 / 0.856 | 8.9 | 11.24× | 0 | 0 / 0 |
+| clicks-174 | normal | 30 | 0.778 | 0.126 / 1.192 | 8.4 | 11.92× | 0 | 996 / 0 |
+| clicks-174 | normal | 50 | 0.779 | 0.131 / 1.521 | 8.6 | 11.64× | 0 | 996 / 0 |
+| clicks-174 | normal | 60 | 0.788 | 0.129 / 42.696 | 9.3 | 10.80× | 0 | 996 / 0 |
+| clicks-174 | timestamped | 30 | 0.795 | 0.419 / 0.639 | 9.0 | 11.11× | 0 | 0 / 0 |
+| clicks-174 | timestamped | 50 | 0.778 | 0.252 / 1.410 | 9.0 | 11.15× | 0 | 0 / 0 |
+| clicks-174 | timestamped | 60 | 0.797 | 0.246 / 1.369 | 9.2 | 10.88× | 0 | 0 / 0 |

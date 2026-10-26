@@ -198,6 +198,7 @@ class AnalyserCreateBody(BaseModel):
 
     name: str = "Default Analysis"
     onset_method: str = "combined"
+    output_render_hz: float = Field(default=30, ge=20, le=60, allow_inf_nan=False)
     onset_lookahead_frames: int = Field(default=1, ge=0, le=3, strict=True)
     onset_delta_abs: float = Field(default=.02, gt=0, allow_inf_nan=False)
     onset_min_ioi_ms: float = Field(default=30.0, ge=0, allow_inf_nan=False)
@@ -220,6 +221,7 @@ class AnalyserPatchBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
     name: str | None = None
     onset_method: str | None = None
+    output_render_hz: float | None = Field(default=None, ge=20, le=60, allow_inf_nan=False)
     onset_lookahead_frames: int | None = Field(default=None, ge=0, le=3, strict=True)
     onset_delta_abs: float | None = Field(default=None, gt=0, allow_inf_nan=False)
     onset_min_ioi_ms: float | None = Field(default=None, ge=0, allow_inf_nan=False)
@@ -392,6 +394,7 @@ class CouplingPatchBody(CouplingReleaseBody):
     higher_cutoff_freq: int | None = None
     # Analyser pcm category (update_onset_pipeline)
     onset_method: str | None = None
+    output_render_hz: float | None = Field(default=None, ge=20, le=60, allow_inf_nan=False)
     onset_lookahead_frames: int | None = Field(default=None, ge=0, le=3, strict=True)
     onset_delta_abs: float | None = Field(default=None, gt=0, allow_inf_nan=False)
     onset_min_ioi_ms: float | None = Field(default=None, ge=0, allow_inf_nan=False)
@@ -439,7 +442,7 @@ _C_SPECTRUM_FIELDS: frozenset[str] = frozenset({
     "bars", "lower_cutoff_freq", "higher_cutoff_freq",
 })
 _C_PCM_FIELDS: frozenset[str] = frozenset({
-    "onset_lookahead_frames", "onset_delta_abs",
+    "output_render_hz", "onset_lookahead_frames", "onset_delta_abs",
     "onset_min_ioi_ms", "onset_silence_gate_dbfs",
     "onset_method", "onset_delta", "onset_alpha", "superflux_mu", "superflux_lag",
     "use_hpss_separation", "bass_hz", "mid_hz",
@@ -460,7 +463,7 @@ _C_PLAYER_INLINE: frozenset[str] = frozenset({
 })
 _C_ANALYSER_INLINE: frozenset[str] = frozenset({
     "bars", "lower_cutoff_freq", "higher_cutoff_freq",
-    "onset_lookahead_frames", "onset_delta_abs",
+    "output_render_hz", "onset_lookahead_frames", "onset_delta_abs",
     "onset_min_ioi_ms", "onset_silence_gate_dbfs",
     "onset_method", "onset_delta", "onset_alpha", "superflux_mu", "superflux_lag",
     "use_hpss_separation", "band_normalise", "bar_falloff_s",
@@ -1002,6 +1005,7 @@ async def create_analyser(request: Request, body: AnalyserCreateBody):
             name=body.name,
             onset_method=body.onset_method,
             onset_delta=body.onset_delta,
+            output_render_hz=body.output_render_hz,
             onset_lookahead_frames=body.onset_lookahead_frames,
             onset_delta_abs=body.onset_delta_abs,
             onset_min_ioi_ms=body.onset_min_ioi_ms,

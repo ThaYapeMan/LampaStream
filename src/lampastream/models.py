@@ -178,6 +178,8 @@ def _validate_onset_effect(effect):
 
 def _validate_onset_analyser(analyser):
     import math
+    if not math.isfinite(analyser.output_render_hz) or not 20 <= analyser.output_render_hz <= 60:
+        raise ValueError("output_render_hz must be finite and between 20 and 60")
     if type(analyser.onset_lookahead_frames) is not int or not (
             0 <= analyser.onset_lookahead_frames <= 3):
         raise ValueError("onset_lookahead_frames must be an integer from 0 to 3")
@@ -265,6 +267,7 @@ class Profile:
     # Onset detection tuning (Dixon 2006 three-condition peak-picking).
     # onset_delta: margin above the asymmetric local mean required for condition 2.
     # Higher values = fewer, more confident onsets.
+    output_render_hz: float = 30.0
     onset_lookahead_frames: int = 1
     onset_delta_abs: float = 0.02
     onset_min_ioi_ms: float = 30.0
@@ -507,6 +510,7 @@ class Analyser:
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     name: str = "Default Analysis"
     onset_method: str = "combined"
+    output_render_hz: float = 30.0
     onset_lookahead_frames: int = 1
     onset_delta_abs: float = 0.02
     onset_min_ioi_ms: float = 30.0
@@ -549,6 +553,7 @@ class Analyser:
             "id": self.id,
             "name": self.name,
             "onset_method": self.onset_method,
+            "output_render_hz": self.output_render_hz,
             "onset_lookahead_frames": self.onset_lookahead_frames,
             "onset_delta_abs": self.onset_delta_abs,
             "onset_min_ioi_ms": self.onset_min_ioi_ms,

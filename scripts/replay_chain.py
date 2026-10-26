@@ -209,6 +209,8 @@ class Replay:
     def __init__(self, args):
         self.args = args
         self.high, self.low = profiles(args.config.read_bytes(), args.coupling_id)
+        self.high = replace(self.high, output_render_hz=args.render_hz)
+        self.low = replace(self.low, output_render_hz=args.render_hz)
         self.output = TraceOutput(load_room(args.room), args.route, load_capabilities(args.room))
         self.pipeline = _make_canonical_pipeline(acceptance._OfflineSource(), self.high)
         self.features, self.records, self.availability = [], [], []
@@ -472,7 +474,7 @@ class Replay:
         async def step(_interval):
             self.finish_tick(engine)
             self.tick += 1
-            self.now = self.tick / self.args.render_hz
+            self.now = round(self.now + _interval, 12)
             if self.now > end + 1e-10:
                 raise FinishedReplay
             self.release()
