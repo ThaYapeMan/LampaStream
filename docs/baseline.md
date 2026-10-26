@@ -312,3 +312,9 @@ first-send values include the replay 1500 ms playback lead.
 | impulse | timestamped | 1500.000 / 1500.000 / 1500.000 |
 | panning | normal | 33.333 / 33.333 / 33.333 |
 | panning | timestamped | 1500.000 / 1500.000 / 1500.000 |
+
+LAT-01 short-window step (lookahead 1, cadence unchanged): clicks-120 and impulse
+window acquisition falls 20→10 ms; clicks-128/174 typically lose 20 ms. The
+remaining render wait can absorb that gain (clicks-120 still sends at 33.333 ms).
+Raw pink-noise event counts 79→82 motivated log-filtered short flux (80 events);
+sweep changes 309→303. No detector threshold was increased.

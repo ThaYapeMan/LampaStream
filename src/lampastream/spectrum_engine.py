@@ -93,6 +93,8 @@ class SharedAnalysisFrame:
     sample_start: int             # canonical epoch position of pcm[0]
     sample_end: int               # canonical epoch position past pcm[-1]
     hop_sample_starts: list[int]  # canonical position of the first sample in each mag_frame
+    mag_frames_short: list[np.ndarray] | None = None
+    hop_sample_starts_short: list[int] | None = None
 
 
 @dataclass

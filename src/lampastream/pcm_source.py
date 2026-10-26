@@ -121,6 +121,7 @@ class TeePcmSource(Generic[_OpenArgs]):
 
 VIS_BUF_SIZE = 16384  # s16 samples in the circular buffer (8192 stereo frames)
 WINDOW_SIZE = 2048  # FFT window length in samples
+ONSET_WINDOW_SIZE = 512  # independent right-aligned onset front end
 
 # vis_t layout, glibc x86-64 (pthread_rwlock_t = 56 bytes):
 #   offset  0  pthread_rwlock_t  56 B  (skipped — not taken)
@@ -234,10 +235,16 @@ class PcmStft:
         frames = stft.push(mono_samples)   # list[np.ndarray], each shape (1025,)
     """
 
-    def __init__(self, sample_rate: int) -> None:
+    def __init__(self, sample_rate: int, window_size: int = WINDOW_SIZE,
+                 *, right_aligned: bool = False) -> None:
+        if window_size not in (256, 512, 1024, WINDOW_SIZE):
+            raise ValueError("unsupported STFT window size")
         self._hop = round(sample_rate * 0.010)
-        self._window = np.hamming(WINDOW_SIZE).astype(np.float32)
-        self._buf = np.zeros(0, dtype=np.float32)
+        self.window_size = window_size
+        self._padding = max(0, window_size - self._hop) if right_aligned else 0
+        self._right_aligned = right_aligned
+        self._window = np.hamming(window_size).astype(np.float32)
+        self._buf = np.zeros(self._padding, dtype=np.float32)
 
     @property
     def hop(self) -> int:
@@ -247,7 +254,7 @@ class PcmStft:
     @property
     def n_bins(self) -> int:
         """Number of real-valued frequency bins per frame (WINDOW_SIZE // 2 + 1)."""
-        return WINDOW_SIZE // 2 + 1
+        return self.window_size // 2 + 1
 
     def push(self, samples: np.ndarray) -> list[np.ndarray]:
         """Append samples and return all complete magnitude frames.
@@ -257,8 +264,9 @@ class PcmStft:
         """
         self._buf = np.concatenate([self._buf, samples])
         frames: list[np.ndarray] = []
-        while len(self._buf) >= WINDOW_SIZE:
-            windowed = self._buf[:WINDOW_SIZE] * self._window
+        while len(self._buf) >= max(self.window_size, self._hop):
+            offset = max(0, self._hop-self.window_size) if self._right_aligned else 0
+            windowed = self._buf[offset:offset+self.window_size] * self._window
             mag = np.abs(np.fft.rfft(windowed)).astype(np.float32)
             frames.append(mag)
             self._buf = self._buf[self._hop:]
@@ -266,7 +274,7 @@ class PcmStft:
 
     def reset(self) -> None:
         """Discard accumulated samples; clear STFT history for epoch transitions."""
-        self._buf = np.zeros(0, dtype=np.float32)
+        self._buf = np.zeros(self._padding, dtype=np.float32)
 
 
 # ---------------------------------------------------------------------------

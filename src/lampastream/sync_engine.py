@@ -27,6 +27,7 @@ import time
 from collections import deque
 from collections.abc import Callable
 from dataclasses import dataclass, replace
+from functools import cache
 
 import numpy as np
 
@@ -45,7 +46,7 @@ from .loudness_analyzer import KWeightedLoudnessAnalyzer
 from .models import Profile
 from .onset_envelope import TriggerEnvelope
 from .output_boundary import GuardedScene, QuantisationGuard
-from .pcm_source import WINDOW_SIZE, PcmStft
+from .pcm_source import ONSET_WINDOW_SIZE, WINDOW_SIZE, PcmStft
 from .spectrum_engine import (
     AnalysisProcessor,
     ProcessorUpdate,
@@ -480,6 +481,23 @@ class OnsetDetector:
 # ---------------------------------------------------------------------------
 
 
+@cache
+def _onset_band_boundaries(bins):
+    frequencies = 27.5 * 2 ** (np.arange(222) / 24)
+    return np.unique(np.clip(np.rint(frequencies * (2*(bins-1)) / 48000),
+                             0, bins-1).astype(int))
+
+
+def log_onset_bands(magnitude):
+    """24 bands/octave, log10(1+X), independently implemented from the paper.
+
+    Unique bin boundaries avoid multiplying unresolved low-frequency bands.
+    """
+    boundaries = _onset_band_boundaries(len(magnitude))
+    means = np.add.reduceat(magnitude[:boundaries[-1]], boundaries[:-1]) / np.diff(boundaries)
+    return np.log10(1 + means)
+
+
 class StftOnsetPipeline:
     """'Combined' onset detector (Dixon 2006) running on STFT magnitude frames.
 
@@ -752,9 +770,10 @@ class StereoMagStft:
     Does NOT perform any downmix before or after the FFT.
     """
 
-    def __init__(self, sample_rate: int) -> None:
-        self._stft_l = PcmStft(sample_rate)
-        self._stft_r = PcmStft(sample_rate)
+    def __init__(self, sample_rate: int, window_size: int = WINDOW_SIZE,
+                 *, right_aligned: bool = False) -> None:
+        self._stft_l = PcmStft(sample_rate, window_size, right_aligned=right_aligned)
+        self._stft_r = PcmStft(sample_rate, window_size, right_aligned=right_aligned)
 
     @property
     def hop(self) -> int:
@@ -947,17 +966,38 @@ class BeatDetector:
         # rebuild() may replace self._state after this point, but this feed()
         # call finishes on the captured configuration.
         state = self._state
-        if not frame.mag_frames:
-            return []
         pipeline = state.onset_pipeline
-        levels = [20 * math.log10(max(float(np.linalg.norm(mag)) / WINDOW_SIZE, 1e-12))
-                  for mag in frame.mag_frames]
-        onset_frames = pipeline.push_events(frame.mag_frames, levels)  # type: ignore[attr-defined]
-        hop = pipeline.hop  # type: ignore[attr-defined]
+        hop = pipeline.hop
+        entries = []
+        if frame.mag_frames_short is None:
+            levels = [20 * math.log10(max(float(np.linalg.norm(m)) / WINDOW_SIZE, 1e-12))
+                      for m in frame.mag_frames]
+            results = pipeline.push_events(frame.mag_frames, levels)
+            entries = [(start, result, 3) for start, result in
+                       zip(frame.hop_sample_starts, results, strict=True)]
+        elif state.onset_method != "multiband":
+            levels = [20 * math.log10(max(float(np.linalg.norm(m)) / ONSET_WINDOW_SIZE, 1e-12))
+                      for m in frame.mag_frames_short]
+            results = pipeline.push_events([log_onset_bands(m) for m in frame.mag_frames_short],
+                                           levels)
+            entries = [(start, result, 0) for start, result in
+                       zip(frame.hop_sample_starts_short, results, strict=True)]
+        else:
+            d = pipeline._detector
+            for start, mag in zip(frame.hop_sample_starts, frame.mag_frames, strict=True):
+                level = 20 * math.log10(max(float(np.linalg.norm(mag))/WINDOW_SIZE, 1e-12))
+                bass = d._bass_det.process_event(mag[:d._bass_hi].tolist(), level)
+                entries.append((start, (bass, None, None), 3))
+            bass_hi = max(1, round(state.bass_hz * ONSET_WINDOW_SIZE / self._SAMPLE_RATE))
+            mid_hi = max(bass_hi+1, round(state.mid_hz * ONSET_WINDOW_SIZE / self._SAMPLE_RATE))
+            for start, mag in zip(frame.hop_sample_starts_short, frame.mag_frames_short,
+                                  strict=True):
+                level = 20 * math.log10(max(float(np.linalg.norm(mag))/ONSET_WINDOW_SIZE, 1e-12))
+                mid = d._mid_det.process_event(np.log10(1+mag[bass_hi:mid_hi]).tolist(), level)
+                treble = d._treble_det.process_event(np.log10(1+mag[mid_hi:]).tolist(), level)
+                entries.append((start, (None, mid, treble), 0))
         updates = []
-        for i, result in enumerate(onset_frames):
-            start = (frame.hop_sample_starts[i] if i < len(frame.hop_sample_starts)
-                     else frame.sample_start)
+        for start, result, attack_hops in entries:
             candidates = (dict(zip(("bass", "mid", "treble"), result, strict=True))
                           if state.onset_method == "multiband" else {"all": result})
             fired = {band: event for band, event in candidates.items() if event is not None}
@@ -971,7 +1011,8 @@ class BeatDetector:
             chosen = fired[dominant]
             # Raw spectral-flux maximum references the leading window. Three
             # hops compensate its causal attack position on the fixture impulses.
-            candidate = start + (3 - chosen.availability_frame + chosen.candidate_frame) * hop
+            candidate = start + (attack_hops - chosen.availability_frame
+                                 + chosen.candidate_frame) * hop
             availability = candidate + state.picker_options["lookahead_frames"] * hop
             event = OnsetEvent(
                 (frame.epoch_id, dominant, candidate), frame.epoch_id, candidate,
@@ -986,7 +1027,7 @@ class BeatDetector:
                 processor_id="beat_detector", sample_start=candidate, sample_end=candidate+hop,
                 availability_sample=availability, onset=True,
                 onset_strength=event.strength_raw, onset_events=(event,), **values))
-        return self._merge_band_updates(state, updates, start + 3*hop)
+        return self._merge_band_updates(state, updates, frame.sample_end - hop)
 
     @staticmethod
     def _merge_band_updates(state, updates, watermark):
@@ -1167,6 +1208,9 @@ class CanonicalAnalysisPipeline:
             self._hpss_analyzer,
         )
         self._bar_stft = StereoMagStft(_CAP_SAMPLE_RATE)
+        self._onset_stft = StereoMagStft(_CAP_SAMPLE_RATE, ONSET_WINDOW_SIZE,
+                                         right_aligned=True)
+        self._short_frame_count = 0
         self._canonicalizer = AudioCanonicalizer()
         self._sustained_tracker = SustainedEnergyTracker()
         self._sustained_energy = None
@@ -1363,6 +1407,8 @@ class CanonicalAnalysisPipeline:
         for proc in self._processors:
             proc.reset()
         self._bar_stft.reset()
+        self._onset_stft.reset()
+        self._short_frame_count = 0
         self._current_epoch_id = None
         self._source_sample_end = 0
         self._stft_frame_count = 0
@@ -1568,6 +1614,10 @@ class CanonicalAnalysisPipeline:
         if frame.play_monotonic is not None:
             self._play_spans.append((epoch_id, frame.sample_pos, frame.sample_pos + len(samples),
                                      frame.play_monotonic, frame.timing_generation))
+        mag_frames_short = self._onset_stft.push(samples)
+        short_starts = [self._epoch_start_sample_pos + (self._short_frame_count+i)*480
+                        for i in range(len(mag_frames_short))]
+        self._short_frame_count += len(mag_frames_short)
         mag_frames = self._bar_stft.push(samples)
         hop = self._bar_stft.hop
         # Chunk-independent hop positions: each STFT frame N starts at
@@ -1592,6 +1642,8 @@ class CanonicalAnalysisPipeline:
             sample_start=canonical_start,
             sample_end=canonical_end,
             hop_sample_starts=hop_starts,
+            mag_frames_short=mag_frames_short,
+            hop_sample_starts_short=short_starts,
         )
 
         spectrum_updates: list[ProcessorUpdate] = []
