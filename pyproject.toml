@@ -51,6 +51,7 @@ packages = ["src/lampastream"]
 addopts = "-n auto"
 testpaths = ["tests"]
 pythonpath = ["src"]
+markers = ["native: requires the compiled cavacore library"]
 
 [tool.ruff]
 extend-exclude = ["third_party"]

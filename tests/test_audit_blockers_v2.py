@@ -592,18 +592,7 @@ def test_processor_updates_never_paired_by_list_index():
 # ---------------------------------------------------------------------------
 
 
-def _cavacore_available() -> bool:
-    try:
-        return CavaCoreSpectrumEngine.check_available()  # type: ignore[attr-defined]
-    except AttributeError:
-        try:
-            CavaCoreSpectrumEngine(n_bars=16, lower_hz=50, upper_hz=10000)
-        except Exception:  # noqa: BLE001
-            return False
-        return True
-
-
-@pytest.mark.skipif(not _cavacore_available(), reason="cavacore native lib unavailable")
+@pytest.mark.native
 def test_cavacore_feed_reports_last_full_block_start():
     """feed(1441 frames) reports the LAST full block start (960), not the
     pre-fix ``_epoch_samples - BLOCK_SIZE`` value (961)."""
@@ -620,7 +609,7 @@ def test_cavacore_feed_reports_last_full_block_start():
     )
 
 
-@pytest.mark.skipif(not _cavacore_available(), reason="cavacore native lib unavailable")
+@pytest.mark.native
 def test_cavacore_flush_reports_carry_start():
     """flush() after feed(1441 frames) reports position 1440 (start of
     the 1-frame real tail), not the pre-fix 961."""

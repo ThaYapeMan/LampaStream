@@ -1,7 +1,7 @@
 """Integration and A/B tests for CanonicalAnalysisPipeline.
 
 Tests are skipped when the shared library has not been compiled yet.
-Build it with:  pip install .   (requires libfftw3-dev on the host).
+Build it with:  python scripts/build_native.py   (requires libfftw3-dev on the host).
 
 A/B comparison:
   Same canonical PCM → CanonicalAnalysisPipeline  (V2 bars)
@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import math
 import time
-from pathlib import Path
 from unittest.mock import MagicMock
 
 import numpy as np
@@ -24,15 +23,10 @@ import pytest
 from pipeline_factory import make_pipeline
 
 # ---------------------------------------------------------------------------
-# Skip guard
+# Shared native requirement (conftest.py)
 # ---------------------------------------------------------------------------
 
-_SO_PATH = Path(__file__).parent.parent / "src" / "lampastream" / "cavacore" / "_libcavacore.so"
-
-pytestmark = pytest.mark.skipif(
-    not _SO_PATH.exists(),
-    reason="cavacore native library not built — run: pip install . (needs libfftw3-dev)",
-)
+pytestmark = pytest.mark.native
 
 from lampastream.canonicalizer import AnalysisPcmFrame  # noqa: E402
 from lampastream.sync_engine import CanonicalAnalysisPipeline  # noqa: E402

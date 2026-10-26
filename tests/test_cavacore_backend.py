@@ -1,7 +1,7 @@
 """Unit tests for CavaCoreBackend (native ctypes binding to upstream cavacore).
 
 Tests are skipped when the shared library has not been compiled yet.
-Build it with:  pip install .   (requires libfftw3-dev on the host).
+Build it with:  python scripts/build_native.py   (requires libfftw3-dev on the host).
 
 Upstream:  github.com/karlstav/cava  commit 6d43df3b  (2026-08-18)
 """
@@ -9,23 +9,17 @@ Upstream:  github.com/karlstav/cava  commit 6d43df3b  (2026-08-18)
 from __future__ import annotations
 
 import math
-from pathlib import Path
 
 import numpy as np
 import pytest
 
 # ---------------------------------------------------------------------------
-# Skip guard — skip every test in this module if the .so is absent
+# Shared native requirement (conftest.py)
 # ---------------------------------------------------------------------------
 
-_SO_PATH = Path(__file__).parent.parent / "src" / "lampastream" / "cavacore" / "_libcavacore.so"
+pytestmark = pytest.mark.native
 
-pytestmark = pytest.mark.skipif(
-    not _SO_PATH.exists(),
-    reason="cavacore native library not built — run: pip install . (needs libfftw3-dev)",
-)
-
-# These imports happen only when the skip guard passes.
+# Native availability is enforced by the shared fixture in conftest.py.
 from lampastream.cavacore import SCALING_DECIBEL, CavaCoreBackend  # noqa: E402
 
 # ---------------------------------------------------------------------------

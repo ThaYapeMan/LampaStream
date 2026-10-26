@@ -37,3 +37,20 @@ def pytest_xdist_auto_num_workers(config):
     """Bound auto workers on shared hosts; respect a smaller CPU affinity."""
     return min(4, len(os.sched_getaffinity(0)) if hasattr(os, "sched_getaffinity")
                else os.cpu_count() or 1)
+
+
+@pytest.fixture(autouse=True)
+def require_native_library(request):
+    """Apply one availability policy to every cavacore-gated test."""
+    if request.node.get_closest_marker("native") is None:
+        return
+    from lampastream.cavacore import is_cavacore_available
+
+    if not is_cavacore_available():
+        message = (
+            "cavacore native library not built — run: python scripts/build_native.py "
+            "(needs libfftw3-dev)"
+        )
+        if os.environ.get("LAMPASTREAM_REQUIRE_NATIVE") == "1":
+            pytest.fail(message)
+        pytest.skip(message)

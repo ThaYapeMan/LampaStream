@@ -8,6 +8,8 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      LAMPASTREAM_REQUIRE_NATIVE: "1"
     strategy:
       fail-fast: false
       matrix:

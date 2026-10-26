@@ -1649,14 +1649,12 @@ def test_acceptance_v2_engine_metadata():
     assert info["shared_stft_hop"] == info["hop"]
 
 
+@pytest.mark.native
 def test_acceptance_cava_metadata_when_available():
     """When CAVA is available, metadata reports CAVA-specific FFT/window/cadence.
 
     Skipped when the native library is not built.
     """
-    from lampastream.spectrum_engine import ENGINES
-    if not ENGINES["cavacore"].check_available():
-        pytest.skip("cavacore native library not available")
     (_rows, info), _acc = _analyse_sine(0.5, backend="cavacore")
     spec = info["spectrum_engine_details"]
     assert spec["engine_id"] == "cavacore"

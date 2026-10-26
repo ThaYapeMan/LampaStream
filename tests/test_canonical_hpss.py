@@ -5,15 +5,14 @@ from unittest.mock import MagicMock
 
 import numpy as np
 import pytest
-from test_cavacore_pipeline import _SO_PATH, _make_canonical_frame
+from test_cavacore_pipeline import _make_canonical_frame
 
 from lampastream.models import Profile
 from lampastream.pcm_source import PcmHpss
 from lampastream.player_manager import _make_canonical_pipeline
 from lampastream.sync_engine import SyncEngine
 
-BACKENDS = ["v2", pytest.param("cavacore", marks=pytest.mark.skipif(
-    not _SO_PATH.exists(), reason="cavacore native library not built"))]
+BACKENDS = ["v2", pytest.param("cavacore", marks=pytest.mark.native)]
 
 
 def pipeline(backend, enabled=True):
