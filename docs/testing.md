@@ -655,7 +655,9 @@ and sends live diagnostic envelope values through the preview socket. Python
 route-only scheduler probes explicitly disable accents when they substitute
 non-Scene sentinels for scenes.
 
-Local ACCENT-01 final verification: default-options pytest passed with 2293 passed,
-5 skipped and 20 warnings (94.76 seconds); ruff passed. Frontend unit tests passed
+Additional all-effects hue/headroom cases cover clicks-128 and clicks-174.
+
+Local ACCENT-01 final verification: default-options pytest passed with 2319 passed,
+5 skipped and 20 warnings (132.59 seconds); ruff passed. Frontend unit tests passed
 450/450 and Playwright passed 72/72. The five Python skips are the existing
 unrelated skips; native coverage remains enabled and available locally.

@@ -24,15 +24,15 @@ def accent_replay(tmp_path_factory):
     data = json.loads((FIXTURES / "default-config.json").read_text())
     cache = {}
 
-    def run(effect, route, fast=False):
-        key = effect, route, fast
+    def run(effect, route, fast=False, fixture="clicks-120"):
+        key = effect, route, fast, fixture
         if key in cache:
             return cache[key]
         config = base / f'{effect}.json'
         for item in data["configuration"]["effects"]:
             item["effect_type"] = effect
         config.write_text(json.dumps(data))
-        args = parser().parse_args(["--input", str(FIXTURES / "clicks-120.wav"),
+        args = parser().parse_args(["--input", str(FIXTURES / f"{fixture}.wav"),
             "--config", str(config), "--route", route,
             "--render-hz", "60" if fast else "30", "--room",
             str(FIXTURES.parent / "rooms" / ("two-channel-fast.json" if fast
@@ -184,3 +184,17 @@ def test_zero_weights_and_disabled_effect_stay_dark():
     profile = Profile(accent_band_weights={'bass': 0., 'mid': 0., 'treble': 0.})
     assert AccentLayer().render(scene, feature(), profile).accent_value == 0
     assert AccentLayer().render(scene, feature(), Profile(effect_type='none')) is scene
+
+
+@pytest.mark.parametrize('fixture', ['clicks-128', 'clicks-174'])
+@pytest.mark.parametrize('effect', EFFECTS)
+def test_lift_preserves_angle_and_headroom_on_other_click_fixtures(
+        accent_replay, effect, fixture):
+    replay = accent_replay(effect, 'normal', fixture=fixture)
+    for row in replay.renders:
+        before = colorsys.rgb_to_hsv(*(row[f'pre_{c}'] for c in 'rgb'))
+        after = colorsys.rgb_to_hsv(*(row[f'post_{c}'] for c in 'rgb'))
+        if before[1] > 1e-6 and before[2] > 1e-6:
+            delta = abs(before[0]-after[0])
+            assert min(delta, 1-delta)*360 <= 1
+        assert sum(row[f'post_{c}'] >= 1 for c in 'rgb') <= 1
