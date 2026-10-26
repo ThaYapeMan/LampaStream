@@ -2455,6 +2455,9 @@ class _FlashesRenderer(_EffectRenderer):
         envelope = features.onset_envelope
         if features.hpss_active:
             envelope *= 0.3 + 0.7 * features.percussive_energy
+        # Reserve room for the universal lift; off retains LAT-01 colour bytes.
+        if profile.accent_mode != "off":
+            envelope *= .85
         brightness = max(envelope, profile.brightness_floor * 0.3)
         return UniformScene(Colour(brightness, brightness, brightness))
 

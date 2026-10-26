@@ -421,7 +421,7 @@ async def test_scene_timestamp_reaches_hue_dispatch(monkeypatch):
     analyser = Mock()
     analyser.latest.return_value = features
     engine = SyncEngine(None, Profile(), analyser=analyser, timing=diagnostics)
-    output = Mock()
+    output = Mock(channels=[])
     # Make the first tick sufficient: no intentional delay; stop at the sleep.
     monkeypatch.setattr("lampastream.sync_engine.time.monotonic", lambda: clock[0])
 

@@ -389,7 +389,7 @@ def test_production_output_loop_obeys_targets_and_flush(monkeypatch, lead, flush
             return result
 
     async def run():
-        output = Mock()
+        output = Mock(channels=[])
         probe = AirPlayAutoLatencyProbe(
             PlayerLatency(player_mac="ap", strategy="auto"), diagnostics, 0, Mock()
         )

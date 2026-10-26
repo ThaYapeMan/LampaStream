@@ -1910,3 +1910,36 @@ def test_yeney_follow_targets_and_saved_aliases_use_mac(client, monkeypatch, nam
     saved = client.get("/api/player-latencies").json()
     assert saved[0]["name"] == "Favourite room"
     assert saved[0]["player_mac"] == external_mac
+
+
+@pytest.mark.parametrize('body', [
+    {'accent_mode': 'unknown'}, {'accent_amount': -1}, {'accent_amount': 2},
+    {'accent_band_weights': {'bass': 1}},
+    {'accent_band_weights': {'bass': 1, 'mid': .6, 'treble': -1}},
+    {'accent_strength_curve': 0}, {'accent_spatial': 'random'}, {'accent_palette_step': 2},
+    {'accent_mode': None}, {'accent_band_weights': None},
+])
+def test_accent_validation_is_atomic(client, body):
+    created = client.post('/api/effects', json={'name': 'Accent validation'}).json()
+    endpoint = f"/api/effects/{created['id']}"
+    assert client.post('/api/effects', json={'name': 'Invalid accent', **body}).status_code == 422
+    assert client.patch(endpoint, json=body).status_code == 422
+    assert client.get(endpoint).json() == created
+
+
+@pytest.mark.parametrize('role', ['high', 'low'])
+def test_accent_patch_reaches_runtime(client, role):
+    coupling = _make_full_coupling(client._storage)
+    energy = client._storage.get_energy_profile(coupling.energy_profile_id)
+    low = Effect(name="Low accent")
+    client._storage.save_effect(low)
+    energy.low_energy_effect_id = low.id
+    client._storage.save_energy_profile(energy)
+    client._storage.set_active_coupling_id(coupling.id)
+    effect_id = getattr(energy, f'{role}_energy_effect_id')
+    body = {'accent_mode': 'pop', 'accent_amount': .7,
+            'accent_band_weights': {'bass': .9, 'mid': .5, 'treble': .2},
+            'accent_strength_curve': 1.5, 'accent_spatial': 'by_band', 'accent_palette_step': .2}
+    assert client.patch(f'/api/effects/{effect_id}', json=body).status_code == 200
+    profile = client._manager.update_render.call_args.args[0 if role == 'high' else 1]
+    assert all(getattr(profile, key) == value for key, value in body.items())

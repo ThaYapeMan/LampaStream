@@ -237,7 +237,44 @@ export interface ChannelPosition {
   z: number
 }
 
+export interface OnsetEvent {
+  id: [string, string, number]
+  epoch: string
+  candidate_sample: number
+  availability_sample: number
+  lookahead_frames: number
+  strength: number
+  strength_raw: number
+  confidence: number
+  bands: string[]
+  dominant_band: string
+  play_monotonic: number | null
+  received_monotonic: number | null
+}
+export interface OutputCapabilities {
+  update_hz: number
+  colour_depth_bits: number
+  transport_latency_s: number
+  min_visible_hold_s: number
+  supports_per_channel_timing: boolean
+}
+export interface AccentFeatures {
+  onset_events?: OnsetEvent[]
+  onset_envelope?: number
+  onset_envelope_bass?: number
+  onset_envelope_mid?: number
+  onset_envelope_treble?: number
+  onset_count_since_render?: number
+  onset_age_s?: number | null
+  accent_value?: number
+  capabilities?: OutputCapabilities
+}
 export interface Analyser {
+  output_render_hz?: number
+  onset_lookahead_frames?: number
+  onset_delta_abs?: number
+  onset_min_ioi_ms?: number
+  onset_silence_gate_dbfs?: number
   bar_falloff_s?: number
   id: string
   name: string
@@ -255,6 +292,17 @@ export interface Analyser {
 }
 
 export interface Effect {
+  accent_mode?: 'lift' | 'pop' | 'palette_step' | 'off'
+  accent_amount?: number
+  accent_band_weights?: { bass: number; mid: number; treble: number }
+  accent_strength_curve?: number
+  accent_spatial?: 'uniform' | 'by_band'
+  accent_palette_step?: number
+  onset_hold_s?: number
+  onset_release_s?: number
+  onset_retrigger?: 'restart' | 'ignore_during_hold' | 'add_with_clamp'
+  onset_lead_s?: number
+  onset_max_age_s?: number
   palette_id?: string
   palette_rotation_cps?: number
   id: string

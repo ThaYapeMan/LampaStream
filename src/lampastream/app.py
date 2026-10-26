@@ -99,6 +99,7 @@ async def ws_preview(websocket: WebSocket):
                 "channel_colours": channel_colours,
                 "onset": onset,
                 "pcm_onset": player_manager.last_pcm_onset,
+                **getattr(player_manager, "accent_diagnostics", {}),
                 "onset_bass": player_manager.last_onset_bass,
                 "onset_mid": player_manager.last_onset_mid,
                 "onset_treble": player_manager.last_onset_treble,

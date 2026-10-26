@@ -23,6 +23,7 @@ class AccentScene:
     accent_value: float
     phase: float
     positions: tuple
+    palette: object = None
 
     def __getattr__(self, name):
         return getattr(self.scene, name)
@@ -42,8 +43,8 @@ class AccentScene:
         amount = min(1., self.value_at(position))
         h, s, v = colorsys.rgb_to_hsv(old.r, old.g, old.b)
         if self.profile.accent_mode == "palette_step":
-            # A cyclic palette coordinate also works for unpaletted effects.
-            h = (h + self.phase) % 1
+            colour = self.palette.sample((h + self.phase) % 1)
+            h, s, _ = colorsys.rgb_to_hsv(colour.r, colour.g, colour.b)
         elif self.profile.accent_mode == "pop":
             s += (1-s)*amount
         # Interpolate peak intensity in linear light, then scale the encoded
@@ -59,9 +60,11 @@ class AccentLayer:
         self.phase = 0.
         self.newest = None
         self.last_value = 0.
+        self.palette_key = None
+        self.palette = None
 
     def render(self, scene, features, profile, positions=()):
-        if profile.accent_mode == "off":
+        if profile.accent_mode == "off" or profile.effect_type == "none":
             self.last_value = 0.
             return scene
         if features.onset_events:
@@ -74,7 +77,8 @@ class AccentLayer:
         values = {band: profile.accent_amount * weight * scale * confidence *
                   getattr(features, f"onset_envelope_{band}")
                   for band, weight in profile.accent_band_weights.items()}
-        if not any(values.values()):
+        if not any(getattr(features, f"onset_envelope_{band}")
+                   for band in profile.accent_band_weights):
             values["bass"] = profile.accent_amount * scale * confidence * features.onset_envelope
         legacy = profile.onset_flash_intensity * features.onset_envelope
         values = {band: value + legacy for band, value in values.items()}
@@ -82,5 +86,14 @@ class AccentLayer:
         if profile.accent_mode == "palette_step":
             self.phase = (self.phase + features.onset_count_since_render *
                           profile.accent_palette_step) % 1
+        if profile.accent_mode == "palette_step":
+            from .palettes import STARTERS, Palette, palette_from_colours
+            key = repr((profile.palette_stops, profile.gradient_palette))
+            if key != self.palette_key:
+                self.palette_key = key
+                self.palette = (Palette(stops=profile.palette_stops) if profile.palette_stops
+                    else palette_from_colours(*STARTERS.get(
+                        profile.gradient_palette, STARTERS["sunset"])))
         ordered = tuple(sorted(set(positions), key=lambda p: (p.x, p.y, p.z)))
-        return AccentScene(scene, profile, values, self.last_value, self.phase, ordered)
+        return AccentScene(scene, profile, values, self.last_value, self.phase, ordered,
+                           self.palette)

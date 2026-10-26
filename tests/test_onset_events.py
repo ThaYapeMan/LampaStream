@@ -107,7 +107,7 @@ def test_output_agnostic_onset_modules():
     from pathlib import Path
     root = Path(__file__).resolve().parents[1] / "src/lampastream"
     matches = []
-    for name in ("sync_engine.py", "onset_envelope.py"):
+    for name in ("sync_engine.py", "onset_envelope.py", "accent.py"):
         for line, text in enumerate((root / name).read_text().splitlines(), 1):
             if re.search(r"\b(?:25|255)\b|hue", text, re.IGNORECASE):
                 matches.append((name, line, text))

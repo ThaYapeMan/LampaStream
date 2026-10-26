@@ -74,11 +74,27 @@ interface FormState {
   bass_hz: string
   mid_hz: string
   exertion_clip: string
+  accent_mode: NonNullable<Effect['accent_mode']>
+  accent_amount: string
+  accent_band_weights: { bass: number; mid: number; treble: number }
+  accent_spatial: NonNullable<Effect['accent_spatial']>
+  accent_palette_step: string
+  onset_hold_s: string
+  onset_release_s: string
+  onset_retrigger: NonNullable<Effect['onset_retrigger']>
   onset_flash_intensity: string
 }
 
 function defaultForm(cfg?: Effect): FormState {
   return {
+    accent_mode: cfg?.accent_mode ?? 'lift',
+    accent_amount: String(cfg?.accent_amount ?? .35),
+    accent_band_weights: cfg?.accent_band_weights ?? { bass: 1, mid: .6, treble: .4 },
+    accent_spatial: cfg?.accent_spatial ?? 'uniform',
+    accent_palette_step: String(cfg?.accent_palette_step ?? .1),
+    onset_hold_s: String(cfg?.onset_hold_s ?? 0),
+    onset_release_s: String(cfg?.onset_release_s ?? .25),
+    onset_retrigger: cfg?.onset_retrigger ?? 'restart',
     palette_id: cfg?.palette_id ?? '',
     palette_rotation_cps: String(cfg?.palette_rotation_cps ?? 0),
     band_colours: [...(cfg?.band_colours ?? EFFECT_DEFAULTS.band_colours)],
@@ -322,7 +338,6 @@ export function Effects({ activeCouplingId = null, initialEffectId }: { activeCo
   const speed        = parseFloat(form.effect_speed)         || 1
   const decay        = parseFloat(form.effect_decay)         || 0.3
   const floor        = parseFloat(form.brightness_floor)     || 0
-  const flash        = parseFloat(form.onset_flash_intensity) || 0
   const bassHz       = parseInt(form.bass_hz, 10)            || EFFECT_DEFAULTS.bass_hz
   const midHz        = parseInt(form.mid_hz, 10)             || EFFECT_DEFAULTS.mid_hz
   const exertionClip = parseFloat(form.exertion_clip)        || EFFECT_DEFAULTS.exertion_clip
@@ -333,7 +348,6 @@ export function Effects({ activeCouplingId = null, initialEffectId }: { activeCo
   // ── at-default checks ──
   const sensDef    = Math.abs(sensitivity  - EFFECT_DEFAULTS.sensitivity)           < 0.001
   const floorDef   = Math.abs(floor        - EFFECT_DEFAULTS.brightness_floor)      < 0.001
-  const flashDef   = Math.abs(flash        - EFFECT_DEFAULTS.onset_flash_intensity) < 0.001
   const speedDef   = Math.abs(speed        - EFFECT_DEFAULTS.effect_speed)          < 0.001
   const decayDef   = Math.abs(decay        - EFFECT_DEFAULTS.effect_decay)          < 0.001
   const freqDef    = bassHz === EFFECT_DEFAULTS.bass_hz && midHz === EFFECT_DEFAULTS.mid_hz
@@ -378,7 +392,7 @@ export function Effects({ activeCouplingId = null, initialEffectId }: { activeCo
   useEffect(() => { load() }, [])
 
   // ── form helpers ──
-  function set(key: keyof FormState, value: string) {
+  function set<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((f) => ({ ...f, [key]: value }))
   }
 
@@ -424,7 +438,15 @@ export function Effects({ activeCouplingId = null, initialEffectId }: { activeCo
         bass_hz:               parseInt(form.bass_hz, 10),
         mid_hz:                parseInt(form.mid_hz, 10),
         exertion_clip:         parseFloat(form.exertion_clip),
-        onset_flash_intensity: parseFloat(form.onset_flash_intensity),
+        onset_flash_intensity: Number(form.onset_flash_intensity),
+        accent_mode: form.accent_mode,
+        accent_amount: Number(form.accent_amount),
+        accent_band_weights: form.accent_band_weights,
+        accent_spatial: form.accent_spatial,
+        accent_palette_step: Number(form.accent_palette_step),
+        onset_hold_s: Number(form.onset_hold_s),
+        onset_release_s: Number(form.onset_release_s),
+        onset_retrigger: form.onset_retrigger,
       }
       if (editingId === 'new') {
         await createEffect(body)
@@ -729,35 +751,37 @@ export function Effects({ activeCouplingId = null, initialEffectId }: { activeCo
                     )}
                   </FieldRow>
 
-                  {/* Beat flash — all non-none types */}
-                  <FieldRow
-                    label="Beat flash"
-                    value={flash.toFixed(2)}
-                    isAtDefault={flashDef}
-                    onReset={() => set('onset_flash_intensity', String(EFFECT_DEFAULTS.onset_flash_intensity))}
-                    resetTestId="reset-beat-flash"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-muted-foreground w-10 shrink-0">Off</span>
-                      <Slider
-                        aria-label="Beat flash intensity"
-                        min={0} max={1} step={0.05}
-                        value={[flash]}
-                        onValueChange={([v]) => set('onset_flash_intensity', String(Math.round(v * 100) / 100))}
-                        className="flex-1"
-                      />
-                      <span className="text-[10px] text-muted-foreground w-14 text-right shrink-0">Full</span>
-                    </div>
-                    {expertMode && (
-                      <Input
-                        data-testid="field-beat-flash-exact"
-                        type="number" step={0.05} min={0} max={1}
-                        value={form.onset_flash_intensity}
-                        onChange={(e) => set('onset_flash_intensity', e.target.value)}
-                        className="h-7 text-xs mt-1"
-                      />
-                    )}
-                  </FieldRow>
+                  <section aria-label="Accent controls" className="space-y-3">
+                    <SectionLabel>Accent</SectionLabel>
+                    <label className="block text-sm">Mode
+                      <select aria-label="Accent mode" value={form.accent_mode} onChange={e => set('accent_mode', e.target.value as FormState['accent_mode'])}>
+                        {['lift', 'pop', 'palette_step', 'off'].map(mode => <option key={mode} value={mode}>{mode.replace('_', ' ')}</option>)}
+                      </select>
+                    </label>
+                    <label className="block text-sm">Amount
+                      <input aria-label="Accent amount" type="range" min="0" max="1" step="0.01" value={form.accent_amount} onChange={e => set('accent_amount', e.target.value)} />
+                      <output>{form.accent_amount}</output>
+                    </label>
+                    {(['bass', 'mid', 'treble'] as const).map(band => <label className="block text-sm" key={band}>{band} weight
+                      <input aria-label={`Accent ${band} weight`} type="range" min="0" max="1" step="0.01" value={form.accent_band_weights[band]} onChange={e => set('accent_band_weights', { ...form.accent_band_weights, [band]: Number(e.target.value) })} />
+                      <output>{form.accent_band_weights[band]}</output>
+                    </label>)}
+                    <label className="block text-sm">Spatial
+                      <select aria-label="Accent spatial" value={form.accent_spatial} onChange={e => set('accent_spatial', e.target.value as FormState['accent_spatial'])}>
+                        <option value="uniform">Uniform</option><option value="by_band">By band</option>
+                      </select>
+                    </label>
+                    {form.accent_mode === 'palette_step' && <label className="block text-sm">Palette step
+                      <Input aria-label="Accent palette step" type="number" min="0" max="1" step="0.01" value={form.accent_palette_step} onChange={e => set('accent_palette_step', e.target.value)} />
+                    </label>}
+                    <details><summary>Advanced</summary>
+                      <label>Hold (seconds)<Input aria-label="Onset hold" type="number" min="0" step="0.01" value={form.onset_hold_s} onChange={e => set('onset_hold_s', e.target.value)} /></label>
+                      <label>Release (seconds)<Input aria-label="Onset release" type="number" min="0.01" step="0.01" value={form.onset_release_s} onChange={e => set('onset_release_s', e.target.value)} /></label>
+                      <label>Retrigger<select aria-label="Onset retrigger" value={form.onset_retrigger} onChange={e => set('onset_retrigger', e.target.value as FormState['onset_retrigger'])}>
+                        {['restart', 'ignore_during_hold', 'add_with_clamp'].map(policy => <option key={policy}>{policy}</option>)}
+                      </select></label>
+                    </details>
+                  </section>
                 </div>
               )}
 

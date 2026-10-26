@@ -255,10 +255,11 @@ def test_timed_output_renders_every_publication_without_latest_sampling(monkeypa
         now[0] += .002
         return 'scene'
     effect = SimpleNamespace(render=Mock(side_effect=render), mix=.2)
-    engine = SyncEngine(None, Profile(), analyser=Pipeline(), probe=NoLatencyProbe(),
+    engine = SyncEngine(None, Profile(accent_mode="off"), analyser=Pipeline(),
+                        probe=NoLatencyProbe(),
                         timing=diagnostics)
     engine._effect = effect
-    output = Mock()
+    output = Mock(channels=[])
     output.send.side_effect = lambda *args: now.__setitem__(0, now[0] + .001)
 
     async def sleep(interval):

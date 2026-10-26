@@ -53,6 +53,16 @@
     ],
     "effects": [
       {
+        "accent_amount": 0.35,
+        "accent_band_weights": {
+          "bass": 1.0,
+          "mid": 0.6,
+          "treble": 0.4
+        },
+        "accent_mode": "lift",
+        "accent_palette_step": 0.1,
+        "accent_spatial": "uniform",
+        "accent_strength_curve": 1.0,
         "band_advance": "beat",
         "band_advance_interval_s": 2.0,
         "band_colours": [

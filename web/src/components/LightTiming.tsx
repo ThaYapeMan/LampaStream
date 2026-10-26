@@ -5,6 +5,7 @@ import { Check, ChevronRight, Clock, Info, Lightbulb, Lock, Pause } from 'lucide
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import type { AccentFeatures } from '@/lib/api'
 import { createPlayerLatency, updatePlayerLatency, type PlayerLatency } from '@/lib/api'
 import type { SocketStatus } from '@/hooks/usePreviewSocket'
 
@@ -41,6 +42,14 @@ export function lightTimingState(current: PlayerLatency | null | undefined, stat
 export function LightTiming({ status, onOpenLatency, playersView = false, controls, footer }: { status: SocketStatus | null; onOpenLatency?: () => void; playersView?: boolean; controls?: React.ReactNode; footer?: React.ReactNode }) {
   const metadata = usePlayerMetadata(!playersView)
   const id = useId()
+  const accents: AccentFeatures = status ?? {}
+  const accentDisplay = <div aria-label="Live accents" className="text-xs space-y-1">
+    {(['all', 'bass', 'mid', 'treble'] as const).map(band => {
+      const value = (band === 'all' ? accents.onset_envelope : accents[`onset_envelope_${band}`]) ?? 0
+      return <label key={band} className="flex items-center gap-2">{band}<meter aria-label={`${band} envelope`} min={0} max={1} value={value} /><output>{value.toFixed(2)}</output></label>
+    })}
+    <p>Accent <output data-testid="accent-value">{(accents.accent_value ?? 0).toFixed(2)}</output></p>
+  </div>
   const [open, setOpen] = useState(() => { try { return localStorage.getItem('lightTimingOpen') !== '0' } catch { return true } })
   const airplay = status?.active_player_type === 'AirPlay' || status?.light_timing?.status?.source === 'airplay'
   const mac = status?.timing_player_mac || status?.follow_target_mac || status?.sync_master
@@ -128,7 +137,8 @@ export function LightTiming({ status, onOpenLatency, playersView = false, contro
         <Badge variant="secondary" className={`gap-1 border-0 ${colour}`}><Icon aria-hidden="true" className="h-3 w-3" />{lms?.state === 'scheduled' ? 'Scheduled · LMS head start' : label}</Badge>
       </CardHeader>
       <CardContent className="space-y-4">
-        {lmsLine}
+        {accentDisplay}
+      {lmsLine}
         <div className="grid items-center gap-4 sm:grid-cols-[minmax(0,1fr)_auto]">
           <div><div className={`text-4xl font-semibold tabular-nums ${state === 'idle' ? 'text-muted-foreground' : ''}`}>{seconds(applied)}<small className="ml-1 text-xl text-muted-foreground">s</small></div><p className="mt-2 text-sm text-muted-foreground">{explanation}</p>{tapDetails}</div>
           <div className="space-y-3 sm:text-right">{controls}
@@ -160,6 +170,7 @@ export function LightTiming({ status, onOpenLatency, playersView = false, contro
       <a href={`/players?player=${encodeURIComponent(mac ?? '')}`} className="ml-auto text-sm text-primary hover:underline" onClick={e => { if (onOpenLatency) { e.preventDefault(); onOpenLatency() } }}>Player settings</a>
     </CardHeader>
     <CardContent id={`${id}-body`} hidden={!open} className="space-y-4">
+      {accentDisplay}
       {lmsLine}
       <div className={state === 'stable' ? 'grid gap-5 sm:grid-cols-2 items-center' : 'space-y-3'}>
         <div>

@@ -492,6 +492,27 @@ class PlayerManager:
         return []
 
     @property
+    def accent_diagnostics(self) -> dict:
+        from dataclasses import asdict
+
+        if not self._active or not self._active.sync_engine:
+            return {}
+        engine = self._active.sync_engine
+        features = getattr(engine, "last_accent_features", None)
+        if features is None:
+            return {}
+        payload = {name: getattr(features, name) for name in (
+            "onset_envelope", "onset_envelope_bass", "onset_envelope_mid",
+            "onset_envelope_treble", "onset_count_since_render", "onset_age_s")}
+        payload["onset_events"] = [dict(asdict(e), bands=sorted(e.bands))
+                                   for e in features.onset_events]
+        payload["accent_value"] = getattr(engine, "last_accent_value", 0.)
+        driver = self._active.hue_driver
+        if driver is not None:
+            payload["capabilities"] = asdict(driver.capabilities)
+        return payload
+
+    @property
     def last_onset(self) -> bool:
         """True if the most recently analysed frame contained a detected onset.
 

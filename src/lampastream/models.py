@@ -183,7 +183,6 @@ def _validate_onset_effect(effect):
         for v in weights.values()
     ):
         raise ValueError("Accent band weights must contain bass, mid, treble in 0..1")
-    import math
     for name in ("onset_hold_s", "onset_release_s", "onset_lead_s", "onset_max_age_s"):
         value = getattr(effect, name)
         if not math.isfinite(value) or value < 0:

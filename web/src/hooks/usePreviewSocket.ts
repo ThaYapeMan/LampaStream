@@ -1,3 +1,4 @@
+import type { AccentFeatures } from '@/lib/api'
 import type { PlayerLatency } from '@/lib/api'
 import { useEffect, useRef, useState } from 'react'
 
@@ -9,7 +10,7 @@ export interface TrackPosition {
   playing: boolean
 }
 
-export interface SocketStatus {
+export interface SocketStatus extends AccentFeatures {
   music?: import('@/lib/api').MusicStatus | null
   timing_player_mac?: string | null
   timing_player_name?: string | null
@@ -46,7 +47,7 @@ export interface SocketStatus {
   airplay_receiving: boolean | null
 }
 
-export interface PreviewState {
+export interface PreviewState extends AccentFeatures {
   colour: { r: number; g: number; b: number }
   channel_colours: Array<{ r: number; g: number; b: number }>
   onset: boolean
@@ -140,8 +141,21 @@ export function usePreviewSocket(): PreviewState {
           const mix = (msg.mix as number) ?? 0
           const energy = (msg.energy as number) ?? 0
 
+          const accentFeatures: AccentFeatures = {
+            onset_events: msg.onset_events as AccentFeatures['onset_events'],
+            onset_envelope: (msg.onset_envelope as number) ?? 0,
+            onset_envelope_bass: (msg.onset_envelope_bass as number) ?? 0,
+            onset_envelope_mid: (msg.onset_envelope_mid as number) ?? 0,
+            onset_envelope_treble: (msg.onset_envelope_treble as number) ?? 0,
+            onset_count_since_render: (msg.onset_count_since_render as number) ?? 0,
+            onset_age_s: (msg.onset_age_s as number | null) ?? null,
+            accent_value: (msg.accent_value as number) ?? 0,
+            capabilities: msg.capabilities as AccentFeatures['capabilities'],
+          }
           setState((s) => ({
             ...s,
+            ...accentFeatures,
+            status: s.status ? { ...s.status, ...accentFeatures } : null,
             colour,
             channel_colours,
             onset: onset || s.onset,
@@ -188,7 +202,7 @@ export function usePreviewSocket(): PreviewState {
           setState((s) => ({ ...s, bars: msg.bars as number[], normalised_bars: msg.normalised_bars as number[] | undefined }))
         } else if (msg.type === 'status') {
           const { type: _ignored, ...fields } = msg
-          setState((s) => ({ ...s, status: fields as unknown as SocketStatus }))
+          setState((s) => ({ ...s, status: { ...s.status, ...fields } as unknown as SocketStatus }))
         }
       }
     }

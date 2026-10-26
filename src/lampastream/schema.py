@@ -106,6 +106,10 @@ def validate_current(data: dict, *, references: bool = False) -> None:
                         valid |= value in {item.value for item in choice}
                     elif choice == list[str]:
                         valid |= type(value) is list and all(type(item) is str for item in value)
+                    elif choice == dict[str, float]:
+                        valid |= (type(value) is dict and all(
+                            type(k) is str and type(v) in (int, float) and math.isfinite(v)
+                            for k, v in value.items()))
                     elif choice is float:
                         valid |= type(value) in (int, float) and math.isfinite(value)
                     else:

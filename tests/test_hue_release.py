@@ -354,7 +354,8 @@ def test_early_tap_release_discards_old_scenes_and_keeps_tap_generation(monkeypa
                                  observe_audio=Mock(), send=Mock())
         probe = AirPlayAutoLatencyProbe(PlayerLatency(player_mac='ap', strategy='auto'),
                                        diagnostics, 0, Mock())
-        engine = SyncEngine(None, Profile(), analyser=pipeline, probe=probe, timing=diagnostics)
+        engine = SyncEngine(None, Profile(accent_mode="off"), analyser=pipeline,
+                            probe=probe, timing=diagnostics)
         engine._effect = SimpleNamespace(render=lambda f, t: f.play_monotonic, mix=0)
 
         async def tick(dt):

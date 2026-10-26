@@ -266,7 +266,7 @@ describe('Standard / Expert mode', () => {
     expect(screen.getByTestId('field-speed-exact')).toBeDefined()       // fireworks hasSpeed
     expect(screen.getByTestId('field-decay-exact')).toBeDefined()       // fireworks hasDecay
     expect(screen.getByTestId('field-brightness-floor-exact')).toBeDefined()
-    expect(screen.getByTestId('field-beat-flash-exact')).toBeDefined()
+    expect(screen.getByLabelText('Accent amount')).toBeDefined()
   })
 
   it('switching back to Standard hides Expert-only inputs', async () => {
@@ -358,7 +358,7 @@ describe('Conditional fields — applicability', () => {
     await renderSpectrumInWorkspace() // spectrum_rgb, no speed/decay
     expect(screen.getByTestId('reset-sensitivity')).toBeDefined()
     expect(screen.getByTestId('reset-brightness-floor')).toBeDefined()
-    expect(screen.getByTestId('reset-beat-flash')).toBeDefined()
+    expect(screen.getByLabelText('Accent mode')).toBeDefined()
   })
 })
 
@@ -418,16 +418,11 @@ describe('Reset behavior', () => {
     expect(exact.value).toBe(String(EFFECT_DEFAULTS.brightness_floor))
   })
 
-  it('beat flash Reset is disabled at default (0.0)', async () => {
-    await renderNewEffectInWorkspace() // all defaults — onset_flash_intensity=0.0
-    const resetBtn = screen.getByTestId('reset-beat-flash')
-    expect(resetBtn.getAttribute('aria-disabled')).toBe('true')
-  })
-
-  it('beat flash Reset is active when non-default (e1: 0.3)', async () => {
-    await renderEffectsInWorkspace() // e1 onset_flash_intensity=0.3
-    const resetBtn = screen.getByTestId('reset-beat-flash')
-    expect(resetBtn.getAttribute('aria-disabled')).toBe('false')
+  it('accent defaults are visible and legacy flash is hidden', async () => {
+    await renderNewEffectInWorkspace()
+    expect((screen.getByLabelText('Accent amount') as HTMLInputElement).value).toBe('0.35')
+    expect((screen.getByLabelText('Accent mode') as HTMLSelectElement).value).toBe('lift')
+    expect(screen.queryByLabelText('Beat flash intensity')).toBeNull()
   })
 
   it('freq-bands Reset is disabled when both at default', async () => {
