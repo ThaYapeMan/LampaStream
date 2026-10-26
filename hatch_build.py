@@ -23,8 +23,8 @@ from __future__ import annotations
 
 import os
 import re
+import runpy
 import subprocess
-import sys
 import tempfile
 from pathlib import Path
 
@@ -72,53 +72,8 @@ class CustomBuildHook(BuildHookInterface):
         commit_file.write_text(f'COMMIT = "{git_hash}"\n')
 
     def _build_cavacore(self) -> None:
-        import shutil
-        cava_dir = Path(self.root) / "src" / "lampastream" / "cavacore"
-        out = Path(self._generated.name) / "_libcavacore.so"
-
-        # Pre-flight: fail fast with an actionable message if build tools are absent.
-        # scripts/install-lampastream.sh installs these before calling pip install.
-        if shutil.which("gcc") is None:
-            raise RuntimeError(
-                "cavacore build requires gcc, which was not found in PATH.\n"
-                "Run the standard LampaStream installer (installs this automatically):\n"
-                "  bash scripts/install-lampastream.sh\n"
-                "Or install manually:  apt install build-essential"
-            )
-
-        # Check that fftw3.h is reachable by verifying the compiler can find it.
-        fftw_check = subprocess.run(
-            ["gcc", "-x", "c", "-fsyntax-only", "-"],
-            input="#include <fftw3.h>\n",
-            capture_output=True,
-            text=True,
-        )
-        if fftw_check.returncode != 0:
-            raise RuntimeError(
-                "cavacore build requires libfftw3-dev (fftw3.h not found by gcc).\n"
-                "Run the standard LampaStream installer (installs this automatically):\n"
-                "  bash scripts/install-lampastream.sh\n"
-                "Or install manually:  apt install libfftw3-dev"
-            )
-
-        cmd = [
-            "gcc",
-            "-shared",
-            "-fPIC",
-            "-O2",
-            "-o", str(out),
-            str(cava_dir / "cavacore.c"),
-            str(cava_dir / "_bridge.c"),
-            "-lfftw3",
-            "-lm",
-        ]
-
-        result = subprocess.run(cmd, capture_output=True, text=True)
-        if result.returncode != 0:
-            print(result.stderr, file=sys.stderr)
-            raise RuntimeError(
-                "cavacore native build failed.\n"
-                "Run the standard LampaStream installer:  bash scripts/install-lampastream.sh\n"
-                f"Command: {' '.join(cmd)}\n"
-                f"Compiler output:\n{result.stderr.strip()}"
-            )
+        # run_path also works in the installer's git archive, outside sys.path.
+        build_cavacore = runpy.run_path(
+            str(Path(self.root) / "scripts" / "build_native.py")
+        )["build_cavacore"]
+        build_cavacore(self.root, Path(self._generated.name) / "_libcavacore.so")

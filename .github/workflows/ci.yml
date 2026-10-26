@@ -31,8 +31,24 @@ jobs:
       - name: Install project
         run: pip install -e ".[dev]"
 
+      - name: Build native library for tests
+        run: python scripts/build_native.py
+
       - name: Build wheel
-        run: python -m pip wheel --no-deps . --wheel-dir dist
+        run: |
+          python -m pip wheel --no-deps . --wheel-dir dist
+          python - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+
+          wheels = list(Path("dist").glob("*.whl"))
+          assert wheels, "No wheel was built"
+          for wheel in wheels:
+              with ZipFile(wheel) as archive:
+                  native = archive.getinfo("lampastream/cavacore/_libcavacore.so")
+                  assert native.file_size > 0, f"Empty native library in {wheel}"
+                  print(f"{wheel}: {native.filename} ({native.file_size} bytes)")
+          PY
 
       - name: Lint
         run: ruff check .
