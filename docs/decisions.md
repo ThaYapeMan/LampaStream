@@ -84,3 +84,9 @@ Each dated line records an owner decision or a bounded documentation choice for 
 - 2026-10-25 — The in-process regression matrix skips serializing its unused renders.csv/sends.csv files while still executing and sampling every production render/send and computing the same identities/dispositions. Ordinary CLI replay always writes all seven files. This removes redundant diagnostic serialization from CI without excluding any scenarios or assertions.
 - 2026-10-25 — Precision guarding also covers the intrinsic onset styles in either layer, not only an explicit white-flash intensity. Guard only positive lifts above baseline so unlit colour channels and spatially dark positions remain dark.
 - 2026-10-25 — An omitted capabilities hold derives from the declared update rate (two frames), while a completely undeclared output retains the conservative 30 Hz profile. Reject nonfinite capabilities so an invalid rate cannot silently disable the visibility hold.
+
+## LAT-01 decisions
+
+- 2026-10-26 — Start from pulled 542b9ed; preserve the existing untracked design image.
+- 2026-10-26 — Split measured input-frontier delay into exact hop rounding, explicit picker lookahead and residual window acquisition; candidate coordinates alone cannot measure acquisition.
+- 2026-10-26 — Match latency rows only within 100 ms of sparse sidecar truth; retain unmatched events to expose false positives rather than fabricate truth.

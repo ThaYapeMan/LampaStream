@@ -531,6 +531,55 @@ class Replay:
             "event_queue_drops": self.pipeline.events_dropped_count,
             "event_mapping_fallbacks": self.engine.event_mapping_fallbacks}
 
+    def latency_rows(self):
+        """Join detected identities to sparse truth without changing detector decisions.
+
+        Acquisition ends at the input frontier that released the event; hop is
+        truth-to-next-hop rounding. The remaining causal acquisition is explicit,
+        rather than confusing the confirmation coordinate with receipt time.
+        """
+        sidecar = self.args.input.with_suffix(".json")
+        truth = json.loads(sidecar.read_text()) if sidecar.exists() else {}
+        targets = [round(s * RATE / truth["sample_rate"]) - round(self.args.start * RATE)
+                   for s in truth.get("event_samples", [])]
+        frontiers = {e.id: available / RATE for record, available in
+                     zip(self.records, self.availability, strict=True)
+                     for e in record.features.onset_events}
+        rows = []
+        for identity, data in self.engine.event_records.items():
+            event = data["event"]
+            nearest = min(targets, key=lambda s: abs(s-event.candidate_sample)) if targets else None
+            # Do not assign noise or a second distant transient to sparse truth.
+            if nearest is not None and abs(nearest-event.candidate_sample) > .1 * RATE:
+                nearest = None
+            origin = nearest / RATE if nearest is not None else None
+            render = data.get("first_render_over_half_s")
+            send = data.get("first_send_s")
+            ready = frontiers[identity]
+            lookahead = event.lookahead_frames * HOP / RATE
+            hop = ((-nearest) % HOP) / RATE if nearest is not None else None
+            rows.append({"id": ":".join(map(str, identity)), "route": self.args.route,
+                "truth_sample": nearest, "candidate_sample": event.candidate_sample,
+                "availability_sample": event.availability_sample,
+                "candidate_ms": (event.candidate_sample / RATE-origin)*1000
+                    if origin is not None else None,
+                "availability_ms": (event.availability_sample / RATE-origin)*1000
+                    if origin is not None else None,
+                "first_render_ms": (render-origin)*1000
+                    if origin is not None and render is not None else None,
+                "first_send_ms": (send-origin)*1000
+                    if origin is not None and send is not None else None,
+                "window_acquisition_ms": (ready-origin-hop-lookahead)*1000
+                    if origin is not None else None,
+                "hop_ms": hop*1000 if hop is not None else None,
+                "lookahead_ms": lookahead*1000,
+                "tick_wait_ms": (render-ready)*1000 if render is not None else None,
+                "schedule_wait_ms": (send-render)*1000
+                    if send is not None and render is not None else None,
+                "schedule_error_ms": (send-data["event_time"])*1000
+                    if send is not None and self.args.route == "timestamped" else None})
+        return rows
+
     def save(self, pcm_format, *, write_channel_traces=True):
         out = self.args.out
         out.mkdir(parents=True, exist_ok=True)
@@ -566,7 +615,16 @@ class Replay:
         if write_channel_traces:
             write_csv(out / "renders.csv", self.renders, RENDER_COLUMNS)
             write_csv(out / "sends.csv", self.output.rows, SEND_COLUMNS)
+        latency = self.latency_rows()
+        write_csv(out / "latency.csv", latency)
         counters = self.counters()
+        counters["latency"] = {self.args.route: {}}
+        for field in ("first_send_ms", "schedule_error_ms", "window_acquisition_ms",
+                      "hop_ms", "lookahead_ms", "tick_wait_ms", "schedule_wait_ms"):
+            values = [row[field] for row in latency if row[field] is not None]
+            counters["latency"][self.args.route][field] = ({
+                "median": float(np.median(values)), "p95": float(np.percentile(values, 95)),
+                "max": float(max(values))} if values else None)
         write_json(out / "counters.json", counters)
         write_json(out / "meta.json", {"trace_version": 1, "quantization_decimals": 6,
             "input_sha256": digest(self.args.input.read_bytes()), "format": pcm_format,

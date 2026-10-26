@@ -529,3 +529,16 @@ at which the full STFT window became available. `publication_time_s` and
 received_monotonic retain that distinction. EVENT-01's queue survival contracts
 are separate from the tighter phase-error acceptance budget; see Decisions for
 the remaining shared-window acquisition delay.
+
+### LAT-01 latency ledger
+
+`latency.csv` joins emitted events to nearest fixture-sidecar truth within 100 ms;
+unmatched events retain empty truth/offset fields. Samples remain canonical 48 kHz.
+`candidate_ms`, `availability_ms`, `first_render_ms`, `first_send_ms` are offsets
+from truth. `window_acquisition_ms` is input-frontier receipt minus truth, hop
+rounding and configured lookahead; `hop_ms` rounds truth up to the 10 ms grid.
+`tick_wait_ms` runs from that frontier to first render over half envelope;
+`schedule_wait_ms` runs from render to first carrying send. These five terms sum
+to truth-to-send latency. `schedule_error_ms` measures send minus the event's
+lead-adjusted envelope time on the timestamped route. Counters summarize each
+term with median, linear p95 and maximum, grouped by route. Empty sets are null.

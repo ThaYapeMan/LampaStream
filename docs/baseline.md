@@ -293,3 +293,22 @@ source/output access was performed.
 Final full verification: **2,071 passed, 93 skipped, zero xfails, five warnings in
 210.59 s**, versus the clean pre-change 190.95 s. The measured final run is 19.64 s
 slower; the requested wall-time acceptance is not demonstrated. Ruff passes.
+
+## LAT-01 starting point at 542b9ed
+
+Measured with the unchanged phase-two DSP/output loop, default configuration,
+30 Hz, unrestricted delivery. Times are software milliseconds; timestamped
+first-send values include the replay 1500 ms playback lead.
+
+| Fixture | Route | Truth → send median / p95 / max (ms) |
+|---|---|---:|
+| clicks-120 | normal | 33.333 / 33.333 / 33.333 |
+| clicks-120 | timestamped | 1500.000 / 1500.000 / 1500.000 |
+| clicks-128 | normal | 47.917 / 62.500 / 62.500 |
+| clicks-128 | timestamped | 1497.917 / 1520.833 / 1525.000 |
+| clicks-174 | normal | 48.844 / 62.807 / 65.521 |
+| clicks-174 | timestamped | 1498.281 / 1516.040 / 1518.396 |
+| impulse | normal | 33.333 / 33.333 / 33.333 |
+| impulse | timestamped | 1500.000 / 1500.000 / 1500.000 |
+| panning | normal | 33.333 / 33.333 / 33.333 |
+| panning | timestamped | 1500.000 / 1500.000 / 1500.000 |
