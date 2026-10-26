@@ -264,3 +264,22 @@ phase-two idle-colour hashes; `test_latency_frontend.py` covers window/chunk clo
 
 `scripts/benchmark_replay.py` measures analysis/output CPU cost with optional
 single-core affinity and reports virtual backlog and separate queue-drop classes.
+
+## ACCENT-01
+
+- `src/lampastream/accent.py`: AccentLayer and immutable-per-render scene wrapper;
+  weighted EVENT-01 envelopes, linear peak lift/pop, palette event stepping and
+  deterministic position selection. No transport constants or independent decay.
+- `SyncEngine._render_scene`: single mixer → accent entry point shared by both
+  routes, followed by the existing output precision wrapper.
+- `models.py`, `schema.py`, `api.py`, `player_manager.py`: stored defaults, typed
+  dictionary validation, CRUD/export round trips, runtime propagation and preview
+  diagnostics. `app.py` forwards diagnostics over the existing frame socket.
+- `scripts/replay_chain.py`: observes the shared scene entry point, records
+  pre/post channel colours and accent counters. `traces-phase4` is the reference.
+- `tests/test_accent.py`, `tests/fixtures/accent-off-lat01.json`: all-effects
+  production acceptance and immutable starting-revision accent-off byte hashes.
+- `web/src/pages/Effects.tsx`: Accent controls and advanced EVENT-01 envelope
+  settings. `lib/api.ts` and `hooks/usePreviewSocket.ts` carry EVENT-01/LAT-01
+  types and live values; `LightTiming.tsx` displays them.
+  `web/tests/e2e/accents.spec.ts` verifies saves, persistence and diagnostics.

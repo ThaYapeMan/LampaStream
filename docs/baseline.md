@@ -410,3 +410,43 @@ Final [headroom](baseline/lat01/headroom.md), [lookahead comparison](baseline/la
 and [phase-two colour hash checks](baseline/lat01/colour-check.md) are retained
 alongside the raw event ledgers. No frontend build, deployment or physical
 source/output access was performed.
+
+
+## Phase 4 (ACCENT-01)
+
+Reference: `docs/baseline/traces-phase4/` for clicks-120, clicks-174, tone-steps
+and pink-noise, both routes, visible default accents. Earlier phase sets remain
+unchanged. The default-spectrum clicks-120 normal trace accents all 19 events,
+loses zero, reaches 82.81 output codes of additional lift and clips zero channels.
+
+All-effects clicks-120 acceptance below uses the default parameters with both
+Effects set to the indicated factory ID, both routes, and the declared-depth
+room. Max lift is pre-output-boundary additional lift; duration is the minimum
+observed display span above eight codes within each event's 500 ms isolated
+window, including the final displayed frame. Consequently durations are bounded
+by the next click rather than representing a complete exponential tail. The
+requirements are ≥80 ms on the slow room and ≥33.3 ms on the fast room.
+
+| Effect | Max lift (8-bit LSB) | Min visible ms (25 Hz) | Max lift (16-bit LSB) | Min visible ms (60 Hz) | Max clipped components/light |
+|---|---:|---:|---:|---:|---:|
+| band_colours | 61.33 | 486.7 | 13659.00 | 475.0 | 0 |
+| band_colours_spatial | 136.84 | 486.7 | 34249.12 | 475.0 | 0 |
+| fireworks | 25.27 | 466.7 | 5473.88 | 475.0 | 0 |
+| flashes | 45.08 | 486.7 | 11586.59 | 475.0 | 0 |
+| gradient | 101.42 | 486.7 | 23991.58 | 475.0 | 0 |
+| mono_pulse | 112.12 | 486.7 | 27113.07 | 475.0 | 0 |
+| pulses | 43.12 | 486.7 | 11084.26 | 475.0 | 0 |
+| solid | 112.12 | 486.7 | 27113.07 | 475.0 | 0 |
+| spectrum_rgb | 90.29 | 486.7 | 20782.79 | 475.0 | 0 |
+| spectrum_rgb_spatial | 138.48 | 486.7 | 34725.75 | 475.0 | 0 |
+| splotches | 125.12 | 486.7 | 32154.68 | 475.0 | 0 |
+| swirl | 103.61 | 486.7 | 24625.63 | 475.0 | 0 |
+| wave | 125.06 | 486.7 | 32141.64 | 475.0 | 0 |
+
+Every one of the 19 received events passes in all 52 cases, with zero lost events.
+Hue stays within one degree and maximum clipped components are zero. Flashes
+reserves 15% internal peak headroom when enabled; off retains LAT-01 intensity.
+All ten fixture × two route accent-off runs match complete LAT-01 sends/features/
+energy/events bytes, anchored at 6986d9a; the one-time audit also matches every
+original render column. Hash expectations are stored in
+`tests/fixtures/accent-off-lat01.json` and continuously tested.

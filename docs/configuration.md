@@ -755,3 +755,52 @@ to V2, but its disabled response controls explain that CAVA uses its own bar
 falloff. This setting does not alter peak EMA, BandNormaliser, onset or pacing.
 Existing stored analysers receive 0.3 through the repository migration. Track colours follows Spectrum
 and keeps its existing controls.
+
+## Universal accents (ACCENT-01)
+
+Every rendered scene receives one accent after the mellow/active blend, on both
+routes and before output precision handling. Existing stored Effects receive the
+visible defaults automatically when fields are absent; no migration is needed.
+`none` remains dark.
+
+| Effect field | Default | Meaning |
+|---|---|---|
+| `accent_mode` | `lift` | `lift`, `pop`, `palette_step`, or `off` |
+| `accent_amount` | 0.35 | Linear-light peak-intensity lift, 0..1 |
+| `accent_band_weights` | `{ "bass": 1, "mid": 0.6, "treble": 0.4 }` | Three weights, each 0..1; maximum weighted band envelope wins |
+| `accent_strength_curve` | 1 | Positive exponent applied to event strength |
+| `accent_spatial` | `uniform` | `by_band`: bass everywhere, mid at alternate positions in x/y/z order, treble at the furthest position from the origin; distance ties use position order |
+| `accent_palette_step` | 0.1 | Palette-coordinate advance per event, 0..1; two events advance twice |
+| `onset_hold_s` | 0 | Effective hold is at least the output capability's minimum visible hold |
+| `onset_release_s` | 0.25 | EVENT-01 exponential release in seconds |
+| `onset_retrigger` | `restart` | Also `ignore_during_hold`, `add_with_clamp` |
+| `onset_lead_s` | 0.02 | Timestamped visual advance in seconds |
+| `onset_max_age_s` | 0.5 | Expiry threshold in seconds |
+
+`lift` preserves each channel's HSV hue and saturation: interpolate its peak
+intensity in linear light, encode that peak, and scale RGB together. `pop` also
+raises saturation. `palette_step` samples the Effect's configured palette (or its
+named gradient starter), with a cyclic offset accumulated from the lossless event
+count. Geometry and brightness still come from the mixed scene. It also lifts.
+Combined-method events have an `all` envelope and use unit broadband weight;
+multiband events use the weighted bass/mid/treble envelopes. Envelope peaks already
+contain strength, so the strength curve is applied without squaring that peak.
+The newest event supplies confidence. The layer introduces no independent decay.
+
+Flashes, pulses, splotches and fireworks retain their own onset responses and also
+receive the universal accent. This intentional double response is measured by the
+all-effects acceptance suite. Flashes reserve 15% internal peak headroom while
+accents are enabled; the other native effects retain their previous intensities.
+`off` preserves LAT-01 output, including the original flashes intensity.
+
+`onset_flash_intensity` is **deprecated** and hidden in the editor. Its default
+remains zero; stored values remain supported as an additional envelope lift.
+The existing renderer-specific compatibility responses also remain intact.
+Use Accent amount for new configurations. Advanced exposes hold, release and
+retrigger; the API also exposes the strength curve and lead/expiry controls.
+
+Output precision remains in the EVENT-01 boundary: eight declared-depth codes
+above baseline for a rising component, and a full-code decay step or hold. No
+output provider, frame rate or colour depth is encoded in AccentLayer.
+Live preview frames include envelopes, events, accent value and capabilities;
+Light timing shows the all/bass/mid/treble envelopes and accent value.

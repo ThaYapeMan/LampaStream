@@ -191,3 +191,43 @@ Affinity: [7]
   cases. Removing the library yields 88 native skips without the flag and 88 setup
   failures with it; restoring it yields 88 passes in both modes. The full required
   run passed with 2203 passed and 5 unrelated skips.
+
+## ACCENT-01 — visible universal event accents (2026-10-26)
+
+- Supersede the 2026-10-25 decision that default spectrum_rgb onsets remain
+  invisible until Styles. Default every existing/new Effect to lift at 0.35,
+  weights bass/mid/treble 1/0.6/0.4. Missing persisted fields receive dataclass
+  defaults, with schema support for the weight dictionary. Export/import carries
+  every field; no migration and no new runtime dependencies.
+- Apply once after LayerMixer and before output precision on both routes.
+  EVENT-01 owns hold/release/retrigger; no raw flags or tick decay enter accents.
+  The research's 20–30 ms cone integration and 50–100 ms maximum perceived flash
+  brightness motivate retaining the capability minimum hold (two output frames;
+  80 ms on the slow reference). Audio-leading light lateness becomes detectable
+  around 15–45 ms; preserve LAT-01 scheduling rather than adding another clock.
+- Normalize the envelope's embedded strength before applying strength^gamma and
+  newest-event confidence; max-merge weighted band envelopes. Combined events
+  have only an all envelope, so use unit broadband weight. Zero explicit band
+  weights remain zero. Sort spatial positions lexicographically, choose every
+  other mid position starting at zero, and resolve furthest-distance ties by
+  that order. The explicit none effect remains dark.
+- Interpolate peak intensity in linear light and scale the encoded RGB direction
+  together. This preserves HSV hue/saturation exactly instead of introducing
+  angle shifts from separate nonlinear component interpolation. Pop increases
+  saturation; palette_step advances a cyclic configured-palette coordinate per
+  counted event, with the named gradient starter for an unpaletted effect.
+- Retain the double response of flashes/pulses/splotches/fireworks. Measured
+  exception to the proposed intensity rule: flashes did not clip, but its
+  near-white peak left only 3.90 additional codes on the slow room, below the
+  required eight. Scale its internal envelope to 0.85 when accents are enabled
+  to reserve lift headroom; off retains original intensity. All 52 effect ×
+  route × depth cases then pass, with zero clipped components. No other internal
+  intensity changed. Deprecate the legacy flash control without dropping it.
+- Keep phase-4 evidence in traces-phase4, alongside the earlier sets. Pin complete
+  LAT-01 accent-off trace bytes for ten fixtures × two routes against 6986d9a;
+  also audit retained render columns. Schema and default-export additions change
+  configuration bytes only, so regenerate the reproducible default fixture.
+- Extend the existing preview socket payload and TypeScript contracts; share its
+  diagnostics through status so Light timing does not create a second socket.
+  Preserve latest diagnostic fields when periodic status metadata arrives. Build
+  and commit the frontend bundle with the pinned Node 22.22.2.

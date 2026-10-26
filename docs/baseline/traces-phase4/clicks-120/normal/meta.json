@@ -1,5 +1,5 @@
 {
-  "config_sha256": "f891260984d0c31c81209b6431f9d229db7c04b83ba3514f68d0af9f6415e34c",
+  "config_sha256": "f65732b3c4e27aa3d94b8d4500703fc75abad5ebcdb479bdd42b353de345605d",
   "delay_ms": 0,
   "delay_schedule": [],
   "duration_s": 10.0,
@@ -9,7 +9,7 @@
     "encoding": "wav-pcm",
     "sample_rate": 48000
   },
-  "git_commit": "064b52a",
+  "git_commit": "0cac449",
   "input_sha256": "3e9c20510904804a54f77f34209c51d5a4420a2bf3085ceada9ab9160812e48b",
   "lead_s": 1.5,
   "numpy_version": "2.5.4",

@@ -617,3 +617,45 @@ OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 .venv/bin/python \
 The report measures DSP CPU milliseconds per hop, loop p95/max execution cost,
 CPU fraction, virtual backlog and distinct publication/event drops. Trace export
 is excluded; no physical I/O or live OS wake-lateness simulation is claimed.
+
+## ACCENT-01 acceptance and phase-4 traces
+
+`pytest tests/test_accent.py` exercises all 13 non-none factory effects using
+clicks-120 through production DSP, LayerMixer, AccentLayer and SyncEngine, both
+routes, the 25 Hz / 8-bit and 60 Hz / 16-bit rooms. Every received event must
+produce an additional eight declared-depth codes within hold; actual sent scene
+identities must demonstrate at least the capability minimum visible duration.
+The same cases check hue within one degree and at most one clipped component per
+light. Separate tests cover real multiband panning/anti-phase events, spatial
+selection, strength curves, palette burst counts, dark/zero-weight behavior,
+legacy defaults and serialization. API tests check atomic validation and both
+runtime profile builders; backup round trips include all serialized fields.
+
+`tests/fixtures/accent-off-lat01.json` pins SHA-256 of sends.csv, features.csv,
+energy.csv and events.csv for all ten fixtures and both routes, regenerated from
+6986d9a. Accent-off replay tests compare complete bytes, including RGB and wire
+codes, timing and event dispositions. The initial cross-revision audit also
+compared every original renders.csv column (the new schema adds columns).
+`test_output_agnostic_onset_modules` includes accent.py.
+
+`docs/baseline/traces-phase4/` retains the requested four fixtures on both routes
+without overwriting older trace sets. renders.csv adds `accent_value`,
+`accent_mode`, `pre_r/g/b`, `post_r/g/b`; `r/g/b` are now post-accent. Measurements
+are before output precision, which remains exercised in sends.csv by tests.
+The accent object in counters.json reports `events_accented`, `max_lift_lsb` for
+that run's declared output, and `clipped_channels_count` (channel-render samples
+with any component at the ceiling). The phase-4 table separately reports maximum
+clipped components per light. Event counts are counted once per render, rather
+than once per channel.
+
+The frontend builds with Node 22.22.2. Run `cd web && npm test && npm run build &&
+npm run test:e2e`; commit source and src/lampastream/webui together. The accent
+Playwright case changes mode/amount/spatial/hold, checks PATCH and persistence,
+and sends live diagnostic envelope values through the preview socket. Python
+route-only scheduler probes explicitly disable accents when they substitute
+non-Scene sentinels for scenes.
+
+Local ACCENT-01 final verification: default-options pytest passed with 2293 passed,
+5 skipped and 20 warnings (94.76 seconds); ruff passed. Frontend unit tests passed
+450/450 and Playwright passed 72/72. The five Python skips are the existing
+unrelated skips; native coverage remains enabled and available locally.
