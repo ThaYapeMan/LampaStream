@@ -672,3 +672,8 @@ snapshot flags cannot refresh the indicators. A grep contract guards preview and
 status assignments. Playwright verifies the envelope threshold, per-channel dot
 outline intensity and the legacy onset-only socket fallback. The existing
 accent-off complete-byte comparisons continue to protect lamp output.
+
+Send-back 1 local verification: default-options pytest 2323 passed / 5 skipped;
+Vitest 450 passed; Playwright 73 passed. Both 20 Hz websocket routes deliver
+19/19 distinct activations. Accent-off byte identity remains green. Rebuilt with
+Node 22.22.2; the committed bundle matches a fresh build.
