@@ -661,3 +661,14 @@ Local ACCENT-01 final verification: default-options pytest passed with 2319 pass
 5 skipped and 20 warnings (132.59 seconds); ruff passed. Frontend unit tests passed
 450/450 and Playwright passed 72/72. The five Python skips are the existing
 unrelated skips; native coverage remains enabled and available locally.
+
+### ACCENT-01 Send-back 1
+
+`pytest -n 0 -s tests/test_preview_onsets.py` replays clicks-120 through production
+SyncEngine on both routes while advancing the actual websocket producer at an
+independent 20 Hz phase. Each route must deliver 19 distinct compatibility onset,
+PCM and all-envelope outline activations. Band hold/expiry checks prove that raw
+snapshot flags cannot refresh the indicators. A grep contract guards preview and
+status assignments. Playwright verifies the envelope threshold, per-channel dot
+outline intensity and the legacy onset-only socket fallback. The existing
+accent-off complete-byte comparisons continue to protect lamp output.
