@@ -469,7 +469,7 @@ export function NowPlaying({ expertMode = false, colour, channel_colours, onset,
                 <ColourSwatch r={colour.r} g={colour.g} b={colour.b} />
               </div>
               <div className="w-full" data-testid="floorplan-preview-size">
-                <FloorplanPreview channels={channels} colours={channel_colours} onset={onset} />
+                <FloorplanPreview channels={channels} colours={channel_colours} onset={onset} envelope={status?.onset_envelope} accentLifts={status?.channel_accent_lifts} />
               </div>
             </section>
             <section className="min-w-0 rounded-xl border p-4" aria-label="Analysis">

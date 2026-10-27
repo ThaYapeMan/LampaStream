@@ -142,8 +142,9 @@ export function usePreviewSocket(): PreviewState {
           const energy = (msg.energy as number) ?? 0
 
           const accentFeatures: AccentFeatures = {
+            channel_accent_lifts: msg.channel_accent_lifts as number[] | undefined,
             onset_events: msg.onset_events as AccentFeatures['onset_events'],
-            onset_envelope: (msg.onset_envelope as number) ?? 0,
+            onset_envelope: msg.onset_envelope as number | undefined,
             onset_envelope_bass: (msg.onset_envelope_bass as number) ?? 0,
             onset_envelope_mid: (msg.onset_envelope_mid as number) ?? 0,
             onset_envelope_treble: (msg.onset_envelope_treble as number) ?? 0,

@@ -507,6 +507,7 @@ class PlayerManager:
         payload["onset_events"] = [dict(asdict(e), bands=sorted(e.bands))
                                    for e in features.onset_events]
         payload["accent_value"] = getattr(engine, "last_accent_value", 0.)
+        payload["channel_accent_lifts"] = getattr(engine, "last_channel_accent_lifts", [])
         driver = self._active.hue_driver
         if driver is not None:
             payload["capabilities"] = asdict(driver.capabilities)

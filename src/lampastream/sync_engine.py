@@ -2997,6 +2997,8 @@ class SyncEngine:
         self._scene_timing = deque()
         self._probe: LatencyProbe = probe if probe is not None else NoLatencyProbe()
         self._delay_buffer: deque[Scene | None] = deque()
+        self._preview_until = dict.fromkeys(("all", "bass", "mid", "treble"), -math.inf)
+        self._preview_clock = time.monotonic
         self._last_onset: bool = False
         self._last_mix: float = 0.0
         self._last_energy: float = 0.0
@@ -3040,6 +3042,7 @@ class SyncEngine:
         Reset published onset status while preserving the analyser's band
         normalisation and the active output session.
         """
+        self._preview_until = dict.fromkeys(self._preview_until, -math.inf)
         self._last_pcm_onset = False
         self._last_onset_bass = False
         self._last_onset_mid = False
@@ -3228,7 +3231,7 @@ class SyncEngine:
 
     @property
     def last_onset(self) -> bool:
-        return self._last_onset
+        return self._preview_active("all")
 
     @property
     def last_mix(self) -> float:
@@ -3242,19 +3245,19 @@ class SyncEngine:
 
     @property
     def last_pcm_onset(self) -> bool:
-        return self._last_pcm_onset
+        return self._preview_active("all")
 
     @property
     def last_onset_bass(self) -> bool:
-        return self._last_onset_bass
+        return self._preview_active("bass")
 
     @property
     def last_onset_mid(self) -> bool:
-        return self._last_onset_mid
+        return self._preview_active("mid")
 
     @property
     def last_onset_treble(self) -> bool:
-        return self._last_onset_treble
+        return self._preview_active("treble")
 
     @property
     def preview_spectrum(self) -> tuple[list[float], list[float] | None]:
@@ -3341,9 +3344,29 @@ class SyncEngine:
         """
         return bool(self._retiring)
 
+    def _preview_active(self, band):
+        return self._preview_clock() <= self._preview_until[band]
+
     def _render_scene(self, features, t):
         scene = self._effect.render(features, t)
         scene = self._accent.render(scene, features, self.profile, self._accent_positions)
+        # Preview compatibility flags follow lossless rendered events, and
+        # survive at least one websocket polling interval. Never alter scenes.
+        now = self._preview_clock()
+        if features.onset_count_since_render > 0:
+            self._preview_until["all"] = now + .05
+            for band in ("bass", "mid", "treble"):
+                if any(band in event.bands for event in features.onset_events):
+                    self._preview_until[band] = now + .05
+        from .accent import AccentScene
+        self.last_channel_accent_lifts = []
+        for position in self._accent_positions:
+            lift = 0.
+            if isinstance(scene, AccentScene):
+                before = scene.scene.color_at(position, t)
+                after = scene.color_at(position, t)
+                lift = max(0., after.r-before.r, after.g-before.g, after.b-before.b)
+            self.last_channel_accent_lifts.append(lift)
         self.last_accent_features = features
         self.last_accent_value = self._accent.last_value
         return scene
@@ -3466,6 +3489,7 @@ class SyncEngine:
         from .airplay_early import SceneSchedule
 
         clock = clock or time.monotonic
+        self._preview_clock = clock
         sleep = sleep or asyncio.sleep
         capabilities = output_capabilities(output)
         from .accent import AccentLayer
@@ -3599,7 +3623,7 @@ class SyncEngine:
                         recorder = getattr(self._timing, "scene_ready", None)
                         if recorder is not None:
                             recorder(f.received_monotonic, ready, f.play_monotonic)
-                        self._last_bars, self._last_onset = f.bars, f.onset
+                        self._last_bars = f.bars
                         self._last_mix, self._last_energy = self._effect.mix, f.full
                         self._last_sustained_energy = f.sustained_energy
                         slot = math.floor((target-cadence_origin)*self.profile.output_render_hz)
@@ -3667,7 +3691,6 @@ class SyncEngine:
             t = clock()
 
             if features is not None:
-                self._last_onset = features.onset
                 self._last_bars = features.bars
                 # The freshest Spectrum record may omit delayed loudness.
                 # Copy only for rendering: PublicationRecord remains authoritative.

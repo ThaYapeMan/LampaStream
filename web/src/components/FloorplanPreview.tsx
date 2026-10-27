@@ -5,6 +5,8 @@ interface Props {
   channels: ChannelPosition[]
   colours: Array<{ r: number; g: number; b: number }>
   onset: boolean
+  envelope?: number
+  accentLifts?: number[]
 }
 
 const W = 200
@@ -30,8 +32,14 @@ function svgY(hz: number, radius: number): number {
   return PAD + radius + ((1 - hz) / 2) * (INNER_H - 2 * radius)
 }
 
-export function FloorplanPreview({ channels, colours, onset }: Props) {
-  if (channels.length === 0) return <div data-testid="floorplan-frame" className={`relative flex aspect-[5/3] items-center justify-center rounded-lg border text-sm text-muted-foreground ${onset ? 'outline outline-2 outline-white' : ''}`}>
+export function FloorplanPreview({ channels, colours, onset, envelope, accentLifts }: Props) {
+  const active = envelope === undefined ? onset : envelope > .5
+  const outline = (index: number) => {
+    const lift = Math.max(0, Math.min(1, accentLifts?.[index] ?? (active ? 1 : 0)))
+    return { stroke: lift > 0 ? 'white' : 'transparent', strokeOpacity: lift,
+      strokeWidth: lift > 0 ? 1 + 3 * lift : 0 }
+  }
+  if (channels.length === 0) return <div data-testid="floorplan-frame" className={`relative flex aspect-[5/3] items-center justify-center rounded-lg border text-sm text-muted-foreground ${active ? 'outline outline-2 outline-white' : ''}`}>
     No floorplan available<span className="absolute bottom-2 text-xs">front</span>
   </div>
 
@@ -55,9 +63,9 @@ export function FloorplanPreview({ channels, colours, onset }: Props) {
             width={INNER_W}
             height={INNER_H}
             fill="none"
-            stroke={onset ? "white" : "currentColor"}
-            strokeOpacity={onset ? 1 : 0.15}
-            strokeWidth={onset ? 2 : 1}
+            stroke={active ? "white" : "currentColor"}
+            strokeOpacity={active ? 1 : 0.15}
+            strokeWidth={active ? 2 : 1}
             vectorEffect="non-scaling-stroke"
             rx={4}
           />
@@ -76,8 +84,8 @@ export function FloorplanPreview({ channels, colours, onset }: Props) {
                     cy={cy}
                     r={r}
                     fill={toCssRgb(col.r, col.g, col.b)}
-                    stroke="transparent"
-                    strokeWidth={0}
+                    data-testid={`floorplan-channel-${ch.channel_id}`}
+                    {...outline(i)}
                   />
                 )
               })
@@ -90,8 +98,8 @@ export function FloorplanPreview({ channels, colours, onset }: Props) {
                     cy={svgY(ch.z, r)}
                     r={r}
                     fill={toCssRgb(col.r, col.g, col.b)}
-                    stroke="transparent"
-                    strokeWidth={0}
+                    data-testid={`floorplan-channel-${ch.channel_id}`}
+                    {...outline(i)}
                   />
                 )
               })}
