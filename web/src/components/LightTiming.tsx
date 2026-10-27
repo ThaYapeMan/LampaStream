@@ -48,6 +48,7 @@ export function LightTiming({ status, onOpenLatency, playersView = false, contro
       const value = (band === 'all' ? accents.onset_envelope : accents[`onset_envelope_${band}`]) ?? 0
       return <label key={band} className="flex items-center gap-2">{band}<meter aria-label={`${band} envelope`} min={0} max={1} value={value} /><output>{value.toFixed(2)}</output></label>
     })}
+    <p data-testid="preview-clock">Preview {status?.preview_clock?.offset_ms == null ? 'unsynchronised' : `offset ${status.preview_clock.offset_ms.toFixed(1)} ms · RTT ${status.preview_clock.rtt_ms?.toFixed(1)} ms`}</p>
     <p>Accent <output data-testid="accent-value">{(accents.accent_value ?? 0).toFixed(2)}</output></p>
   </div>
   const [open, setOpen] = useState(() => { try { return localStorage.getItem('lightTimingOpen') !== '0' } catch { return true } })

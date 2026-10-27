@@ -338,6 +338,7 @@ class ActiveSession:
 
 class PlayerManager:
     def __init__(self, storage: Storage):
+        self._preview_listeners = set()
         self.storage = storage
         self.airplay_timing = TimingDiagnostics()
         self._active: ActiveSession | None = None
@@ -494,6 +495,17 @@ class PlayerManager:
         if self._active and self._active.hue_driver:
             return self._active.hue_driver.last_colours
         return []
+
+    def subscribe_preview(self, listener):
+        self._preview_listeners.add(listener)
+        return lambda: self._preview_listeners.discard(listener)
+
+    def _publish_preview(self, payload):
+        for listener in tuple(self._preview_listeners):
+            try:
+                listener(payload)
+            except Exception:
+                log.exception("Preview subscriber failed")
 
     @property
     def preview_frame(self) -> dict:
@@ -980,6 +992,7 @@ class PlayerManager:
             mellow_profile=mellow_profile, analyser=pcm_analyser,
             timing=(session.lms_timed_source.timing if session.lms_timed_source else None),
         )
+        engine.preview_publish = self._publish_preview
         session.sync_engine = engine
         engine.start()
 
@@ -1040,6 +1053,7 @@ class PlayerManager:
             None, profile, probe=session.probe, timing=self.airplay_timing,
             mellow_profile=mellow_profile, analyser=pcm_analyser,
         )
+        engine.preview_publish = self._publish_preview
         session.sync_engine = engine
         engine.start()
 

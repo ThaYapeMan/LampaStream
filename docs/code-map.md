@@ -283,3 +283,22 @@ single-core affinity and reports virtual backlog and separate queue-drop classes
   settings. `lib/api.ts` and `hooks/usePreviewSocket.ts` carry EVENT-01/LAT-01
   types and live values; `LightTiming.tsx` displays them.
   `web/tests/e2e/accents.spec.ts` verifies saves, persistence and diagnostics.
+
+## PREVIEW-01
+
+- `audible_preview.py`: exactly-once event publication, per-event channel snapshots,
+  bounded identity history and 5 ms coalescing of already available messages.
+- `SyncEngine._render_scene` / `_preview_sent`: preview-only publication hooks on
+  timestamped pre-render and normal carrying-send boundaries, respectively.
+- `PlayerManager.subscribe_preview`: session-independent subscriber registration;
+  worker callbacks cross into the websocket loop via `call_soon_threadsafe`.
+- `app.ws_preview`: bounded per-socket event queue, ping/pong and task cleanup;
+  `_preview_frames` retains the original periodic frame/spectrum/status cadence.
+- `web/src/hooks/previewTiming.ts`: typed event transport, midpoint/median clock
+  estimator and bounded event scheduler with hold/exponential release policies.
+- `usePreviewSocket.ts`: ping lifecycle, scheduled animation updates and continuous
+  colour fallback; `LightTiming.tsx` exposes clock offset/RTT. Existing
+  `NowPlaying` / `FloorplanPreview` props render the scheduled outlines and lifts.
+- `test_preview_onsets.py`, `previewTiming.test.ts`, `previewSocketTiming.test.tsx`
+  and `preview-onsets.spec.ts`: server timing, scheduler/clock, hook integration and
+  browser outline activation contracts.

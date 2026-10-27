@@ -270,3 +270,12 @@ Affinity: [7]
 - Browser scheduling is deferred. The residual is the websocket interval plus
   browser rendering, roughly 50–80 ms. Dots and outlines share it because they
   come from the same snapshot. Keep the timestamp for later browser scheduling.
+
+## PREVIEW-01
+
+- 2026-10-27 — Start from pulled 8f5385b; preserve the owner's untracked design image. Preview-only hooks observe existing event/render/send boundaries; no lamp scheduling, renderer, envelope, accent, output boundary or HueDriver changes.
+- 2026-10-27 — Publish timestamped events at pre-render time with their canonical playback timestamps and post-accent scene samples; publish normal events with exact carrying-send colours and send-clock anchors. Never sample the stateful output precision guard for a preview.
+- 2026-10-27 — Coalesce already available events within 5 ms without a timer that would delay normal-route publication. Preserve each event's own timestamp and channel snapshot inside the transport batch. Bound queue/history growth and isolate failing subscribers from output.
+- 2026-10-27 — Keep the 50 ms continuous producer; push events and answer clock pings in independent socket tasks. Use midpoint RTT and a seven-sample median for server-minus-browser clock offset. Unknown clock falls back to immediate activation and an explicit unsynchronised indicator.
+- 2026-10-27 — Browser requestAnimationFrame owns event hold/release and colour precedence during hold. Periodic frames cannot retrigger the event path. Reset/reconnect discards queued event state; no runtime or frontend dependencies added.
+- 2026-10-27 — Report controlled software activation residuals separately from socket delivery lead and earlier poll latency; no physical lamp/audio or live-network measurements are inferred. No deployment or owner-device contact.

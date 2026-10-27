@@ -450,3 +450,31 @@ All ten fixture × two route accent-off runs match complete LAT-01 sends/feature
 energy/events bytes, anchored at 6986d9a; the one-time audit also matches every
 original render column. Hash expectations are stored in
 `tests/fixtures/accent-off-lat01.json` and continuously tested.
+
+### Audible preview: Send-back 2 and PREVIEW-01
+
+Controlled clicks-120 replay, 19 events per route; timestamped ingress lead 1.5 s.
+Positive residual means preview activation after its audible reference. These are
+software clocks, excluding physical output and uncontrolled network/browser load.
+
+| Probe | Events | Residual / delivery lead (ms) |
+|---|---:|---:|
+| Send-back 2 periodic normal, 0 / 200 ms buffer | 19 each | activation +46.999…+47.000 |
+| Send-back 2 periodic timestamped, 20 / 100 ms lamp advance | 19 each | activation +17.000 |
+| PREVIEW-01 normal push, 0 / 200 ms buffer | 19 each | publication minus carrying send 0.000 |
+| PREVIEW-01 timestamped push, 20 / 100 ms lamp advance | 19 each | publication minus playback −1466.667 |
+| PREVIEW-01 Vitest, known offset, 16 ms animation interval | 1 | scheduled activation minus audible +8.000 |
+| PREVIEW-01 Playwright, future socket event, controlled clock | 1 | scheduled activation minus audible +6.000 |
+
+The pushed timestamped event is available well before playback; its browser
+activation is deliberately deferred to playback. The two browser probes measure
+residual activation error after clock conversion, rather than claiming 1466 ms
+of latency. All scheduled activations are at or after the target and within one
+animation frame. The normal-route push removes the 20 Hz wait but still incurs
+transport and the next browser animation frame. Unknown offset explicitly falls
+back to immediate drawing and is labelled unsynchronised. RTT/offset are visible
+in Light timing. Existing periodic probes remain as cadence/compatibility checks.
+
+Active-accent sends.csv is byte-identical to 8f5385b for normal (0 and 200 ms delay)
+and timestamped output; all 20 LAT-01 accent-off fixture/route hash pins remain
+unchanged. No physical device was contacted.

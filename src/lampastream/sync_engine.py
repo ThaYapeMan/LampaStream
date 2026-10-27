@@ -3357,6 +3357,7 @@ class SyncEngine:
         colours = getattr(output, "last_colours", ())
         if not isinstance(colours, (list, tuple)):
             colours = ()
+        self._audible_preview.publish = getattr(self, "preview_publish", None)
         self._audible_preview.sent(scene, stamp, colours, self._preview_timestamped)
 
     def _render_scene(self, features, t):
@@ -3379,9 +3380,15 @@ class SyncEngine:
         shift = (newest.play_monotonic-stamp
                  if newest is not None and newest.play_monotonic is not None else 0.)
         if callable(getattr(scene, "color_at", None)):
-            return PreviewScene(scene, features, t, self._accent.last_value,
+            metadata = PreviewScene(scene, features, t, self._accent.last_value,
                                 self.last_channel_accent_lifts, shift, baseline,
                                 self._accent_positions, self.profile)
+            if getattr(self, "_preview_timestamped", False):
+                self._audible_preview.publish = getattr(self, "preview_publish", None)
+                self._audible_preview.push(metadata, t,
+                    lambda: [scene.color_at(position, t)
+                             for position in self._accent_positions], True)
+            return metadata
         return scene
 
     def _onset_lift_enabled(self):
@@ -3517,7 +3524,8 @@ class SyncEngine:
         from .audible_preview import AudiblePreview
         self._audible_preview = AudiblePreview(
             max(self.profile.onset_hold_s, capabilities.min_visible_hold_s),
-            self.profile.onset_release_s, self.profile.onset_retrigger)
+            self.profile.onset_release_s, self.profile.onset_retrigger,
+            getattr(self, "preview_publish", None))
         self._preview_timestamped = False
         self._newest_onset = None, 0.0
         self._event_sample_reference = 0

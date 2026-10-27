@@ -17,6 +17,7 @@ it('delivers WebSocket loudness through App, clears silence and disconnected rea
     onmessage = (_event: { data: string }) => {}
     constructor() { socket = this }
     close() {}
+    send(_data: string) {}
   }
   vi.stubGlobal('WebSocket', FakeSocket)
   render(<App />)

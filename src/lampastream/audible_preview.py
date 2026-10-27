@@ -39,8 +39,10 @@ def render_metadata(scene):
 
 
 class AudiblePreview:
-    def __init__(self, hold, release, policy):
+    def __init__(self, hold, release, policy, publish=None):
         self.envelopes = {band: TriggerEnvelope(hold, release) for band in BANDS}
+        self.publish = publish
+        self.pushed = set()
         self.policy = policy
         self.events = {}
         self.seen = set()
@@ -58,8 +60,10 @@ class AudiblePreview:
         self.accent = AccentLayer()
 
     def reset(self):
+        if self.publish is not None:
+            self.publish(dict(type='preview_reset'))
         envelope = self.envelopes['all']
-        self.__init__(envelope.hold_s, envelope.release_s, self.policy)
+        self.__init__(envelope.hold_s, envelope.release_s, self.policy, self.publish)
 
     def route(self, timestamped):
         if timestamped != self.timestamped:
@@ -81,6 +85,48 @@ class AudiblePreview:
             oldest = next(iter(self.events))
             self.events.pop(oldest)
             self.seen.discard(oldest)
+            self.pushed.discard(oldest)
+
+    def push(self, metadata, stamp, colours, timestamped):
+        """Publish once, independently of reads and the 20 Hz continuous socket."""
+        due = [(event, audible if timestamped else stamp)
+               for identity, (event, audible) in self.events.items()
+               if identity not in self.pushed and
+               (audible <= metadata.render_time + metadata.playback_shift + 1e-9
+                if timestamped else audible <= metadata.render_time)]
+        if not due:
+            return
+        if callable(colours):
+            colours = colours()
+        due.sort(key=lambda item: item[1])
+        while due:
+            anchor = due[0][1]
+            group = [item for item in due if item[1] - anchor <= .005]
+            due = due[len(group):]
+            self.pushed.update(event.id for event, _ in group)
+            # Keep individual timestamps inside a coalesced transport message:
+            # browser activation must never pull a later event forward.
+            events = []
+            for event, audible in group:
+                peaks = {band: min(1., max(0., event.strength))
+                         if band in event.bands | {'all'} else 0. for band in BANDS}
+                events.append(dict(id=event.id, audible_monotonic=audible,
+                                   peaks=peaks, bands=sorted(event.bands)))
+            channels = [dict(zip(('r', 'g', 'b'), c.to_16bit(), strict=True))
+                        for c in colours]
+            for event in events:
+                event.update(channel_colours=channels, channel_accent_lifts=list(metadata.lifts),
+                             accent_value=metadata.accent_value)
+            envelope = self.envelopes['all']
+            payload = dict(type='event', audible_monotonic=anchor, events=events,
+                           event_count=len(events), bands=sorted(set().union(
+                               *(event.bands for event, _ in group))),
+                           hold_s=envelope.hold_s, release_s=envelope.release_s,
+                           policy=self.policy, channel_colours=channels,
+                           channel_accent_lifts=list(metadata.lifts),
+                           accent_value=metadata.accent_value)
+            if self.publish is not None:
+                self.publish(payload)
 
     def sent(self, scene, stamp, colours, timestamped):
         metadata = render_metadata(scene)
@@ -98,6 +144,8 @@ class AudiblePreview:
             before = metadata.baseline.color_at(position, stamp)
             lifts.append(max(0., colour.r-before.r, colour.g-before.g, colour.b-before.b))
         heapq.heappush(self.pending, (audible, self.sequence, metadata, tuple(colours), lifts))
+        if not timestamped:
+            self.push(replace(metadata, lifts=lifts), stamp, colours, False)
         self.snapshot(stamp)
 
     def snapshot(self, now):
@@ -147,3 +195,20 @@ class AudiblePreview:
             'accent_value': accent_value,
             'channel_accent_lifts': self.lifts,
         }
+
+
+def coalesce_messages(messages):
+    """Merge already available socket bursts without delaying normal-route sends."""
+    result = []
+    for message in messages:
+        previous = result[-1] if result else None
+        if (previous is not None and previous['type'] == message['type'] == 'event'
+                and 0 <= message['audible_monotonic'] - previous['audible_monotonic'] <= .005
+                and all(previous[key] == message[key]
+                        for key in ('hold_s', 'release_s', 'policy'))):
+            result[-1] = dict(previous, events=previous['events'] + message['events'],
+                              event_count=previous['event_count'] + message['event_count'],
+                              bands=sorted(set(previous['bands']) | set(message['bands'])))
+        else:
+            result.append(message)
+    return result

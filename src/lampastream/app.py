@@ -7,6 +7,8 @@ import json
 import logging
 import math
 import os
+import time
+from asyncio import CancelledError
 from pathlib import Path
 
 import uvicorn
@@ -75,6 +77,54 @@ async def on_shutdown() -> None:
 async def ws_preview(websocket: WebSocket):
     player_manager = websocket.app.state.player_manager
     await websocket.accept()
+    subscribe = getattr(player_manager, 'subscribe_preview', None)
+    if callable(subscribe):
+        loop = asyncio.get_running_loop()
+        queue = asyncio.Queue(maxsize=1000)
+
+        def enqueue(payload):
+            if queue.full():
+                queue.get_nowait()
+            queue.put_nowait(payload)
+
+        unsubscribe = subscribe(lambda payload: loop.call_soon_threadsafe(enqueue, payload))
+
+        async def events():
+            while True:
+                from .audible_preview import coalesce_messages
+
+                messages = [await queue.get()]
+                while not queue.empty():
+                    messages.append(queue.get_nowait())
+                for payload in coalesce_messages(messages):
+                    await websocket.send_json(payload)
+
+        async def receive():
+            while True:
+                message = await websocket.receive_json()
+                if isinstance(message, dict) and message.get('type') == 'ping':
+                    await websocket.send_json(dict(type='pong', client_ms=message.get('client_ms'),
+                                                   server_monotonic=time.monotonic()))
+
+        tasks = [asyncio.create_task(work()) for work in
+                 (events, receive, lambda: _preview_frames(websocket, player_manager))]
+        try:
+            done, _ = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+            for task in done:
+                task.result()
+        except (WebSocketDisconnect, CancelledError):
+            pass
+        finally:
+            unsubscribe()
+            for task in tasks:
+                task.cancel()
+            with contextlib.suppress(CancelledError):
+                await asyncio.gather(*tasks, return_exceptions=True)
+        return
+    await _preview_frames(websocket, player_manager)
+
+
+async def _preview_frames(websocket, player_manager):
     last_status_json: str | None = None
     tick = 0
     light_timing = None

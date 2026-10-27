@@ -1,3 +1,4 @@
+import { PreviewClock, PreviewScheduler, type PreviewEventMessage } from './previewTiming'
 import type { AccentFeatures } from '@/lib/api'
 import type { PlayerLatency } from '@/lib/api'
 import { useEffect, useRef, useState } from 'react'
@@ -11,6 +12,7 @@ export interface TrackPosition {
 }
 
 export interface SocketStatus extends AccentFeatures {
+  preview_clock?: { offset_ms: number | null; rtt_ms: number | null }
   music?: import('@/lib/api').MusicStatus | null
   timing_player_mac?: string | null
   timing_player_name?: string | null
@@ -97,6 +99,30 @@ export function usePreviewSocket(): PreviewState {
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null
     let attempt = 0
     let stopped = false
+    let clock = new PreviewClock()
+    let scheduler = new PreviewScheduler()
+    let eventMode = false
+    let pingTimer: ReturnType<typeof setInterval> | null = null
+    let animation = 0
+    let continuous: PreviewState['channel_colours'] = []
+    function animate(now: number) {
+      if (eventMode) {
+        const sample = scheduler.sample(now)
+        const channels = sample.colours?.map(c => ({ r: c.r / 65535, g: c.g / 65535, b: c.b / 65535 })) ?? continuous
+        const features: AccentFeatures = {
+          onset_envelope: sample.values.all, onset_envelope_bass: sample.values.bass,
+          onset_envelope_mid: sample.values.mid, onset_envelope_treble: sample.values.treble,
+          channel_accent_lifts: sample.lifts, accent_value: sample.accent,
+          onset_age_s: Number.isFinite(sample.age) ? sample.age : null,
+        }
+        setState(s => ({ ...s, ...features, channel_colours: channels, colour: channels[0] ?? s.colour,
+          onset: sample.values.all > .5, onset_bass: sample.values.bass > .5,
+          onset_mid: sample.values.mid > .5, onset_treble: sample.values.treble > .5,
+          status: s.status ? { ...s.status, ...features } : null }))
+      }
+      animation = requestAnimationFrame(animate)
+    }
+    animation = requestAnimationFrame(animate)
 
     function connect() {
       const proto = location.protocol === 'https:' ? 'wss:' : 'ws:'
@@ -104,10 +130,20 @@ export function usePreviewSocket(): PreviewState {
 
       ws.onopen = () => {
         attempt = 0
-        setState((s) => ({ ...s, connected: true, reconnectAttempt: 0 }))
+        clock = new PreviewClock()
+        scheduler = new PreviewScheduler()
+        eventMode = false
+        const ping = () => ws?.send(JSON.stringify({ type: 'ping', client_ms: performance.now() }))
+        ping()
+        if (pingTimer) clearInterval(pingTimer)
+        pingTimer = setInterval(ping, 2000)
+        setState((s) => ({ ...s, connected: true, reconnectAttempt: 0,
+          status: s.status ? { ...s.status, preview_clock: { offset_ms: null, rtt_ms: null } } : null }))
       }
 
       ws.onclose = () => {
+        if (pingTimer) clearInterval(pingTimer)
+        eventMode = false
         setState((s) => ({ ...s, connected: false, reconnectAttempt: attempt, loudness_momentary_lufs: null, loudness_short_term_lufs: null }))
         if (!stopped) {
           // Exponential backoff: 250 ms → 500 → 1 s → 2 s → 4 s, cap at 5 s.
@@ -124,7 +160,18 @@ export function usePreviewSocket(): PreviewState {
       ws.onmessage = (event: MessageEvent) => {
         const msg = JSON.parse(event.data as string) as Record<string, unknown>
 
-        if (msg.type === 'frame') {
+        if (msg.type === 'pong') {
+          clock.pong(msg.client_ms as number, msg.server_monotonic as number, performance.now())
+          setState(s => ({ ...s, status: s.status ? { ...s.status,
+            preview_clock: { offset_ms: clock.offset, rtt_ms: clock.rtt } } : null }))
+        } else if (msg.type === 'preview_reset') {
+          scheduler = new PreviewScheduler()
+          eventMode = true
+        } else if (msg.type === 'event') {
+          eventMode = true
+          scheduler.enqueue(msg as unknown as PreviewEventMessage, performance.now(), clock.offset)
+          if (clock.offset === null) { cancelAnimationFrame(animation); animate(performance.now()) }
+        } else if (msg.type === 'frame') {
           const c = msg.colour as { r: number; g: number; b: number }
           // Values arrive as 16-bit (0–65535); normalise to 0–1 for CSS.
           const colour = { r: c.r / 65535, g: c.g / 65535, b: c.b / 65535 }
@@ -134,10 +181,11 @@ export function usePreviewSocket(): PreviewState {
             g: ch.g / 65535,
             b: ch.b / 65535,
           }))
-          const onset = msg.onset as boolean
-          const onset_bass = (msg.onset_bass as boolean) ?? false
-          const onset_mid = (msg.onset_mid as boolean) ?? false
-          const onset_treble = (msg.onset_treble as boolean) ?? false
+          continuous = channel_colours
+          const onset = !eventMode && msg.onset as boolean
+          const onset_bass = !eventMode && ((msg.onset_bass as boolean) ?? false)
+          const onset_mid = !eventMode && ((msg.onset_mid as boolean) ?? false)
+          const onset_treble = !eventMode && ((msg.onset_treble as boolean) ?? false)
           const mix = (msg.mix as number) ?? 0
           const energy = (msg.energy as number) ?? 0
 
@@ -156,10 +204,10 @@ export function usePreviewSocket(): PreviewState {
           }
           setState((s) => ({
             ...s,
-            ...accentFeatures,
-            status: s.status ? { ...s.status, ...accentFeatures } : null,
-            colour,
-            channel_colours,
+            ...(!eventMode ? accentFeatures : {}),
+            status: s.status ? { ...s.status, ...(!eventMode ? accentFeatures : {}) } : null,
+            colour: eventMode ? s.colour : colour,
+            channel_colours: eventMode ? s.channel_colours : channel_colours,
             onset: onset || s.onset,
             onset_bass: onset_bass || s.onset_bass,
             onset_mid: onset_mid || s.onset_mid,
@@ -204,7 +252,8 @@ export function usePreviewSocket(): PreviewState {
           setState((s) => ({ ...s, bars: msg.bars as number[], normalised_bars: msg.normalised_bars as number[] | undefined }))
         } else if (msg.type === 'status') {
           const { type: _ignored, ...fields } = msg
-          setState((s) => ({ ...s, status: { ...s.status, ...fields } as unknown as SocketStatus }))
+          setState((s) => ({ ...s, status: { ...s.status, ...fields,
+            preview_clock: { offset_ms: clock.offset, rtt_ms: clock.rtt } } as unknown as SocketStatus }))
         }
       }
     }
@@ -213,6 +262,8 @@ export function usePreviewSocket(): PreviewState {
 
     return () => {
       stopped = true
+      cancelAnimationFrame(animation)
+      if (pingTimer) clearInterval(pingTimer)
       if (reconnectTimer) clearTimeout(reconnectTimer)
       if (onsetTimer.current) clearTimeout(onsetTimer.current)
       if (bassTimer.current) clearTimeout(bassTimer.current)

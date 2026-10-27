@@ -1,7 +1,7 @@
 import { expect } from '@playwright/test'
 import type { Page, WebSocketRoute } from '@playwright/test'
 
-export async function setupPreview(page: Page, timingStatus: () => Record<string, unknown> = () => ({})) {
+export async function setupPreview(page: Page, timingStatus: () => Record<string, unknown> = () => ({}), clock = false) {
   await page.setViewportSize({ width: 1400, height: 1100 })
   await page.route('**/api/**', route => {
     const path = new URL(route.request().url()).pathname
@@ -17,6 +17,11 @@ export async function setupPreview(page: Page, timingStatus: () => Record<string
   let socket: WebSocketRoute
   await page.routeWebSocket('**/ws/preview', ws => {
     socket = ws
+    if (clock) ws.onMessage(message => {
+      const ping = JSON.parse(String(message))
+      if (ping.type === 'ping') ws.send(JSON.stringify({ type: 'pong', client_ms: ping.client_ms,
+        server_monotonic: (ping.client_ms + 9000) / 1000 }))
+    })
     ws.send(JSON.stringify({ type: 'status', active_coupling_id: 'c', active_energy_profile_id: 'e',
       active_player_type: 'LMS', follow_mode: 'manual', active_zone_id: 'z', active_bars_source: 'pcm_pipeline',
       effect_type: 'spectrum_rgb', processes: { lms_player: true }, applied_delay_ms: 1100,

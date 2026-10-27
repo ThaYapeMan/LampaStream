@@ -1,0 +1,10 @@
+{
+  "baseline": "8f5385b6700c38906049cc0bd0691e05e12e42af",
+  "fixture": "clicks-120",
+  "config": "replay/default-config.json",
+  "cases": [
+    {"route": "normal", "delay_ms": 0, "sends_sha256": "719b3f1a649ce3cfe088d91825b38793bd81c0c36d55396588f5224074d4692e"},
+    {"route": "normal", "delay_ms": 200, "sends_sha256": "d12b033ba8abfb02084a21ff0bec8ed16193e9041e2d444a1fec60f2b4436177"},
+    {"route": "timestamped", "delay_ms": 0, "sends_sha256": "a2eedb3378ec49426eb0d632425a99c95b21d3be5ec5bec4262f529206d756e9"}
+  ]
+}

@@ -706,3 +706,50 @@ lift-carrying send on normal output (including 200 ms buffering). All cases reta
 19/19 distinct activations and matching post-accent colours/lifts. The standalone
 preview contracts plus output-agnostic grep pass 10 tests. Future-event reset and
 clock advancement without another send are covered. Lamp byte pins are unchanged.
+
+### PREVIEW-01: pushed events and browser playback clock
+
+The 20 Hz `frame` and every-third-frame `spectrum` cadence is unchanged. Each
+socket also receives `event` messages independently of that producer: normal
+output publishes at the carrying send; timestamped output publishes from the
+already rendered post-accent scene as soon as its playback anchor is available.
+No output guard is sampled again. Event messages have `audible_monotonic`
+(server seconds), `event_count`, `bands`, `hold_s`, `release_s`, `policy`,
+`channel_colours` (16-bit RGB), `channel_accent_lifts`, `accent_value` and `events`.
+Each event contains its unique `id`, own `audible_monotonic`, per-band `peaks`,
+`bands` and channel/ accent snapshot. Already available bursts within 5 ms coalesce;
+individual event clocks and colours survive. Normal sends never wait for a
+coalescing timer. Socket queues and identity histories are bounded; a stalled
+socket drops its oldest queued message at 1000 rather than blocking output.
+
+The browser sends `{type: "ping", client_ms: performance.now()}` on connect and
+every 2 s. The reply echoes `client_ms` with `type: "pong"` and
+`server_monotonic`. Offset in milliseconds is server time minus the midpoint of
+client send/receive; RTT is receive minus send. The offset estimator retains the
+median of seven samples. Light timing displays signed offset and the most recent
+RTT; the offset is a clock-origin difference, not audio or lamp delay. Before a
+valid pong it displays **unsynchronised** and draws arriving events immediately.
+
+With an offset, events enter a bounded browser queue and activate on the first
+requestAnimationFrame at or after `1000 * audible_monotonic - offset_ms`, never
+on an earlier animation frame. The outline and per-channel lifts share hold then
+`peak * exp(-(age - hold) / release)` decay and the configured retrigger policy.
+Event channel colours override continuous frame colours throughout hold. Periodic
+frames continue to update continuous values but cannot refresh scheduled event
+envelopes. `preview_reset` clears queued/active events on route/generation reset;
+reconnect clears the clock estimator and scheduler. Existing outline/Now Playing
+props consume these scheduled values without adding a second timing mechanism.
+
+`pytest -n 0 -s tests/test_preview_onsets.py` measures every production replay
+event against its carrying send/play clock, exactly-once identities, 5 ms burst
+coalescing, independent socket push/pong during a blocked periodic sleep, cleanup,
+advance invariance and unchanged 50 ms cadence. Vitest covers midpoint/median
+estimation, jitter, unknown-clock fallback, fake-timer animation scheduling,
+retrigger/decay, event colour precedence and pings. Playwright supplies a future
+clocked event and checks both no-early outline activation and offset/RTT display.
+Controlled residuals are recorded next to Send-back 2 in [baseline](baseline.md).
+
+`tests/fixtures/preview01-accent-on.json` pins independently captured 8f5385b
+sends.csv hashes for both routes and normal output with 200 ms buffering. The
+preview tests replay accents enabled against those immutable hashes; tests never
+regenerate them. The existing accent-off LAT-01 hash suite runs unchanged.
