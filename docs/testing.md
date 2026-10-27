@@ -753,3 +753,10 @@ Controlled residuals are recorded next to Send-back 2 in [baseline](baseline.md)
 sends.csv hashes for both routes and normal output with 200 ms buffering. The
 preview tests replay accents enabled against those immutable hashes; tests never
 regenerate them. The existing accent-off LAT-01 hash suite runs unchanged.
+
+PREVIEW-01 final committed-source verification: pytest **2334 passed / 5 skipped**
+(142.01 s), standalone preview contracts **15 passed**, unchanged accent-off byte
+pins plus output-agnostic grep **21 passed**; Ruff clean. Vitest **458 passed**
+and Playwright **74 passed**. Known-offset fake animation residual is 8 ms;
+controlled Playwright residuals are 6–7 ms, never early. Node 22.22.2 fresh build
+matches the committed bundle. Existing untracked design input is preserved.

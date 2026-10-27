@@ -464,12 +464,13 @@ software clocks, excluding physical output and uncontrolled network/browser load
 | PREVIEW-01 normal push, 0 / 200 ms buffer | 19 each | publication minus carrying send 0.000 |
 | PREVIEW-01 timestamped push, 20 / 100 ms lamp advance | 19 each | publication minus playback −1466.667 |
 | PREVIEW-01 Vitest, known offset, 16 ms animation interval | 1 | scheduled activation minus audible +8.000 |
-| PREVIEW-01 Playwright, future socket event, controlled clock | 1 | scheduled activation minus audible +6.000 |
+| PREVIEW-01 Playwright, future socket event, controlled clock | 1 | scheduled activation minus audible +6.000…+7.000 |
 
 The pushed timestamped event is available well before playback; its browser
 activation is deliberately deferred to playback. The two browser probes measure
 residual activation error after clock conversion, rather than claiming 1466 ms
-of latency. All scheduled activations are at or after the target and within one
+of latency. Repeated Playwright runs measured 6 and 7 ms as animation phase varied.
+All scheduled activations are at or after the target and within one
 animation frame. The normal-route push removes the 20 Hz wait but still incurs
 transport and the next browser animation frame. Unknown offset explicitly falls
 back to immediate drawing and is labelled unsynchronised. RTT/offset are visible
