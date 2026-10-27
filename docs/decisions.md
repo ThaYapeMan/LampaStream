@@ -238,3 +238,19 @@ Affinity: [7]
   worker/session a unique owned directory beneath the same ignored repository
   parent, preserving Windows ffmpeg visibility and deleting only its own files.
   Production behavior and every assertion remain unchanged; no retry is added.
+
+
+## ACCENT-01 Send-back 1 — event-based preview indicators (2026-10-27)
+
+- Preview compatibility onset/PCM/band fields use the lossless render event view,
+  with a 50 ms wall-clock hold spanning one websocket interval. They never read
+  snapshot onset flags. All/band envelopes and event counts remain on frames;
+  per-channel pre/post-accent peak RGB differences drive dot outline intensity.
+  The frame outline uses all-envelope >0.5, with the onset flag as a fallback for
+  older socket payloads without an envelope. Neither indication changes lamps.
+- Correct the PlayerManager docstring rather than claiming audio synchronization.
+  The hold begins when the event is consumed by render evaluation, before output
+  buffering. On the timestamped route availability may precede playback by the
+  configured ingress lead, and render preparation may also happen ahead of it;
+  received_monotonic cannot by itself promise audio synchronization. Keep the
+  shared render envelopes as the preview reference and state that limitation.

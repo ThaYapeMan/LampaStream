@@ -515,11 +515,11 @@ class PlayerManager:
 
     @property
     def last_onset(self) -> bool:
-        """True if the most recently analysed frame contained a detected onset.
+        """Rendered event indicator held for at least one preview poll (50 ms).
 
-        Reflects the raw detection result without any output delay applied,
-        so the GUI can show onset flashes in sync with the audio rather than
-        with the delayed light output.
+        Uses the lossless event view, before the output delay buffer. Timing
+        follows render evaluation, including timestamped scene preparation;
+        it does not promise alignment with audio or physical light playback.
         """
         if self._active and self._active.sync_engine:
             return self._active.sync_engine.last_onset
@@ -527,7 +527,7 @@ class PlayerManager:
 
     @property
     def last_pcm_onset(self) -> bool:
-        """True if the PCM-tap onset pipeline detected an onset this tick."""
+        """Compatibility alias for the held event-based preview indicator."""
         if self._active and self._active.sync_engine:
             return self._active.sync_engine.last_pcm_onset
         return False
