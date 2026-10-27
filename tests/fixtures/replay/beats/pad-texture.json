@@ -1,0 +1,20 @@
+{
+  "bits": 16,
+  "bpm": null,
+  "channels": 1,
+  "description": "pad-texture synthetic loop",
+  "event_samples": [],
+  "first_beat_sample": null,
+  "fixture_version": 2,
+  "frames": 576000,
+  "instruments": {
+    "beats": [],
+    "downbeats": [],
+    "hat": [],
+    "kick": [],
+    "snare": []
+  },
+  "quantum": 4,
+  "sample_rate": 48000,
+  "tempo_changes": []
+}

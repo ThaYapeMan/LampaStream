@@ -102,6 +102,85 @@ def default_export(path):
         json_file(path, exported)
 
 
+def generate_beats(out):
+    """Twelve-second drum loops with independent instrument/grid truth."""
+    out.mkdir(parents=True, exist_ok=True)
+    rate, seconds = 48000, 12
+    rng = np.random.default_rng(20261027)
+    names = [('house', 120), ('techno', 128), ('breakbeat', 174),
+             ('disco', 100), ('deep-house', 122), ('pad-texture', 120),
+             ('tempo-change', 120), ('breakdown', 120)]
+    for name, bpm in names:
+        t = np.arange(rate*seconds)/rate
+        pad = .015*(np.sin(2*np.pi*330*t)+.5*np.sin(2*np.pi*440*t))
+        # Smooth onset/ending: no artificial transient in the zero-beat control.
+        pad *= np.minimum(1, t/.5)*np.minimum(1, (seconds-t)/.5)
+        pcm = pad.copy()
+        beat_times = []
+        stamp = .5
+        while stamp < seconds-.05:
+            beat_times.append(stamp)
+            stamp += 60/(128 if name == 'tempo-change' and stamp >= 6 else bpm)
+        if name == 'tempo-change':
+            beat_times = [v for v in beat_times if v < 6]
+            stamp = 6.
+            while stamp < seconds-.05:
+                beat_times.append(stamp)
+                stamp += 60/128
+        truth = dict(kick=[], snare=[], hat=[], beats=[], downbeats=[])
+        def strike(stamp, audio, instrument, pcm=pcm, truth=truth):
+            pos = round(stamp*rate)
+            count = min(len(audio), len(pcm)-pos)
+            if count > 0:
+                pcm[pos:pos+count] += audio[:count]
+                truth[instrument].append(pos)
+        k = np.arange(round(.16*rate))/rate
+        kick = .65*np.sin(2*np.pi*(58*k+45*.018*(1-np.exp(-k/.018))))
+        kick *= (1-np.exp(-k/.001))*np.exp(-k/.035)
+        h = np.arange(round(.035*rate))/rate
+        noise = rng.normal(size=len(h))
+        hat = .045*(noise-np.roll(noise, 1))*np.exp(-h/.006)
+        sn = np.arange(round(.12*rate))/rate
+        snare = .15*rng.normal(size=len(sn))*np.exp(-sn/.018)
+        for i, stamp in enumerate(beat_times):
+            truth['beats'].append(round(stamp*rate))
+            if i % 4 == 0:
+                truth['downbeats'].append(round(stamp*rate))
+            if name != 'pad-texture':
+                if not (name == 'breakdown' and 4 <= stamp < 8):
+                    if name != 'breakbeat' or i % 2 == 0:
+                        strike(stamp, kick, 'kick')
+                if i % 2 == 1:
+                    strike(stamp, snare, 'snare')
+                divisions = 4 if name in ('techno', 'breakbeat') else 2
+                for j in range(divisions):
+                    strike(stamp+j*60/bpm/divisions,
+                           hat*(10**(-30/20) if name == 'deep-house' else 1), 'hat')
+        if name == 'techno':
+            envelope = np.clip((t-7.5)/4, 0, 1)
+            noise = rng.normal(size=len(t))
+            pcm += .025*envelope*(noise-np.roll(noise, 1))
+        if name == 'disco':
+            pcm += .04*np.sin(2*np.pi*110*t)*(np.sin(2*np.pi*bpm/60*t) > 0)
+        if name == 'deep-house':
+            pcm *= 10**(-18/20)/max(abs(pcm))
+        if name == 'pad-texture':
+            truth['beats'] = truth['downbeats'] = []
+        write_fixture(out, name, pcm, rate, 16, truth['kick'], name+' synthetic loop')
+        path = out/f'{name}.json'
+        sidecar = json.loads(path.read_text())
+        sidecar.update(fixture_version=2, bpm=None if name == 'pad-texture' else bpm,
+                       first_beat_sample=24000 if name != 'pad-texture' else None,
+                       quantum=4, instruments=truth,
+                       tempo_changes=[dict(sample=6*rate, bpm=128)]
+                       if name == 'tempo-change' else [])
+        json_file(path, sidecar)
+    total = sum(p.stat().st_size for p in out.iterdir() if p.is_file())
+    if total >= 15_000_000:
+        raise ValueError(f'Beat fixture set exceeds 15 MB: {total}')
+    print(f'Generated eight BEAT-01 fixtures: {total} bytes')
+
+
 def generate(out):
     out.mkdir(parents=True, exist_ok=True)
     for bpm in (120, 128, 174):
@@ -142,4 +221,6 @@ def generate(out):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--out", type=Path, default=ROOT / "tests/fixtures/replay")
-    generate(parser.parse_args().out)
+    parser.add_argument('--beats', action='store_true')
+    args = parser.parse_args()
+    (generate_beats if args.beats else generate)(args.out)
