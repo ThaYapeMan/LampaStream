@@ -179,6 +179,9 @@ class AudioFeatures:
     agc_gain: float = 1.
     trigger_ratio: float = 0.
     onset_events: tuple[OnsetEvent, ...] = ()
+    beat_envelope: float = 0.
+    downbeat_envelope: float = 0.
+    texture_envelope: float = 0.
     onset_envelope: float = 0.0
     onset_envelope_bass: float = 0.0
     onset_envelope_mid: float = 0.0

@@ -15,6 +15,11 @@ def _encoded(value):
     return value * 12.92 if value <= .0031308 else 1.055 * value ** (1 / 2.4) - .055
 
 
+# Floor, ordinary bump and estimated downbeat bump (linear-light factors).
+INTENSITIES = {"Subtle": (.75, 1.15, 1.15), "Moderate": (.60, 1.5, 1.7),
+               "High": (.45, 1.8, 2.2), "Intense": (.30, 2., 2.)}
+
+
 @dataclass
 class AccentScene:
     scene: object
@@ -47,10 +52,15 @@ class AccentScene:
             h, s, _ = colorsys.rgb_to_hsv(colour.r, colour.g, colour.b)
         elif self.profile.accent_mode == "pop":
             s += (1-s)*amount
-        # Interpolate peak intensity in linear light, then scale the encoded
-        # components together: HSV angle and saturation are preserved exactly.
-        peak = _encoded(_linear(v) + (1-_linear(v))*amount)
-        return Colour(*colorsys.hsv_to_rgb(h, s, min(1., peak)))
+        floor, bump, downbeat = INTENSITIES[self.profile.beat_intensity]
+        factor = (floor + (bump-floor)*amount
+                  + (downbeat-bump)*self.band_values.get("downbeat", 0))
+        # Common encoded RGB scale preserves hue even at the gamut boundary.
+        peak = min(1., _encoded(_linear(v)*factor))
+        if self.profile.beat_intensity == "Intense" and amount > 0:
+            peak = _encoded(_linear(v)*floor + (1-_linear(v)*floor)*amount**2)
+        return Colour(*colorsys.hsv_to_rgb(h, s, peak))
+
 
 
 class AccentLayer:
@@ -69,20 +79,13 @@ class AccentLayer:
             return scene
         if features.onset_events:
             self.newest = features.onset_events[-1]
-        strength = self.newest.strength if self.newest else features.onset_strength
-        confidence = self.newest.confidence if self.newest else 1.
-        # Envelopes already include peak strength. Divide it out before applying
-        # the configurable curve, so gamma=1 does not square the event strength.
-        scale = strength ** (profile.accent_strength_curve-1) if strength > 0 else 0.
-        values = {band: profile.accent_amount * weight * scale * confidence *
-                  getattr(features, f"onset_envelope_{band}")
-                  for band, weight in profile.accent_band_weights.items()}
-        if not any(getattr(features, f"onset_envelope_{band}")
-                   for band in profile.accent_band_weights):
-            values["bass"] = profile.accent_amount * scale * confidence * features.onset_envelope
-        legacy = profile.onset_flash_intensity * features.onset_envelope
-        values = {band: value + legacy for band, value in values.items()}
-        self.last_value = max(values.values())
+        # Beat/texture envelopes are independently gated at event intake. No
+        # continuous energy, sustained bass or pad can open the bump.
+        beat = features.beat_envelope
+        texture = .1*features.texture_envelope
+        values = {"bass": beat, "mid": texture, "treble": texture,
+                  "downbeat": features.downbeat_envelope}
+        self.last_value = min(1., max(beat, texture))
         if profile.accent_mode == "palette_step":
             self.phase = (self.phase + features.onset_count_since_render *
                           profile.accent_palette_step) % 1

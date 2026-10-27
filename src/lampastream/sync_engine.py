@@ -3503,8 +3503,30 @@ class SyncEngine:
                     event, stamp = max(candidates, key=lambda item: item[0].strength)
                     self._onset_envelopes[band].trigger(
                         event.strength, stamp, self.profile.onset_retrigger)
+        for event, stamp in due:
+            if event.kind == "beat":
+                self._beat_count += 1
+                divisor = max(self.profile.beat_divisor,
+                              2 if self.profile.beat_mode == "Alternate" else 1)
+                if (self._beat_count-1) % divisor or (event.predicted
+                                                        and not self.profile.beat_predicted):
+                    continue
+                strength = event.strength if event.predicted else 1.
+                self._beat_envelopes["beat"].trigger(strength, stamp)
+                if event.bar_position == 0:
+                    self._beat_envelopes["downbeat"].trigger(strength, stamp)
+            else:
+                self._beat_envelopes["texture"].trigger(event.strength, stamp)
         newest, stamp = self._newest_onset
-        return replace(features, onset=bool(due), onset_events=tuple(e for e, _ in due),
+        beat_values = {band: envelope.value(t) for band, envelope in self._beat_envelopes.items()}
+        if self.profile.beat_mode == "Pulse" and newest is not None:
+            width = .08 * (60/features.tempo_bpm if features.tempo_bpm else .5)
+            beat_values["beat"] *= max(0., 1-abs(t-stamp)/width)
+        return replace(features,
+                       beat_envelope=beat_values["beat"],
+                       downbeat_envelope=beat_values["downbeat"],
+                       texture_envelope=beat_values["texture"],
+                       onset=bool(due), onset_events=tuple(e for e, _ in due),
                        onset_count_since_render=len(due),
                        onset_strength=newest.strength if newest is not None else 0.0,
                        onset_age_s=t-stamp if newest is not None else None,
@@ -3543,6 +3565,11 @@ class SyncEngine:
         self._onset_envelopes = {band: TriggerEnvelope(
             max(self.profile.onset_hold_s, capabilities.min_visible_hold_s),
             self.profile.onset_release_s) for band in ("all", "bass", "mid", "treble")}
+        self._beat_count = 0
+        self._beat_envelopes = {band: TriggerEnvelope(
+            max(1/capabilities.update_hz, capabilities.min_visible_hold_s),
+            self.profile.beat_fall_ms/1000/math.log(10))
+            for band in ("beat", "downbeat", "texture")}
         from .audible_preview import AudiblePreview
         self._audible_preview = AudiblePreview(
             max(self.profile.onset_hold_s, capabilities.min_visible_hold_s),
