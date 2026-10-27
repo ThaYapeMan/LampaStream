@@ -189,6 +189,18 @@ export function usePreviewSocket(): PreviewState {
           const mix = (msg.mix as number) ?? 0
           const energy = (msg.energy as number) ?? 0
 
+          const rhythm: AccentFeatures = {
+            tempo_bpm: msg.tempo_bpm as number | null,
+            tempo_alt_bpm: msg.tempo_alt_bpm as number | null,
+            tempo_locked: msg.tempo_locked as boolean,
+            tempo_confidence: msg.tempo_confidence as number,
+            beat_phase: msg.beat_phase as number,
+            beat_events_per_second: msg.beat_events_per_second as number,
+            texture_events_per_second: msg.texture_events_per_second as number,
+            agc_gain: msg.agc_gain as number,
+            trigger_ratio: msg.trigger_ratio as number,
+            beat_grid: msg.beat_grid as AccentFeatures['beat_grid'],
+          }
           const accentFeatures: AccentFeatures = {
             audible_monotonic: (msg.audible_monotonic as number | null) ?? null,
             channel_accent_lifts: msg.channel_accent_lifts as number[] | undefined,
@@ -205,7 +217,7 @@ export function usePreviewSocket(): PreviewState {
           setState((s) => ({
             ...s,
             ...(!eventMode ? accentFeatures : {}),
-            status: s.status ? { ...s.status, ...(!eventMode ? accentFeatures : {}) } : null,
+            status: s.status ? { ...s.status, ...rhythm, ...(!eventMode ? accentFeatures : {}) } : null,
             colour: eventMode ? s.colour : colour,
             channel_colours: eventMode ? s.channel_colours : channel_colours,
             onset: onset || s.onset,

@@ -111,7 +111,10 @@ class AudiblePreview:
                 peaks = {band: min(1., max(0., event.strength))
                          if band in event.bands | {'all'} else 0. for band in BANDS}
                 events.append(dict(id=event.id, audible_monotonic=audible,
-                                   peaks=peaks, bands=sorted(event.bands)))
+                                   peaks=peaks, bands=sorted(event.bands),
+                                   kind=event.kind, predicted=event.predicted,
+                                   on_beat=event.on_beat, beat_phase=event.beat_phase,
+                                   bar_position=event.bar_position))
             channels = [dict(zip(('r', 'g', 'b'), c.to_16bit(), strict=True))
                         for c in colours]
             for event in events:
@@ -182,7 +185,18 @@ class AudiblePreview:
                               for band in BANDS})
             self.accent.render(self.metadata.baseline, view, self.metadata.profile)
             accent_value = self.accent.last_value
+        recent = [(event, stamp) for event, stamp in self.events.values()
+                  if now-1 < stamp <= now]
+        rhythm = {key: getattr(features, key, default) for key, default in (
+            ('tempo_bpm', None), ('tempo_alt_bpm', None), ('tempo_confidence', 0.),
+            ('tempo_locked', False), ('beat_phase', 0.), ('agc_gain', 1.), ('trigger_ratio', 0.))}
+        rhythm.update(beat_events_per_second=sum(e.kind == 'beat' for e, _ in recent),
+                      texture_events_per_second=sum(e.kind == 'onset' for e, _ in recent),
+                      beat_grid=[dict(time=stamp, predicted=e.predicted)
+                                 for e, stamp in self.events.values() if e.kind == 'beat'
+                                 and now-8 < stamp < now+2])
         return {
+            **rhythm,
             'audible_monotonic': now if self.timestamped else self.sent_time,
             'colours': self.colours,
             'onset': active['all'], 'pcm_onset': active['all'],

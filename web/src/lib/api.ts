@@ -238,6 +238,11 @@ export interface ChannelPosition {
 }
 
 export interface OnsetEvent {
+  kind?: 'beat' | 'onset'
+  on_beat?: boolean
+  beat_phase?: number
+  bar_position?: number | null
+  predicted?: boolean
   id: [string, string, number]
   epoch: string
   candidate_sample: number
@@ -259,6 +264,16 @@ export interface OutputCapabilities {
   supports_per_channel_timing: boolean
 }
 export interface AccentFeatures {
+  tempo_bpm?: number | null
+  tempo_alt_bpm?: number | null
+  tempo_confidence?: number
+  tempo_locked?: boolean
+  beat_phase?: number
+  beat_events_per_second?: number
+  texture_events_per_second?: number
+  agc_gain?: number
+  trigger_ratio?: number
+  beat_grid?: { time: number; predicted: boolean }[]
   audible_monotonic?: number | null
   channel_accent_lifts?: number[]
   onset_events?: OnsetEvent[]
@@ -272,6 +287,9 @@ export interface AccentFeatures {
   capabilities?: OutputCapabilities
 }
 export interface Analyser {
+  beat_sensitivity?: number
+  beat_band?: 'bass' | 'low' | 'energy'
+  beat_latency_ms?: number
   output_render_hz?: number
   onset_lookahead_frames?: number
   onset_delta_abs?: number
@@ -294,6 +312,11 @@ export interface Analyser {
 }
 
 export interface Effect {
+  beat_intensity?: 'Subtle' | 'Moderate' | 'High' | 'Intense'
+  beat_mode?: 'Phase' | 'Flash' | 'Alternate' | 'Pulse'
+  beat_divisor?: number
+  beat_fall_ms?: number
+  beat_predicted?: boolean
   accent_mode?: 'lift' | 'pop' | 'palette_step' | 'off'
   accent_amount?: number
   accent_band_weights?: { bass: number; mid: number; treble: number }

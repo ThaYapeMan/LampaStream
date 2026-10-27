@@ -48,6 +48,11 @@ export function LightTiming({ status, onOpenLatency, playersView = false, contro
       const value = (band === 'all' ? accents.onset_envelope : accents[`onset_envelope_${band}`]) ?? 0
       return <label key={band} className="flex items-center gap-2">{band}<meter aria-label={`${band} envelope`} min={0} max={1} value={value} /><output>{value.toFixed(2)}</output></label>
     })}
+    <p>{(accents.beat_events_per_second ?? 0).toFixed(1)} beats/s · {(accents.texture_events_per_second ?? 0).toFixed(1)} texture/s</p>
+    <p>AGC {(accents.agc_gain ?? 1).toFixed(2)}× · Trigger ratio {(accents.trigger_ratio ?? 0).toFixed(2)}</p>
+    <svg viewBox="0 0 200 20" className="h-5 w-full" role="img" aria-label="Beat grid">
+      {(accents.beat_grid ?? []).slice(-16).map((beat, index) => <line key={`${beat.time}-${index}`} x1={index*12+8} x2={index*12+8} y1={beat.predicted ? 7 : 2} y2="18" stroke="currentColor" strokeDasharray={beat.predicted ? '2 2' : undefined} />)}
+    </svg>
     <p data-testid="preview-clock">Preview {status?.preview_clock?.offset_ms == null ? 'unsynchronised' : `offset ${status.preview_clock.offset_ms.toFixed(1)} ms · RTT ${status.preview_clock.rtt_ms?.toFixed(1)} ms`}</p>
     <p>Accent <output data-testid="accent-value">{(accents.accent_value ?? 0).toFixed(2)}</output></p>
   </div>

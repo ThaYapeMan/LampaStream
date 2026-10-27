@@ -74,6 +74,10 @@ interface FormState {
   bass_hz: string
   mid_hz: string
   exertion_clip: string
+  beat_intensity: NonNullable<Effect['beat_intensity']>
+  beat_mode: NonNullable<Effect['beat_mode']>
+  beat_divisor: string
+  beat_fall_ms: string
   accent_mode: NonNullable<Effect['accent_mode']>
   accent_amount: string
   accent_band_weights: { bass: number; mid: number; treble: number }
@@ -87,6 +91,10 @@ interface FormState {
 
 function defaultForm(cfg?: Effect): FormState {
   return {
+    beat_intensity: cfg?.beat_intensity ?? 'Moderate',
+    beat_mode: cfg?.beat_mode ?? 'Phase',
+    beat_divisor: String(cfg?.beat_divisor ?? 1),
+    beat_fall_ms: String(cfg?.beat_fall_ms ?? 250),
     accent_mode: cfg?.accent_mode ?? 'lift',
     accent_amount: String(cfg?.accent_amount ?? .35),
     accent_band_weights: cfg?.accent_band_weights ?? { bass: 1, mid: .6, treble: .4 },
@@ -439,6 +447,10 @@ export function Effects({ activeCouplingId = null, initialEffectId }: { activeCo
         mid_hz:                parseInt(form.mid_hz, 10),
         exertion_clip:         parseFloat(form.exertion_clip),
         onset_flash_intensity: Number(form.onset_flash_intensity),
+        beat_intensity: form.beat_intensity,
+        beat_mode: form.beat_mode,
+        beat_divisor: Number(form.beat_divisor),
+        beat_fall_ms: Number(form.beat_fall_ms),
         accent_mode: form.accent_mode,
         accent_amount: Number(form.accent_amount),
         accent_band_weights: form.accent_band_weights,
@@ -752,7 +764,20 @@ export function Effects({ activeCouplingId = null, initialEffectId }: { activeCo
                   </FieldRow>
 
                   <section aria-label="Accent controls" className="space-y-3">
-                    <SectionLabel>Accent</SectionLabel>
+                    <SectionLabel>Beat</SectionLabel>
+                    <label className="block text-sm">Intensity
+                      <select aria-label="Intensity" value={form.beat_intensity} onChange={e => { const intensity = e.target.value as FormState['beat_intensity']; set('beat_intensity', intensity); set('beat_fall_ms', String({ Subtle: 300, Moderate: 250, High: 200, Intense: 150 }[intensity])) }}>
+                        {['Subtle', 'Moderate', 'High', 'Intense'].map(mode => <option key={mode}>{mode}</option>)}
+                      </select>
+                    </label>
+                    <label className="block text-sm">Beat mode
+                      <select aria-label="Beat mode" value={form.beat_mode} onChange={e => set('beat_mode', e.target.value as FormState['beat_mode'])}>
+                        {['Phase', 'Flash', 'Alternate', 'Pulse'].map(mode => <option key={mode}>{mode}</option>)}
+                      </select>
+                    </label>
+                    <label className="block text-sm">Divisor<Input aria-label="Divisor" type="number" min="1" max="8" value={form.beat_divisor} onChange={e => set('beat_divisor', e.target.value)} /></label>
+                    <label className="block text-sm">Fall (ms)<Input aria-label="Fall" type="number" min="10" max="5000" value={form.beat_fall_ms} onChange={e => set('beat_fall_ms', e.target.value)} /></label>
+                    <details><summary>Advanced</summary>
                     <label className="block text-sm">Mode
                       <select aria-label="Accent mode" value={form.accent_mode} onChange={e => set('accent_mode', e.target.value as FormState['accent_mode'])}>
                         {['lift', 'pop', 'palette_step', 'off'].map(mode => <option key={mode} value={mode}>{mode.replace('_', ' ')}</option>)}
@@ -774,7 +799,6 @@ export function Effects({ activeCouplingId = null, initialEffectId }: { activeCo
                     {form.accent_mode === 'palette_step' && <label className="block text-sm">Palette step
                       <Input aria-label="Accent palette step" type="number" min="0" max="1" step="0.01" value={form.accent_palette_step} onChange={e => set('accent_palette_step', e.target.value)} />
                     </label>}
-                    <details><summary>Advanced</summary>
                       <label>Hold (seconds)<Input aria-label="Onset hold" type="number" min="0" step="0.01" value={form.onset_hold_s} onChange={e => set('onset_hold_s', e.target.value)} /></label>
                       <label>Release (seconds)<Input aria-label="Onset release" type="number" min="0.01" step="0.01" value={form.onset_release_s} onChange={e => set('onset_release_s', e.target.value)} /></label>
                       <label>Retrigger<select aria-label="Onset retrigger" value={form.onset_retrigger} onChange={e => set('onset_retrigger', e.target.value as FormState['onset_retrigger'])}>

@@ -474,6 +474,7 @@ export function NowPlaying({ expertMode = false, colour, channel_colours, onset,
             </section>
             <section className="min-w-0 rounded-xl border p-4" aria-label="Analysis">
               <h3 className="mb-4 text-sm text-muted-foreground">Analysis</h3>
+              <p className="mb-3 text-sm tabular-nums" data-testid="tempo">Tempo {status?.tempo_bpm ? `${Math.round(status.tempo_bpm)} BPM` : '—'} · {status?.tempo_locked ? 'Locked' : 'Unlocked'} · {Math.round((status?.tempo_confidence ?? 0)*100)}%</p>
               <StatusGrid status={status} analyser={activeAnalyser} effects={effects} profile={activeEnergyProfile}
                 manual={!!couplingId && (status?.music?.manual ?? !!(activeCoupling?.manual_energy_profile_id || activeCoupling?.manual_palette_id))} onOpen={onOpenEnergyProfile} />
             </section>

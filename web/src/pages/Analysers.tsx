@@ -49,6 +49,9 @@ export function percentToHz(pct: number): number {
 // ── Draft state ───────────────────────────────────────────────────────────────
 
 interface Draft {
+  beat_sensitivity: string
+  beat_band: NonNullable<Analyser['beat_band']>
+  beat_latency_ms: string
   name: string
   spectrum_backend: string
   onset_method: string
@@ -65,6 +68,9 @@ interface Draft {
 
 function defaultDraft(a?: Analyser | null): Draft {
   return {
+    beat_sensitivity: String(a?.beat_sensitivity ?? 50),
+    beat_band: a?.beat_band ?? 'bass',
+    beat_latency_ms: String(a?.beat_latency_ms ?? 0),
     band_normalise: a?.band_normalise ?? ANALYSER_DEFAULTS.band_normalise,
     name: a?.name ?? '',
     spectrum_backend: a?.spectrum_backend ?? ANALYSER_DEFAULTS.spectrum_backend,
@@ -406,6 +412,9 @@ function AnalyserWorkspace({ analyser, couplings, onSaved, onDeleted, onCloned, 
       const body = {
         name: draft.name.trim() || 'Unnamed',
         spectrum_backend: draft.spectrum_backend,
+        beat_sensitivity: Number(draft.beat_sensitivity),
+        beat_band: draft.beat_band,
+        beat_latency_ms: Number(draft.beat_latency_ms),
         onset_method: draft.onset_method,
         bars: parseInt(draft.bars, 10) || ANALYSER_DEFAULTS.bars,
         lower_cutoff_freq: parseInt(draft.lower_cutoff_freq, 10) || ANALYSER_DEFAULTS.lower_cutoff_freq,
@@ -655,6 +664,20 @@ function AnalyserWorkspace({ analyser, couplings, onSaved, onDeleted, onCloned, 
           <div className="px-5 py-5 space-y-5">
             <ColumnHeading title="Beat Detection" />
 
+            <div className="space-y-3">
+              <label className="block text-sm">Sensitivity <output>{draft.beat_sensitivity}</output>
+                <input aria-label="Beat sensitivity" className="w-full" type="range" min="0" max="100" value={draft.beat_sensitivity} onChange={e => setDraft(d => ({ ...d, beat_sensitivity: e.target.value }))} />
+              </label>
+              <label className="block text-sm">Band
+                <select aria-label="Beat band" value={draft.beat_band} onChange={e => setDraft(d => ({ ...d, beat_band: e.target.value as Draft['beat_band'] }))}>
+                  <option value="bass">Bass 50–100 Hz</option><option value="low">Low 100–200 Hz</option><option value="energy">Energy</option>
+                </select>
+              </label>
+              <label className="block text-sm">Beat latency (ms)
+                <input aria-label="Beat latency" type="number" min="-1000" max="1000" value={draft.beat_latency_ms} onChange={e => setDraft(d => ({ ...d, beat_latency_ms: e.target.value }))} />
+              </label>
+            </div>
+            <details><summary className="cursor-pointer text-sm">Advanced</summary>
             {/* Detection Method — Combined full-width, Multiband + SuperFlux side-by-side */}
             <div data-testid="section-beat-detection">
               <ConfigSection
@@ -839,6 +862,7 @@ function AnalyserWorkspace({ analyser, couplings, onSaved, onDeleted, onCloned, 
                 </div>
               </>
             )}
+            </details>
           </div>
 
         </div>
