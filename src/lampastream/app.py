@@ -80,34 +80,40 @@ async def ws_preview(websocket: WebSocket):
     light_timing = None
     try:
         while True:
-            colours = player_manager.last_colours
-            onset = player_manager.last_onset
-            if colours:
-                r, g, b = colours[0].to_16bit()
+            preview = getattr(player_manager, "preview_frame", {})
+            preview = preview if isinstance(preview, dict) else {}
+            if preview:
+                channel_colours = preview["channel_colours"]
+                colour = preview["colour"]
+                onset = preview["onset"]
+                diagnostics = {}
             else:
-                r = g = b = 0
-
-            channel_colours = [
-                {"r": r16, "g": g16, "b": b16}
-                for c in player_manager.last_colours
-                for r16, g16, b16 in (c.to_16bit(),)
-            ]
+                colours = player_manager.last_colours
+                channel_colours = [dict(zip(("r", "g", "b"), c.to_16bit(), strict=True))
+                                   for c in colours]
+                colour = channel_colours[0] if channel_colours else {"r": 0, "g": 0, "b": 0}
+                onset = player_manager.last_onset
+                diagnostics = getattr(player_manager, "accent_diagnostics", {})
             momentary, short_term = player_manager.last_loudness
             await websocket.send_json({
                 "type": "frame",
-                "colour": {"r": r, "g": g, "b": b},
+                "colour": colour,
                 "channel_colours": channel_colours,
                 "onset": onset,
-                "pcm_onset": player_manager.last_pcm_onset,
-                **getattr(player_manager, "accent_diagnostics", {}),
-                "onset_bass": player_manager.last_onset_bass,
-                "onset_mid": player_manager.last_onset_mid,
-                "onset_treble": player_manager.last_onset_treble,
+                "pcm_onset": preview["pcm_onset"] if preview else player_manager.last_pcm_onset,
+                **diagnostics,
+                "onset_bass": (preview["onset_bass"] if preview
+                               else player_manager.last_onset_bass),
+                "onset_mid": (preview["onset_mid"] if preview
+                               else player_manager.last_onset_mid),
+                "onset_treble": (preview["onset_treble"] if preview
+                               else player_manager.last_onset_treble),
                 "mix": player_manager.last_mix,
                 "energy": player_manager.last_energy,
                 "last_energy_input": player_manager.last_energy_input,
                 "sustained_energy": player_manager.last_sustained_energy,
                 "relative_exertion": player_manager.last_energy,
+                **preview,
                 # JSON has no infinity. Silence (-inf) and warmup are null.
                 "loudness_momentary_lufs": (
                     momentary if momentary is not None and math.isfinite(momentary) else None

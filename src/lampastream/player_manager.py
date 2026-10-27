@@ -487,9 +487,33 @@ class PlayerManager:
 
     @property
     def last_colours(self) -> list[Colour]:
+        if self._active and self._active.sync_engine:
+            snapshot = self._active.sync_engine.preview_snapshot
+            if isinstance(snapshot, dict) and snapshot:
+                return list(snapshot["colours"])
         if self._active and self._active.hue_driver:
             return self._active.hue_driver.last_colours
         return []
+
+    @property
+    def preview_frame(self) -> dict:
+        if not self._active or not self._active.sync_engine:
+            return {}
+        from dataclasses import asdict
+        snapshot = self._active.sync_engine.preview_snapshot
+        if not isinstance(snapshot, dict) or not snapshot:
+            return {}
+        snapshot = dict(snapshot)
+        colours = snapshot.pop("colours", ())
+        snapshot["onset_events"] = [dict(asdict(e), bands=sorted(e.bands))
+                                    for e in snapshot.get("onset_events", ())]
+        channels = [dict(zip(("r", "g", "b"), c.to_16bit(), strict=True)) for c in colours]
+        snapshot["channel_colours"] = channels
+        snapshot["colour"] = channels[0] if channels else {"r": 0, "g": 0, "b": 0}
+        driver = self._active.hue_driver
+        if driver is not None:
+            snapshot["capabilities"] = asdict(driver.capabilities)
+        return snapshot
 
     @property
     def accent_diagnostics(self) -> dict:
@@ -498,16 +522,10 @@ class PlayerManager:
         if not self._active or not self._active.sync_engine:
             return {}
         engine = self._active.sync_engine
-        features = getattr(engine, "last_accent_features", None)
-        if features is None:
-            return {}
-        payload = {name: getattr(features, name) for name in (
-            "onset_envelope", "onset_envelope_bass", "onset_envelope_mid",
-            "onset_envelope_treble", "onset_count_since_render", "onset_age_s")}
+        payload = dict(engine.preview_snapshot)
+        payload.pop("colours", None)
         payload["onset_events"] = [dict(asdict(e), bands=sorted(e.bands))
-                                   for e in features.onset_events]
-        payload["accent_value"] = getattr(engine, "last_accent_value", 0.)
-        payload["channel_accent_lifts"] = getattr(engine, "last_channel_accent_lifts", [])
+                                   for e in payload.get("onset_events", ())]
         driver = self._active.hue_driver
         if driver is not None:
             payload["capabilities"] = asdict(driver.capabilities)
@@ -515,11 +533,10 @@ class PlayerManager:
 
     @property
     def last_onset(self) -> bool:
-        """Rendered event indicator held for at least one preview poll (50 ms).
+        """Audible event indicator, held for 50 ms from playback/presentation.
 
-        Uses the lossless event view, before the output delay buffer. Timing
-        follows render evaluation, including timestamped scene preparation;
-        it does not promise alignment with audio or physical light playback.
+        Timestamped events use their playback clock without lamp advance.
+        Normal output follows the scene actually sent after its delay buffer.
         """
         if self._active and self._active.sync_engine:
             return self._active.sync_engine.last_onset

@@ -3344,20 +3344,25 @@ class SyncEngine:
         """
         return bool(self._retiring)
 
+    @property
+    def preview_snapshot(self):
+        preview = getattr(self, "_audible_preview", None)
+        return preview.snapshot(self._preview_clock()) if preview is not None else {}
+
     def _preview_active(self, band):
-        return self._preview_clock() <= self._preview_until[band]
+        key = "onset" if band == "all" else "onset_"+band
+        return self.preview_snapshot.get(key, False)
+
+    def _preview_sent(self, scene, stamp, output):
+        colours = getattr(output, "last_colours", ())
+        if not isinstance(colours, (list, tuple)):
+            colours = ()
+        self._audible_preview.sent(scene, stamp, colours, self._preview_timestamped)
 
     def _render_scene(self, features, t):
         scene = self._effect.render(features, t)
+        baseline = scene
         scene = self._accent.render(scene, features, self.profile, self._accent_positions)
-        # Preview compatibility flags follow lossless rendered events, and
-        # survive at least one websocket polling interval. Never alter scenes.
-        now = self._preview_clock()
-        if features.onset_count_since_render > 0:
-            self._preview_until["all"] = now + .05
-            for band in ("bass", "mid", "treble"):
-                if any(band in event.bands for event in features.onset_events):
-                    self._preview_until[band] = now + .05
         from .accent import AccentScene
         self.last_channel_accent_lifts = []
         for position in self._accent_positions:
@@ -3369,6 +3374,14 @@ class SyncEngine:
             self.last_channel_accent_lifts.append(lift)
         self.last_accent_features = features
         self.last_accent_value = self._accent.last_value
+        from .audible_preview import PreviewScene
+        newest, stamp = getattr(self, "_newest_onset", (None, 0.))
+        shift = (newest.play_monotonic-stamp
+                 if newest is not None and newest.play_monotonic is not None else 0.)
+        if callable(getattr(scene, "color_at", None)):
+            return PreviewScene(scene, features, t, self._accent.last_value,
+                                self.last_channel_accent_lifts, shift, baseline,
+                                self._accent_positions, self.profile)
         return scene
 
     def _onset_lift_enabled(self):
@@ -3441,6 +3454,7 @@ class SyncEngine:
                     self.event_counters[band]["expired"] += 1
                 continue
             due.append((event, stamp))
+            self._audible_preview.register(event, stamp if timestamped else t, timestamped)
         self._pending_onset_events = future
         if due:
             newest, newest_t = max(due, key=lambda item: item[1])
@@ -3500,10 +3514,16 @@ class SyncEngine:
         self._onset_envelopes = {band: TriggerEnvelope(
             max(self.profile.onset_hold_s, capabilities.min_visible_hold_s),
             self.profile.onset_release_s) for band in ("all", "bass", "mid", "treble")}
+        from .audible_preview import AudiblePreview
+        self._audible_preview = AudiblePreview(
+            max(self.profile.onset_hold_s, capabilities.min_visible_hold_s),
+            self.profile.onset_release_s, self.profile.onset_retrigger)
+        self._preview_timestamped = False
         self._newest_onset = None, 0.0
         self._event_sample_reference = 0
         schedule = SceneSchedule()
         output_generation = getattr(output, "output_generation", 0)
+        preview_generation = getattr(self._timing, "tap_generation", None)
         output_minimum_sequence = None
         self.event_counters = {band: dict(received=0, merged=0, triggered=0, expired=0, lost=0)
                                for band in ("all", "bass", "mid", "treble")}
@@ -3565,6 +3585,7 @@ class SyncEngine:
             generation = getattr(output, "output_generation", 0)
             if (generation != output_generation
                     or getattr(output, "accepting_frames", True) is False):
+                self._audible_preview.reset()
                 output_generation = generation
                 if isinstance(token, int):
                     output_minimum_sequence = token
@@ -3576,6 +3597,9 @@ class SyncEngine:
                 await sleep(interval)
                 continue
             if self._timing is not None:
+                if preview_generation != self._timing.tap_generation:
+                    self._audible_preview.reset()
+                    preview_generation = self._timing.tap_generation
                 schedule.reset(self._timing.tap_generation)
                 if (self._timing.tap_source in {"early tap", "LMS head start"}
                         and isinstance(self._analyser, CanonicalAnalysisPipeline)):
@@ -3588,6 +3612,8 @@ class SyncEngine:
                                         - (data["median_processing_ms"] or 0))
                         trim = max(-available, trim)
                     records = self._analyser.drain_publications()
+                    self._preview_timestamped = True
+                    self._audible_preview.route(True)
                     self._map_event_play_times(records)
                     continuous = [r for r in records
                         if getattr(r, "effective_processor_ids", ()) != ("beat_detector",)
@@ -3639,6 +3665,7 @@ class SyncEngine:
                         sent = clock()
                         output.send(scene, sent)
                         self._shown_scene, self._shown_t = scene, sent
+                        self._preview_sent(scene, self._shown_t, output)
                         if provenance[0] is not None:
                             self._timing.processing(*provenance, sent)
                     self._delay_buffer.clear()
@@ -3652,6 +3679,8 @@ class SyncEngine:
                     await sleep(max(0.0, wake-now))
                     continue
                 schedule.queue.clear()
+            self._preview_timestamped = False
+            self._audible_preview.route(False)
             now = clock()
             # Extra event scenes preserve configured delay without advancing its
             # cadence-sized slot buffer. Coalescing retains held event envelopes.
@@ -3661,6 +3690,7 @@ class SyncEngine:
                     scene, _ = due
                     output.send(scene, now)
                     self._shown_scene, self._shown_t = scene, now
+                    self._preview_sent(scene, self._shown_t, output)
                     record_extra(now)
                     last_send = now
             # At cadences above the declared send ceiling, keep only the latest
@@ -3672,6 +3702,7 @@ class SyncEngine:
                 if scene is not None:
                     output.send(scene, now)
                     self._shown_scene, self._shown_t = scene, now
+                    self._preview_sent(scene, self._shown_t, output)
                     last_send = now
                     if provenance is not None and self._timing is not None:
                         self._timing.processing(*provenance, now)
@@ -3781,6 +3812,7 @@ class SyncEngine:
                     output.send(entry, sent)
                     last_send = sent
                     self._shown_scene, self._shown_t = entry, sent
+                    self._preview_sent(entry, self._shown_t, output)
                     if provenance is not None and self._timing is not None:
                         self._timing.processing(*provenance, sent)
 
@@ -3791,6 +3823,7 @@ class SyncEngine:
                     scene, _ = due
                     output.send(scene, clock())
                     self._shown_scene, self._shown_t = scene, clock()
+                    self._preview_sent(scene, self._shown_t, output)
                     record_extra(clock())
                     last_send = clock()
             await wait_for_work()

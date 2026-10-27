@@ -677,3 +677,32 @@ Send-back 1 local verification: default-options pytest 2323 passed / 5 skipped;
 Vitest 450 passed; Playwright 73 passed. Both 20 Hz websocket routes deliver
 19/19 distinct activations. Accent-off byte identity remains green. Rebuilt with
 Node 22.22.2; the committed bundle matches a fresh build.
+
+
+### ACCENT-01 Send-back 2: audible preview timing
+
+The Send-back 1 render-time timing reference is superseded. Timestamped preview
+uses server now against event play_monotonic, without lamp advance; normal preview
+uses the scene actually sent after the configured delay. Channel colours and
+outline quantities are captured/presented as one audible snapshot. Timestamped
+sent colour samples are retained on that event playback timeline so lamp advance
+cannot make dots lead the room outline. The socket includes audible_monotonic;
+no browser delay compensation is applied. Residual latency is the socket interval
+plus browser render (roughly 50–80 ms), shared by dots and outlines.
+
+`pytest -n 0 -s tests/test_preview_onsets.py` retains the 19/19 and grep contracts,
+checks 200 ms normal delay against actual sends carrying the lift, and verifies
+19 timestamped events against their playback clock with 1.5 s ingress lead.
+20 ms and 100 ms lamp-advance variants must have identical preview activation
+times, never early, and within one 50 ms socket interval. Every active socket
+frame's channel colours must equal the captured post-accent colours of the same
+presented frame. Preview colour inspection never samples the live quantisation
+guard a second time. LAT-01 accent-off byte pins remain unchanged.
+
+Send-back 2 local verification: default-options pytest 2328 passed / 5 skipped;
+Vitest 450 passed; Playwright 73 passed. The 20 Hz socket offsets are 17 ms after
+playback on both timestamped advance variants and approximately 47 ms after the
+lift-carrying send on normal output (including 200 ms buffering). All cases retain
+19/19 distinct activations and matching post-accent colours/lifts. The standalone
+preview contracts plus output-agnostic grep pass 10 tests. Future-event reset and
+clock advancement without another send are covered. Lamp byte pins are unchanged.

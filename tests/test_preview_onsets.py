@@ -13,14 +13,17 @@ from replay_chain import Replay, decode, parser
 from lampastream.player_manager import PlayerManager
 
 
-@pytest.mark.parametrize('route', ['normal', 'timestamped'])
-def test_websocket_clicks_19_distinct_activations(tmp_path, monkeypatch, route):
+def replay_preview(tmp_path, monkeypatch, route, delay=0, advance=.02):
     app_module = importlib.import_module('lampastream.app')
     root = Path(__file__).resolve().parents[1]
     args = parser().parse_args(['--input', str(root/'tests/fixtures/replay/clicks-120.wav'),
         '--config', str(root/'tests/fixtures/replay/default-config.json'),
         '--route', route, '--out', str(tmp_path)])
+    args.delay_ms = delay
     replay = Replay(args)
+    from dataclasses import replace
+    replay.high = replace(replay.high, onset_lead_s=advance)
+    replay.low = replace(replay.low, onset_lead_s=advance)
     frames = []
     clock = [0.]
     poll = [.017]  # Deliberately out of phase with the render and event clocks.
@@ -32,7 +35,8 @@ def test_websocket_clicks_19_distinct_activations(tmp_path, monkeypatch, route):
         last_onset_mid = PlayerManager.last_onset_mid
         last_onset_treble = PlayerManager.last_onset_treble
         accent_diagnostics = PlayerManager.accent_diagnostics
-        last_colours = []
+        last_colours = PlayerManager.last_colours
+        preview_frame = PlayerManager.preview_frame
         last_loudness = (None, None)
         preview_spectrum = ([], None)
 
@@ -55,7 +59,7 @@ def test_websocket_clicks_19_distinct_activations(tmp_path, monkeypatch, route):
 
         async def send_json(self, payload):
             if payload['type'] == 'frame':
-                frames.append(json.loads(json.dumps(payload)))
+                frames.append(dict(json.loads(json.dumps(payload)), poll_time=clock[0]))
 
     monkeypatch.setattr(app_module, 'asyncio', SimpleNamespace(sleep=lambda _: Pause()))
     socket = Socket()
@@ -65,9 +69,11 @@ def test_websocket_clicks_19_distinct_activations(tmp_path, monkeypatch, route):
     def attach(engine):
         observe(engine)
         socket.app.state.player_manager._active = SimpleNamespace(
-            sync_engine=engine, hue_driver=None)
+            sync_engine=engine, hue_driver=replay.output)
         engine._preview_clock = lambda: clock[0]
         render = engine._render_scene
+        send = replay.output.send
+        captures = []
 
         def flush(until):
             while poll[0] < until:
@@ -81,6 +87,25 @@ def test_websocket_clicks_19_distinct_activations(tmp_path, monkeypatch, route):
             clock[0] = replay.now
             return render(features, t)
 
+        def sent(scene, t):
+            engine._preview_clock = lambda: clock[0]
+            flush(replay.now)
+            clock[0] = replay.now
+            send(scene, t)
+            from lampastream.audible_preview import render_metadata
+            metadata = render_metadata(scene)
+            deadline = t+metadata.playback_shift if route == 'timestamped' else t
+            lifts = []
+            for position, colour in zip(
+                    metadata.positions, replay.output.last_colours, strict=True):
+                before = metadata.baseline.color_at(position, t)
+                lifts.append(max(0., colour.r-before.r, colour.g-before.g, colour.b-before.b))
+            captures.append((deadline, len(captures), tuple(
+                dict(zip(('r', 'g', 'b'), c.to_16bit(), strict=True))
+                for c in replay.output.last_colours), metadata.features.onset_envelope, lifts))
+
+        replay.captures = captures
+        replay.output.send = sent
         engine._render_scene = rendered
         replay.flush_preview = flush
 
@@ -100,7 +125,43 @@ def test_websocket_clicks_19_distinct_activations(tmp_path, monkeypatch, route):
         assert activations == 19, (route, name, activations)
     assert all('onset_count_since_render' in f and 'accent_value' in f
                and 'channel_accent_lifts' in f for f in frames if f['onset'])
-    print(f'websocket 20 Hz {route}: 19/19 distinct onset, PCM and outline activations')
+    starts = [f['poll_time'] for i, f in enumerate(frames) if f.get('onset_envelope', 0) > .5
+              and (i == 0 or frames[i-1].get('onset_envelope', 0) <= .5)]
+    events = sorted(replay.engine.event_records.values(), key=lambda r: r['event'].candidate_sample)
+    targets = ([r['event'].play_monotonic for r in events] if route == 'timestamped' else
+               [c[0] for i, c in enumerate(replay.captures) if c[3] > .5
+                and (i == 0 or replay.captures[i-1][3] <= .5)])
+    offsets = [(actual-target)*1000 for actual, target in zip(starts, targets, strict=True)]
+    assert min(offsets) >= -1e-6 and max(offsets) <= 50+1e-6, offsets
+    for frame in frames:
+        if frame.get('onset_envelope', 0) <= .5:
+            continue
+        shown = max((capture for capture in replay.captures if capture[0] <= frame['poll_time']),
+                    key=lambda c: (c[0], c[1]))
+        assert frame['channel_colours'] == list(shown[2])
+        assert frame['channel_accent_lifts'] == shown[4]
+        if route == 'normal':
+            assert frame['audible_monotonic'] == shown[0]
+        else:
+            assert frame['audible_monotonic'] == frame['poll_time']
+    print(f'websocket 20 Hz {route}, delay={delay} ms, lamp advance={advance:.2f} s: '
+          f'19/19; audible offsets {min(offsets):.3f}..{max(offsets):.3f} ms; '
+          'post-accent colours consistent')
+    return starts
+
+
+@pytest.mark.parametrize('route,delay,advance', [
+    ('normal', 0, .02), ('normal', 200, .02),
+    ('timestamped', 0, .02), ('timestamped', 0, .10)])
+def test_websocket_clicks_19_distinct_activations(tmp_path, monkeypatch, route, delay, advance):
+    replay_preview(tmp_path, monkeypatch, route, delay, advance)
+
+
+def test_lamp_advance_does_not_move_audible_preview(tmp_path, monkeypatch):
+    early = replay_preview(tmp_path, monkeypatch, 'timestamped', advance=.02)
+    earlier = replay_preview(tmp_path, monkeypatch, 'timestamped', advance=.10)
+    assert early == earlier
+    print('timestamped lamp advance 0.02 vs 0.10 s: identical 19 preview activation times')
 
 
 def test_no_snapshot_flags_feed_preview_or_status():
@@ -135,7 +196,14 @@ def test_band_holds_and_raw_flags_cannot_refresh_preview():
                        frozenset({'bass'}), 'bass')
     view = AudioFeatures([], 0, 0, 0, 0, onset=False, onset_count_since_render=1,
                          onset_events=(event,))
-    engine._render_scene(view, now[0])
+    from lampastream.audible_preview import AudiblePreview
+    engine._audible_preview = AudiblePreview(.08, .25, 'restart')
+    engine._preview_timestamped = False
+    engine._newest_onset = (None, 0.)
+    engine._audible_preview.register(event, now[0], False)
+    scene = engine._render_scene(view, now[0])
+    assert not engine.last_onset
+    engine._preview_sent(scene, now[0], SimpleNamespace(last_colours=[]))
     assert engine.last_onset and engine.last_pcm_onset and engine.last_onset_bass
     assert not engine.last_onset_mid and not engine.last_onset_treble
     now[0] += .049
@@ -147,3 +215,46 @@ def test_band_holds_and_raw_flags_cannot_refresh_preview():
                                 onset_treble=True), now[0])
     assert not engine.last_onset and not engine.last_onset_bass
     assert not engine.last_onset_mid and not engine.last_onset_treble
+
+
+def test_preview_fences_future_events_when_route_or_generation_resets():
+    from lampastream.audible_preview import AudiblePreview
+    from lampastream.types import OnsetEvent
+
+    event = OnsetEvent(('test', 'all', 0), 'test', 0, 480, 1, 1, 1, 1,
+                       frozenset({'all'}), 'all', play_monotonic=10.)
+    preview = AudiblePreview(.08, .25, 'restart')
+    preview.register(event, 9.9, True)
+    assert preview.snapshot(9.99)['onset_envelope'] == 0
+    preview.route(False)
+    assert not preview.snapshot(10.)['onset']
+    preview.register(event, 9.9, True)
+    preview.reset()
+    assert preview.snapshot(10.)['onset_envelope'] == 0
+
+
+def test_timestamped_preview_envelope_and_accent_advance_without_another_send():
+    import math
+
+    from lampastream.audible_preview import AudiblePreview, PreviewScene
+    from lampastream.models import Profile
+    from lampastream.types import AudioFeatures, Colour, OnsetEvent, Position, UniformScene
+
+    preview = AudiblePreview(.08, .25, 'restart')
+    event = OnsetEvent(('test', 'all', 0), 'test', 0, 480, 1, 1, 1, 1,
+                       frozenset({'all'}), 'all', play_monotonic=10.)
+    preview.register(event, 9.98, True)
+    scene = UniformScene(Colour(.1, .1, .1))
+    features = AudioFeatures([], 0, 0, 0, 0, onset_envelope=1.)
+    metadata = PreviewScene(scene, features, 9.98, .35, [.2], .02, scene,
+                            (Position(0, 0, 0),), Profile())
+    preview.sent(metadata, 9.98, [Colour(.3, .3, .3)], True)
+    assert preview.snapshot(9.999)['onset_envelope'] == 0
+    assert not preview.snapshot(9.999)['colours']
+    peak = preview.snapshot(10.)
+    assert peak['onset'] and peak['accent_value'] == pytest.approx(.35)
+    assert peak['colours'] == (Colour(.3, .3, .3),)
+    tail = preview.snapshot(10.33)
+    assert not tail['onset']
+    assert tail['onset_envelope'] == pytest.approx(math.exp(-1))
+    assert tail['accent_value'] == pytest.approx(.35*math.exp(-1))

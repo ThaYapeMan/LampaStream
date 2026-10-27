@@ -142,6 +142,7 @@ export function usePreviewSocket(): PreviewState {
           const energy = (msg.energy as number) ?? 0
 
           const accentFeatures: AccentFeatures = {
+            audible_monotonic: (msg.audible_monotonic as number | null) ?? null,
             channel_accent_lifts: msg.channel_accent_lifts as number[] | undefined,
             onset_events: msg.onset_events as AccentFeatures['onset_events'],
             onset_envelope: msg.onset_envelope as number | undefined,

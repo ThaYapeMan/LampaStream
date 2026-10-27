@@ -242,15 +242,31 @@ Affinity: [7]
 
 ## ACCENT-01 Send-back 1 — event-based preview indicators (2026-10-27)
 
-- Preview compatibility onset/PCM/band fields use the lossless render event view,
-  with a 50 ms wall-clock hold spanning one websocket interval. They never read
-  snapshot onset flags. All/band envelopes and event counts remain on frames;
-  per-channel pre/post-accent peak RGB differences drive dot outline intensity.
-  The frame outline uses all-envelope >0.5, with the onset flag as a fallback for
-  older socket payloads without an envelope. Neither indication changes lamps.
-- Correct the PlayerManager docstring rather than claiming audio synchronization.
-  The hold begins when the event is consumed by render evaluation, before output
-  buffering. On the timestamped route availability may precede playback by the
-  configured ingress lead, and render preparation may also happen ahead of it;
-  received_monotonic cannot by itself promise audio synchronization. Keep the
-  shared render envelopes as the preview reference and state that limitation.
+- The 19/19 event-path and raw-snapshot grep contracts remain. Send-back 2
+  supersedes render-time preview publication and the earlier acceptance of
+  timestamped preview lead; all indicators now follow the audible snapshot.
+
+## ACCENT-01 Send-back 2 — one audible preview clock (2026-10-27)
+
+- Timestamped preview envelopes trigger at each event's play_monotonic and are
+  evaluated at server now, without onset_lead_s or the lamp hop-midpoint advance.
+  The ingress playback lead is already represented by play_monotonic; it is not
+  added again. Changing lamp advance from 20 to 100 ms leaves all 19 preview
+  activation times identical. Compatibility flags hold for 50 ms from playback.
+- Normal preview freezes the envelope/accent view belonging to the scene actually
+  sent after the delay buffer. The compatibility hold begins on that send, not
+  on render or analysis receipt. A 200 ms buffer therefore moves every preview
+  quantity together with the shown frame.
+- Capture exact post-boundary channel colours from send(), without re-sampling
+  the output precision guard. Timestamped preview retains these immutable sent
+  frames on the playback timeline: map their lamp-event anchor to the event's
+  play_monotonic. This removes lamp advance from dot colours and dot outlines as
+  well as the room outline. The renderer and all lamp scheduling stay unchanged.
+- Publish one atomic snapshot per websocket frame, including colours, band/all
+  envelopes, accent/lifts, compatibility flags, event counts and audible_monotonic.
+  On normal output the timestamp is the shown frame's send time; on timestamped
+  output it is the evaluation time (server now). Preview getters advance only
+  the preview timeline, never renderers, event queues or output state.
+- Browser scheduling is deferred. The residual is the websocket interval plus
+  browser rendering, roughly 50–80 ms. Dots and outlines share it because they
+  come from the same snapshot. Keep the timestamp for later browser scheduling.

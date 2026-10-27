@@ -259,6 +259,7 @@ export interface OutputCapabilities {
   supports_per_channel_timing: boolean
 }
 export interface AccentFeatures {
+  audible_monotonic?: number | null
   channel_accent_lifts?: number[]
   onset_events?: OnsetEvent[]
   onset_envelope?: number

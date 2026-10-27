@@ -406,7 +406,9 @@ class Replay:
             self.tick_renders.append(identity)
             for channel in self.output.channels:
                 colour = scene.color_at(channel.position, t)
-                before = getattr(scene, "scene", scene).color_at(channel.position, t)
+                from lampastream.audible_preview import PreviewScene
+                sampled = scene.scene if isinstance(scene, PreviewScene) else scene
+                before = getattr(sampled, "scene", sampled).color_at(channel.position, t)
                 self.renders.append({"render_id": identity, "virtual_time_s": self.now,
                     "render_argument_s": t, "route": self.args.route,
                     "sequence": sequence, "play_time_s": features.play_monotonic
