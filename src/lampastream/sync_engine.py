@@ -1187,6 +1187,9 @@ class CanonicalAnalysisPipeline:
         superflux_lag: int,
         bass_hz: int,
         mid_hz: int,
+        beat_sensitivity: float = 50.,
+        beat_band: str = "bass",
+        beat_latency_ms: float = 0.,
         band_normalise: bool = False,
         exertion_clip: float = BandNormaliser.DEFAULT_EXERTION_CLIP,
         use_hpss_separation: bool = False,
@@ -1217,9 +1220,13 @@ class CanonicalAnalysisPipeline:
             bass_hz=bass_hz,
             mid_hz=mid_hz,
         )
+        from .beat_fusion import BeatFusion
+        self._beat_fusion = BeatFusion(beat_sensitivity, beat_band, beat_latency_ms,
+                                      onset_silence_gate_dbfs)
         self._hpss_analyzer = HpssAnalyzer(use_hpss_separation)
         self._processors: tuple[AnalysisProcessor, ...] = (
-            self._spectrum_processor, self._beat_detector, KWeightedLoudnessAnalyzer(),
+            self._spectrum_processor, self._beat_detector, self._beat_fusion,
+            KWeightedLoudnessAnalyzer(),
             self._hpss_analyzer,
         )
         self._bar_stft = StereoMagStft(_CAP_SAMPLE_RATE)
@@ -1395,6 +1402,12 @@ class CanonicalAnalysisPipeline:
         Onset warmup state resets; allow ~30 frames (~300 ms) before comparing
         onset timings.
         """
+        from .beat_fusion import BeatFusion
+        fusion = BeatFusion(profile.beat_sensitivity, profile.beat_band,
+                            profile.beat_latency_ms, profile.onset_silence_gate_dbfs)
+        previous = self._beat_fusion
+        self._processors = tuple(fusion if p is previous else p for p in self._processors)
+        self._beat_fusion = fusion
         for proc in self._processors:
             if isinstance(proc, BeatDetector):
                 proc.rebuild(
@@ -1490,7 +1503,7 @@ class CanonicalAnalysisPipeline:
             # For equal ends, prefer the later start; exact interval ties prefer
             # this later delivery, including same-interval Beat contributions.
             latest = self._latest_pub
-            if (effective_processor_ids != ("beat_detector",) and (
+            if (effective_processor_ids not in {("beat_detector",), ("beat_fusion",)} and (
                 latest is None
                 or record.epoch != latest.epoch
                 or (record.sample_end, record.sample_pos)
@@ -1569,7 +1582,16 @@ class CanonicalAnalysisPipeline:
             mid=_slice_avg(bars, 0.0, 0.55),
             full=full,
             centroid=centroid,
-            onset_events=tuple(e for pu in onset_batch for e in pu.onset_events),
+            diagnostic_events=tuple(e for pu in onset_batch if pu.processor_id == "beat_detector"
+                                    for e in pu.onset_events),
+            onset_events=tuple(e for pu in onset_batch if pu.processor_id == "beat_fusion"
+                               for e in pu.onset_events),
+            tempo_bpm=self._beat_fusion.clock.tempo_bpm,
+            tempo_alt_bpm=self._beat_fusion.clock.tempo_alt_bpm,
+            tempo_confidence=self._beat_fusion.clock.confidence,
+            tempo_locked=self._beat_fusion.clock.locked,
+            agc_gain=self._beat_fusion.trigger.primary.gain,
+            trigger_ratio=self._beat_fusion.trigger.primary.ratio,
             onset=onset,
             onset_strength=onset_strength,
             onset_bass=onset_bass,

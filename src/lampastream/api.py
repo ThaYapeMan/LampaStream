@@ -197,6 +197,9 @@ class AnalyserCreateBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     name: str = "Default Analysis"
+    beat_sensitivity: float = Field(default=50, ge=0, le=100, allow_inf_nan=False)
+    beat_band: Literal["bass", "low", "energy"] = "bass"
+    beat_latency_ms: float = Field(default=0, ge=-1000, le=1000, allow_inf_nan=False)
     onset_method: str = "combined"
     output_render_hz: float = Field(default=30, ge=20, le=60, allow_inf_nan=False)
     onset_lookahead_frames: int = Field(default=1, ge=0, le=3, strict=True)
@@ -220,6 +223,9 @@ class AnalyserCreateBody(BaseModel):
 class AnalyserPatchBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
     name: str | None = None
+    beat_sensitivity: float | None = Field(default=None, ge=0, le=100, allow_inf_nan=False)
+    beat_band: Literal["bass", "low", "energy"] | None = None
+    beat_latency_ms: float | None = Field(default=None, ge=-1000, le=1000, allow_inf_nan=False)
     onset_method: str | None = None
     output_render_hz: float | None = Field(default=None, ge=20, le=60, allow_inf_nan=False)
     onset_lookahead_frames: int | None = Field(default=None, ge=0, le=3, strict=True)
@@ -265,6 +271,11 @@ class EffectCreateBody(BaseModel):
     onset_lead_s: float = Field(default=0.02, ge=0, allow_inf_nan=False)
     onset_max_age_s: float = Field(default=0.5, gt=0)
     accent_mode: Literal["lift", "pop", "palette_step", "off"] = "lift"
+    beat_intensity: Literal["Subtle", "Moderate", "High", "Intense"] = "Moderate"
+    beat_mode: Literal["Phase", "Flash", "Alternate", "Pulse"] = "Phase"
+    beat_divisor: int = Field(default=1, ge=1, le=8, strict=True)
+    beat_fall_ms: float = Field(default=250, ge=10, le=5000, allow_inf_nan=False)
+    beat_predicted: bool = True
     accent_amount: float = Field(default=0.35, ge=0, le=1, allow_inf_nan=False)
     accent_band_weights: dict[str, float] = Field(
         default_factory=lambda: {"bass": 1.0, "mid": 0.6, "treble": 0.4})
@@ -298,6 +309,11 @@ class EffectPatchBody(BaseModel):
     onset_lead_s: float | None = Field(default=None, ge=0, allow_inf_nan=False)
     onset_max_age_s: float | None = Field(default=None, gt=0)
     accent_mode: Literal["lift", "pop", "palette_step", "off"] | None = None
+    beat_intensity: Literal["Subtle", "Moderate", "High", "Intense"] | None = None
+    beat_mode: Literal["Phase", "Flash", "Alternate", "Pulse"] | None = None
+    beat_divisor: int | None = Field(default=None, ge=1, le=8, strict=True)
+    beat_fall_ms: float | None = Field(default=None, ge=10, le=5000, allow_inf_nan=False)
+    beat_predicted: bool | None = None
     accent_amount: float | None = Field(default=None, ge=0, le=1, allow_inf_nan=False)
     accent_band_weights: dict[str, float] | None = None
     accent_strength_curve: float | None = Field(default=None, gt=0, allow_inf_nan=False)
@@ -406,6 +422,9 @@ class CouplingPatchBody(CouplingReleaseBody):
     lower_cutoff_freq: int | None = None
     higher_cutoff_freq: int | None = None
     # Analyser pcm category (update_onset_pipeline)
+    beat_sensitivity: float | None = Field(default=None, ge=0, le=100, allow_inf_nan=False)
+    beat_band: Literal["bass", "low", "energy"] | None = None
+    beat_latency_ms: float | None = Field(default=None, ge=-1000, le=1000, allow_inf_nan=False)
     onset_method: str | None = None
     output_render_hz: float | None = Field(default=None, ge=20, le=60, allow_inf_nan=False)
     onset_lookahead_frames: int | None = Field(default=None, ge=0, le=3, strict=True)
@@ -455,6 +474,7 @@ _C_SPECTRUM_FIELDS: frozenset[str] = frozenset({
     "bars", "lower_cutoff_freq", "higher_cutoff_freq",
 })
 _C_PCM_FIELDS: frozenset[str] = frozenset({
+    "beat_sensitivity", "beat_band", "beat_latency_ms",
     "output_render_hz", "onset_lookahead_frames", "onset_delta_abs",
     "onset_min_ioi_ms", "onset_silence_gate_dbfs",
     "onset_method", "onset_delta", "onset_alpha", "superflux_mu", "superflux_lag",
@@ -476,6 +496,7 @@ _C_PLAYER_INLINE: frozenset[str] = frozenset({
 })
 _C_ANALYSER_INLINE: frozenset[str] = frozenset({
     "bars", "lower_cutoff_freq", "higher_cutoff_freq",
+    "beat_sensitivity", "beat_band", "beat_latency_ms",
     "output_render_hz", "onset_lookahead_frames", "onset_delta_abs",
     "onset_min_ioi_ms", "onset_silence_gate_dbfs",
     "onset_method", "onset_delta", "onset_alpha", "superflux_mu", "superflux_lag",
@@ -1016,6 +1037,9 @@ async def create_analyser(request: Request, body: AnalyserCreateBody):
     try:
         ac = Analyser(
             name=body.name,
+            beat_sensitivity=body.beat_sensitivity,
+            beat_band=body.beat_band,
+            beat_latency_ms=body.beat_latency_ms,
             onset_method=body.onset_method,
             onset_delta=body.onset_delta,
             output_render_hz=body.output_render_hz,
@@ -1160,6 +1184,11 @@ async def create_effect_route(request: Request, body: EffectCreateBody):
         onset_lead_s=body.onset_lead_s,
         onset_max_age_s=body.onset_max_age_s,
         onset_flash_intensity=body.onset_flash_intensity,
+        beat_intensity=body.beat_intensity,
+        beat_mode=body.beat_mode,
+        beat_divisor=body.beat_divisor,
+        beat_fall_ms=body.beat_fall_ms,
+        beat_predicted=body.beat_predicted,
         accent_mode=body.accent_mode,
         accent_amount=body.accent_amount,
         accent_band_weights=body.accent_band_weights,

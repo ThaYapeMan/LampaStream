@@ -634,7 +634,8 @@ class Replay:
             "id", "epoch", "candidate_sample", "availability_sample", "lookahead_frames",
             "strength", "strength_raw", "confidence", "bands", "dominant_band",
             "play_monotonic", "received_monotonic", "disposition", "event_time",
-            "first_render_over_half_s", "first_send_s"])
+            "first_render_over_half_s", "first_send_s",
+            "kind", "on_beat", "beat_phase", "bar_position", "predicted"])
         write_csv(out / "energy.csv", self.energy)
         if write_channel_traces:
             write_csv(out / "renders.csv", self.renders, RENDER_COLUMNS)

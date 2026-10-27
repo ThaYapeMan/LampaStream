@@ -166,6 +166,16 @@ class PlayerLatency:
 
 def _validate_onset_effect(effect):
     import math
+    if effect.beat_intensity not in {"Subtle", "Moderate", "High", "Intense"}:
+        raise ValueError("Invalid beat_intensity")
+    if effect.beat_mode not in {"Phase", "Flash", "Alternate", "Pulse"}:
+        raise ValueError("Invalid beat_mode")
+    if type(effect.beat_divisor) is not int or not 1 <= effect.beat_divisor <= 8:
+        raise ValueError("beat_divisor must be an integer from 1 to 8")
+    if not math.isfinite(effect.beat_fall_ms) or not 10 <= effect.beat_fall_ms <= 5000:
+        raise ValueError("beat_fall_ms must be between 10 and 5000")
+    if type(effect.beat_predicted) is not bool:
+        raise ValueError("beat_predicted must be boolean")
     if effect.accent_mode not in {"lift", "pop", "palette_step", "off"}:
         raise ValueError("Invalid accent_mode")
     if effect.accent_spatial not in {"uniform", "by_band"}:
@@ -195,6 +205,12 @@ def _validate_onset_effect(effect):
 
 def _validate_onset_analyser(analyser):
     import math
+    if not math.isfinite(analyser.beat_sensitivity) or not 0 <= analyser.beat_sensitivity <= 100:
+        raise ValueError("beat_sensitivity must be between 0 and 100")
+    if analyser.beat_band not in {"bass", "low", "energy"}:
+        raise ValueError("Invalid beat_band")
+    if not math.isfinite(analyser.beat_latency_ms) or abs(analyser.beat_latency_ms) > 1000:
+        raise ValueError("beat_latency_ms must be between -1000 and 1000")
     if not math.isfinite(analyser.output_render_hz) or not 20 <= analyser.output_render_hz <= 60:
         raise ValueError("output_render_hz must be finite and between 20 and 60")
     if type(analyser.onset_lookahead_frames) is not int or not (
@@ -297,6 +313,9 @@ class Profile:
     #   "combined"  — full-spectrum spectral flux on shared STFT (100 Hz)
     #   "multiband" — per-band flux on 100 Hz STFT data; fills onset_bass/mid/treble
     #   "superflux" — Böck & Widmer (2013) SuperFlux on 100 Hz STFT data
+    beat_sensitivity: float = 50.
+    beat_band: str = "bass"
+    beat_latency_ms: float = 0.
     onset_method: str = "combined"
     # SuperFlux parameters (used only when onset_method == "superflux").
     superflux_mu: int = 3   # max-filter half-width in FFT bins
@@ -331,6 +350,11 @@ class Profile:
     onset_lead_s: float = 0.02
     onset_max_age_s: float = 0.5
     onset_flash_intensity: float = 0.0
+    beat_intensity: str = "Moderate"
+    beat_mode: str = "Phase"
+    beat_divisor: int = 1
+    beat_fall_ms: float = 250.
+    beat_predicted: bool = True
     accent_mode: str = "lift"
     accent_amount: float = 0.35
     accent_band_weights: dict[str, float] = field(
@@ -533,6 +557,9 @@ class Analyser:
 
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     name: str = "Default Analysis"
+    beat_sensitivity: float = 50.
+    beat_band: str = "bass"
+    beat_latency_ms: float = 0.
     onset_method: str = "combined"
     output_render_hz: float = 30.0
     onset_lookahead_frames: int = 1
@@ -576,6 +603,9 @@ class Analyser:
         return {
             "id": self.id,
             "name": self.name,
+            "beat_sensitivity": self.beat_sensitivity,
+            "beat_band": self.beat_band,
+            "beat_latency_ms": self.beat_latency_ms,
             "onset_method": self.onset_method,
             "output_render_hz": self.output_render_hz,
             "onset_lookahead_frames": self.onset_lookahead_frames,
@@ -634,6 +664,11 @@ class Effect:
     onset_lead_s: float = 0.02
     onset_max_age_s: float = 0.5
     onset_flash_intensity: float = 0.0
+    beat_intensity: str = "Moderate"
+    beat_mode: str = "Phase"
+    beat_divisor: int = 1
+    beat_fall_ms: float = 250.
+    beat_predicted: bool = True
     accent_mode: str = "lift"
     accent_amount: float = 0.35
     accent_band_weights: dict[str, float] = field(
@@ -670,6 +705,11 @@ class Effect:
             "onset_lead_s": self.onset_lead_s,
             "onset_max_age_s": self.onset_max_age_s,
             "onset_flash_intensity": self.onset_flash_intensity,
+            "beat_intensity": self.beat_intensity,
+            "beat_mode": self.beat_mode,
+            "beat_divisor": self.beat_divisor,
+            "beat_fall_ms": self.beat_fall_ms,
+            "beat_predicted": self.beat_predicted,
             "accent_mode": self.accent_mode,
             "accent_amount": self.accent_amount,
             "accent_band_weights": self.accent_band_weights,

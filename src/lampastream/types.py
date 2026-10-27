@@ -130,6 +130,11 @@ class OnsetEvent:
     dominant_band: str
     play_monotonic: float | None = None
     received_monotonic: float | None = None
+    kind: str = "onset"
+    on_beat: bool = False
+    beat_phase: float = 0.
+    bar_position: int | None = None
+    predicted: bool = False
 
 
 @dataclass
@@ -165,6 +170,14 @@ class AudioFeatures:
 
     # Onset detection.  onset=True on frames where a note or drum hit starts.
     # onset_strength is the raw spectral flux value (unnormalised).
+    diagnostic_events: tuple[OnsetEvent, ...] = ()
+    tempo_bpm: float | None = None
+    tempo_alt_bpm: float | None = None
+    tempo_confidence: float = 0.
+    tempo_locked: bool = False
+    beat_phase: float = 0.
+    agc_gain: float = 1.
+    trigger_ratio: float = 0.
     onset_events: tuple[OnsetEvent, ...] = ()
     onset_envelope: float = 0.0
     onset_envelope_bass: float = 0.0
