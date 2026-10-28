@@ -1,6 +1,6 @@
 # BEAT-01 traces
 
-Source implementation: f0de755.
+Source implementation: 3262918.
 
 Eight default normal-route loops plus house route/capability probes.
 See ../../baseline.md, Phase 5, for definitions and measurements.

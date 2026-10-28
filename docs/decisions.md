@@ -354,3 +354,11 @@ no GPL/LGPL detector code or learned model was introduced.
 - The LAT-01 slow-render burst probe now injects `kind="beat"`: a default
   `kind="onset"` is a secondary texture and correctly does not request an urgent
   send. Its original assertions (one extra send, at most one per drain) remain.
+
+- Wire-level audit: an eight-code minimum applied throughout an active tail can
+  hold a timestamped channel above floor +0.10 even after its render has fallen.
+  The console path applies that minimum only while its beat envelope is ≥0.5;
+  texture and fall tails retain the sub-code decay guard. Four tests assert
+  actual quantised sends reach ≤floor +0.10 on both routes and both rooms.
+  Historical diagnostic guards remain byte-identical. Duty now integrates held
+  quantised sends; earlier render-only duty probes are superseded.

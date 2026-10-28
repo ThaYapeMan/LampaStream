@@ -482,7 +482,7 @@ unchanged. No physical device was contacted.
 
 ## Phase 5 (BEAT-01)
 
-Core implementation: `f0de755`; local synthetic PCM only, no deployed hardware.
+Core implementation: `3262918`; local synthetic PCM only, no deployed hardware.
 All loops are 12 s; room is 25 Hz / 8-bit, render cadence 30 Hz. Before means
 all-bin diagnostic onsets/s; the old stream had no separate texture count.
 After separates visible beat and texture events. Lock coordinates below are
@@ -491,14 +491,14 @@ in traces. Kick latency excludes texture events and predictions.
 
 | Fixture | Before onsets/s | Beat/s | Texture/s | Kick recall | False bass triggers | BPM (alternate) | Lock s | On-beat kicks | Duty ch0/ch1 | Median kick→send ms |
 |---|---:|---:|---:|---:|---:|---|---:|---:|---|---:|
-| breakbeat | 11.167 | 2.417 | 1.667 | 17/17 | 0 | 173.91 (86.96) | 3.92 | 1.00 | 64.6%/64.6% | 23.792 |
-| breakdown | 12.333 | 1.917 | 2.667 | 15/15 | 0 | 119.76 (59.98) | 2.98 | 1.00 | 42.5%/42.5% | 30.000 |
-| deep-house | 2.167 | 2.000 | 0.000 | 24/24 | 0 | 121.98 (60.86) | 3.43 | 1.00 | 62.1%/62.1% | 27.302 |
-| disco | 11.250 | 1.667 | 3.417 | 20/20 | 0 | 100.00 (200.00) | 3.47 | 1.00 | 53.4%/53.4% | 20.000 |
-| house | 11.667 | 1.917 | 2.167 | 23/23 | 0 | 120.00 (60.00) | 2.98 | 1.00 | 61.6%/61.6% | 30.000 |
+| breakbeat | 11.167 | 2.417 | 1.667 | 17/17 | 0 | 173.91 (86.96) | 3.92 | 1.00 | 58.9%/58.9% | 23.792 |
+| breakdown | 12.333 | 1.917 | 2.667 | 15/15 | 0 | 119.76 (59.98) | 2.98 | 1.00 | 44.6%/44.6% | 30.000 |
+| deep-house | 2.167 | 2.000 | 0.000 | 24/24 | 0 | 121.98 (60.86) | 3.43 | 1.00 | 59.2%/59.2% | 27.302 |
+| disco | 11.250 | 1.667 | 3.417 | 20/20 | 0 | 100.00 (200.00) | 3.47 | 1.00 | 49.2%/49.2% | 20.000 |
+| house | 11.667 | 1.917 | 2.167 | 23/23 | 0 | 120.00 (60.00) | 2.98 | 1.00 | 60.4%/60.4% | 30.000 |
 | pad-texture | 19.333 | 0.000 | 0.000 | — | 0 | — | — | — | 0.0%/0.0% | — |
-| techno | 10.250 | 2.083 | 1.833 | 25/25 | 0 | 127.79 (63.88) | 3.29 | 1.00 | 67.2%/67.2% | 26.917 |
-| tempo-change | 11.333 | 2.000 | 2.917 | 24/24 | 0 | 128.09 (64.21) | 2.98 | 1.00 | 63.2%/63.2% | 30.000 |
+| techno | 10.250 | 2.083 | 1.833 | 25/25 | 0 | 127.79 (63.88) | 3.29 | 1.00 | 62.9%/62.9% | 26.917 |
+| tempo-change | 11.333 | 2.000 | 2.917 | 24/24 | 0 | 128.09 (64.21) | 2.98 | 1.00 | 60.7%/60.7% | 30.000 |
 
 All cases have zero lost events. Pink noise: **2 triggers / 5 s = 0.4/s**,
 sweep: **6 / 20 s = 0.3/s**; pad: zero beat and texture events. Beat periods
@@ -507,8 +507,9 @@ Tempo change relocks at 9.77 s, 3.77 s after the change. Missing breakbeat-grid
 predictions have at most 389 samples (8.104 ms) error. Breakdown contains eight
 predictions and zero false bass triggers in its missing-kick interval.
 
-Duty is above floor +0.10 in **linear light**, relative to each rendered base
-colour. It is sampled render duty, not a photometric or perceptual measurement.
+Duty is above floor +0.10 in **linear light**, relative to each carrying render’s
+base colour. It integrates the quantised setpoint held between actual sends;
+it is not a photometric or perceptual measurement.
 Actual output tests pass both the 25 Hz/8-bit and 60 Hz/16-bit rooms, with
 between-kick output ≤ floor +0.10. Alternate gives 12 flashes out of 23 beats;
 Divisor 4 gives 6. Texture-only lift is below 25% of kick lift. Timestamped Pulse
@@ -527,20 +528,20 @@ Affinity: [5]
 
 | Fixture | Route | Hz | DSP CPU ms/hop | Loop p95 / max ms | Core % | Margin | Virtual backlog | Pub / event drops |
 |---|---|---:|---:|---:|---:|---:|---:|---:|
-| pink-noise | normal | 30 | 0.727 | 0.015 / 1.517 | 8.8 | 11.37× | 0 | 0 / 0 |
-| pink-noise | normal | 50 | 0.707 | 0.276 / 0.455 | 9.2 | 10.83× | 0 | 0 / 0 |
-| pink-noise | normal | 60 | 0.709 | 0.207 / 24.844 | 10.0 | 9.99× | 0 | 0 / 0 |
-| pink-noise | timestamped | 30 | 0.715 | 1.091 / 1.347 | 10.1 | 9.93× | 0 | 0 / 0 |
-| pink-noise | timestamped | 50 | 0.706 | 0.861 / 1.111 | 10.4 | 9.65× | 0 | 0 / 0 |
-| pink-noise | timestamped | 60 | 0.708 | 0.532 / 1.550 | 10.6 | 9.46× | 0 | 0 / 0 |
-| clicks-174 | normal | 30 | 0.787 | 0.014 / 0.728 | 9.7 | 10.33× | 0 | 52 / 0 |
-| clicks-174 | normal | 50 | 0.778 | 0.045 / 1.124 | 9.8 | 10.17× | 0 | 52 / 0 |
-| clicks-174 | normal | 60 | 0.776 | 0.208 / 40.316 | 10.5 | 9.51× | 0 | 52 / 0 |
-| clicks-174 | timestamped | 30 | 0.773 | 1.101 / 1.566 | 10.8 | 9.26× | 0 | 0 / 0 |
-| clicks-174 | timestamped | 50 | 0.774 | 0.672 / 1.536 | 11.2 | 8.96× | 0 | 0 / 0 |
-| clicks-174 | timestamped | 60 | 0.774 | 0.677 / 45.008 | 11.8 | 8.47× | 0 | 0 / 0 |
+| pink-noise | normal | 30 | 0.724 | 0.016 / 1.517 | 8.8 | 11.38× | 0 | 0 / 0 |
+| pink-noise | normal | 50 | 0.708 | 0.284 / 0.579 | 9.3 | 10.76× | 0 | 0 / 0 |
+| pink-noise | normal | 60 | 0.717 | 0.209 / 25.511 | 10.1 | 9.89× | 0 | 0 / 0 |
+| pink-noise | timestamped | 30 | 0.707 | 1.115 / 1.346 | 10.0 | 9.95× | 0 | 0 / 0 |
+| pink-noise | timestamped | 50 | 0.708 | 0.864 / 1.123 | 10.4 | 9.62× | 0 | 0 / 0 |
+| pink-noise | timestamped | 60 | 0.706 | 0.526 / 1.530 | 10.6 | 9.47× | 0 | 0 / 0 |
+| clicks-174 | normal | 30 | 0.771 | 0.013 / 36.546 | 9.5 | 10.52× | 0 | 52 / 0 |
+| clicks-174 | normal | 50 | 0.783 | 0.050 / 0.981 | 9.9 | 10.11× | 0 | 52 / 0 |
+| clicks-174 | normal | 60 | 0.787 | 0.212 / 42.687 | 10.7 | 9.35× | 0 | 52 / 0 |
+| clicks-174 | timestamped | 30 | 0.774 | 1.107 / 1.618 | 10.8 | 9.26× | 0 | 0 / 0 |
+| clicks-174 | timestamped | 50 | 0.774 | 0.677 / 1.631 | 11.2 | 8.95× | 0 | 0 / 0 |
+| clicks-174 | timestamped | 60 | 0.779 | 0.672 / 45.234 | 11.9 | 8.42× | 0 | 0 / 0 |
 
-Clock update: 0.248 µs; trigger/hypothesis update: 19.039 µs.
+Clock update: 0.269 µs; trigger/hypothesis update: 19.395 µs.
 
 The eight musical/control fixture DSP measurements are also recorded individually
 in `traces-phase5/measurements.json`. Two independent house runs have identical
@@ -550,7 +551,7 @@ Host-measured CPU time is deliberately outside the deterministic trace hashes.
 Private excerpts: `/home/codex/src/private-fixtures/` was absent. No private
 input was copied and no real LMS, player, bridge or lamp was contacted.
 
-Validation: 2387 passed, 5 skipped in the full local Python suite; Ruff clean;
+Validation: 2391 passed, 5 skipped in the full local Python suite; Ruff clean;
 Vitest 458 passed; Playwright 74 passed; Node 22.22.2 build reproduces the
 committed bundle. CI conclusions and external report provenance are recorded
 in the task report after the final push.

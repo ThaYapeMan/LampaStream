@@ -797,9 +797,11 @@ contracts continue on the diagnostic stream. The diagnostic path is a deliberate
 offline selection, not a hidden test-environment switch.
 
 Phase-five normal-route traces cover all eight fixtures. Additional house traces
-cover timestamped routing and both declared room capabilities. Duty is the
-fraction of sampled per-channel renders above 0.70 × that frame's own base
-linear-light intensity (Moderate floor 0.60 +0.10). Both reference channels have
+cover timestamped routing and both declared room capabilities. Duty integrates each quantised channel setpoint held between actual sends,
+above 0.70 × its carrying render's own base linear-light intensity (Moderate
+floor 0.60 +0.10). Normal windows cover [0,12); timestamped windows cover the
+same source interval shifted by ingress lead. Eight-bit values use the traced
+wire codes; sixteen-bit values use integer output codes. Both reference channels have
 the same duty in these symmetric synthetic rooms. No physical response or
 private-music quality claim is made by this metric.
 
@@ -814,3 +816,9 @@ separate from the fixed absolute half-envelope threshold retained in diagnostic
 replay. The acceptance tests require `attributed_kicks == kicks` before checking
 latency, so omission cannot make a median look faster. Texture runs at normal
 cadence and cannot consume the beat's urgent send reservation.
+
+The floor-gap assertions sample the actual sent, quantised colours on both
+normal and timestamped routes, not only the pre-output render. The eight-code
+minimum is a peak guard; falling tails retain the one-code decay guard without
+being raised back to that minimum. Archived diagnostic rendering keeps its
+original quantisation policy and byte expectations.

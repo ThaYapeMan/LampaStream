@@ -319,7 +319,7 @@ single-core affinity and reports virtual backlog and separate queue-drop classes
 - `audible_preview.py`: audible-clock projection of the same events and separate
   beat/texture rates, grid and trigger diagnostics.
 - `scripts/measure_beats.py`, `benchmark_replay.py`: phase-five traces, ground-truth
-  metrics, render duty and DSP/clock CPU measurements.
+  metrics, held-wire duty and DSP/clock CPU measurements.
 - `tests/test_beat_trigger.py`, `test_tempo_clock.py`, `test_beat_fusion.py`,
   `test_beat_shaping.py`, `test_beat_output.py`: isolated and full-chain acceptance.
 - `web/src/pages/{Analysers,Effects,NowPlaying}.tsx`,
