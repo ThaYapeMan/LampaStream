@@ -39,3 +39,32 @@ def test_output_flashes_have_floor_gaps_and_divisor(tmp_path, room, mode, diviso
             assert post <= .7*pre+1e-9
     finally:
         replay.pipeline.stop()
+
+
+def test_timestamped_pulse_has_symmetric_attack_and_fall(tmp_path):
+    config = json.loads((FIXTURES/'replay/default-config.json').read_text())
+    for effect in config['configuration']['effects']:
+        effect.update(beat_mode='Pulse', effect_type='solid')
+    path = tmp_path/'config.json'
+    path.write_text(json.dumps(config))
+    args = parser().parse_args(['--input', str(FIXTURES/'replay/beats/house.wav'),
+        '--config', str(path), '--route', 'timestamped', '--out', str(tmp_path/'trace')])
+    replay = Replay(args)
+    try:
+        pcm, rate, _ = decode(args.input)
+        replay.analyse(pcm, rate)
+        asyncio.run(replay.run())
+        first = next(data for data in replay.engine.event_records.values()
+                     if data['event'].kind == 'beat')
+        target = first['event_time']
+        ratios = []
+        for offset in (-.04, .04):
+            rows = [r for r in replay.renders if abs(r['render_argument_s']-target-offset) < 1e-8]
+            assert rows
+            row = rows[-1]
+            pre = max(_linear(row[f'pre_{c}']) for c in 'rgb')
+            post = max(_linear(row[f'post_{c}']) for c in 'rgb')
+            ratios.append(post/pre)
+        assert ratios == pytest.approx([1.05, 1.05], abs=1e-8)
+    finally:
+        replay.pipeline.stop()

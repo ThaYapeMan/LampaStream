@@ -32,7 +32,7 @@ def test_high_frequency_is_texture_not_bass():
     mag[100] = 100
     beat, texture = trigger.process(mag, 0)
     assert beat is None
-    assert texture is not None
+    assert len(texture) == 1 and texture[0].band == "treble"
 
 
 @pytest.mark.parametrize('sensitivity', [-1, 101, float('nan')])

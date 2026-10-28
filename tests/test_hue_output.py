@@ -341,8 +341,8 @@ def test_health_clock_detects_drop_and_api_reports_recovery(tmp_path, monkeypatc
         manager = PlayerManager(Storage(tmp_path / 'config.json'))
         manager._active = ActiveSession(Profile())
         manager._active.hue_driver = driver
-        monkeypatch.setattr(app.state, 'player_manager', manager)
-        monkeypatch.setattr(app.state, 'storage', manager.storage)
+        monkeypatch.setattr(app.state, 'player_manager', manager, raising=False)
+        monkeypatch.setattr(app.state, 'storage', manager.storage, raising=False)
         async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),
                                     base_url='http://test') as client:
             driver._session.is_streaming = False

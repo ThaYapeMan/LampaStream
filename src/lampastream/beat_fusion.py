@@ -39,9 +39,9 @@ class BeatFusion:
             strength *= math.exp(-max(0., t-clock.last_trigger)/clock.fade_s)
         elif not on_beat:
             strength *= .25
-        band = 'mid' if texture else 'bass'
+        band = trigger.band if texture else 'bass'
         sample = round(t*48000)
-        return OnsetEvent((epoch, 'texture' if texture else 'beat', sample), epoch,
+        return OnsetEvent((epoch, 'texture-'+band if texture else 'beat', sample), epoch,
                           sample, availability, 0, strength,
                           trigger.ratio if trigger else 0.,
                           trigger.confidence if trigger else clock.confidence,
@@ -73,8 +73,8 @@ class BeatFusion:
                 if self.clock.locked:
                     self.last_grid = t
                     self.next_grid = self.clock.next_beat
-            if texture:
-                events.append(self._event(frame.epoch_id, t, availability, texture, texture=True))
+            for tick in texture:
+                events.append(self._event(frame.epoch_id, t, availability, tick, texture=True))
             if (self.clock.locked and self.next_grid is not None
                     and t >= self.next_grid+.04):
                 events.append(self._event(frame.epoch_id, self.next_grid, availability,

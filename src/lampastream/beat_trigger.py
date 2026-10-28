@@ -87,11 +87,13 @@ class BassBeatTrigger:
             (f2+20.6**2)*np.sqrt((f2+107.7**2)*(f2+737.9**2))
             *(f2+12194.**2), 1e-30))
         self.weights = (ra*10**(2/20))**2
-        self.texture_mask = frequencies >= 200
+        self.texture_mask = (frequencies >= 200) & (frequencies < 2000)
+        self.treble_mask = frequencies >= 2000
         self.scale = fft_size**2
         self.primary = EnergyTrigger(sensitivity)
         self.energy = EnergyTrigger(sensitivity)
         self.texture = EnergyTrigger(25, .06)
+        self.treble = EnergyTrigger(25, .06)
         self.last_bass = None
         self.open_since = None
         self.first_time = None
@@ -104,6 +106,7 @@ class BassBeatTrigger:
         low = float(np.sum(power[self.mask]))
         broad = float(np.sum(power*self.weights))
         texture = float(np.sum(power[self.texture_mask]))
+        treble = float(np.sum(power[self.treble_mask]))
         if not gate:
             self.open_since = None
         elif self.open_since is None:
@@ -111,10 +114,11 @@ class BassBeatTrigger:
         dead = .6*period if locked and period is not None else .1
         bass = self.primary.process(low, t, self.band, gate=gate and ready, dead_time=dead)
         energy = self.energy.process(broad, t, "energy", gate=gate and ready, dead_time=dead)
-        tick = self.texture.process(texture, t, "texture", gate=gate)
+        ticks = (self.texture.process(texture, t, "mid", gate=gate),
+                 self.treble.process(treble, t, "treble", gate=gate))
         if bass is not None:
             self.last_bass = t
         reference = self.last_bass if self.last_bass is not None else self.open_since
         fallback = reference is not None and t-reference >= 4
         beat = energy if self.band == "energy" or fallback else bass
-        return beat, tick
+        return beat, tuple(tick for tick in ticks if tick is not None)

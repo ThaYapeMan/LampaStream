@@ -3467,7 +3467,7 @@ class SyncEngine:
 
     def _event_view(self, features, t, *, timestamped=False):
         """Project queued events onto scene time, independent of latest polling."""
-        due, future = [], []
+        due, future, future_times = [], [], []
         for event in self._pending_onset_events:
             if timestamped:
                 stamp = event.play_monotonic
@@ -3483,6 +3483,7 @@ class SyncEngine:
                         0, self._event_sample_reference - event.candidate_sample) / _CAP_SAMPLE_RATE
             if stamp > t:
                 future.append(event)
+                future_times.append((event, stamp))
                 continue
             record = self.event_records[event.id]
             record["event_time"] = stamp
@@ -3530,9 +3531,25 @@ class SyncEngine:
         for envelope in self._beat_envelopes.values():
             envelope.release_s = self.profile.beat_fall_ms/1000/math.log(10)
         beat_values = {band: envelope.value(t) for band, envelope in self._beat_envelopes.items()}
-        if self.profile.beat_mode == "Pulse" and newest is not None:
-            width = .08 * (60/features.tempo_bpm if features.tempo_bpm else .5)
-            beat_values["beat"] *= max(0., 1-abs(t-stamp)/width)
+        if self.profile.beat_mode == "Pulse":
+            width = max(.08*(60/features.tempo_bpm if features.tempo_bpm else .5),
+                        self._beat_envelopes["beat"].hold_s)
+            candidates = list(self._beat_envelopes["beat"]._triggers[-1:])
+            divisor = max(1, self.profile.beat_divisor)
+            future_beats = [(event, stamp) for event, stamp in future_times if event.kind == "beat"]
+            for index, (event, stamp) in enumerate(future_beats):
+                if (self._beat_count+index) % divisor:
+                    continue
+                if not event.predicted or self.profile.beat_predicted:
+                    candidates.append((stamp, event.strength if event.predicted else 1.))
+            beat_values["beat"] = max((peak*max(0., 1-abs(t-stamp)/width)
+                                       for stamp, peak in candidates), default=0.)
+            beat_values["downbeat"] = min(beat_values["downbeat"], beat_values["beat"])
+        elif self.profile.beat_mode == "Flash":
+            history = self._beat_envelopes["beat"]._triggers
+            if history and t-history[-1][0] > (self._beat_envelopes["beat"].hold_s
+                                              + self.profile.beat_fall_ms/1000):
+                beat_values["beat"] = beat_values["downbeat"] = 0.
         return replace(features,
                        beat_envelope=beat_values["beat"],
                        downbeat_envelope=beat_values["downbeat"],
@@ -3684,7 +3701,8 @@ class SyncEngine:
                     self._audible_preview.route(True)
                     self._map_event_play_times(records)
                     continuous = [r for r in records
-                        if getattr(r, "effective_processor_ids", ()) != ("beat_detector",)
+                        if getattr(r, "effective_processor_ids", ()) not in {
+                            ("beat_detector",), ("beat_fusion",)}
                         and r.features.play_monotonic is not None
                         and r.features.timing_generation == self._timing.tap_generation]
                     jobs = [(r.features.play_monotonic + trim/1000, r, False)
@@ -3699,6 +3717,17 @@ class SyncEngine:
                         record = min(continuous, key=lambda r:
                                      abs(r.features.play_monotonic-target))
                         jobs.append((target, record, True))
+                        if self.profile.beat_mode == "Pulse" and event.kind == "beat":
+                            width = max(.08*(60/record.features.tempo_bpm
+                                        if record.features.tempo_bpm else .5),
+                                        self._beat_envelopes["beat"].hold_s)
+                            jobs.extend((target+width*offset, record, True)
+                                        for offset in (-1., -.5, .5, 1.))
+                            # Replace already queued cadence samples inside the
+                            # newly known pulse window, retaining their deadlines.
+                            jobs.extend((deadline, record, True)
+                                        for deadline in sorted({item[0] for item in schedule.queue
+                                            if target-width < item[0] < target+width}))
                     for target, record, event_boundary in sorted(jobs, key=lambda job: job[0]):
                         f = record.features
                         if (f.play_monotonic is None

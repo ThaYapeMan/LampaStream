@@ -189,12 +189,16 @@ class AudiblePreview:
                 peaks = dict.fromkeys(('beat', 'downbeat', 'texture'), (0., 0.))
                 divisor = max(profile.beat_divisor, 2 if profile.beat_mode == 'Alternate' else 1)
                 count = 0
+                pulse = 0.
                 for event, stamp in sorted(self.events.values(), key=lambda item: item[1]):
                     if event.kind == 'beat':
                         count += 1
                         if (count-1) % divisor or (event.predicted and not profile.beat_predicted):
                             continue
                         strength = event.strength if event.predicted or not event.on_beat else 1.
+                        width = max(.08*(60/features.tempo_bpm if features.tempo_bpm else .5),
+                                    self.envelopes['all'].hold_s)
+                        pulse = max(pulse, strength*max(0., 1-abs(now-stamp)/width))
                         if stamp > now:
                             continue
                         peaks['beat'] = stamp, strength
@@ -205,8 +209,11 @@ class AudiblePreview:
                 def value(name):
                     stamp, strength = peaks[name]
                     age = max(0., now-stamp-self.envelopes['all'].hold_s)
+                    if profile.beat_mode == 'Flash' and age > profile.beat_fall_ms/1000:
+                        return 0.
                     return strength*math.exp(-age/(profile.beat_fall_ms/1000/math.log(10)))
-                view = replace(view, beat_envelope=value('beat'),
+                view = replace(view, beat_envelope=(pulse if profile.beat_mode == 'Pulse'
+                                                   else value('beat')),
                                downbeat_envelope=value('downbeat'),
                                texture_envelope=value('texture'))
             self.accent.render(self.metadata.baseline, view, profile)
