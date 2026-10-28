@@ -369,8 +369,8 @@ AIRPLAY_BYTES_PER_FRAME: int = AIRPLAY_CHANNELS * AIRPLAY_SAMPLE_WIDTH  # 4
 _AIRPLAY_STALE_S: float = 2.0
 
 
-class SqueezeliteShmStereoSource:
-    """Reads stereo decoded float32 PCM from squeezelite's visualiser SHM.
+class YeneyCoreShmStereoSource:
+    """Read canonical-ingress stereo float32 PCM from yeney-core SHM v1.
 
     Returns SourceReadResult with a stereo DecodedSourceFrame.
 
@@ -382,8 +382,9 @@ class SqueezeliteShmStereoSource:
     - n_new > VIS_BUF_SIZE // 2 (fell too far behind) → StreamInvalidated(UNKNOWN)
     - valid read → DataResult(DecodedSourceFrame)
 
-    source_sample_pos is always None: the SHM buf_index is modular and cannot
-    reconstruct an absolute timeline position.
+    SHM v1 supplies absolute frame positions, epochs and continuity under a
+    seqlock. The optional yeney-core player clock supplies play-time provenance.
+    The legacy squeezelite pathname is retained for producer ABI compatibility.
     """
 
     def __init__(self) -> None:
@@ -482,8 +483,8 @@ class SqueezeliteShmStereoSource:
                     f"Squeezelite SHM at {path} does not provide the v1 ABI "
                     f"(magic 0x{SHM_ABI_V1_MAGIC:08X} not found at offset "
                     f"{_V2_EXT_OFFSET}). "
-                    "Rebuild squeezelite from the pinned shared fork using "
-                    "scripts/build-squeezelite.sh and redeploy."
+                    "Rebuild yeney-player from the pinned yeney-core submodule using "
+                    "scripts/install-lampastream.sh."
                 )
             self._abi_version = 0
         else:
@@ -498,7 +499,7 @@ class SqueezeliteShmStereoSource:
                     raise RuntimeError(
                         f"Squeezelite SHM at {path} advertises ABI version "
                         f"{ext.abi_version}, but this consumer only supports "
-                        f"version {SHM_ABI_VERSION}.  Rebuild squeezelite "
+                        f"version {SHM_ABI_VERSION}.  Rebuild yeney-player "
                         "from the pinned LampaStream producer fork, or upgrade "
                         "LampaStream to a matching consumer."
                     )
@@ -1326,3 +1327,7 @@ if __name__ == "__main__":
     _elapsed = timeit.timeit(lambda: _hpss.push(_chunk), number=_n)
     _us = _elapsed / _n * 1e6
     print(f"PcmHpss.push() per frame: {_us:.1f} µs  ({10000/_us:.0f}x headroom vs 10 ms budget)")
+
+
+# Deprecated compatibility name; retain for one release after ROUTE-01.
+SqueezeliteShmStereoSource = YeneyCoreShmStereoSource

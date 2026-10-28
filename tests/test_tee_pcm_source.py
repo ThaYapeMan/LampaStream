@@ -166,7 +166,7 @@ def test_manager_activation_swap_and_teardown_reuse_tee(tmp_path, monkeypatch, i
     source = Source([TemporarilyNoData()])
     source.discard_pending = MagicMock()
     source_factory = MagicMock(return_value=source)
-    monkeypatch.setattr(pm, 'SqueezeliteShmStereoSource', source_factory)
+    monkeypatch.setattr(pm, 'YeneyCoreShmStereoSource', source_factory)
     monkeypatch.setattr(pm, 'AirPlayPipeStereoSource', source_factory)
     factory = MagicMock(return_value=MagicMock())
     monkeypatch.setattr(pm, '_make_canonical_pipeline', factory)

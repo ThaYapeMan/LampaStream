@@ -1118,7 +1118,7 @@ def test_lms_airplay_switches_release_every_session(tmp_path, monkeypatch, caplo
         sources.append(source)
         return source
 
-    monkeypatch.setattr(pm, 'SqueezeliteShmStereoSource', shm_factory)
+    monkeypatch.setattr(pm, 'YeneyCoreShmStereoSource', shm_factory)
 
     def start_player(session, profile):
         session.lms_player = MagicMock(poll=Mock(return_value=None))

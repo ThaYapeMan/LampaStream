@@ -30,7 +30,12 @@ class AudibleClock:
 
     def at(self, sample, reference, features, now):
         delay = self.probe.current_delay_ms()/1000 if self.probe is not None else 0.
-        return ClockPoint(now + max(0., delay))
+        anchor = features.received_monotonic
+        offset = (sample-reference)/48000
+        if anchor is None:
+            anchor = now
+            offset = min(0., offset)
+        return ClockPoint(anchor+offset+max(0., delay))
 
     def scene_ready(self, received, ready, audible):
         recorder = getattr(self.timing, 'scene_ready', None)

@@ -35,8 +35,8 @@ from .lms_status import query_lms_status, query_lms_sync_peers, unsync_player
 from .models import BridgeConfig, Controller, Coupling, Profile, VirtualPlayerType
 from .pcm_source import (
     AirPlayPipeStereoSource,
-    SqueezeliteShmStereoSource,
     TeePcmSource,
+    YeneyCoreShmStereoSource,
 )
 from .spectrum_engine import make_spectrum_engine as _make_spectrum_engine
 from .storage import Storage
@@ -987,7 +987,7 @@ class PlayerManager:
     ) -> None:
         """LMS pcm_pipeline sub-path: yeney-player + canonical PCM pipeline, no cava/FIFO.
 
-        Uses SqueezeliteShmStereoSource (stereo, SourceReadResult protocol) so the
+        Uses YeneyCoreShmStereoSource (stereo, SourceReadResult protocol) so the
         shared _make_canonical_pipeline() factory can select v2 or cavacore, identical
         to the AirPlay path.  Both ingresses feed into the same factory.
         """
@@ -996,7 +996,7 @@ class PlayerManager:
         from .lms_timing import LmsHeadStart, LmsTimedSource
         player = (self.storage.get_virtual_player(session.coupling.player_id)
                   if session.coupling else None)
-        source = SqueezeliteShmStereoSource()
+        source = YeneyCoreShmStereoSource()
         session.lms_timed_source = None
         session.head_start = None
         if player and player.follow_mode == "sync_group":

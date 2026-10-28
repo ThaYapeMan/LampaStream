@@ -873,7 +873,7 @@ def test_lms_path_uses_canonical_pipeline():
     assert "_make_canonical_pipeline" in src, (
         "_activate_lms_pcm must use _make_canonical_pipeline for backend selection"
     )
-    assert "SqueezeliteShmStereoSource" in src, (
+    assert "YeneyCoreShmStereoSource" in src, (
         "_activate_lms_pcm must use SqueezeliteShmStereoSource (stereo, SourceReadResult)"
     )
     # Legacy mono pipeline must not be called directly.
