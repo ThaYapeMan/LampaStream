@@ -3742,8 +3742,12 @@ class SyncEngine:
                         f = self._event_view(f, scene_time, timestamped=True)
                         scene = self._render_scene(f, scene_time)
                         if self._onset_lift_enabled():
+                            legacy = self.profile.diagnostic_onsets
+                            amplitude = (f.onset_envelope if legacy else
+                                         max(f.beat_envelope, .1*f.texture_envelope))
                             scene = GuardedScene(scene, precision_guard,
-                                f.onset_envelope > precision_guard.lsb)
+                                amplitude > precision_guard.lsb,
+                                minimum_lift=legacy or f.beat_envelope >= .5)
                         ready = clock()
                         recorder = getattr(self._timing, "scene_ready", None)
                         if recorder is not None:
@@ -3852,8 +3856,12 @@ class SyncEngine:
                         continue
                 scene: Scene = self._render_scene(features, t)
                 if self._onset_lift_enabled():
+                    legacy = self.profile.diagnostic_onsets
+                    amplitude = (features.onset_envelope if legacy else
+                                 max(features.beat_envelope, .1*features.texture_envelope))
                     scene = GuardedScene(scene, precision_guard,
-                        features.onset_envelope > precision_guard.lsb)
+                        amplitude > precision_guard.lsb,
+                        minimum_lift=legacy or features.beat_envelope >= .5)
                 self._last_mix = self._effect.mix
                 self._last_energy = features.full
                 self._last_sustained_energy = features.sustained_energy

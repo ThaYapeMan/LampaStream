@@ -40,15 +40,29 @@ def measure(path, out, *, route='normal', room='two-channel.json'):
                        if r.features.tempo_bpm is not None), None)
         diagnostics = {e.id for r in replay.records for e in r.features.diagnostic_events}
         ratio = sum(e.on_beat for e in matched)/len(matched) if matched else None
-        # Each channel/render is sampled equally at the controlled cadence.
-        # Threshold is relative to that frame's own base colour in linear light.
+        # Integrate the held, quantised wire setpoint between actual sends.
+        # The base is the colour belonging to the carrying render identity.
         from lampastream.accent import _linear
+        renders = {(r['render_id'], r['channel_id']): r for r in replay.renders}
         duty = {}
-        for row in replay.renders:
-            channel = row['channel_id']
-            pre = max(_linear(row[f'pre_{c}']) for c in 'rgb')
-            post = max(_linear(row[f'post_{c}']) for c in 'rgb')
-            duty.setdefault(channel, []).append(post > .7*pre+1e-9)
+        window_start = args.lead_s if route == 'timestamped' else 0.
+        window_end = window_start+seconds
+        for channel in {r['channel_id'] for r in replay.output.rows}:
+            sends = [r for r in replay.output.rows if r['channel_id'] == channel]
+            lifted = 0.
+            for index, send in enumerate(sends):
+                row = renders[send['scene_id'], channel]
+                pre = max(_linear(row[f'pre_{c}']) for c in 'rgb')
+                if replay.output.capabilities.colour_depth_bits == 8:
+                    wire = [send[c+'8']/255 for c in 'rgb']
+                else:
+                    wire = [int(send[c]*65535)/65535 for c in 'rgb']
+                post = max(_linear(v) for v in wire)
+                until = sends[index+1]['virtual_time_s'] if index+1 < len(sends) else window_end
+                held = max(0., min(window_end, until)-max(window_start, send['virtual_time_s']))
+                if post > .7*pre+1e-9:
+                    lifted += held
+            duty[channel] = lifted/seconds
         beat_ids = {':'.join(map(str, e.id)) for e in matched}
         beat_latencies = [r['first_send_ms'] for r in replay.latency_rows()
                           if r['id'] in beat_ids and r['first_send_ms'] is not None]
@@ -62,7 +76,7 @@ def measure(path, out, *, route='normal', room='two-channel.json'):
             bpm=latest.tempo_bpm if latest else None,
             alt_bpm=latest.tempo_alt_bpm if latest else None,
             lock_s=stable[0][0] if stable else None, on_beat_ratio=ratio,
-            duty_cycle={key: sum(values)/len(values) for key, values in duty.items()},
+            duty_cycle=duty,
             latency_median_ms=statistics.median(beat_latencies) if beat_latencies else None,
             cpu_ms_hop=cpu/seconds*10,
             event_loss=counters['events']['all']['lost'])

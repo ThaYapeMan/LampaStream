@@ -79,3 +79,34 @@ def test_every_kick_has_an_attributed_lifted_send_within_latency_budget(tmp_path
     assert result['kick_hits'] == result['kicks'] == result['attributed_kicks']
     assert result['latency_median_ms'] == pytest.approx(latency, abs=1e-6)
     assert result['latency_median_ms'] <= 30+1e-7
+
+
+@pytest.mark.parametrize('route', ['normal', 'timestamped'])
+@pytest.mark.parametrize('room', ['two-channel.json', 'two-channel-fast.json'])
+def test_actual_sent_colours_reach_floor_between_kicks(tmp_path, route, room):
+    args = parser().parse_args(['--input', str(FIXTURES/'replay/beats/house.wav'),
+        '--config', str(FIXTURES/'replay/default-config.json'), '--route', route,
+        '--room', str(FIXTURES/'rooms'/room), '--render-hz',
+        '60' if 'fast' in room else '30', '--out', str(tmp_path/'trace')])
+    replay = Replay(args)
+    try:
+        pcm, rate, _ = decode(args.input)
+        replay.analyse(pcm, rate)
+        asyncio.run(replay.run())
+        renders = {(r['render_id'], r['channel_id']): r for r in replay.renders}
+        ratios = []
+        for send in replay.output.rows:
+            row = renders[send['scene_id'], send['channel_id']]
+            t = row['render_argument_s']-(args.lead_s-.02 if route == 'timestamped' else 0)
+            if 1 < t < 11 and .43 <= t % .5 <= .45:
+                pre = max(_linear(row[f'pre_{c}']) for c in 'rgb')
+                if replay.output.capabilities.colour_depth_bits == 8:
+                    sent = [send[c+'8']/255 for c in 'rgb']
+                else:
+                    sent = [int(send[c]*65535)/65535 for c in 'rgb']
+                post = max(_linear(v) for v in sent)
+                ratios.append(post/pre)
+        assert ratios
+        assert max(ratios) <= .7
+    finally:
+        replay.pipeline.stop()
