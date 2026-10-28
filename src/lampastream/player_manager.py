@@ -72,6 +72,7 @@ def _make_canonical_pipeline(
     return CanonicalAnalysisPipeline(
         source=source,
         engine=engine,
+        diagnostic_only=profile.diagnostic_onsets,
         beat_sensitivity=profile.beat_sensitivity,
         beat_band=profile.beat_band,
         beat_latency_ms=profile.beat_latency_ms,

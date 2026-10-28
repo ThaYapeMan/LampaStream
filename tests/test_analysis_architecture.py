@@ -472,10 +472,11 @@ def test_cap_holds_spectrum_processor_and_beat_detector():
 
 def test_cap_processors_tuple_contains_optional_hpss_family():
     cap = _make_cap()
-    assert len(cap._processors) == 4
+    assert len(cap._processors) == 5
     ids = {p.processor_id for p in cap._processors}
     assert "v2" in ids
     assert "beat_detector" in ids
+    assert "beat_fusion" in ids
     assert "loudness_analyzer" in ids
     assert "hpss_analyzer" in ids
     assert not cap._hpss_analyzer.enabled

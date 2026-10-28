@@ -17,6 +17,12 @@ from lampastream.types import AudioFeatures, Colour, OnsetEvent, Position, Unifo
 FIXTURES = Path(__file__).parent / "fixtures/replay"
 EFFECTS = sorted(EFFECT_IDS - {"none"})
 
+EngineProfile = Profile
+
+
+def Profile(**kwargs):
+    return EngineProfile(diagnostic_onsets=True, **kwargs)
+
 
 @pytest.fixture(scope="module")
 def accent_replay(tmp_path_factory):
@@ -32,7 +38,8 @@ def accent_replay(tmp_path_factory):
         for item in data["configuration"]["effects"]:
             item["effect_type"] = effect
         config.write_text(json.dumps(data))
-        args = parser().parse_args(["--input", str(FIXTURES / f"{fixture}.wav"),
+        args = parser().parse_args(["--diagnostic-onsets",
+            "--input", str(FIXTURES / f"{fixture}.wav"),
             "--config", str(config), "--route", route,
             "--render-hz", "60" if fast else "30", "--room",
             str(FIXTURES.parent / "rooms" / ("two-channel-fast.json" if fast
@@ -136,7 +143,8 @@ def test_accent_off_lat01_byte_identity(tmp_path, case):
         effect['accent_mode'] = 'off'
     config = tmp_path/'config.json'
     config.write_text(json.dumps(data))
-    args = parser().parse_args(['--input', str(FIXTURES/f"{case['fixture']}.wav"),
+    args = parser().parse_args(["--diagnostic-onsets",
+            '--input', str(FIXTURES/f"{case['fixture']}.wav"),
         '--config', str(config), '--route', case['route'], '--out', str(tmp_path/'trace')])
     replay = Replay(args)
     try:
@@ -156,7 +164,8 @@ def test_multiband_fixture_weight_ratio(tmp_path, fixture):
     data['configuration']['analysers'][0]['onset_method'] = 'multiband'
     config = tmp_path/'config.json'
     config.write_text(json.dumps(data))
-    args = parser().parse_args(['--input', str(FIXTURES/f'{fixture}.wav'),
+    args = parser().parse_args(["--diagnostic-onsets",
+            '--input', str(FIXTURES/f'{fixture}.wav'),
         '--config', str(config), '--out', str(tmp_path/'trace')])
     replay = Replay(args)
     try:

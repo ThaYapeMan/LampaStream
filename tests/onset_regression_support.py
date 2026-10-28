@@ -56,7 +56,8 @@ class ReplayCache:
                 data["configuration"]["analysers"][0]["onset_method"] = method
                 config.write_text(json.dumps(data, sort_keys=True))
         out = self.base / "-".join(map(str, key))
-        args = parser().parse_args(["--input", str(FIXTURES / f"{fixture}.wav"),
+        args = parser().parse_args(["--diagnostic-onsets",
+            "--input", str(FIXTURES / f"{fixture}.wav"),
             "--config", str(config), "--route", route, "--render-hz", str(hz),
             "--publications-per-tick", str(cap), "--seed", "0", "--out", str(out)])
         out = self.disk.run(args)

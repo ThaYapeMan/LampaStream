@@ -153,7 +153,8 @@ def test_canonical_worker_input_and_output_byte_parity(monkeypatch):
         assert tee.drain_secondary(100) == []
         records = cap.drain_publications()
         assert records
-        return json.dumps([dataclasses.asdict(r) for r in records], sort_keys=True).encode()
+        return json.dumps([dataclasses.asdict(r) for r in records], sort_keys=True,
+                          default=sorted).encode()
 
     assert run(False) == run(True)
 

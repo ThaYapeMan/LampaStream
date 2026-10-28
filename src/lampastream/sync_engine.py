@@ -1187,6 +1187,7 @@ class CanonicalAnalysisPipeline:
         superflux_lag: int,
         bass_hz: int,
         mid_hz: int,
+        diagnostic_only: bool = False,
         beat_sensitivity: float = 50.,
         beat_band: str = "bass",
         beat_latency_ms: float = 0.,
@@ -1198,6 +1199,7 @@ class CanonicalAnalysisPipeline:
         onset_min_ioi_ms: float = 30.0,
         onset_silence_gate_dbfs: float = -60.0,
     ) -> None:
+        self.diagnostic_only = diagnostic_only
         self._normalise_lock = threading.Lock()
         self._band_normalise = band_normalise
         self._band_clip = exertion_clip
@@ -1229,6 +1231,8 @@ class CanonicalAnalysisPipeline:
             KWeightedLoudnessAnalyzer(),
             self._hpss_analyzer,
         )
+        if diagnostic_only:
+            self._processors = tuple(p for p in self._processors if p is not self._beat_fusion)
         self._bar_stft = StereoMagStft(_CAP_SAMPLE_RATE)
         self._onset_stft = StereoMagStft(_CAP_SAMPLE_RATE, ONSET_WINDOW_SIZE,
                                          right_aligned=True)
@@ -1584,8 +1588,12 @@ class CanonicalAnalysisPipeline:
             centroid=centroid,
             diagnostic_events=tuple(e for pu in onset_batch if pu.processor_id == "beat_detector"
                                     for e in pu.onset_events),
-            onset_events=tuple(e for pu in onset_batch if pu.processor_id == "beat_fusion"
+            onset_events=tuple(e for pu in onset_batch
+                               if pu.processor_id == ("beat_detector" if self.diagnostic_only
+                                                      else "beat_fusion")
                                for e in pu.onset_events),
+            beat_phase=self._beat_fusion.clock.phase(
+                self._beat_fusion.trigger.primary.last_time or 0.),
             tempo_bpm=self._beat_fusion.clock.tempo_bpm,
             tempo_alt_bpm=self._beat_fusion.clock.tempo_alt_bpm,
             tempo_confidence=self._beat_fusion.clock.confidence,
@@ -3387,10 +3395,11 @@ class SyncEngine:
         baseline = scene
         scene = self._accent.render(scene, features, self.profile, self._accent_positions)
         from .accent import AccentScene
+        from .diagnostic_accent import AccentScene as DiagnosticAccentScene
         self.last_channel_accent_lifts = []
         for position in self._accent_positions:
             lift = 0.
-            if isinstance(scene, AccentScene):
+            if isinstance(scene, (AccentScene, DiagnosticAccentScene)):
                 before = scene.scene.color_at(position, t)
                 after = scene.color_at(position, t)
                 lift = max(0., after.r-before.r, after.g-before.g, after.b-before.b)
@@ -3511,13 +3520,15 @@ class SyncEngine:
                 if (self._beat_count-1) % divisor or (event.predicted
                                                         and not self.profile.beat_predicted):
                     continue
-                strength = event.strength if event.predicted else 1.
+                strength = event.strength if event.predicted or not event.on_beat else 1.
                 self._beat_envelopes["beat"].trigger(strength, stamp)
                 if event.bar_position == 0:
                     self._beat_envelopes["downbeat"].trigger(strength, stamp)
             else:
                 self._beat_envelopes["texture"].trigger(event.strength, stamp)
         newest, stamp = self._newest_onset
+        for envelope in self._beat_envelopes.values():
+            envelope.release_s = self.profile.beat_fall_ms/1000/math.log(10)
         beat_values = {band: envelope.value(t) for band, envelope in self._beat_envelopes.items()}
         if self.profile.beat_mode == "Pulse" and newest is not None:
             width = .08 * (60/features.tempo_bpm if features.tempo_bpm else .5)

@@ -274,7 +274,7 @@ class EffectCreateBody(BaseModel):
     beat_intensity: Literal["Subtle", "Moderate", "High", "Intense"] = "Moderate"
     beat_mode: Literal["Phase", "Flash", "Alternate", "Pulse"] = "Phase"
     beat_divisor: int = Field(default=1, ge=1, le=8, strict=True)
-    beat_fall_ms: float = Field(default=250, ge=10, le=5000, allow_inf_nan=False)
+    beat_fall_ms: float | None = Field(default=None, ge=10, le=5000, allow_inf_nan=False)
     beat_predicted: bool = True
     accent_amount: float = Field(default=0.35, ge=0, le=1, allow_inf_nan=False)
     accent_band_weights: dict[str, float] = Field(

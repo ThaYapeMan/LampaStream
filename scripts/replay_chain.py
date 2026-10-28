@@ -66,6 +66,8 @@ FEATURE_EXTRA = ["availability_sample", "publication_time_s", "carried_historica
     "timing_generation"] + [f"{key}_{band}" for band in BANDS
     for key in ("event_id", "candidate_sample", "candidate_strength", "reported_sample",
                 "reported_strength", "decision_sample")]
+BEAT_COLUMNS = ["tempo_bpm", "confidence", "locked", "phase", "kind", "on_beat",
+                "agc_gain", "trigger_ratio"]
 RENDER_COLUMNS = ["render_id", "virtual_time_s", "render_argument_s", "route", "sequence",
     "play_time_s", "scheduled_play_time_s", "schedule_target_s", "event_ids", "high_effect",
     "low_effect", "onset_consumed", "onset_envelope", "onset_envelope_bass",
@@ -213,6 +215,7 @@ class Replay:
         self.high = replace(self.high, output_render_hz=args.render_hz)
         self.low = replace(self.low, output_render_hz=args.render_hz)
         self.output = TraceOutput(load_room(args.room), args.route, load_capabilities(args.room))
+        self.high.diagnostic_onsets = self.low.diagnostic_onsets = args.diagnostic_onsets
         self.pipeline = _make_canonical_pipeline(acceptance._OfflineSource(), self.high)
         self.features, self.records, self.availability = [], [], []
         self.energy, self.renders = [], []
@@ -317,6 +320,12 @@ class Replay:
                                 f"reported_strength_{band}": raw,
                                 f"decision_sample_{band}": event.availability_sample})
 
+            if not self.args.diagnostic_onsets:
+                row.update(tempo_bpm=f.tempo_bpm, confidence=f.tempo_confidence,
+                           locked=int(f.tempo_locked), phase=f.beat_phase,
+                           kind=f.onset_events[0].kind if f.onset_events else "",
+                           on_beat=int(f.onset_events[0].on_beat) if f.onset_events else "",
+                           agc_gain=f.agc_gain, trigger_ratio=f.trigger_ratio)
             self.features.append(row)
 
     def release(self):
@@ -609,6 +618,8 @@ class Replay:
         out.mkdir(parents=True, exist_ok=True)
         columns = acceptance.CSV_COLUMNS + [f"bar_{i:02d}"
                     for i in range(30, self.high.bars)] + FEATURE_EXTRA
+        if not self.args.diagnostic_onsets:
+            columns += BEAT_COLUMNS
         write_csv(out / "features.csv", self.features, columns)
         for tick in self.energy:
             delivered = tick["delivered_sequences"]
@@ -626,6 +637,9 @@ class Replay:
         event_rows = []
         for data in self.engine.event_records.values():
             event_row = asdict(data["event"])
+            if self.args.diagnostic_onsets:
+                for key in ("band", "kind", "on_beat", "beat_phase", "bar_position", "predicted"):
+                    event_row.pop(key)
             event_row["bands"] = sorted(event_row["bands"])
             event_row["id"] = ":".join(map(str, event_row["id"]))
             event_row.update({key: value for key, value in data.items() if key != "event"})
@@ -634,8 +648,8 @@ class Replay:
             "id", "epoch", "candidate_sample", "availability_sample", "lookahead_frames",
             "strength", "strength_raw", "confidence", "bands", "dominant_band",
             "play_monotonic", "received_monotonic", "disposition", "event_time",
-            "first_render_over_half_s", "first_send_s",
-            "kind", "on_beat", "beat_phase", "bar_position", "predicted"])
+            "first_render_over_half_s", "first_send_s"] + ([] if self.args.diagnostic_onsets else
+            ["band", "kind", "on_beat", "beat_phase", "bar_position", "predicted"]))
         write_csv(out / "energy.csv", self.energy)
         if write_channel_traces:
             write_csv(out / "renders.csv", self.renders, RENDER_COLUMNS)
@@ -672,6 +686,8 @@ class Replay:
 
 def parser():
     result = argparse.ArgumentParser(description=__doc__)
+    result.add_argument("--diagnostic-onsets", action="store_true",
+                        help="Replay archived flux/onset contracts instead of visible beats")
     result.add_argument("--input", type=Path, required=True)
     result.add_argument("--config", type=Path, required=True)
     result.add_argument("--coupling-id")

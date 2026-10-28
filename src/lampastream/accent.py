@@ -55,11 +55,14 @@ class AccentScene:
         floor, bump, downbeat = INTENSITIES[self.profile.beat_intensity]
         factor = (floor + (bump-floor)*amount
                   + (downbeat-bump)*self.band_values.get("downbeat", 0))
-        # Common encoded RGB scale preserves hue even at the gamut boundary.
+        # Common encoded RGB scale preserves colour angle even at the gamut boundary.
         peak = min(1., _encoded(_linear(v)*factor))
         if self.profile.beat_intensity == "Intense" and amount > 0:
             peak = _encoded(_linear(v)*floor + (1-_linear(v)*floor)*amount**2)
-        return Colour(*colorsys.hsv_to_rgb(h, s, peak))
+        rgb = colorsys.hsv_to_rgb(h, s, peak)
+        if sum(component >= 1 for component in rgb) > 1:
+            rgb = tuple(component*.99 for component in rgb)
+        return Colour(*rgb)
 
 
 
@@ -74,6 +77,13 @@ class AccentLayer:
         self.palette = None
 
     def render(self, scene, features, profile, positions=()):
+        if profile.diagnostic_onsets:
+            from .diagnostic_accent import AccentLayer as DiagnosticAccent
+            if not hasattr(self, "diagnostic"):
+                self.diagnostic = DiagnosticAccent()
+            result = self.diagnostic.render(scene, features, profile, positions)
+            self.last_value = self.diagnostic.last_value
+            return result
         if profile.accent_mode == "off" or profile.effect_type == "none":
             self.last_value = 0.
             return scene

@@ -45,7 +45,8 @@ class BeatFusion:
                           sample, availability, 0, strength,
                           trigger.ratio if trigger else 0.,
                           trigger.confidence if trigger else clock.confidence,
-                          frozenset({band}), band, kind='onset' if texture else 'beat',
+                          frozenset({band}), band, band=trigger.band if trigger else 'bass',
+                          kind='onset' if texture else 'beat',
                           on_beat=False if texture else on_beat,
                           beat_phase=clock.phase(t), bar_position=clock.bar_position(t),
                           predicted=predicted)
@@ -55,7 +56,7 @@ class BeatFusion:
         for start, mag in zip(frame.hop_sample_starts, frame.mag_frames, strict=True):
             # The long STFT labels its leading edge. Its energy rise labels the
             # containing attack hop; availability remains the full window end.
-            t = (start+1440)/48000
+            t = (start+960)/48000
             availability = start+2048
             gate = float(sum(mag**2))**.5/2048 >= self.gate
             beat, texture = self.trigger.process(mag, t, locked=self.clock.locked,

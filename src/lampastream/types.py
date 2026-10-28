@@ -130,6 +130,7 @@ class OnsetEvent:
     dominant_band: str
     play_monotonic: float | None = None
     received_monotonic: float | None = None
+    band: str | None = None
     kind: str = "onset"
     on_beat: bool = False
     beat_phase: float = 0.

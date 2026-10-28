@@ -168,6 +168,9 @@ def _validate_onset_effect(effect):
     import math
     if effect.beat_intensity not in {"Subtle", "Moderate", "High", "Intense"}:
         raise ValueError("Invalid beat_intensity")
+    if effect.beat_fall_ms is None:
+        effect.beat_fall_ms = {"Subtle": 300., "Moderate": 250., "High": 200., "Intense": 150.}[
+            effect.beat_intensity]
     if effect.beat_mode not in {"Phase", "Flash", "Alternate", "Pulse"}:
         raise ValueError("Invalid beat_mode")
     if type(effect.beat_divisor) is not int or not 1 <= effect.beat_divisor <= 8:
@@ -313,6 +316,7 @@ class Profile:
     #   "combined"  — full-spectrum spectral flux on shared STFT (100 Hz)
     #   "multiband" — per-band flux on 100 Hz STFT data; fills onset_bass/mid/treble
     #   "superflux" — Böck & Widmer (2013) SuperFlux on 100 Hz STFT data
+    diagnostic_onsets: bool = False
     beat_sensitivity: float = 50.
     beat_band: str = "bass"
     beat_latency_ms: float = 0.
@@ -353,7 +357,7 @@ class Profile:
     beat_intensity: str = "Moderate"
     beat_mode: str = "Phase"
     beat_divisor: int = 1
-    beat_fall_ms: float = 250.
+    beat_fall_ms: float | None = None
     beat_predicted: bool = True
     accent_mode: str = "lift"
     accent_amount: float = 0.35
@@ -667,7 +671,7 @@ class Effect:
     beat_intensity: str = "Moderate"
     beat_mode: str = "Phase"
     beat_divisor: int = 1
-    beat_fall_ms: float = 250.
+    beat_fall_ms: float | None = None
     beat_predicted: bool = True
     accent_mode: str = "lift"
     accent_amount: float = 0.35

@@ -16,7 +16,8 @@ from lampastream.player_manager import PlayerManager
 def replay_preview(tmp_path, monkeypatch, route, delay=0, advance=.02):
     app_module = importlib.import_module('lampastream.app')
     root = Path(__file__).resolve().parents[1]
-    args = parser().parse_args(['--input', str(root/'tests/fixtures/replay/clicks-120.wav'),
+    args = parser().parse_args(["--diagnostic-onsets",
+            '--input', str(root/'tests/fixtures/replay/clicks-120.wav'),
         '--config', str(root/'tests/fixtures/replay/default-config.json'),
         '--route', route, '--out', str(tmp_path)])
     args.delay_ms = delay
@@ -271,7 +272,7 @@ def test_timestamped_preview_envelope_and_accent_advance_without_another_send():
     scene = UniformScene(Colour(.1, .1, .1))
     features = AudioFeatures([], 0, 0, 0, 0, onset_envelope=1.)
     metadata = PreviewScene(scene, features, 9.98, .35, [.2], .02, scene,
-                            (Position(0, 0, 0),), Profile())
+                            (Position(0, 0, 0),), Profile(diagnostic_onsets=True))
     preview.sent(metadata, 9.98, [Colour(.3, .3, .3)], True)
     assert preview.snapshot(9.999)['onset_envelope'] == 0
     assert not preview.snapshot(9.999)['colours']
@@ -410,7 +411,8 @@ def test_accent_on_lamp_bytes_match_8f5385b(tmp_path, case):
     import hashlib
 
     fixtures = Path(__file__).parent/'fixtures/replay'
-    args = parser().parse_args(['--input', str(fixtures/'clicks-120.wav'),
+    args = parser().parse_args(["--diagnostic-onsets",
+            '--input', str(fixtures/'clicks-120.wav'),
         '--config', str(fixtures/'default-config.json'), '--route', case['route'],
         '--delay-ms', str(case['delay_ms']), '--out', str(tmp_path)])
     replay = Replay(args)

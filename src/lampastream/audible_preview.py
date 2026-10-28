@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import heapq
+import math
 from dataclasses import dataclass, replace
 
 from .accent import AccentLayer
@@ -183,7 +184,32 @@ class AudiblePreview:
                            onset_count_since_render=0,
                            **{'onset_envelope'+('' if band == 'all' else '_'+band): values[band]
                               for band in BANDS})
-            self.accent.render(self.metadata.baseline, view, self.metadata.profile)
+            profile = self.metadata.profile
+            if not profile.diagnostic_onsets:
+                peaks = dict.fromkeys(('beat', 'downbeat', 'texture'), (0., 0.))
+                divisor = max(profile.beat_divisor, 2 if profile.beat_mode == 'Alternate' else 1)
+                count = 0
+                for event, stamp in sorted(self.events.values(), key=lambda item: item[1]):
+                    if event.kind == 'beat':
+                        count += 1
+                        if (count-1) % divisor or (event.predicted and not profile.beat_predicted):
+                            continue
+                        strength = event.strength if event.predicted or not event.on_beat else 1.
+                        if stamp > now:
+                            continue
+                        peaks['beat'] = stamp, strength
+                        if event.bar_position == 0:
+                            peaks['downbeat'] = stamp, strength
+                    elif stamp <= now:
+                        peaks['texture'] = stamp, event.strength
+                def value(name):
+                    stamp, strength = peaks[name]
+                    age = max(0., now-stamp-self.envelopes['all'].hold_s)
+                    return strength*math.exp(-age/(profile.beat_fall_ms/1000/math.log(10)))
+                view = replace(view, beat_envelope=value('beat'),
+                               downbeat_envelope=value('downbeat'),
+                               texture_envelope=value('texture'))
+            self.accent.render(self.metadata.baseline, view, profile)
             accent_value = self.accent.last_value
         recent = [(event, stamp) for event, stamp in self.events.values()
                   if now-1 < stamp <= now]

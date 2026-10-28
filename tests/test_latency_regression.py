@@ -61,7 +61,8 @@ def test_idle_colour_bytes_match_phase_two(replay_cache, tmp_path, fixture, rout
     config['configuration']['analysers'][0]['onset_delta_abs'] = 1e9
     config_path = tmp_path/'no-onsets.json'
     config_path.write_text(json.dumps(config))
-    args = parser().parse_args(['--input', str(root/f'tests/fixtures/replay/{fixture}.wav'),
+    args = parser().parse_args(["--diagnostic-onsets",
+            '--input', str(root/f'tests/fixtures/replay/{fixture}.wav'),
         '--config', str(config_path), '--route', route, '--out', str(tmp_path/'trace')])
     out = replay_cache.disk.run(args)
     counters = json.loads((out/'counters.json').read_text())

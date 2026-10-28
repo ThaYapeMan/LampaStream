@@ -35,6 +35,7 @@ class EnergyTrigger:
         self.floor = .08 * 2 ** ((50-sensitivity)/25)
         self.dead_time = dead_time
         self.fast = self.slow = self.mean = self.previous = 0.
+        self.previous_energy = 0.
         self.last_time = None
         self.last_fire = -math.inf
         self.gain = 1.
@@ -44,15 +45,17 @@ class EnergyTrigger:
         dt = .01 if self.last_time is None else max(0., t-self.last_time)
         self.last_time = t
         energy = max(0., float(energy))
-        self.fast += -math.expm1(-dt/.1) * (energy-self.fast)
+        self.fast += -math.expm1(-dt/(.05 if energy > self.fast else .1)) * (energy-self.fast)
         self.slow += -math.expm1(-dt/5.) * (self.fast-self.slow)
         self.gain = 1/max(self.slow, 1e-4)
-        value = math.log10(1 + energy*self.gain)
+        value = math.log10(1 + self.fast*self.gain)
         self.ratio = value/max(self.mean, 1e-6)
         refractory = self.dead_time if dead_time is None else dead_time
         fire = (gate and energy >= 1e-6 and value >= self.floor
                 and self.ratio >= self.threshold and value > self.previous
+                and energy > self.previous_energy
                 and t-self.last_fire >= refractory-1e-9)
+        self.previous_energy = energy
         self.previous = value
         self.mean += (-math.expm1(-dt/.3)) * (value-self.mean)
         if not fire:
@@ -91,8 +94,12 @@ class BassBeatTrigger:
         self.texture = EnergyTrigger(25, .06)
         self.last_bass = None
         self.open_since = None
+        self.first_time = None
 
     def process(self, magnitudes, t, *, locked=False, period=None, gate=True):
+        if self.first_time is None:
+            self.first_time = t
+        ready = t-self.first_time >= .35
         power = np.asarray(magnitudes, dtype=float)**2/self.scale
         low = float(np.sum(power[self.mask]))
         broad = float(np.sum(power*self.weights))
@@ -102,8 +109,8 @@ class BassBeatTrigger:
         elif self.open_since is None:
             self.open_since = t
         dead = .6*period if locked and period is not None else .1
-        bass = self.primary.process(low, t, self.band, gate=gate, dead_time=dead)
-        energy = self.energy.process(broad, t, "energy", gate=gate, dead_time=dead)
+        bass = self.primary.process(low, t, self.band, gate=gate and ready, dead_time=dead)
+        energy = self.energy.process(broad, t, "energy", gate=gate and ready, dead_time=dead)
         tick = self.texture.process(texture, t, "texture", gate=gate)
         if bass is not None:
             self.last_bass = t

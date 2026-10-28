@@ -30,6 +30,7 @@ def rows(out, name):
 
 def run(out, *options, config=None, audio=None):
     result = subprocess.run([sys.executable, str(ROOT / "scripts/replay_chain.py"),
+        "--diagnostic-onsets",
         "--input", str(audio or FIXTURES / "clicks-120.wav"),
         "--config", str(config or FIXTURES / "default-config.json"),
         "--out", str(out), *options], capture_output=True, text=True, timeout=90)
@@ -38,7 +39,8 @@ def run(out, *options, config=None, audio=None):
 
 
 def hashes(out):
-    return {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in out.iterdir()}
+    return {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in out.iterdir()
+            if p.is_file()}
 
 
 @pytest.fixture(scope="module")
@@ -177,7 +179,8 @@ def test_observers_do_not_change_acceptance_dsp_and_band_ids(tmp_path, method):
 
     config = tmp_path / "config.json"
     config.write_text(json.dumps({"analyser": {"onset_method": method}}))
-    args = parser().parse_args(["--input", str(FIXTURES / "clicks-120.wav"),
+    args = parser().parse_args(["--diagnostic-onsets",
+            "--input", str(FIXTURES / "clicks-120.wav"),
         "--config", str(config), "--duration", "1", "--out", str(tmp_path / "trace")])
     replay = Replay(args)
     pcm, rate, _ = decode(args.input, duration=1)

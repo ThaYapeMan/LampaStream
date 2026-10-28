@@ -57,6 +57,22 @@ def benchmark(fixture, route, hz):
         replay.pipeline.stop()
 
 
+def benchmark_clock():
+    from lampastream.tempo_clock import TempoClock
+
+    clock = TempoClock()
+    started = time.process_time()
+    for index in range(10000):
+        clock.update(index*.1)
+    update_us = (time.process_time()-started)*1e6/10000
+    clock = TempoClock()
+    started = time.process_time()
+    for index in range(10000):
+        clock.trigger(index*.5)
+    trigger_us = (time.process_time()-started)*1e6/10000
+    return f'Clock update: {update_us:.3f} µs; trigger/hypothesis update: {trigger_us:.3f} µs.'
+
+
 def main():
     command = argparse.ArgumentParser(description=__doc__)
     command.add_argument('--cpu', type=int)
@@ -74,6 +90,8 @@ def main():
                 row = benchmark(fixture, route, hz)
                 rows.append(row)
                 print(row, flush=True)
+    rows += ["", benchmark_clock()]
+    print(rows[-1], flush=True)
     if args.out:
         args.out.write_text('\n'.join(rows)+'\n')
     return 0

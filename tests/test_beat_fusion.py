@@ -59,3 +59,62 @@ def test_new_configuration_defaults_roundtrip():
             effect.beat_fall_ms, effect.beat_predicted) == ('Moderate', 'Phase', 1, 250, True)
     assert Analyser.from_dict(analyser.to_dict()) == analyser
     assert Effect.from_dict(effect.to_dict()) == effect
+
+
+@pytest.mark.parametrize('name,bpm,lock', [
+    ('house', 120, 3.02), ('techno', 128, 3.34), ('breakbeat', 174, 3.97),
+    ('disco', 100, 3.52), ('deep-house', 122, 3.47)])
+def test_measured_tempo_lock_and_on_beat_ratio(name, bpm, lock):
+    events, history = analyse(name)
+    first_lock = next(row for row in history if row[2])
+    assert first_lock[0] == pytest.approx(lock, abs=1e-9)
+    assert first_lock[0]-.5 <= 4
+    assert history[-1][1] == pytest.approx(bpm, abs=.25)
+    beats = [e for e in events if e.kind == 'beat' and not e.predicted]
+    assert all(e.on_beat for e in beats)
+
+
+def test_breakdown_grid_has_no_false_bass_and_keeps_phase():
+    events, _ = analyse('breakdown')
+    missing = [e for e in events if 3.98 <= e.candidate_sample/48000 < 7.98 and e.kind == 'beat']
+    assert len(missing) == 8
+    assert all(e.predicted for e in missing)
+    assert all(abs(e.candidate_sample/48000-round(e.candidate_sample/24000)*.5) <= .02
+               for e in missing)
+    assert missing[-1].strength < missing[0].strength
+
+
+def test_pink_noise_and_sweep_exact_false_trigger_counts():
+    from replay_chain import Replay, decode, parser
+
+    for name, count in [('pink-noise', 2), ('sweep', 6)]:
+        args = parser().parse_args(['--input', str(FIXTURES.parent/f'{name}.wav'),
+            '--config', str(FIXTURES.parent/'default-config.json'), '--out', '/tmp/unused-beat'])
+        replay = Replay(args)
+        try:
+            pcm, rate, _ = decode(args.input)
+            replay.analyse(pcm, rate)
+            beats = [e for record in replay.records for e in record.features.onset_events
+                     if e.kind == 'beat' and not e.predicted]
+            assert len(beats) == count
+            assert len(beats)/(replay.sample_count/48000) <= .5
+        finally:
+            replay.pipeline.stop()
+
+
+def test_tempo_change_relocks_and_missing_breakbeat_grid_is_accurate():
+    events, history = analyse('tempo-change')
+    relock = next(t for t, bpm, locked, _ in history if t >= 6 and locked and abs(bpm-128) < 1)
+    assert relock == pytest.approx(9.77, abs=1e-9)
+    events, _ = analyse('breakbeat')
+    grid = json.loads((FIXTURES/'breakbeat.json').read_text())['instruments']['beats']
+    errors = [min(abs(e.candidate_sample-p) for p in grid) for e in events if e.predicted]
+    assert max(errors) == 286
+    assert max(errors)/48 <= 20
+
+
+@pytest.mark.parametrize('intensity,fall', [('Subtle', 300), ('Moderate', 250),
+                                          ('High', 200), ('Intense', 150)])
+def test_preset_default_fall(intensity, fall):
+    assert Effect(beat_intensity=intensity).beat_fall_ms == fall
+    assert Effect(beat_intensity=intensity, beat_fall_ms=175).beat_fall_ms == 175

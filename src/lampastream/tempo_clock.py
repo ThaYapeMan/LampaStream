@@ -36,7 +36,7 @@ class TempoClock:
         self.anchor = None
         self.beat_index = 0
         self.downbeat_index = 0
-        self.octave_rule = 'prefer 70–180 BPM unless alternative support is ≥1.5×'
+        self.octave_rule = 'prefer 70–180; faster in-range octave below 90 if support ≥0.3×'
 
     @property
     def period(self):
@@ -97,6 +97,11 @@ class TempoClock:
                                or abs(h.bpm/2-winner.bpm) <= 3)), None)
         if not 70 <= winner.bpm <= 180 and preferred and winner.score < 1.5*preferred.score:
             winner = preferred
+        # Resolve the remaining in-range octave ambiguity toward the faster
+        # dance grid when bass only marks alternate beats (e.g. 174 BPM).
+        double = next((h for h in ranked if abs(h.bpm-2*winner.bpm) <= 3), None)
+        if winner.bpm < 90 and double and double.bpm <= 180 and double.score >= .3*winner.score:
+            winner = double
         alternative = next((h for h in ranked if h is not winner
                             and (abs(h.bpm*2-winner.bpm) <= 3
                                  or abs(h.bpm/2-winner.bpm) <= 3)), None)
@@ -112,7 +117,7 @@ class TempoClock:
         self.estimates.append(winner.bpm)
         self.tempo_bpm = median(self.estimates)
         stability = max(0., 1-abs(winner.bpm-self.tempo_bpm)/3)
-        self.confidence = min(1., winner.score/1.5)*stability
+        self.confidence = min(1., winner.score/.9)*stability
         if old_bpm is not None and abs(old_bpm-self.tempo_bpm) > 3:
             self.locked = False
             self.stable_since = None
