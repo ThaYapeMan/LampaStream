@@ -62,8 +62,8 @@ def test_new_configuration_defaults_roundtrip():
 
 
 @pytest.mark.parametrize('name,bpm,lock', [
-    ('house', 120, 3.02), ('techno', 128, 3.34), ('breakbeat', 174, 3.97),
-    ('disco', 100, 3.52), ('deep-house', 122, 3.47)])
+    ('house', 120, 3.02), ('techno', 128, 3.33), ('breakbeat', 174, 3.96),
+    ('disco', 100, 3.51), ('deep-house', 122, 3.47)])
 def test_measured_tempo_lock_and_on_beat_ratio(name, bpm, lock):
     events, history = analyse(name)
     first_lock = next(row for row in history if row[2])
@@ -109,7 +109,7 @@ def test_tempo_change_relocks_and_missing_breakbeat_grid_is_accurate():
     events, _ = analyse('breakbeat')
     grid = json.loads((FIXTURES/'breakbeat.json').read_text())['instruments']['beats']
     errors = [min(abs(e.candidate_sample-p) for p in grid) for e in events if e.predicted]
-    assert max(errors) == 286
+    assert max(errors) == 389
     assert max(errors)/48 <= 20
 
 

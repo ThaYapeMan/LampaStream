@@ -3647,7 +3647,8 @@ class SyncEngine:
                 deadline = min(deadline, max(due, last_send+minimum_interval))
             if self._delay_buffer and previous_delay_frames == 0:
                 deadline = min(deadline, last_send+minimum_interval)
-            await sleep(max(0.000001, min(.005, deadline-clock())))
+            poll = .005 if self.profile.diagnostic_onsets else .001
+            await sleep(max(0.000001, min(poll, deadline-clock())))
 
         while True:
             extra_sent_this_drain = 0
@@ -3655,7 +3656,8 @@ class SyncEngine:
                 for event in self._analyser.drain_events():
                     if event.id in self.event_records:
                         continue
-                    extra_requested = True
+                    extra_requested = (extra_requested or self.profile.diagnostic_onsets
+                                       or event.kind == "beat")
                     self._event_source_times[event.id] = event.received_monotonic
                     event = replace(event, received_monotonic=clock())
                     self._pending_onset_events.append(event)
@@ -3834,6 +3836,20 @@ class SyncEngine:
                     latest = self._analyser._latest_pub
                     self._event_sample_reference = latest.sample_end if latest else 0
                     features = self._event_view(features, t)
+                # A known grid reserves the short detection window for the kick.
+                # Sending a quiet cadence sample here would make the beat wait
+                # another output minimum interval. Keep the previously shown
+                # scene instead; the event send still obeys the output ceiling.
+                beat_history = self._beat_envelopes["beat"]._triggers
+                if (cadence and not self.profile.diagnostic_onsets
+                        and self.profile.accent_mode != "off" and features.tempo_locked
+                        and features.tempo_bpm and beat_history
+                        and self._probe.current_delay_ms() == 0
+                        and not any(e.kind == "beat" for e in features.onset_events)):
+                    phase_time = (t-beat_history[-1][0]) % (60/features.tempo_bpm)
+                    if .005 <= phase_time <= .04:
+                        await wait_for_work()
+                        continue
                 scene: Scene = self._render_scene(features, t)
                 if self._onset_lift_enabled():
                     scene = GuardedScene(scene, precision_guard,

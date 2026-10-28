@@ -68,3 +68,14 @@ def test_timestamped_pulse_has_symmetric_attack_and_fall(tmp_path):
         assert ratios == pytest.approx([1.05, 1.05], abs=1e-8)
     finally:
         replay.pipeline.stop()
+
+
+@pytest.mark.parametrize('name,latency', [('house', 30), ('techno', 26.9166666667),
+    ('breakbeat', 23.7916666667), ('disco', 20), ('deep-house', 27.3020833333)])
+def test_every_kick_has_an_attributed_lifted_send_within_latency_budget(tmp_path, name, latency):
+    from measure_beats import measure
+
+    result = measure(FIXTURES/f'replay/beats/{name}.wav', tmp_path/name)
+    assert result['kick_hits'] == result['kicks'] == result['attributed_kicks']
+    assert result['latency_median_ms'] == pytest.approx(latency, abs=1e-6)
+    assert result['latency_median_ms'] <= 30+1e-7

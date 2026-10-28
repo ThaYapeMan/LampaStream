@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import statistics
 import time
 from pathlib import Path
 
@@ -48,18 +49,21 @@ def measure(path, out, *, route='normal', room='two-channel.json'):
             pre = max(_linear(row[f'pre_{c}']) for c in 'rgb')
             post = max(_linear(row[f'post_{c}']) for c in 'rgb')
             duty.setdefault(channel, []).append(post > .7*pre+1e-9)
-        latency = counters['latency'][route]['first_send_ms']
+        beat_ids = {':'.join(map(str, e.id)) for e in matched}
+        beat_latencies = [r['first_send_ms'] for r in replay.latency_rows()
+                          if r['id'] in beat_ids and r['first_send_ms'] is not None]
         return dict(fixture=path.stem, duration_s=seconds,
             before_events_s=len(diagnostics)/seconds, beat_events_s=len(beats)/seconds,
             texture_events_s=len(textures)/seconds, confirmed_beats=len(confirmed),
             predicted_beats=len(beats)-len(confirmed), kick_hits=hits, kicks=len(kicks),
             kick_recall=hits/len(kicks) if kicks else None,
+            attributed_kicks=len(beat_latencies),
             false_triggers=len(confirmed)-len(matched),
             bpm=latest.tempo_bpm if latest else None,
             alt_bpm=latest.tempo_alt_bpm if latest else None,
             lock_s=stable[0][0] if stable else None, on_beat_ratio=ratio,
             duty_cycle={key: sum(values)/len(values) for key, values in duty.items()},
-            latency_median_ms=latency['median'] if latency else None,
+            latency_median_ms=statistics.median(beat_latencies) if beat_latencies else None,
             cpu_ms_hop=cpu/seconds*10,
             event_loss=counters['events']['all']['lost'])
     finally:

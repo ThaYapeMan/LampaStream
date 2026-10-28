@@ -45,11 +45,19 @@ class EnergyTrigger:
         dt = .01 if self.last_time is None else max(0., t-self.last_time)
         self.last_time = t
         energy = max(0., float(energy))
+        # Preserve a sharp kick's causal attack instead of waiting for the
+        # follower: an eightfold raw rise must still pass the same ratio/floor.
+        abrupt = energy >= 8*max(self.fast, 1e-9)
         self.fast += -math.expm1(-dt/(.05 if energy > self.fast else .1)) * (energy-self.fast)
         self.slow += -math.expm1(-dt/5.) * (self.fast-self.slow)
         self.gain = 1/max(self.slow, 1e-4)
         value = math.log10(1 + self.fast*self.gain)
         self.ratio = value/max(self.mean, 1e-6)
+        raw_value = math.log10(1+energy*self.gain)
+        raw_ratio = raw_value/max(self.mean, 1e-6)
+        if abrupt and raw_ratio >= self.threshold:
+            self.ratio = raw_ratio
+            value = raw_value
         refractory = self.dead_time if dead_time is None else dead_time
         fire = (gate and energy >= 1e-6 and value >= self.floor
                 and self.ratio >= self.threshold and value > self.previous

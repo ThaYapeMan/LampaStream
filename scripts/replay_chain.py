@@ -400,15 +400,24 @@ class Replay:
             self.tick_reads.append(sequence)
             scene = render(features, t)
             active_ids = []
-            if features.onset_envelope > .5:
-                for event_id, data in engine.event_records.items():
-                    stamp = data.get("event_time")
-                    if (stamp is not None and stamp <= t and
-                            t-stamp <= max(engine.profile.onset_hold_s,
-                                self.output.capabilities.min_visible_hold_s)
-                            + engine.profile.onset_release_s * math.log(2)):
-                        active_ids.append(":".join(map(str, event_id)))
-                        data.setdefault("first_render_over_half_s", self.now)
+            for event_id, data in engine.event_records.items():
+                stamp = data.get("event_time")
+                event = data["event"]
+                if self.args.diagnostic_onsets:
+                    visible = features.onset_envelope > .5
+                    release = engine.profile.onset_release_s
+                else:
+                    peak = (event.strength if event.kind == "onset" or event.predicted
+                            or not event.on_beat else 1.)
+                    envelope = (features.beat_envelope if event.kind == "beat"
+                                else features.texture_envelope)
+                    visible = peak > 0 and envelope >= peak*.5
+                    release = engine.profile.beat_fall_ms/1000/math.log(10)
+                if (visible and stamp is not None and stamp <= t and
+                        t-stamp <= max(engine.profile.onset_hold_s,
+                            self.output.capabilities.min_visible_hold_s) + release*math.log(2)):
+                    active_ids.append(":".join(map(str, event_id)))
+                    data.setdefault("first_render_over_half_s", self.now)
             identity = len(self.render_records) + 1
             self.render_records[identity] = sequence
             self.render_event_ids[identity] = active_ids
