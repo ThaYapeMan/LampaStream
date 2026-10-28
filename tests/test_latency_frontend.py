@@ -89,7 +89,8 @@ def test_slow_render_cannot_send_two_extras_in_one_drain(monkeypatch):
             raise asyncio.CancelledError
         clock[0] += dt
         event = OnsetEvent(('epoch', 'all', 0), 'epoch', 0, 480, 1, 1, 1, 1,
-                           frozenset({'all'}), 'all', received_monotonic=clock[0])
+                           frozenset({'all'}), 'all', received_monotonic=clock[0],
+                           kind='beat', on_beat=True)
         pipeline._event_queue.append(event)
 
     try:

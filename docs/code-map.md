@@ -302,3 +302,26 @@ single-core affinity and reports virtual backlog and separate queue-drop classes
 - `test_preview_onsets.py`, `previewTiming.test.ts`, `previewSocketTiming.test.tsx`
   and `preview-onsets.spec.ts`: server timing, scheduler/clock, hook integration and
   browser outline activation contracts.
+
+## BEAT-01
+
+- `beat_trigger.py`: shared-STFT bass/low or A-weighted fallback; asymmetric fast
+  follower and slow AGC; independent mid/treble ratio triggers.
+- `tempo_clock.py`: interval hypotheses, octave alternatives, median/stability,
+  four-beat phase and estimated downbeat; original FastLED-inspired approach.
+- `beat_fusion.py`: AnalysisProcessor producing timestamped beat/texture events;
+  trigger/grid fusion, predictions and confidence fade.
+- `sync_engine.py`: diagnostic BeatDetector plus fusion processor; event queues,
+  independent beat/texture envelopes, divisors and scheduled pulse windows.
+- `accent.py`: provider-neutral linear-light floor/bump/fall colour field.
+  `diagnostic_accent.py` preserves archived additive arithmetic for explicit
+  offline diagnostic replay only.
+- `audible_preview.py`: audible-clock projection of the same events and separate
+  beat/texture rates, grid and trigger diagnostics.
+- `scripts/measure_beats.py`, `benchmark_replay.py`: phase-five traces, ground-truth
+  metrics, render duty and DSP/clock CPU measurements.
+- `tests/test_beat_trigger.py`, `test_tempo_clock.py`, `test_beat_fusion.py`,
+  `test_beat_shaping.py`, `test_beat_output.py`: isolated and full-chain acceptance.
+- `web/src/pages/{Analysers,Effects,NowPlaying}.tsx`,
+  `components/LightTiming.tsx`: the main beat controls, Advanced disclosures and
+  live tempo/trigger readouts; compiled assets remain in `lampastream/webui`.

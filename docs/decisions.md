@@ -279,3 +279,78 @@ Affinity: [7]
 - 2026-10-27 — Keep the 50 ms continuous producer; push events and answer clock pings in independent socket tasks. Use midpoint RTT and a seven-sample median for server-minus-browser clock offset. Unknown clock falls back to immediate activation and an explicit unsynchronised indicator.
 - 2026-10-27 — Browser requestAnimationFrame owns event hold/release and colour precedence during hold. Periodic frames cannot retrigger the event path. Reset/reconnect discards queued event state; no runtime or frontend dependencies added.
 - 2026-10-27 — Report controlled software activation residuals separately from socket delivery lead and earlier poll latency; no physical lamp/audio or live-network measurements are inferred. No deployment or owner-device contact.
+
+## BEAT-01 — trigger, grid and console shaping
+
+Evidence is the unchanged [competitor code analysis](research/competitor-beat-trigger-code-analysis.md)
+and [industry research](research/industry-standard-sound-to-light-research.md), committed in Part 0.
+The following defaults are original implementations of the documented approaches;
+no GPL/LGPL detector code or learned model was introduced.
+
+| Default | Evidence and measurement |
+|---|---|
+| Bass 50–100 Hz; optional Low 100–200 / A-weighted Energy | Titan 50 Hz, MagicQ 63 Hz, ETC 15–100 Hz and MA energy. Every labelled kick in all five musical fixtures is recalled; pad has zero events. |
+| AGC always on; slow reference 5 s, reference floor 1e-4 in normalised spectral power | WLED 3–15 s reference / ETC 5 s; silence cannot increase gain past 10000. |
+| Fast follower attack **50 ms**, release 100 ms | ETC's 100 ms is the starting point. Deep-house attack coordinates moved one hop earlier with 50 ms attack. The final asymmetric follower, abrupt-rise path and grid reservation give musical-fixture median sends ≤30 ms, pink noise 2/5 s and sweep 6/20 s. This is a measured deviation from the proposed symmetric follower. |
+| Log10(1 + energy × AGC gain), mean 300 ms, ratio 1.5 | LedFx 200 ms / 1.5, MA 1.6, FastLED 1.3. Smoothing before the ratio reduced the initial instantaneous-energy pink count from 17/5 s to 2/5 s while retaining all kicks. |
+| Sensitivity 0–100, default 50 | Fixture convention. R = 2.5 − 0.02 × sensitivity; compressed floor = 0.08 × 2^((50−sensitivity)/25); raw power floor 1e-6. The defaults preserve the quiet −18 dBFS fixture's complete kick recall. |
+| 350 ms initial reference warmup | Measured disco startup false triggers at 30 and 160 ms disappear. Statistics still run during warmup. Musical fixture grids start at 500 ms. Beats during the initial 350 ms are deliberately not asserted as detected. |
+| Rising raw energy **and** rising follower; post-hit mean 0.6/0.4 | MA's fast post-hit adaptation. Requiring raw rise prevents a smoothed sustained step from producing a second hit. |
+| Unlocked dead time 100 ms; locked 0.6 × period | LedFx/WLED 100 ms; MagicQ divisor and FastLED rate cap. Techno/breakbeat hats never enter the bass beat stream. |
+| Energy fallback after 4 s with open gate and no bass trigger | MA broadband fallback; the same independent AGC/ratio rule is maintained before switching. Events retain `band="energy"`, with bass visual routing. |
+| Independent mid (200–2000) and treble (>2000 Hz) texture ratios, 60 ms dead time | Secondary lighting-onset paths from the research. Their threshold is 2.0 (Sensitivity 25); texture bump is capped at 0.1 of the beat envelope. Separate event identities preserve coincident bands. |
+| Pair intervals 250–2000 ms; 50–220 BPM; merge within 3 BPM; support decay 1 s; median 21 | FastLED TempoAnalyzer (MIT) approach, implemented originally. All five musical fixture BPM estimates are within 1 BPM before 4 s from the first kick. |
+| Prefer 70–180 BPM unless the outside alternative is ≥1.5× stronger | Explicit octave guard. Inside that range, bass marking alternate beats below 90 BPM selects its double if double support is ≥0.3×. Without this extra in-range rule the 174 BPM fixture selected 86.96 BPM; it now reports about 173.91, retaining about 87 as the alternative. This is a measured octave-ambiguity decision, not evidence that arbitrary half-time music is identifiable from kicks alone. |
+| Confidence support normaliser 0.9; threshold 0.5 stable for 2 s | FastLED support/stability idea. The normaliser brings the alternating-kick fixture inside the four-second lock requirement. A change resets the median after three consistent recent intervals; 120→128 relocks at source time 9.77 s (3.77 s after the change). |
+| Four-beat quantum; strongest of the latest four triggers estimates downbeat | Link quantum / FastLED downbeat idea. This is explicitly an estimate, not a downbeat transcription claim. |
+| Silence confidence τ 2 s, gated silence unlock by 2 s | Onyx Beat Fade Time / FastLED silence envelope. BPM is retained while confidence decays; missing-grid predictions additionally fade in strength. |
+| Beat window ±40 ms, predicted enabled, prediction weight confidence ×0.5; off-grid weight 0.25 | MA ±8% at 120 BPM; professional phase-clock operation. Breakdown has eight predicted beats and zero false bass triggers; predicted breakbeat error is at most 389 samples (8.10 ms). |
+| Beat latency 0 ms, configurable ±1000 ms | Onyx / VirtualDJ offset. Applied to predicted grid times. Existing timestamped `onset_lead_s=0.02` remains the separate output advance. |
+| Moderate / Phase / Divisor 1 / Fall 250 ms | Hue intensity wording, Onyx mode names, MagicQ/QLC+ divisor. Divisor accepts 1–8; Alternate imposes a minimum divisor of 2. Actual output tests pin 23 / 12 / 6 flashes for default / Alternate / Divisor 4. |
+| Subtle .75 / ×1.15 / 300 ms; Moderate .60 / ×1.5 (downbeat ×1.7) / 250; High .45 / ×1.8 (×2.2) / 200; Intense .30 / full / 150 | MA brightness modes and the research's proposed intensity mapping. Selecting a preset supplies its fall unless an explicit fall is supplied. The output scales common RGB intensity in linear light and preserves colour angle. |
+| Fall means time to **10%** after the capability hold; exponential τ=Fall/ln(10) | A literal 250 ms τ left a 0.167 lift at the next 120 BPM kick, exceeding floor +0.1. The chosen interpretation passes both room rates. This is a measured deviation, keeping exponential shaping and making the control describe a useful visible fall. |
+| Hold ≥ one output frame and output minimum visible hold; restart | EVENT-01 / perception §1. Pulse expands its ±8% triangle when necessary for the output hold and revises queued timestamped samples symmetrically. Flash cuts its residual tail after hold + Fall. Live audio without lookahead cannot show the pre-beat half of a pulse. |
+| Achromatic/tied-maximum full strikes reserve 1% headroom | Full white necessarily saturates three components. Reserve common headroom when multiple components would reach 1, retaining angle and satisfying the no-multiple-clipping constraint. Chromatic strikes can reach full on one component. |
+
+- The long-window envelope's measured attack coordinate is two hops after window
+  start (rather than the diagnostic flux detector's three); availability remains
+  window end. Normal-route musical-fixture medians are ≤30 ms. No physical-device
+  latency has been inferred.
+- The eight new mono 48 kHz/16-bit/12 s fixtures occupy 9,233,801 bytes including
+  sidecars, below 15 MB. They live in `replay/beats/`. Retained historical REG-01
+  fixtures plus the new set exceed 15 MB together: eight new uncompressed WAVs
+  alone require 9,216,352 bytes, and the immutable legacy audio requires another
+  9,072,440. Shrinking or requantising the old PCM would invalidate the required
+  byte pins. The 15 MB bound is therefore applied to the new BEAT-01 set; this
+  explicit size deviation preserves both evidence sets.
+- Historical regressions explicitly use `replay_chain.py --diagnostic-onsets`.
+  That offline-only profile keeps the old flux producer and archived accent
+  arithmetic; it is never enabled by the main UI or production profile builders.
+  Production publishes `diagnostic_events` alongside visible beat/texture events.
+- CI with current Starlette exposed tests assuming pre-existing application state.
+  The two affected test modules explicitly install their storage/manager with
+  `raising=False`; production startup and test assertions remain intact.
+
+- Final attribution audit: the legacy observer's absolute `onset_envelope >0.5`
+  filter omitted weaker trigger identities even though the console model opens
+  a full confirmed-beat bump. Replay now tags half of each event's **own visual
+  peak**, and acceptance requires a carrying send for every labelled kick.
+  Earlier sampled-ID latency probes are superseded by this all-kick measurement.
+- An abrupt raw band rise of ≥8× the prior fast follower may use its raw
+  compressed ratio/floor immediately; all gates, rising tests, R=1.5, dead time
+  and post-hit adaptation still apply. This prevents an obvious kick waiting for
+  the follower. Pink noise remains exactly 2/5 s; all kicks are retained.
+- Normal-route texture uses the ordinary render cadence, while beats request
+  urgent sends. The visible-beat path polls at ≤1 ms (archived diagnostics retain
+  5 ms). Once locked, a zero-delay route reserves phase +5…40 ms for the kick by
+  retaining the shown quiet frame instead of sending a new quiet cadence frame.
+  This preserves the output minimum interval rather than raising its send ceiling.
+  With complete send attribution, deep-house/techno medians decreased from about
+  36.13/38.75 ms to 27.302/26.917 ms; the other musical medians are ≤30 ms.
+- Prediction phase errors in acceptance refer to candidate/event time. The causal
+  normal route still needs the fusion confirmation window for a missing trigger;
+  timestamped ingress has the head start needed to schedule those events before
+  their audible moment. Software traces do not establish physical lamp timing.
+- The LAT-01 slow-render burst probe now injects `kind="beat"`: a default
+  `kind="onset"` is a secondary texture and correctly does not request an urgent
+  send. Its original assertions (one extra send, at most one per drain) remain.

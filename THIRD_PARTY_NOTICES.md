@@ -22,3 +22,10 @@ with their own distribution licence texts. OKLab's published mathematics are
 credited to Björn Ottosson: https://bottosson.github.io/posts/oklab/ (public
 domain/MIT). No LedFx or aubio source or package is included or required by this
 feature.
+
+The BEAT-01 tempo clock is an original implementation of the pairwise-interval,
+BPM-hypothesis clustering and median-estimate approach described by FastLED's
+TempoAnalyzer. Attribution: FastLED contributors, MIT-licensed project,
+https://github.com/FastLED/FastLED. No FastLED source file, GPL/LGPL detector,
+neural model or additional runtime package is included by this feature. Lighting
+trigger and shaping evidence is recorded in the two BEAT-01 research documents.

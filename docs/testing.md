@@ -760,3 +760,57 @@ pins plus output-agnostic grep **21 passed**; Ruff clean. Vitest **458 passed**
 and Playwright **74 passed**. Known-offset fake animation residual is 8 ms;
 controlled Playwright residuals are 6–7 ms, never early. Node 22.22.2 fresh build
 matches the committed bundle. Existing untracked design input is preserved.
+
+## BEAT-01 fixtures, clocks and contrast
+
+Generate the eight new fixtures independently of the historical replay set:
+
+```sh
+.venv/bin/python scripts/make_fixtures.py --beats --out tests/fixtures/replay/beats
+OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 .venv/bin/python scripts/measure_beats.py
+OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 .venv/bin/python scripts/benchmark_replay.py --cpu 5 --out /tmp/beat-cpu.md
+```
+
+Choose an allowed affinity CPU on another host. Clock microbenchmarks report
+10000 periodic updates and 10000 trigger/hypothesis updates separately. CPU
+numbers are host measurements, not portable exact timing assertions.
+
+Each BEAT sidecar has `fixture_version: 2`, sample rate, bits, frames, `bpm`,
+`first_beat_sample`, `quantum: 4`, and `instruments` containing canonical sample
+arrays `kick`, `snare`, `hat`, `beats`, `downbeats`. `event_samples` retains the
+kick-array compatibility view. `tempo_changes` gives sample/BPM changes. Pad has
+empty beat/instrument truth. The breakdown retains the complete grid but omits
+kicks in [4,8). The 12 s techno riser includes the available portion of bars 5–8.
+
+New `features.csv` columns are `tempo_bpm`, `confidence`, `locked`, `phase`,
+`kind`, `on_beat`, `agc_gain`, `trigger_ratio`. `events.csv` additionally has
+`band`, `kind`, `on_beat`, `beat_phase`, `bar_position`, `predicted`, retaining all
+EVENT-01 timing/identity fields. Diagnostic replay explicitly selects
+`--diagnostic-onsets` and retains the historical CSV schema and byte pins.
+
+The new tests use the production STFT, fusion and render/output loop: exact kick
+recall and noise counts; pinned lock coordinates; tempo change; missing-beat
+phase; no pad lifts; two output capability rooms; divisor counts; linear-light
+floor gaps; faint textures; colour preservation; and a symmetric timestamped
+Pulse. `tests/test_onset_*_regression.py`, survival, latency, accent and preview
+contracts continue on the diagnostic stream. The diagnostic path is a deliberate
+offline selection, not a hidden test-environment switch.
+
+Phase-five normal-route traces cover all eight fixtures. Additional house traces
+cover timestamped routing and both declared room capabilities. Duty is the
+fraction of sampled per-channel renders above 0.70 × that frame's own base
+linear-light intensity (Moderate floor 0.60 +0.10). Both reference channels have
+the same duty in these symmetric synthetic rooms. No physical response or
+private-music quality claim is made by this metric.
+
+Determinism compares all eight trace files from two independent processes by
+SHA-256. Exclude `measurements.json` from byte equality: it intentionally contains
+measured process CPU time. Never copy private input into the repository; the
+private-excerpt section of the external report contains metrics only.
+
+Replay send attribution uses half of each new event's own visual peak; a low
+numerical trigger strength can still open a full confirmed-beat bump. This is
+separate from the fixed absolute half-envelope threshold retained in diagnostic
+replay. The acceptance tests require `attributed_kicks == kicks` before checking
+latency, so omission cannot make a median look faster. Texture runs at normal
+cadence and cannot consume the beat's urgent send reservation.

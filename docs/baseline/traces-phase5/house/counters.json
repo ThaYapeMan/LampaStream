@@ -1,0 +1,112 @@
+{
+  "accent": {
+    "clipped_channels_count": 0,
+    "events_accented": 49,
+    "max_lift_lsb": 40.97045
+  },
+  "event_mapping_fallbacks": 0,
+  "event_queue_drops": 0,
+  "events": {
+    "all": {
+      "expired": 0,
+      "lost": 0,
+      "merged": 13,
+      "received": 49,
+      "triggered": 36
+    },
+    "bass": {
+      "expired": 0,
+      "lost": 0,
+      "merged": 11,
+      "received": 23,
+      "triggered": 12
+    },
+    "mid": {
+      "expired": 0,
+      "lost": 0,
+      "merged": 2,
+      "received": 2,
+      "triggered": 0
+    },
+    "treble": {
+      "expired": 0,
+      "lost": 0,
+      "merged": 0,
+      "received": 24,
+      "triggered": 24
+    }
+  },
+  "extra_sends": {
+    "max_per_drain": 1,
+    "minimum_interval_s": 0.02,
+    "sends": 23,
+    "smallest_gap_s": 0.02
+  },
+  "latency": {
+    "normal": {
+      "availability_ms": {
+        "max": 22.666667,
+        "median": 22.666667,
+        "p95": 22.666667
+      },
+      "candidate_ms": {
+        "max": 0.0,
+        "median": 0.0,
+        "p95": 0.0
+      },
+      "first_render_ms": {
+        "max": 33.333333,
+        "median": 30.0,
+        "p95": 30.833333
+      },
+      "first_send_ms": {
+        "max": 40.0,
+        "median": 30.0,
+        "p95": 32.5
+      },
+      "hop_ms": {
+        "max": 0.0,
+        "median": 0.0,
+        "p95": 0.0
+      },
+      "lookahead_ms": {
+        "max": 0.0,
+        "median": 0.0,
+        "p95": 0.0
+      },
+      "schedule_error_ms": null,
+      "schedule_wait_ms": {
+        "max": 6.666667,
+        "median": 0.0,
+        "p95": 0.0
+      },
+      "tick_wait_ms": {
+        "max": 20.0,
+        "median": 1.666667,
+        "p95": 20.0
+      },
+      "window_acquisition_ms": {
+        "max": 30.0,
+        "median": 30.0,
+        "p95": 30.0
+      }
+    }
+  },
+  "publication_queue_drops": 383,
+  "publications": {
+    "normal": {
+      "consumed": 355,
+      "published": 1383,
+      "render_reads": 365,
+      "repeat_reads": 5,
+      "repeated": 5,
+      "skipped": 1023
+    }
+  },
+  "sends": 365,
+  "sends_per_second": {
+    "max": 33,
+    "p50": 30.0,
+    "p95": 31.8
+  }
+}

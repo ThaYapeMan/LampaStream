@@ -1,0 +1,116 @@
+{
+  "accent": {
+    "clipped_channels_count": 0,
+    "events_accented": 49,
+    "max_lift_lsb": 42.379498
+  },
+  "event_mapping_fallbacks": 0,
+  "event_queue_drops": 0,
+  "events": {
+    "all": {
+      "expired": 0,
+      "lost": 0,
+      "merged": 1,
+      "received": 49,
+      "triggered": 48
+    },
+    "bass": {
+      "expired": 0,
+      "lost": 0,
+      "merged": 0,
+      "received": 23,
+      "triggered": 23
+    },
+    "mid": {
+      "expired": 0,
+      "lost": 0,
+      "merged": 1,
+      "received": 2,
+      "triggered": 1
+    },
+    "treble": {
+      "expired": 0,
+      "lost": 0,
+      "merged": 0,
+      "received": 24,
+      "triggered": 24
+    }
+  },
+  "extra_sends": {
+    "max_per_drain": 0,
+    "minimum_interval_s": 0.02,
+    "sends": 0,
+    "smallest_gap_s": null
+  },
+  "latency": {
+    "timestamped": {
+      "availability_ms": {
+        "max": 22.666667,
+        "median": 22.666667,
+        "p95": 22.666667
+      },
+      "candidate_ms": {
+        "max": 0.0,
+        "median": 0.0,
+        "p95": 0.0
+      },
+      "first_render_ms": {
+        "max": 33.333333,
+        "median": 33.333333,
+        "p95": 33.333333
+      },
+      "first_send_ms": {
+        "max": 1485.0,
+        "median": 1480.0,
+        "p95": 1485.0
+      },
+      "hop_ms": {
+        "max": 0.0,
+        "median": 0.0,
+        "p95": 0.0
+      },
+      "lookahead_ms": {
+        "max": 0.0,
+        "median": 0.0,
+        "p95": 0.0
+      },
+      "schedule_error_ms": {
+        "max": 0.0,
+        "median": 0.0,
+        "p95": 0.0
+      },
+      "schedule_wait_ms": {
+        "max": 1451.666667,
+        "median": 1446.666667,
+        "p95": 1449.666667
+      },
+      "tick_wait_ms": {
+        "max": 20.0,
+        "median": 3.333333,
+        "p95": 20.0
+      },
+      "window_acquisition_ms": {
+        "max": 30.0,
+        "median": 30.0,
+        "p95": 30.0
+      }
+    }
+  },
+  "publication_queue_drops": 0,
+  "publications": {
+    "timestamped": {
+      "consumed": 1158,
+      "published": 1383,
+      "render_reads": 1245,
+      "repeat_reads": 49,
+      "repeated": 38,
+      "skipped": 187
+    }
+  },
+  "sends": 408,
+  "sends_per_second": {
+    "max": 35,
+    "p50": 34.0,
+    "p95": 34.35
+  }
+}

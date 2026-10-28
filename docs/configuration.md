@@ -804,3 +804,42 @@ above baseline for a rising component, and a full-code decay step or hold. No
 output provider, frame rate or colour depth is encoded in AccentLayer.
 Live preview frames include envelopes, events, accent value and capabilities;
 Light timing shows the all/bass/mid/treble envelopes and accent value.
+
+## Beat controls (BEAT-01)
+
+Existing stored entities obtain these defaults when loaded. The analyser's
+Sensitivity is independent of the effect's older colour sensitivity multiplier.
+
+| Entity / API field | Default | Values / meaning |
+|---|---|---|
+| Analyser `beat_sensitivity` | 50 | 0–100; threshold and floor together; AGC is always on |
+| Analyser `beat_band` | `bass` | `bass` 50–100 Hz, `low` 100–200 Hz, `energy` A-weighted broadband |
+| Analyser `beat_latency_ms` | 0 | −1000…1000; predicted beat-grid offset |
+| Effect `beat_intensity` | `Moderate` | `Subtle`, `Moderate`, `High`, `Intense` |
+| Effect `beat_mode` | `Phase` | `Phase`, `Flash`, `Alternate`, `Pulse` |
+| Effect `beat_divisor` | 1 | Integer 1–8; Alternate uses at least 2 |
+| Effect `beat_fall_ms` | 250 | 10…5000 ms; time to 10% after the output hold |
+| Effect `beat_predicted` | true | Allow the locked grid to pulse softly without a trigger |
+
+Preset fall defaults are 300 / 250 / 200 / 150 ms respectively. The UI updates
+Fall when selecting Intensity. API/model creation with no explicit Fall derives
+it from the chosen preset; an explicit Fall overrides that value.
+
+Intensity lowers the effect's own colour to its floor continuously. Only a beat
+or texture event opens a bump. Sustained energy continues to select/blend effects
+but cannot hold open the accent. Pulse is symmetric where timestamped lookahead
+is available; the causal live route can only show its post-beat half. The
+capability hold can widen a short pulse on a slower output.
+
+The analyser's old method/delta/alpha/lookahead/gate/min-IOI controls and the
+accent mode/amount/weights/curve/spatial/hold/release controls are Advanced.
+Their API fields have not been removed. Flux parameters now configure the
+**diagnostic** onset stream; old additive amount/weights/curve/release semantics
+are retained for the explicit offline diagnostic replay. The console beat shape
+uses Intensity and Fall. Palette-step, spatial routing and accent-off remain
+available. `onset_lead_s` continues to advance timestamped output independently
+of Beat latency.
+
+Now Playing shows BPM, lock and confidence. Light timing shows separate beat and
+texture rates, AGC gain, trigger ratio and beat ticks; dashed ticks are predictions.
+Downbeat/bar position is an estimate from recent bass accents.
