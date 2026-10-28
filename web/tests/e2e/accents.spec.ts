@@ -27,10 +27,15 @@ test('Accent mode, amount and advanced controls PATCH and persist; live envelope
   await page.getByLabel('Accent amount', { exact: true }).fill('0.55')
   await page.getByLabel('Accent spatial', { exact: true }).selectOption('by_band')
   await page.getByLabel('Onset hold', { exact: true }).fill('0.1')
+  await page.getByLabel('Accent strength curve', { exact: true }).fill('1.5')
+  await page.getByLabel('Onset lead', { exact: true }).fill('0.05')
+  await page.getByLabel('Onset maximum age', { exact: true }).fill('0.7')
+  await page.getByLabel('Predicted beats', { exact: true }).uncheck()
   const patch = page.waitForRequest(r => r.url().endsWith('/api/effects/low') && r.method() === 'PATCH')
   await page.getByTestId('editor-save').click()
   expect((await patch).postDataJSON()).toMatchObject({ accent_mode: 'palette_step', accent_amount: .55,
-    accent_palette_step: .2, accent_spatial: 'by_band', onset_hold_s: .1 })
+    accent_palette_step: .2, accent_spatial: 'by_band', onset_hold_s: .1,
+    accent_strength_curve: 1.5, onset_lead_s: .05, onset_max_age_s: .7, beat_predicted: false })
   await page.getByRole('button', { name: 'Now Playing', exact: true }).click()
   await page.getByRole('link', { name: 'Accent test', exact: true }).first().click()
   await page.getByText('Advanced', { exact: true }).click()

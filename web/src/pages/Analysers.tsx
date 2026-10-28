@@ -49,6 +49,10 @@ export function percentToHz(pct: number): number {
 // ── Draft state ───────────────────────────────────────────────────────────────
 
 interface Draft {
+  onset_lookahead_frames: string
+  onset_delta_abs: string
+  onset_min_ioi_ms: string
+  onset_silence_gate_dbfs: string
   beat_sensitivity: string
   beat_band: NonNullable<Analyser['beat_band']>
   beat_latency_ms: string
@@ -68,6 +72,10 @@ interface Draft {
 
 function defaultDraft(a?: Analyser | null): Draft {
   return {
+    onset_lookahead_frames: String(a?.onset_lookahead_frames ?? 1),
+    onset_delta_abs: String(a?.onset_delta_abs ?? .02),
+    onset_min_ioi_ms: String(a?.onset_min_ioi_ms ?? 30),
+    onset_silence_gate_dbfs: String(a?.onset_silence_gate_dbfs ?? -60),
     beat_sensitivity: String(a?.beat_sensitivity ?? 50),
     beat_band: a?.beat_band ?? 'bass',
     beat_latency_ms: String(a?.beat_latency_ms ?? 0),
@@ -412,6 +420,10 @@ function AnalyserWorkspace({ analyser, couplings, onSaved, onDeleted, onCloned, 
       const body = {
         name: draft.name.trim() || 'Unnamed',
         spectrum_backend: draft.spectrum_backend,
+        onset_lookahead_frames: Number(draft.onset_lookahead_frames),
+        onset_delta_abs: Number(draft.onset_delta_abs),
+        onset_min_ioi_ms: Number(draft.onset_min_ioi_ms),
+        onset_silence_gate_dbfs: Number(draft.onset_silence_gate_dbfs),
         beat_sensitivity: Number(draft.beat_sensitivity),
         beat_band: draft.beat_band,
         beat_latency_ms: Number(draft.beat_latency_ms),
@@ -678,6 +690,13 @@ function AnalyserWorkspace({ analyser, couplings, onSaved, onDeleted, onCloned, 
               </label>
             </div>
             <details><summary className="cursor-pointer text-sm">Advanced</summary>
+              <div className="grid gap-3 py-3 sm:grid-cols-2">
+                <label className="text-sm">Lookahead (hops)<input aria-label="Onset lookahead" type="number" min="0" max="3" step="1" value={draft.onset_lookahead_frames} onChange={e => setDraft(d => ({ ...d, onset_lookahead_frames: e.target.value }))} /></label>
+                <label className="text-sm">Absolute delta<input aria-label="Onset absolute delta" type="number" min="0.001" step="0.001" value={draft.onset_delta_abs} onChange={e => setDraft(d => ({ ...d, onset_delta_abs: e.target.value }))} /></label>
+                <label className="text-sm">Minimum interval (ms)<input aria-label="Onset minimum interval" type="number" min="0" step="1" value={draft.onset_min_ioi_ms} onChange={e => setDraft(d => ({ ...d, onset_min_ioi_ms: e.target.value }))} /></label>
+                <label className="text-sm">Gate (dBFS)<input aria-label="Onset gate" type="number" max="0" step="1" value={draft.onset_silence_gate_dbfs} onChange={e => setDraft(d => ({ ...d, onset_silence_gate_dbfs: e.target.value }))} /></label>
+              </div>
+
             {/* Detection Method — Combined full-width, Multiband + SuperFlux side-by-side */}
             <div data-testid="section-beat-detection">
               <ConfigSection

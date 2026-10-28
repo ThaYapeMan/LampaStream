@@ -76,6 +76,10 @@ interface FormState {
   exertion_clip: string
   beat_intensity: NonNullable<Effect['beat_intensity']>
   beat_mode: NonNullable<Effect['beat_mode']>
+  beat_predicted: boolean
+  accent_strength_curve: string
+  onset_lead_s: string
+  onset_max_age_s: string
   beat_divisor: string
   beat_fall_ms: string
   accent_mode: NonNullable<Effect['accent_mode']>
@@ -91,6 +95,10 @@ interface FormState {
 
 function defaultForm(cfg?: Effect): FormState {
   return {
+    beat_predicted: cfg?.beat_predicted ?? true,
+    accent_strength_curve: String(cfg?.accent_strength_curve ?? 1),
+    onset_lead_s: String(cfg?.onset_lead_s ?? .02),
+    onset_max_age_s: String(cfg?.onset_max_age_s ?? .5),
     beat_intensity: cfg?.beat_intensity ?? 'Moderate',
     beat_mode: cfg?.beat_mode ?? 'Phase',
     beat_divisor: String(cfg?.beat_divisor ?? 1),
@@ -447,6 +455,10 @@ export function Effects({ activeCouplingId = null, initialEffectId }: { activeCo
         mid_hz:                parseInt(form.mid_hz, 10),
         exertion_clip:         parseFloat(form.exertion_clip),
         onset_flash_intensity: Number(form.onset_flash_intensity),
+        beat_predicted: form.beat_predicted,
+        accent_strength_curve: Number(form.accent_strength_curve),
+        onset_lead_s: Number(form.onset_lead_s),
+        onset_max_age_s: Number(form.onset_max_age_s),
         beat_intensity: form.beat_intensity,
         beat_mode: form.beat_mode,
         beat_divisor: Number(form.beat_divisor),
@@ -778,6 +790,11 @@ export function Effects({ activeCouplingId = null, initialEffectId }: { activeCo
                     <label className="block text-sm">Divisor<Input aria-label="Divisor" type="number" min="1" max="8" value={form.beat_divisor} onChange={e => set('beat_divisor', e.target.value)} /></label>
                     <label className="block text-sm">Fall (ms)<Input aria-label="Fall" type="number" min="10" max="5000" value={form.beat_fall_ms} onChange={e => set('beat_fall_ms', e.target.value)} /></label>
                     <details><summary>Advanced</summary>
+                      <label className="flex items-center gap-2 text-sm"><input aria-label="Predicted beats" type="checkbox" checked={form.beat_predicted} onChange={e => set('beat_predicted', e.target.checked)} />Keep the locked grid pulsing through missing triggers</label>
+                      <label className="block text-sm">Strength curve<Input aria-label="Accent strength curve" type="number" min="0.01" step="0.1" value={form.accent_strength_curve} onChange={e => set('accent_strength_curve', e.target.value)} /></label>
+                      <label className="block text-sm">Output lead (seconds)<Input aria-label="Onset lead" type="number" min="0" step="0.01" value={form.onset_lead_s} onChange={e => set('onset_lead_s', e.target.value)} /></label>
+                      <label className="block text-sm">Maximum event age (seconds)<Input aria-label="Onset maximum age" type="number" min="0.01" step="0.01" value={form.onset_max_age_s} onChange={e => set('onset_max_age_s', e.target.value)} /></label>
+
                     <label className="block text-sm">Mode
                       <select aria-label="Accent mode" value={form.accent_mode} onChange={e => set('accent_mode', e.target.value as FormState['accent_mode'])}>
                         {['lift', 'pop', 'palette_step', 'off'].map(mode => <option key={mode} value={mode}>{mode.replace('_', ' ')}</option>)}
