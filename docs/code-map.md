@@ -1,5 +1,8 @@
 # Code and contract map
 
+See the [player-independent architecture](architecture.md) and the
+[README architecture statement](../README.md#player-independent-audio-architecture).
+
 Descriptive snapshot of baseline commit
 **3998c440f464d0cf02743633fba98e8dd990743b**, recorded **2026-10-24**.
 All `file:line` references below are relative to `src/lampastream/`, unless a
