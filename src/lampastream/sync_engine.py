@@ -2960,7 +2960,8 @@ class SmoothLayerMixer(LayerMixer):
     def render(self, features, t):
         from .transitions import TransitionScene
         new = super().render(features, t)
-        if self.phase.completed:
+        self.phase.advance(t)
+        if self.phase.completed or self.previous is None:
             self.previous = None
             return new
         old = self.previous.render(features, t)

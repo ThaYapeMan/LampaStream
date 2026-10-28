@@ -36,23 +36,27 @@ class TransitionPhase:
         self.frozen = None
         self.completed = duration == 0
 
-    def weight(self, t):
+    def advance(self, t):
+        """Advance once on the render clock; arbitrary scene samples are pure."""
         if self.start is None:
             self.start = t
             if self.baseline:
                 scene, stamp = self.baseline()
                 if scene is not None:
                     self.frozen = FrozenScene(scene, stamp)
-        weight = 1 if self.duration == 0 else max(0.0, min(1.0, (t - self.start) / self.duration))
-        if weight >= 1 - 1e-9:
-            weight = 1
-        self.completed = weight == 1
-        return weight
+        self.completed = self.completed or self.weight(t) == 1
+
+    def weight(self, t):
+        if self.start is None:
+            return 1. if self.duration == 0 else 0.
+        weight = 1 if self.duration == 0 else max(0., min(1., (t-self.start)/self.duration))
+        return 1. if weight >= 1-1e-9 else weight
 
 
 class TransitionScene:
     def __init__(self, old, new, phase):
-        self.old, self.new, self.phase = old, new, phase
+        from copy import copy
+        self.old, self.new, self.phase = old, new, copy(phase)
 
     def color_at(self, position, t):
         w = self.phase.weight(t)

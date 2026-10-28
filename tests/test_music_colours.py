@@ -291,6 +291,7 @@ def test_transition_endpoints_midpoint_and_real_time(mode):
     assert transition_colour(old, new, 0.5, mode) == expected
     for fps in (10, 30, 120):
         phase = TransitionPhase(mode, 0.7)
+        phase.advance(100)
         scene = TransitionScene(UniformScene(old), UniformScene(new), phase)
         scene.color_at(ORIGIN, 100)
         for i in range(1, fps):
@@ -300,16 +301,19 @@ def test_transition_endpoints_midpoint_and_real_time(mode):
 
 def test_mid_transition_starts_from_shown_frame_and_early_schedule_waits():
     phase = TransitionPhase(duration=1)
+    phase.advance(10)
     first = TransitionScene(UniformScene(Colour(1, 0, 0)), UniformScene(Colour(0, 0, 1)), phase)
     first.color_at(ORIGIN, 10)
     shown = first.color_at(ORIGIN, 10.4)
+    next_phase = TransitionPhase(duration=0.7, baseline=lambda: (first, 10.4))
+    next_phase.advance(11)
     second = TransitionScene(
         UniformScene(Colour.BLACK),
         UniformScene(Colour(0, 1, 0)),
-        TransitionPhase(duration=0.7, baseline=lambda: (first, 10.4)),
+        next_phase,
     )
-    # Rendering/enqueuing it does not consume the transition before playout.
-    assert second.phase.start is None
+    # The render clock starts the transition; sampling never changes it.
+    assert second.phase.start == 11
     assert second.color_at(ORIGIN, 11) == shown
     assert second.color_at(ORIGIN, 11.7) == pytest.approx(Colour(0, 1, 0))
 
