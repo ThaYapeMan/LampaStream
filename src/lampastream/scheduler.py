@@ -45,10 +45,13 @@ class Scheduler:
     samples and preview metadata travel with the same sent entry.
     """
 
-    def __init__(self, capabilities, *, interval=1/30, origin=0., capacity=1000):
+    def __init__(self, capabilities, *, interval=1/30, origin=0., capacity=None):
         self.capabilities = capabilities
         self.interval, self.origin = interval, origin
-        self.capacity = capacity
+        self.capacity = 1000 if capacity is None else capacity
+        self.adaptive_capacity = capacity is None
+        self._quiet_slots = {}
+        self.coalesced_continuous = 0
         self.queue = []
         self.sequence = 0
         self.generation = None
@@ -58,6 +61,7 @@ class Scheduler:
 
     def clear(self):
         self.queue.clear()
+        self._quiet_slots.clear()
         self.features.clear()
         self.pending = None
 
@@ -76,13 +80,29 @@ class Scheduler:
             slot = math.ceil((deadline-self.origin-1e-10)/self.interval)
             deadline = self.origin+slot*self.interval
         request.received_at = ready
-        heapq.heappush(self.queue, Entry(deadline, self.sequence, request))
+        if self.adaptive_capacity:
+            horizon_slots = math.ceil(max(0., deadline-ready)/self.interval)+2
+            self.capacity = max(self.capacity, horizon_slots)
+        if cadence and deadline in self._quiet_slots:
+            previous = self._quiet_slots[deadline]
+            previous.request = request
+            previous.sequence = self.sequence
+            self.coalesced_continuous += 1
+            heapq.heapify(self.queue)
+            return
+        entry = Entry(deadline, self.sequence, request)
+        heapq.heappush(self.queue, entry)
+        if cadence:
+            self._quiet_slots[deadline] = entry
         if len(self.queue) > self.capacity:
             # Continuous snapshots are replaceable. Events are never pruned:
             # ingress bounds their rate and accepted lookahead horizon.
             quiet = [entry for entry in self.queue if not entry.request.events]
             if quiet:
-                self.queue.remove(min(quiet))
+                removed = min(quiet)
+                self.queue.remove(removed)
+                if self._quiet_slots.get(removed.deadline) is removed:
+                    self._quiet_slots.pop(removed.deadline)
                 heapq.heapify(self.queue)
 
     def features_at(self, audible):
@@ -94,7 +114,10 @@ class Scheduler:
     def due(self, now):
         entries = []
         while self.queue and self.queue[0].deadline <= now+1e-10:
-            entries.append(heapq.heappop(self.queue))
+            entry = heapq.heappop(self.queue)
+            if self._quiet_slots.get(entry.deadline) is entry:
+                self._quiet_slots.pop(entry.deadline)
+            entries.append(entry)
         if not entries:
             return None
         newest = entries[-1].request

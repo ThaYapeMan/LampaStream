@@ -150,3 +150,19 @@ def test_new_clock_calibration_fences_obsolete_scheduled_work():
     scheduler.reset(clock.generation)
     assert scheduler.next_due() is None
     assert current.audible == 1.
+
+
+def test_long_delay_queues_cadence_slots_without_pruning_the_next_due_frame():
+    scheduler = Scheduler(OutputCapabilities(), interval=1/30)
+    first = None
+    maximum_depth = 0
+    for i in range(4500):
+        now = i/100
+        scheduler.add(RenderRequest(i, i*480, now+40.), now, cadence=True)
+        due = scheduler.due(now)
+        if due is not None and first is None:
+            first = now, due.features
+        maximum_depth = max(maximum_depth, len(scheduler.queue))
+    assert first == (40., 0)
+    assert maximum_depth <= 1202
+    assert scheduler.coalesced_continuous > 0

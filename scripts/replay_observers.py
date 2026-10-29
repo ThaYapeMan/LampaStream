@@ -77,9 +77,13 @@ class ScheduleObserver(Scheduler):
 
     def add(self, *args, **kwargs):
         previous = {entry.sequence for entry in self.queue}
+        coalesced = self.coalesced_continuous
         super().add(*args, **kwargs)
-        self.overflow.update((previous | {self.sequence})-
-                             {entry.sequence for entry in self.queue})
+        removed = (previous | {self.sequence})-{entry.sequence for entry in self.queue}
+        if self.coalesced_continuous != coalesced:
+            self.coalesced.update(removed)
+        else:
+            self.overflow.update(removed)
 
     def due(self, now):
         candidates = [entry for entry in self.queue if entry.deadline <= now+1e-10]
