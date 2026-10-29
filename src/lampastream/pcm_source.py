@@ -403,7 +403,8 @@ class YeneyCoreShmStereoSource:
         self._prev_gap_seq: int = 0
         self.retry_count = 0
         self.overwrite_invalidations = 0
-        self.use_player_clock = False  # enabled only by LMS timed ingress, never follow mode
+        # VirtualPlayer enables native timing; legacy readers may explicitly opt out.
+        self.use_player_clock = False
         self._clock_event_seq: int | None = None
         self._clock_segments: list[tuple[int, PlayerClock | None]] = []
         # (st_dev, st_ino) at the time of mmap.  Used to detect SHM

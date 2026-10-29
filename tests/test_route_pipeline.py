@@ -13,7 +13,7 @@ def test_equal_clock_points():
     probe = SimpleNamespace(current_delay_ms=lambda: 0)
     timing = SimpleNamespace(tap_source='early tap')
     a, b = LmsAudibleClock(probe), AirPlayAudibleClock(probe, timing, lookahead=0)
-    features = AudioFeatures([], 0, 0, 0, 0, play_monotonic=10.)
+    features = AudioFeatures([], 0, 0, 0, 0, received_monotonic=1., play_monotonic=1.)
     assert a.at(480, 0, features, 1.) == b.at(480, 0, features, 1.)
 
 
@@ -166,3 +166,44 @@ def test_long_delay_queues_cadence_slots_without_pruning_the_next_due_frame():
     assert first == (40., 0)
     assert maximum_depth <= 1202
     assert scheduler.coalesced_continuous > 0
+
+
+@pytest.mark.parametrize('invalidate', [False, True], ids=['clean-eof', 'invalidation'])
+def test_epoch_fence_keeps_clean_eof_queue_and_discards_cancelled_scenes(invalidate):
+    import asyncio
+
+    from lampastream.models import Profile
+    from lampastream.player_manager import _make_canonical_pipeline
+    from lampastream.trace_output import TraceChannel, TraceOutput
+    from lampastream.types import Position
+    analyser = _make_canonical_pipeline(None, Profile())
+    analyser._current_epoch_id = 'old'
+    for sample, play in ((0, 10.4), (4800, 10.5)):
+        analyser._publish(epoch_id='old', sample_start=sample, sample_end=sample+480,
+            features=AudioFeatures([.2]*30, .2, .2, .2, .2,
+                                   received_monotonic=10., play_monotonic=play),
+            effective_spectrum_backend='v2', effective_processor_ids=('v2',))
+    stale = analyser._latest_pub
+    engine = SyncEngine(None, Profile(), analyser=analyser, audible_clock=LmsAudibleClock())
+    output = TraceOutput([TraceChannel(0, Position(0, 0, 0))])
+    now = [10.]
+    changed = False
+
+    async def tick(dt):
+        nonlocal changed
+        now[0] += dt
+        if not changed and now[0] >= 10.15:
+            changed = True
+            analyser.end_of_stream()
+            if invalidate:
+                analyser._latest_pub = None
+                analyser._pub_queue.append(stale)
+        if now[0] > 10.6:
+            raise asyncio.CancelledError
+
+    try:
+        with pytest.raises(asyncio.CancelledError):
+            asyncio.run(engine.run(output, clock=lambda: now[0], sleep=tick))
+        assert len(output.rows) == (0 if invalidate else 2)
+    finally:
+        analyser.stop()

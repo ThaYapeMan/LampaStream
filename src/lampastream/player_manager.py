@@ -1000,6 +1000,7 @@ class PlayerManager:
         player = (self.storage.get_virtual_player(session.coupling.player_id)
                   if session.coupling else None)
         source = YeneyCoreShmStereoSource()
+        source.use_player_clock = True
         session.lms_timed_source = None
         session.head_start = None
         if player and player.follow_mode == "sync_group":

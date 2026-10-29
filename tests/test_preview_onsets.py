@@ -162,7 +162,7 @@ def replay_preview(tmp_path, monkeypatch, route, delay=0, advance=.02):
                 assert target == pytest.approx(source_event.play_monotonic, abs=1e-8)
             elif delay:
                 assert target == pytest.approx(
-                    source_event.play_monotonic-args.lead_s+delay/1000, abs=1e-8)
+                    source_event.play_monotonic+delay/1000, abs=1e-8)
             else:
                 assert target == pytest.approx(sent_at, abs=1e-8)
             residuals.append((sent_at - target) * 1000)
@@ -408,7 +408,7 @@ def test_socket_coalesces_available_bursts_without_waiting_or_crossing_reset():
 @pytest.mark.parametrize('case', json.loads((Path(__file__).parent /
     'fixtures/preview01-accent-on.json').read_text())['cases'],
     ids=lambda case: f"{case['route']}-{case['delay_ms']}")
-def test_accent_on_lamp_bytes_match_8f5385b(tmp_path, case):
+def test_accent_on_lamp_bytes_match_route01_pin(tmp_path, case):
     import hashlib
 
     fixtures = Path(__file__).parent/'fixtures/replay'
@@ -424,7 +424,7 @@ def test_accent_on_lamp_bytes_match_8f5385b(tmp_path, case):
         replay.save(fmt)
         actual = hashlib.sha256((tmp_path/'sends.csv').read_bytes()).hexdigest()
         assert actual == case['sends_sha256']
-        print(f"active-accent sends.csv vs 8f5385b {case['route']} "
+        print(f"active-accent ROUTE-01 sends.csv {case['route']} "
               f"delay={case['delay_ms']}: byte-identical ({actual})")
     finally:
         replay.pipeline.stop()

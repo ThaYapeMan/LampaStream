@@ -94,6 +94,11 @@ class LmsAudibleClock(AudibleClock):
             self._set_calibration(("trim", trim))
             return ClockPoint(features.play_monotonic+(sample-reference)/48000+trim,
                               self.lookahead_s)
+        if features.play_monotonic is not None and self.timing is None:
+            delay = self.probe.current_delay_ms()/1000 if self.probe is not None else 0.
+            self._set_calibration(("delay", delay))
+            return ClockPoint(features.play_monotonic+(sample-reference)/48000+max(0., delay),
+                              self.lookahead_s)
         return super().at(sample, reference, features, now)
 
 

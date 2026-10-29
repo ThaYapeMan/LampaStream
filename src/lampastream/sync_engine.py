@@ -3508,6 +3508,12 @@ class SyncEngine:
             level=self._analyser.latest_level(), loudness_momentary_lufs=momentary,
             loudness_short_term_lufs=short_term)
 
+    def _render_generation(self, output):
+        publication = (getattr(self._analyser, "_latest_pub", None)
+                       if isinstance(self._analyser, CanonicalAnalysisPipeline) else None)
+        return (getattr(output, "output_generation", 0), self.audible_clock.generation,
+                getattr(publication, "epoch", None))
+
     async def run(self, output: Output, *, clock=None, sleep=None) -> None:
         """Consume generic features through one renderer, scheduler and preview."""
         from .accent import AccentLayer
@@ -3556,15 +3562,27 @@ class SyncEngine:
         latest_sequence = None
         unmapped_events = []
         generation = None
+        seen_epoch = False
         while True:
             now = clock()
             token = getattr(self._analyser, "pub_seq", None)
             observer = getattr(output, "observe_audio", None)
             if observer is not None and isinstance(token, int):
                 observer(token, token > 0)
-            current_generation = (getattr(output, "output_generation", 0),
-                                  self.audible_clock.generation,
-                                  getattr(self._analyser, "_current_epoch_id", None))
+            if getattr(output, "accepting_frames", True) is False:
+                schedule.clear()
+                minimum_sequence = token
+                if isinstance(self._analyser, CanonicalAnalysisPipeline):
+                    self._analyser.drain_publications()
+                    self._analyser.drain_events()
+                await sleep(interval)
+                continue
+            records = []
+            events = []
+            if isinstance(self._analyser, CanonicalAnalysisPipeline):
+                records = self._analyser.drain_publications()
+                events = self._analyser.drain_events()
+            current_generation = self._render_generation(output)
             if current_generation != generation:
                 schedule.reset(current_generation)
                 self._audible_preview.reset()
@@ -3583,17 +3601,13 @@ class SyncEngine:
                     if current_generation[0] != generation[0]:
                         minimum_sequence = token
                 generation = current_generation
-            if getattr(output, "accepting_frames", True) is False:
-                schedule.clear()
-                minimum_sequence = token
-                await sleep(interval)
-                continue
-            records = []
-            events = []
-            if isinstance(self._analyser, CanonicalAnalysisPipeline):
-                records = self._analyser.drain_publications()
-                events = self._analyser.drain_events()
+            published_epoch = current_generation[2]
+            invalidated = seen_epoch and published_epoch is None
+            seen_epoch = seen_epoch or published_epoch is not None
             for record in records:
+                if (invalidated or (published_epoch is not None
+                        and getattr(record, "epoch", None) != published_epoch)):
+                    continue
                 if (getattr(record, "effective_processor_ids", ()) in {
                         ("beat_detector",), ("beat_fusion",)}):
                     continue
@@ -3637,6 +3651,11 @@ class SyncEngine:
                     for band in event.bands | {"all"}:
                         self.event_counters[band]["received"] += 1
                 elif self.event_records[event.id]["disposition"] != "received":
+                    continue
+                if invalidated or (published_epoch is not None and event.epoch != published_epoch):
+                    self.event_records[event.id]["disposition"] = "expired"
+                    for band in event.bands | {"all"}:
+                        self.event_counters[band]["expired"] += 1
                     continue
                 if latest is None:
                     if now-event.received_monotonic <= self.profile.onset_max_age_s:
@@ -3710,6 +3729,9 @@ class SyncEngine:
                     phase_time = (clock()-history[-1][0]) % period
                     if .005 <= phase_time <= .04:
                         reserve_until = clock()+.04-phase_time+.000001
+            if self._render_generation(output) != generation:
+                schedule.clear()
+                continue
             entry = schedule.take(clock(), last_send, minimum_interval,
                                   reserve_until=reserve_until)
             if entry is not None:

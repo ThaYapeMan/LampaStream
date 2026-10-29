@@ -31,7 +31,7 @@ def test_player_provenance_and_trim_remain_in_clock_mapping(kind, mode):
 
 def test_zero_lookahead_clock_points_are_equal():
     probe = SimpleNamespace(current_delay_ms=lambda: 0)
-    features = AudioFeatures([], 0, 0, 0, 0, received_monotonic=1., play_monotonic=10.)
+    features = AudioFeatures([], 0, 0, 0, 0, received_monotonic=1., play_monotonic=1.)
     a = LmsAudibleClock(probe)
     b = AirPlayAudibleClock(probe, SimpleNamespace(tap_source='early tap'), lookahead=0.)
     assert a.at(480, 0, features, 5.) == b.at(480, 0, features, 5.)
@@ -55,3 +55,11 @@ def test_room_kind_selection_and_reported_delay_are_owned_by_clock(model, kind):
     assert clock.at(0, 0, features, 11.).audible == pytest.approx(10.350)
     if kind == 'yeney-sonos':
         assert clock.reported_pipeline_delay_ms == 200
+
+
+def test_normal_native_player_clock_adds_room_offset_without_using_receipt_time():
+    probe = SimpleNamespace(current_delay_ms=lambda: 200)
+    clock = LmsAudibleClock(probe)
+    features = AudioFeatures([], 0, 0, 0, 0, received_monotonic=10.5, play_monotonic=10.)
+    assert clock.at(480, 0, features, 20.).audible == pytest.approx(10.21)
+    assert clock.lookahead_s == 0

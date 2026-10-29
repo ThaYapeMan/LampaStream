@@ -213,6 +213,7 @@ class FinishedReplay(Exception):
 class Replay:
     def __init__(self, args):
         self.args = args
+        self.playback_offset = args.lead_s if args.route == "timestamped" else 0.
         self.high, self.low = profiles(args.config.read_bytes(), args.coupling_id)
         self.high = replace(self.high, output_render_hz=args.render_hz)
         self.low = replace(self.low, output_render_hz=args.render_hz)
@@ -257,7 +258,7 @@ class Replay:
                 part = replace(frame, samples=frame.samples[offset:offset + HOP],
                                sample_pos=start, epoch_id="replay-0001",
                                received_monotonic=start / RATE,
-                               play_monotonic=start / RATE + self.args.lead_s,
+                               play_monotonic=start / RATE + self.playback_offset,
                                timing_generation=1)
                 self.capture(self.pipeline.feed(part), start + len(part.samples))
         self.sample_count = sum(len(f.samples) for f in canonical_frames)
