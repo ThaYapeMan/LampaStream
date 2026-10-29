@@ -1,7 +1,7 @@
 # Player-independent audio architecture
 
-Architecture decision, 2026-10-28 (ROUTE-01). This is the target contract;
-implementation and measurement evidence are recorded in the code map and baseline.
+Architecture decision, 2026-10-28 (ROUTE-01). Implementation and offline
+measurement evidence are recorded in the code map and baseline.
 
 ### VirtualPlayers
 
@@ -71,3 +71,24 @@ brand constants inside the driver, reuse the renderer and scheduler, and measure
 it offline before deployment.
 
 See the [code map](code-map.md) and [testing contract](testing.md).
+
+PlayerManager chooses an LMS room clock from the server's model and modelname:
+YeneY/Sonos, hardware Squeezebox or generic LMS. The existing per-player probe
+already includes the reported pipeline/playDelay term; the clock never adds it
+twice. Model metadata is read on the existing owned LMS status connection, using
+the standard [players query](https://lyrion.org/reference/cli/players/).
+AirPlay's clock owns early-tap play times and pipe fallback. No model/name suffix
+is interpreted in analysis, rendering, preview or scheduling.
+
+RenderPipeline is the single stateful call site. Scheduler owns future requests
+and the newest unsent scene, combines unsent envelopes, coalesces continuous
+cadence slots, and preserves event identities. Its deadlines subtract declared
+transport latency. Canonical sample epochs, output ownership and clock
+calibration generations fence obsolete work. Precision is computed once on the
+render clock into BoundaryScene; reading its colours never advances a guard.
+TransitionScene copies its phase, and completion is latched on render advancement.
+
+AudiblePreview receives the sent entry's exact output colours and event clocks.
+Socket events and periodic snapshots share that entry. Preview reads do not call
+an effect, mixer or accent renderer. Room and dot outlines use event hold pulses;
+release tails never keep them continuously lit.

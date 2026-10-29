@@ -3,6 +3,31 @@
 See the [player-independent architecture](architecture.md) and the
 [README architecture statement](../README.md#player-independent-audio-architecture).
 
+## Current runtime structure (ROUTE-01)
+
+| Module | Responsibility |
+|---|---|
+| `pcm_source.YeneyCoreShmStereoSource` | yeney-core SHM v1 canonical ingress; deprecated `SqueezeliteShmStereoSource` alias for one release. |
+| `player_manager.PlayerManager` | VirtualPlayer/session ownership; selects the room/source clock and output driver. |
+| `audible_clock` | Canonical sample → audible monotonic time, lookahead, per-player calibration and generation fencing. YeneY/Sonos, Squeezebox, generic LMS and AirPlay knowledge ends here. |
+| `CanonicalAnalysisPipeline` | One canonical PCM/STFT/processor/publication/event pipeline. |
+| `render_pipeline.RenderPipeline` | One event view → effect/mixer → accent → immutable output boundary; retains unsent event envelopes. |
+| `scheduler.Scheduler` | Exact capability-based deadlines, cadence-slot coalescing and one newest sent entry; retains every due event identity. |
+| `audible_preview.AudiblePreview` | One sent-entry timeline and socket event path; exact sent colours, pure envelope/accent projections and event hold pulses. |
+| `output_boundary.BoundaryScene` | Precision state advances at render time; colour sampling is pure. |
+| `transitions` | Render-clock phase advancement; immutable scene phase snapshots and monotonic completion. |
+| `hue_output`, `trace_output` | Output drivers; brand/protocol details remain in drivers and capabilities. |
+
+`test_route_pipeline.py` enforces the single render/event/preview call sites and
+rejects route names or player timing branches in the loop. The output-agnostic
+grep test enforces capability-based rendering. `replay_chain.py --route equal`
+runs two zero-lookahead clocks and compares the complete sends.csv bytes.
+
+## Anchored analysis details
+
+The remaining numbered references describe the analysis baseline; the runtime
+structure above and ROUTE-01 sections below supersede its scheduling details.
+
 Descriptive snapshot of baseline commit
 **3998c440f464d0cf02743633fba98e8dd990743b**, recorded **2026-10-24**.
 All `file:line` references below are relative to `src/lampastream/`, unless a
@@ -105,8 +130,8 @@ through cubic smoothstep between `blend_start=0.3` and `blend_end=0.7`, then upd
 selects the mellow layer; high mix the active layer; the middle returns a LerpScene.
 
 `SmoothLayerMixer` (`sync_engine.py:2709`) renders old/new mixers through a shared
-transition phase. `transitions.py:34` starts the phase when the output samples it,
-not at PCM receipt; an interrupted transition can freeze the shown scene as its
+transition phase. `transitions.py` starts and advances the phase on the render clock;
+scene sampling is pure, and an interrupted transition can freeze the shown scene as its
 baseline. Modes are crossfade, through-black and through-white
 (`transitions.py:8`); defaults are crossfade and **0.7 s** (`models.py:202`).
 Old and new renderers may both advance during a transition.
@@ -142,25 +167,20 @@ intensity 0 (`models.py:198`).
 centroid for palette position, palette rotation and the original scene's
 brightness. Thus palette wrapping can add centroid use to the base renderer table; it does not replace the renderer's envelope timing.
 
-## Output routes and Hue transport
+## Rendering, scheduling and output transport
 
-Normal route: `SEND_INTERVAL_S=1/30` (`sync_engine.py:76`), then each loop polls
-`latest()` (`sync_engine.py:3210`), copies freshest loudness/level/HPSS for rendering,
-and appends one Scene (or None) to a delay deque. Target depth is rounded from
-milliseconds to ticks. `sync_engine.py:3273` pops **while** depth exceeds target;
-a delay reduction can therefore send several scenes in one tick. Repeated polling
-can reuse an onset, or miss onsets between snapshots. This is not queue delivery
-of every analysis event, nor an exactly 30 Hz wire guarantee under load.
+Every source supplies a clock mapping and lookahead. The shared loop ingests
+publications/events and creates generic render requests. Scheduler uses
+`max(ready, audible - lead - capabilities.transport_latency_s)` and quantises
+only continuous requests to the configured cadence. Events have exact deadlines;
+all clocks use the same wake-ups, extra sends and capability-based minimum gap.
 
-Timestamped route: AirPlay early tap or LMS head start activates
-`sync_engine.py:3169`. It drains PublicationRecords, rejects missing play times or
-stale timing generations, renders scenes and adds them to `SceneSchedule`
-(`airplay_early.py:333`). Target is `max(ready, play+trim_ms/1000)`. Capacity is
-1,000; overflow removes the earliest entry. Each output tick consumes due entries
-but sends only the last due scene. Reset/flush generations clear old scenes.
-LMS may use the SHM player clock or a write-clock estimate (`lms_timing.py:349`);
-AirPlay maps paired raw/monotonic clocks (`airplay_early.py:49`). These clocks are
-software playout estimates, not measured acoustic arrival at a listener.
+Continuous requests for one cadence slot coalesce before rendering. When due
+requests or unsent scenes coalesce, event identities and the strongest unsent
+beat/texture/band envelopes survive. Clock calibration, sample epochs and output
+ownership generations clear obsolete work. Canonical scenes stop when publications
+stop; the driver owns heartbeat/connection lifetime. The old delay deque and
+SceneSchedule are removed.
 
 `HueDriver.send` (`hue_output.py:399`) samples each scene at channel positions and
 the send timestamp. `Colour.to_16bit` (`types.py:38`) supplies 0–65535 commands to
@@ -233,9 +253,10 @@ OutputCapabilities. `OnsetDetector.process_event` and process_odf_event expose
 candidate metadata; the boolean methods remain compatibility adapters. BeatDetector
 emits candidate-hop ProcessorUpdates and combines band votes over 30 ms.
 CanonicalAnalysisPipeline owns drain_events beside the continuous publication queue.
-SyncEngine drains events on both routes and projects them onto each scene's clock.
+SyncEngine drains one event queue; AudibleClock maps sample positions, and
+RenderPipeline projects each event onto the render clock.
 `onset_envelope.py` contains TriggerEnvelope hold/release and retrigger policies.
-`output_boundary.py` guards output precision at scene sampling, outside renderers.
+`output_boundary.py` freezes guarded output samples once at render time.
 `trace_output.py` loads capabilities from room JSON; replay_chain exports events.csv
 and independent event-disposition counters. The baseline sections above retain their
 original revision anchor; these additions replace its boolean onset path only.
@@ -250,12 +271,11 @@ independent short clock. SpectrumProcessor and bass use the original long stream
 BeatDetector applies log-filtered short flux to combined/SuperFlux and short
 mid/treble slices to multiband, retaining candidate hop coordinates and long bass.
 
-`SyncEngine.run` owns one output coroutine: configurable `output_render_hz`
-(default 30), ≤5 ms event drains, capability-based inter-send spacing, independent
-extra scene scheduling and exact timestamped event deadlines. `SceneSchedule.next_due`
-exposes the earliest fenced heap deadline. Continuous timestamped scenes keep
-cadence quantisation. Zero-delay continuous output coalesces when its cadence
-exceeds the capability-based send ceiling; delay-shrink bursts remain measurable.
+`SyncEngine.run` owns one output coroutine, with configurable `output_render_hz`
+(default 30), 1 ms visible-beat polling (5 ms archived diagnostics), exact scheduler
+deadlines and capability-based inter-send spacing. The same event-triggered sends
+and generation fences apply to all clocks. Calibration shrink cannot replay a
+same-tick delay-buffer burst; the shared scheduler retains the newest valid work.
 
 `replay_chain.Replay.latency_rows` joins sidecar truth to actual event/render/send
 clocks and writes latency.csv. `counters.extra_sends` exposes minimum spacing and
@@ -263,7 +283,7 @@ maximum sends per drain. `tests/replay_cache_support.DiskReplays` shares analysi
 and replay artifacts under session temporary storage using per-key file locks;
 regression helpers and replay-chain references consume the same session fixture.
 `test_latency_regression.py` asserts software timing, spacing, band alignment and
-phase-two idle-colour hashes; `test_latency_frontend.py` covers window/chunk clocks.
+archived and ROUTE-01 idle-colour hashes; `test_latency_frontend.py` covers window/chunk clocks.
 
 `scripts/benchmark_replay.py` measures analysis/output CPU cost with optional
 single-core affinity and reports virtual backlog and separate queue-drop classes.
@@ -281,7 +301,8 @@ single-core affinity and reports virtual backlog and separate queue-drop classes
 - `scripts/replay_chain.py`: observes the shared scene entry point, records
   pre/post channel colours and accent counters. `traces-phase4` is the reference.
 - `tests/test_accent.py`, `tests/fixtures/accent-off-lat01.json`: all-effects
-  production acceptance and immutable starting-revision accent-off byte hashes.
+  production acceptance and ROUTE-01 accent-off byte pins; original hashes are
+  preserved in `route01-previous-pins.json`.
 - `web/src/pages/Effects.tsx`: Accent controls and advanced EVENT-01 envelope
   settings. `lib/api.ts` and `hooks/usePreviewSocket.ts` carry EVENT-01/LAT-01
   types and live values; `LightTiming.tsx` displays them.
@@ -291,8 +312,8 @@ single-core affinity and reports virtual backlog and separate queue-drop classes
 
 - `audible_preview.py`: exactly-once event publication, per-event channel snapshots,
   bounded identity history and 5 ms coalescing of already available messages.
-- `SyncEngine._render_scene` / `_preview_sent`: preview-only publication hooks on
-  timestamped pre-render and normal carrying-send boundaries, respectively.
+- `Scheduler` / `SyncEngine._preview_sent`: one carrying-send entry supplies
+  preview colours and event timestamps for every clock.
 - `PlayerManager.subscribe_preview`: session-independent subscriber registration;
   worker callbacks cross into the websocket loop via `call_soon_threadsafe`.
 - `app.ws_preview`: bounded per-socket event queue, ping/pong and task cleanup;
@@ -328,3 +349,10 @@ single-core affinity and reports virtual backlog and separate queue-drop classes
 - `web/src/pages/{Analysers,Effects,NowPlaying}.tsx`,
   `components/LightTiming.tsx`: the main beat controls, Advanced disclosures and
   live tempo/trigger readouts; compiled assets remain in `lampastream/webui`.
+
+
+The LMS VirtualPlayer is yeney-player from `third_party/yeney-core`, a virtual
+player synced to the listening room (YeneY/Sonos or another LMS player), delivering
+stereo float PCM through yeney-core SHM v1. `YeneyCoreShmStereoSource` names that
+reader; `SqueezeliteShmStereoSource` remains a deprecated alias for one release.
+Player-specific ingress owns timing knowledge. See [architecture](architecture.md).

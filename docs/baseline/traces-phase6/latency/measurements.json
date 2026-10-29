@@ -1,0 +1,490 @@
+[
+  {
+    "fixture": "clicks-120",
+    "route": "normal",
+    "latency": {
+      "candidate_ms": {
+        "median": 0.0,
+        "p95": 0.0,
+        "max": 0.0
+      },
+      "availability_ms": {
+        "median": 9.999999999999787,
+        "p95": 10.000000000000009,
+        "max": 10.000000000000009
+      },
+      "first_render_ms": {
+        "median": 19.99999999999158,
+        "p95": 19.999999999999606,
+        "max": 19.999999999999908
+      },
+      "first_send_ms": {
+        "median": 19.99999999999158,
+        "p95": 19.999999999999606,
+        "max": 19.999999999999908
+      },
+      "schedule_error_ms": null,
+      "window_acquisition_ms": {
+        "median": 9.999999999999574,
+        "p95": 10.000000000000018,
+        "max": 10.000000000000018
+      },
+      "hop_ms": {
+        "median": 0.0,
+        "p95": 0.0,
+        "max": 0.0
+      },
+      "lookahead_ms": {
+        "median": 10.0,
+        "p95": 10.0,
+        "max": 10.0
+      },
+      "tick_wait_ms": {
+        "median": -7.993605777301127e-12,
+        "p95": -4.1078251911130863e-13,
+        "max": -1.1102230246251565e-13
+      },
+      "schedule_wait_ms": {
+        "median": 0.0,
+        "p95": 0.0,
+        "max": 0.0
+      }
+    },
+    "events": {
+      "received": 19,
+      "triggered": 19,
+      "merged": 0,
+      "expired": 0,
+      "lost": 0
+    }
+  },
+  {
+    "fixture": "clicks-128",
+    "route": "normal",
+    "latency": {
+      "candidate_ms": {
+        "median": -4.999999999999893,
+        "p95": 0.0,
+        "max": 0.0
+      },
+      "availability_ms": {
+        "median": 4.999999999999893,
+        "p95": 9.999999999999787,
+        "max": 10.000000000000009
+      },
+      "first_render_ms": {
+        "median": 16.66666666664618,
+        "p95": 21.666666666661172,
+        "max": 22.083333333315913
+      },
+      "first_send_ms": {
+        "median": 17.91666666666658,
+        "p95": 30.41666666665588,
+        "max": 36.66666666666085
+      },
+      "schedule_error_ms": null,
+      "window_acquisition_ms": {
+        "median": 7.112366251504909e-14,
+        "p95": 9.999999999999574,
+        "max": 10.000000000000018
+      },
+      "hop_ms": {
+        "median": 3.75,
+        "p95": 8.75,
+        "max": 8.75
+      },
+      "lookahead_ms": {
+        "median": 10.0,
+        "p95": 10.0,
+        "max": 10.0
+      },
+      "tick_wait_ms": {
+        "median": 1.6666666666491636,
+        "p95": 3.333333333332522,
+        "max": 3.333333333332966
+      },
+      "schedule_wait_ms": {
+        "median": 0.0,
+        "p95": 14.99999999999968,
+        "max": 14.99999999999968
+      }
+    },
+    "events": {
+      "received": 21,
+      "triggered": 21,
+      "merged": 0,
+      "expired": 0,
+      "lost": 0
+    }
+  },
+  {
+    "fixture": "clicks-174",
+    "route": "normal",
+    "latency": {
+      "candidate_ms": {
+        "median": -4.656249999999973,
+        "p95": -0.4708333333334207,
+        "max": 0.0
+      },
+      "availability_ms": {
+        "median": 5.3437500000000355,
+        "p95": 9.529166666666988,
+        "max": 10.000000000000009
+      },
+      "first_render_ms": {
+        "median": 16.374999999997808,
+        "p95": 22.174999999982823,
+        "max": 22.645833333312382
+      },
+      "first_send_ms": {
+        "median": 19.05208333332753,
+        "p95": 31.435416666651566,
+        "max": 34.93749999998386
+      },
+      "schedule_error_ms": null,
+      "window_acquisition_ms": {
+        "median": 3.642919299551295e-14,
+        "p95": 9.411742218912163e-13,
+        "max": 10.000000000000018
+      },
+      "hop_ms": {
+        "median": 4.822916666666667,
+        "p95": 9.188541666666666,
+        "max": 9.645833333333332
+      },
+      "lookahead_ms": {
+        "median": 10.0,
+        "p95": 10.0,
+        "max": 10.0
+      },
+      "tick_wait_ms": {
+        "median": 1.6666666666522723,
+        "p95": 3.3333333333328885,
+        "max": 3.3333333333332993
+      },
+      "schedule_wait_ms": {
+        "median": 0.0,
+        "p95": 13.24999999999971,
+        "max": 14.99999999999968
+      }
+    },
+    "events": {
+      "received": 28,
+      "triggered": 28,
+      "merged": 0,
+      "expired": 0,
+      "lost": 0
+    }
+  },
+  {
+    "fixture": "impulse",
+    "route": "normal",
+    "latency": {
+      "candidate_ms": {
+        "median": 0.0,
+        "p95": 0.0,
+        "max": 0.0
+      },
+      "availability_ms": {
+        "median": 9.999999999999787,
+        "p95": 9.999999999999787,
+        "max": 9.999999999999787
+      },
+      "first_render_ms": {
+        "median": 19.99999999999158,
+        "p95": 19.99999999999158,
+        "max": 19.99999999999158
+      },
+      "first_send_ms": {
+        "median": 19.99999999999158,
+        "p95": 19.99999999999158,
+        "max": 19.99999999999158
+      },
+      "schedule_error_ms": null,
+      "window_acquisition_ms": {
+        "median": 9.999999999999574,
+        "p95": 9.999999999999574,
+        "max": 9.999999999999574
+      },
+      "hop_ms": {
+        "median": 0.0,
+        "p95": 0.0,
+        "max": 0.0
+      },
+      "lookahead_ms": {
+        "median": 10.0,
+        "p95": 10.0,
+        "max": 10.0
+      },
+      "tick_wait_ms": {
+        "median": -7.993605777301127e-12,
+        "p95": -7.993605777301127e-12,
+        "max": -7.993605777301127e-12
+      },
+      "schedule_wait_ms": {
+        "median": 0.0,
+        "p95": 0.0,
+        "max": 0.0
+      }
+    },
+    "events": {
+      "received": 1,
+      "triggered": 1,
+      "merged": 0,
+      "expired": 0,
+      "lost": 0
+    }
+  },
+  {
+    "fixture": "clicks-120",
+    "route": "timestamped",
+    "latency": {
+      "candidate_ms": {
+        "median": 0.0,
+        "p95": 0.0,
+        "max": 0.0
+      },
+      "availability_ms": {
+        "median": 9.999999999999787,
+        "p95": 10.000000000000009,
+        "max": 10.000000000000009
+      },
+      "first_render_ms": {
+        "median": 1464.9999999999998,
+        "p95": 1465.0000000000016,
+        "max": 1465.0000000000016
+      },
+      "first_send_ms": {
+        "median": 1464.9999999999998,
+        "p95": 1465.0000000000016,
+        "max": 1465.0000000000016
+      },
+      "schedule_error_ms": {
+        "median": 0.0,
+        "p95": 0.0,
+        "max": 0.0
+      },
+      "window_acquisition_ms": {
+        "median": 9.999999999999574,
+        "p95": 10.000000000000018,
+        "max": 10.000000000000018
+      },
+      "hop_ms": {
+        "median": 0.0,
+        "p95": 0.0,
+        "max": 0.0
+      },
+      "lookahead_ms": {
+        "median": 10.0,
+        "p95": 10.0,
+        "max": 10.0
+      },
+      "tick_wait_ms": {
+        "median": 1445.0000000000002,
+        "p95": 1445.0000000000016,
+        "max": 1445.000000000002
+      },
+      "schedule_wait_ms": {
+        "median": 0.0,
+        "p95": 0.0,
+        "max": 0.0
+      }
+    },
+    "events": {
+      "received": 19,
+      "triggered": 19,
+      "merged": 0,
+      "expired": 0,
+      "lost": 0
+    }
+  },
+  {
+    "fixture": "clicks-128",
+    "route": "timestamped",
+    "latency": {
+      "candidate_ms": {
+        "median": -4.999999999999893,
+        "p95": 0.0,
+        "max": 0.0
+      },
+      "availability_ms": {
+        "median": 4.999999999999893,
+        "p95": 9.999999999999787,
+        "max": 10.000000000000009
+      },
+      "first_render_ms": {
+        "median": 1459.9999999999995,
+        "p95": 1464.9999999999982,
+        "max": 1465.0
+      },
+      "first_send_ms": {
+        "median": 1459.9999999999995,
+        "p95": 1464.9999999999982,
+        "max": 1465.0
+      },
+      "schedule_error_ms": {
+        "median": 0.0,
+        "p95": 0.0,
+        "max": 0.0
+      },
+      "window_acquisition_ms": {
+        "median": 7.112366251504909e-14,
+        "p95": 9.999999999999574,
+        "max": 10.000000000000018
+      },
+      "hop_ms": {
+        "median": 3.75,
+        "p95": 8.75,
+        "max": 8.75
+      },
+      "lookahead_ms": {
+        "median": 10.0,
+        "p95": 10.0,
+        "max": 10.0
+      },
+      "tick_wait_ms": {
+        "median": 1444.9999999999993,
+        "p95": 1445.0000000000011,
+        "max": 1445.0000000000011
+      },
+      "schedule_wait_ms": {
+        "median": 0.0,
+        "p95": 0.0,
+        "max": 0.0
+      }
+    },
+    "events": {
+      "received": 21,
+      "triggered": 21,
+      "merged": 0,
+      "expired": 0,
+      "lost": 0
+    }
+  },
+  {
+    "fixture": "clicks-174",
+    "route": "timestamped",
+    "latency": {
+      "candidate_ms": {
+        "median": -4.656249999999973,
+        "p95": -0.4708333333334207,
+        "max": 0.0
+      },
+      "availability_ms": {
+        "median": 5.3437500000000355,
+        "p95": 9.529166666666988,
+        "max": 10.000000000000009
+      },
+      "first_render_ms": {
+        "median": 1460.3437499999995,
+        "p95": 1464.5291666666653,
+        "max": 1465.0
+      },
+      "first_send_ms": {
+        "median": 1460.3437499999995,
+        "p95": 1464.5291666666653,
+        "max": 1465.0
+      },
+      "schedule_error_ms": {
+        "median": 0.0,
+        "p95": 0.0,
+        "max": 0.0
+      },
+      "window_acquisition_ms": {
+        "median": 3.642919299551295e-14,
+        "p95": 9.411742218912163e-13,
+        "max": 10.000000000000018
+      },
+      "hop_ms": {
+        "median": 4.822916666666667,
+        "p95": 9.188541666666666,
+        "max": 9.645833333333332
+      },
+      "lookahead_ms": {
+        "median": 10.0,
+        "p95": 10.0,
+        "max": 10.0
+      },
+      "tick_wait_ms": {
+        "median": 1444.9999999999995,
+        "p95": 1445.0000000000011,
+        "max": 1445.0000000000011
+      },
+      "schedule_wait_ms": {
+        "median": 0.0,
+        "p95": 0.0,
+        "max": 0.0
+      }
+    },
+    "events": {
+      "received": 28,
+      "triggered": 28,
+      "merged": 0,
+      "expired": 0,
+      "lost": 0
+    }
+  },
+  {
+    "fixture": "impulse",
+    "route": "timestamped",
+    "latency": {
+      "candidate_ms": {
+        "median": 0.0,
+        "p95": 0.0,
+        "max": 0.0
+      },
+      "availability_ms": {
+        "median": 9.999999999999787,
+        "p95": 9.999999999999787,
+        "max": 9.999999999999787
+      },
+      "first_render_ms": {
+        "median": 1465.0000000000007,
+        "p95": 1465.0000000000007,
+        "max": 1465.0000000000007
+      },
+      "first_send_ms": {
+        "median": 1465.0000000000007,
+        "p95": 1465.0000000000007,
+        "max": 1465.0000000000007
+      },
+      "schedule_error_ms": {
+        "median": 0.0,
+        "p95": 0.0,
+        "max": 0.0
+      },
+      "window_acquisition_ms": {
+        "median": 9.999999999999574,
+        "p95": 9.999999999999574,
+        "max": 9.999999999999574
+      },
+      "hop_ms": {
+        "median": 0.0,
+        "p95": 0.0,
+        "max": 0.0
+      },
+      "lookahead_ms": {
+        "median": 10.0,
+        "p95": 10.0,
+        "max": 10.0
+      },
+      "tick_wait_ms": {
+        "median": 1445.0000000000011,
+        "p95": 1445.0000000000011,
+        "max": 1445.0000000000011
+      },
+      "schedule_wait_ms": {
+        "median": 0.0,
+        "p95": 0.0,
+        "max": 0.0
+      }
+    },
+    "events": {
+      "received": 1,
+      "triggered": 1,
+      "merged": 0,
+      "expired": 0,
+      "lost": 0
+    }
+  }
+]

@@ -1,0 +1,8150 @@
+{
+  "accent-off-lat01.json": {
+    "cases": [
+      {
+        "fixture": "anti-phase",
+        "hashes": {
+          "energy.csv": "050623f61cf2ab2de06223b0dd9e09b5fca3b584f1f5a8f111f07f870a042d96",
+          "events.csv": "0c7815ca5c66ad3bda1be470189b4f3ed1575d14d8c5b4dac1b4333ef7749c3b",
+          "features.csv": "94f64438950ee3cade8e068e0f55245264b9580adb73135bfba740d3688c97ad",
+          "sends.csv": "88c8c0514a7146730ac5fb27a52a69356b6bbdc414a3b9e5a285757397386487"
+        },
+        "route": "normal"
+      },
+      {
+        "fixture": "anti-phase",
+        "hashes": {
+          "energy.csv": "7a4c74650c61bad8c52596097b084a023d8c7e9f1dde0835f6e120c8cad904a1",
+          "events.csv": "b952807aa412d0b8ce385d7daad6e2ee2d6d5c4f2ca89a232e51e313a9b3e613",
+          "features.csv": "43200b14504d674778b9bd7eac9f1b2a260a674f5f22c4e58ba1db60e40a6804",
+          "sends.csv": "b7d67ae79ef928f2ac5d22f1eace05c34b9018ff549c20c4a48de425e1958941"
+        },
+        "route": "timestamped"
+      },
+      {
+        "fixture": "clicks-120",
+        "hashes": {
+          "energy.csv": "eaef7ae43ccf3d11b324a499b9e5c765ba0deb45758f4ae85bce98648f7ecb00",
+          "events.csv": "6080fa12b85e20598b4caccd331ae8fdc8aaabb144f3378b26f00c49e126bd74",
+          "features.csv": "c274f1e4f66cbdf56c900dc5304b6402d52f9f576f0a63dd9a180439ff18e72c",
+          "sends.csv": "85574c45d37cecb6e1cb91186da55438aa4d59380c3cf540dcd4790621097f87"
+        },
+        "route": "normal"
+      },
+      {
+        "fixture": "clicks-120",
+        "hashes": {
+          "energy.csv": "e61bebc5ccac015e994ddb28623ad0971725cad7373755b04caf6acb1b5944bd",
+          "events.csv": "d7f15a0729dcefa21804d5a988901b3c4f571937a215b57a95897fa1014758ef",
+          "features.csv": "97e21c108522f8558df056e81ed796ea974812333045d9627252587ebb22b283",
+          "sends.csv": "b540f98df93b345de22205d335d80b3548e3e6547fd79f7fc784eb0dcadae746"
+        },
+        "route": "timestamped"
+      },
+      {
+        "fixture": "clicks-128",
+        "hashes": {
+          "energy.csv": "5f0f670b9b9148a2f015aa5673bbe89d0025307b67b7fc2fe86a096a7b03637c",
+          "events.csv": "5058679f5c869fb2b4a692ae1ef92aa1c89b9e4dc577ac0b7ef422652004fb93",
+          "features.csv": "beb190a8d40f4ab1c77d8250da0a973162a1219501dd8b96d2a1451b96dff828",
+          "sends.csv": "ec092719dde417d5da0bfbebe672806ba0cd509dd91e41a874b19b640bbaccab"
+        },
+        "route": "normal"
+      },
+      {
+        "fixture": "clicks-128",
+        "hashes": {
+          "energy.csv": "2933cb9a74fb731676558ecba19e0a88efabbc38129816d649a78be3e0f90ce4",
+          "events.csv": "df451219302575182d7ed136289e0b9905e25a17b4bab6ea248bb094d44e186a",
+          "features.csv": "8c06e3882fa12d2cf27b58c41892e8b9be13ed2a9f2a00e8043f6c4f4c613a8c",
+          "sends.csv": "9b492d140779da70766f42002ae524456aee958f71a49a77849b95d6ad559944"
+        },
+        "route": "timestamped"
+      },
+      {
+        "fixture": "clicks-174",
+        "hashes": {
+          "energy.csv": "c6b1f8c96a37ec2463014e51d74794daadd90dd88f50868d8f1908bf74e0a63b",
+          "events.csv": "8dad0da77c79879255349bc6a801ba3e423aa34733b8931dd2aa1c57ac753347",
+          "features.csv": "4f18d75a1b19f2d8e01c9564a4c5dfe798e01abf67236983f69140ce00d33788",
+          "sends.csv": "3b001c45b37f9bb7a10d40f670c95cd4c639ca2088e8accfd60c36f00f66dd6d"
+        },
+        "route": "normal"
+      },
+      {
+        "fixture": "clicks-174",
+        "hashes": {
+          "energy.csv": "bf088bca64c9abb27c7bd8c648633b47e52f0c3e222934fa44534fe30190b8b9",
+          "events.csv": "223cd231b8b2e81d0c99552856e814a2cfd446ca68bbbe33f4ec15fe80085567",
+          "features.csv": "6623a41597bc55c4562bdee12d0974ca06125af45226acdeca7058c5eb7bad1a",
+          "sends.csv": "7824c341fb70651040e53019aee72c64aeab11d0601b22e0768d2fcb9cba7de4"
+        },
+        "route": "timestamped"
+      },
+      {
+        "fixture": "impulse",
+        "hashes": {
+          "energy.csv": "d325e996320321f95b83b1787e215073a4444172acc972b1fe8a2ee1c385c4cb",
+          "events.csv": "6ab3890588cfb12752310200c2cc24e25b00f0d9e87e46d16877288a26b9005d",
+          "features.csv": "14fd25ed39311b937caab9d6b2e4a474f653d582ba5c8cb1ab9a4466fb765148",
+          "sends.csv": "9d3fadfeb98540d3b544fc5f22a95fb780d7c1d65c660ccb13616652e707edf0"
+        },
+        "route": "normal"
+      },
+      {
+        "fixture": "impulse",
+        "hashes": {
+          "energy.csv": "291369e0be10518ac0f43e36dbb5ca712d77d33f3d1fe1070809bd2764265687",
+          "events.csv": "7cafa9665cc4e558c0aec33bba184efbd8f692c53fe74720716ddd2582b1fc3d",
+          "features.csv": "e2f428793bea0fbd7c0dc9dff235554ebc5b8c2da3646b18376bcb9897d3da84",
+          "sends.csv": "a9ccad13f4bf3b13fdce9880f357170aca2150e4aa96f27fb60babb2c717157b"
+        },
+        "route": "timestamped"
+      },
+      {
+        "fixture": "panning",
+        "hashes": {
+          "energy.csv": "a1afe515ba334871f72fa4bc311804d48e4ce217f5231b3aaff4c099ea8a9ad2",
+          "events.csv": "158db827442f703a3e75d5add05178e1d438fcc28f8af8ec98d9032345caaad4",
+          "features.csv": "961f5d6fa8beacb266997d89a517f129780826f41a0fd88fd7ffc327c6ad7539",
+          "sends.csv": "e7636bc19e000587faccf6e48ae7c6428cab00cb8b520b1b8cecb48c70fda41a"
+        },
+        "route": "normal"
+      },
+      {
+        "fixture": "panning",
+        "hashes": {
+          "energy.csv": "f14d30e6788c86d20c6e076c17b6097a1a5f441e388d382418aa03c6d4b8a6c8",
+          "events.csv": "be120fefbc3bbde43bdda0d55871ad501dd310269708bd431125051c7958d4d1",
+          "features.csv": "c2566b71e3ca29c7ddd064fc618d2b8668c6dfd611bd062f3d54edba35b88b23",
+          "sends.csv": "fc7cfde103b6e4541e4f0b4774768cc57b46252869529a068cf33aa08b654bf6"
+        },
+        "route": "timestamped"
+      },
+      {
+        "fixture": "pink-noise",
+        "hashes": {
+          "energy.csv": "e8128cce35992b3075184ee74ada014273bca128fbb81334a2de5ec8fbba49ef",
+          "events.csv": "ef4ad2fa6ab1ceb3c31f6b83149ec6d3dba07eacc85a9ab5880da3ca9cd27094",
+          "features.csv": "6401d4c86312d7124e61dfdd9a9ce516e2dc5526fcb33fe34411fc03f654eb32",
+          "sends.csv": "e9d79781a9697324e4f4484615d5d99e3dda764eeaa23e2a3e19db738e56d9b9"
+        },
+        "route": "normal"
+      },
+      {
+        "fixture": "pink-noise",
+        "hashes": {
+          "energy.csv": "75154eea018ea3316546e243595361e16d3ac26397b639cd28cf606a4ed867ad",
+          "events.csv": "93dd34eebf34c9b20c01e9de20d31ac54602a4186b78181d24a6c3c8c4c78116",
+          "features.csv": "008959d66689c3b0bef7a53c9f0bab30ee44917a0347e1612b5d222acf7254f1",
+          "sends.csv": "c6e7e65ea02dac6fb3e79ce96d1b3b29d3115e29cfe9416ff79d80d1e89e044e"
+        },
+        "route": "timestamped"
+      },
+      {
+        "fixture": "silence",
+        "hashes": {
+          "energy.csv": "ce13aa7dd86c8990594ae862b34f7168fa59ed9810dd8e8c56e0260f647b4d1e",
+          "events.csv": "1430f2b7d45695a4592ded56bc859cc34325e97aaaa6cce0ac38c20f48716378",
+          "features.csv": "a458db0c241c121da3fd6b58db740cf6bc7fa67aa8be55ce6b75deed76923788",
+          "sends.csv": "f180f0b8fc9ccbf9e5a56687c19fc02f8df9bcff172f84e4d6e0d10e79164491"
+        },
+        "route": "normal"
+      },
+      {
+        "fixture": "silence",
+        "hashes": {
+          "energy.csv": "44fe7d78dc24aa07dcc371eaad61d1d472130f4af34dbdd1a301799daf8afb23",
+          "events.csv": "1430f2b7d45695a4592ded56bc859cc34325e97aaaa6cce0ac38c20f48716378",
+          "features.csv": "eb75250b5b9a3315c115c9ecd73f01146ab7df678434462a10388f91372c7191",
+          "sends.csv": "a577e324e8b1d0a02e708095d6b961473126ea05bf7ca90573ee9920d80133d9"
+        },
+        "route": "timestamped"
+      },
+      {
+        "fixture": "sweep",
+        "hashes": {
+          "energy.csv": "6bca61b5689ae1273c5c1a1e0aa1b3d75816e8123448a36b9a2a7c69ea491cfb",
+          "events.csv": "0d1dbb7f8361a3d8921f22b30dde1e13067824c595e66eafb97a2d6f34e27c99",
+          "features.csv": "65aa5fe0fcc67cf5f271d3fe0bed781cc50f177ae300dc00099a75dbfe733938",
+          "sends.csv": "7e87815db212a976bd1d9209b92596476be136e7e7bad302efc34dbc2424dbd8"
+        },
+        "route": "normal"
+      },
+      {
+        "fixture": "sweep",
+        "hashes": {
+          "energy.csv": "899d0b278a8a8622e56ccff3a49a3ae92ebb5c257d6bbbf8df9eaac55783ae69",
+          "events.csv": "54a4fc587cbd0329e6e9f7cc676ea0ad891570e17d35af02d7e26efe1c489da8",
+          "features.csv": "4352f0c450d52ad304acc4b6dc4c03e9a95f95bf8aa62735055e49bfd0b798c5",
+          "sends.csv": "2b167f46962d2a01433c9c4c0787e378abfab6e3c1ed1532a41abe0dca80256f"
+        },
+        "route": "timestamped"
+      },
+      {
+        "fixture": "tone-steps",
+        "hashes": {
+          "energy.csv": "4a1919b84605703f671022902c91cce82a198d871d25dff47d9435b441eec8e7",
+          "events.csv": "3b14bb3aef0668cb5ea8079f4fa31a7866889010bb8583d5e200c2950f22cff4",
+          "features.csv": "213a68f0acb349e5602b005bc324d1054bfd451eb6637e26cbe416edc958f1fe",
+          "sends.csv": "222926645e03742335128674c3197af948bb2b9e7e083e01039bc8b00b07d984"
+        },
+        "route": "normal"
+      },
+      {
+        "fixture": "tone-steps",
+        "hashes": {
+          "energy.csv": "73460aaf5f563af93d30cf389aa34d7889ae4d63cee42aa22e2891c6d976d1b1",
+          "events.csv": "8b2674d031eb2e2670e442ff9154cb82cb86f06ea6e76a1523780ac2e13d6808",
+          "features.csv": "e2f24a6c05226c04c845b6e7ccb58facc76367a3a58fb47fbea19fe8dceaa859",
+          "sends.csv": "50582a53476bfd8c74089d8fad2205563ad39ddc6356e6eb4110ae789a5eee5a"
+        },
+        "route": "timestamped"
+      }
+    ],
+    "source_commit": "6986d9ad171beaed0a4b643cd37bab371a70abcf"
+  },
+  "onset-regression-numbers.json": {
+    "measurement_commit": "c5e6a7eb735e09a31e66e3194be2bee787019229",
+    "panning": {
+      "combined": {
+        "all": [
+          {
+            "availability_offset_median": 0.0,
+            "candidate_offset_median": -480.0,
+            "candidate_strength_median": 1.870075,
+            "events": 9,
+            "reported_strength_median": 1.870075
+          },
+          {
+            "availability_offset_median": 0.0,
+            "candidate_offset_median": -480.0,
+            "candidate_strength_median": 1.836823,
+            "events": 10,
+            "reported_strength_median": 1.836823
+          }
+        ]
+      },
+      "multiband": {
+        "all": [
+          {
+            "availability_offset_median": 0.0,
+            "candidate_offset_median": -480.0,
+            "candidate_strength_median": 11.168447,
+            "events": 9,
+            "reported_strength_median": 11.168447
+          },
+          {
+            "availability_offset_median": 0.0,
+            "candidate_offset_median": -480.0,
+            "candidate_strength_median": 10.963674000000001,
+            "events": 10,
+            "reported_strength_median": 10.963674000000001
+          }
+        ],
+        "bass": [
+          {
+            "availability_offset_median": 0.0,
+            "candidate_offset_median": -480.0,
+            "candidate_strength_median": 2.807108,
+            "events": 9,
+            "reported_strength_median": 2.807108
+          },
+          {
+            "availability_offset_median": 0.0,
+            "candidate_offset_median": -480.0,
+            "candidate_strength_median": 2.7550790000000003,
+            "events": 10,
+            "reported_strength_median": 2.7550790000000003
+          }
+        ],
+        "mid": [
+          {
+            "availability_offset_median": 0.0,
+            "candidate_offset_median": -480.0,
+            "candidate_strength_median": 0.644805,
+            "events": 9,
+            "reported_strength_median": 0.644805
+          },
+          {
+            "availability_offset_median": 0.0,
+            "candidate_offset_median": -480.0,
+            "candidate_strength_median": 0.6329845000000001,
+            "events": 10,
+            "reported_strength_median": 0.6329845000000001
+          }
+        ],
+        "treble": [
+          {
+            "availability_offset_median": 0.0,
+            "candidate_offset_median": -480.0,
+            "candidate_strength_median": 11.168447,
+            "events": 9,
+            "reported_strength_median": 11.168447
+          },
+          {
+            "availability_offset_median": 0.0,
+            "candidate_offset_median": -480.0,
+            "candidate_strength_median": 10.963674000000001,
+            "events": 10,
+            "reported_strength_median": 10.963674000000001
+          }
+        ]
+      }
+    },
+    "phase2_reason": "Candidate-attributed one-hop picker, frozen silence reference, independent event intake; triggered replaces accepted/rendered. Beat-only publications no longer replace continuous latest or advance timestamped ballistics; skipped flags survive as queued events.",
+    "phase3_reason": "LAT-01: independent short log flux, unchanged long bass/spectrum, event sends between cadence ticks, exact timestamped event deadlines; deliberate exact publication and detector pins.",
+    "position": {
+      "anti-phase/combined": {
+        "all": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": 0,
+            "median_samples": 0.0,
+            "misses": 0
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": 480,
+            "median_samples": -480.0,
+            "misses": 0
+          },
+          "event_count": 19,
+          "lookahead_samples": [
+            480
+          ],
+          "truth_count": 19
+        },
+        "bass": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": null,
+            "median_samples": null,
+            "misses": 19
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": null,
+            "median_samples": null,
+            "misses": 19
+          },
+          "event_count": 0,
+          "lookahead_samples": [],
+          "truth_count": 19
+        },
+        "mid": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": null,
+            "median_samples": null,
+            "misses": 19
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": null,
+            "median_samples": null,
+            "misses": 19
+          },
+          "event_count": 0,
+          "lookahead_samples": [],
+          "truth_count": 19
+        },
+        "treble": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": null,
+            "median_samples": null,
+            "misses": 19
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": null,
+            "median_samples": null,
+            "misses": 19
+          },
+          "event_count": 0,
+          "lookahead_samples": [],
+          "truth_count": 19
+        }
+      },
+      "anti-phase/multiband": {
+        "all": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": 0,
+            "median_samples": 0.0,
+            "misses": 0
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": 480,
+            "median_samples": -480.0,
+            "misses": 0
+          },
+          "event_count": 19,
+          "lookahead_samples": [
+            480
+          ],
+          "truth_count": 19
+        },
+        "bass": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": 0,
+            "median_samples": 0.0,
+            "misses": 0
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": 480,
+            "median_samples": -480.0,
+            "misses": 0
+          },
+          "event_count": 19,
+          "lookahead_samples": [
+            480
+          ],
+          "truth_count": 19
+        },
+        "mid": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": 0,
+            "median_samples": 0.0,
+            "misses": 0
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": 480,
+            "median_samples": -480.0,
+            "misses": 0
+          },
+          "event_count": 19,
+          "lookahead_samples": [
+            480
+          ],
+          "truth_count": 19
+        },
+        "treble": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": 0,
+            "median_samples": 0.0,
+            "misses": 0
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": 480,
+            "median_samples": -480.0,
+            "misses": 0
+          },
+          "event_count": 19,
+          "lookahead_samples": [
+            480
+          ],
+          "truth_count": 19
+        }
+      },
+      "clicks-120/combined": {
+        "all": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": 480,
+            "median_samples": 480.0,
+            "misses": 0
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": 0,
+            "median_samples": 0.0,
+            "misses": 0
+          },
+          "event_count": 19,
+          "lookahead_samples": [
+            480
+          ],
+          "truth_count": 19
+        },
+        "bass": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": null,
+            "median_samples": null,
+            "misses": 19
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": null,
+            "median_samples": null,
+            "misses": 19
+          },
+          "event_count": 0,
+          "lookahead_samples": [],
+          "truth_count": 19
+        },
+        "mid": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": null,
+            "median_samples": null,
+            "misses": 19
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": null,
+            "median_samples": null,
+            "misses": 19
+          },
+          "event_count": 0,
+          "lookahead_samples": [],
+          "truth_count": 19
+        },
+        "treble": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": null,
+            "median_samples": null,
+            "misses": 19
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": null,
+            "median_samples": null,
+            "misses": 19
+          },
+          "event_count": 0,
+          "lookahead_samples": [],
+          "truth_count": 19
+        }
+      },
+      "clicks-120/multiband": {
+        "all": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": 480,
+            "median_samples": 480.0,
+            "misses": 0
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": 0,
+            "median_samples": 0.0,
+            "misses": 0
+          },
+          "event_count": 19,
+          "lookahead_samples": [
+            480
+          ],
+          "truth_count": 19
+        },
+        "bass": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": 480,
+            "median_samples": 480.0,
+            "misses": 0
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": 0,
+            "median_samples": 0.0,
+            "misses": 0
+          },
+          "event_count": 19,
+          "lookahead_samples": [
+            480
+          ],
+          "truth_count": 19
+        },
+        "mid": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": 480,
+            "median_samples": 480.0,
+            "misses": 0
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": 0,
+            "median_samples": 0.0,
+            "misses": 0
+          },
+          "event_count": 19,
+          "lookahead_samples": [
+            480
+          ],
+          "truth_count": 19
+        },
+        "treble": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": 480,
+            "median_samples": 480.0,
+            "misses": 0
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": 0,
+            "median_samples": 0.0,
+            "misses": 0
+          },
+          "event_count": 19,
+          "lookahead_samples": [
+            480
+          ],
+          "truth_count": 19
+        }
+      },
+      "clicks-128/combined": {
+        "all": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": 480,
+            "median_samples": 240.0,
+            "misses": 0
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": 420,
+            "median_samples": -240.0,
+            "misses": 0
+          },
+          "event_count": 21,
+          "lookahead_samples": [
+            480
+          ],
+          "truth_count": 21
+        },
+        "bass": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": null,
+            "median_samples": null,
+            "misses": 21
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": null,
+            "median_samples": null,
+            "misses": 21
+          },
+          "event_count": 0,
+          "lookahead_samples": [],
+          "truth_count": 21
+        },
+        "mid": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": null,
+            "median_samples": null,
+            "misses": 21
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": null,
+            "median_samples": null,
+            "misses": 21
+          },
+          "event_count": 0,
+          "lookahead_samples": [],
+          "truth_count": 21
+        },
+        "treble": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": null,
+            "median_samples": null,
+            "misses": 21
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": null,
+            "median_samples": null,
+            "misses": 21
+          },
+          "event_count": 0,
+          "lookahead_samples": [],
+          "truth_count": 21
+        }
+      },
+      "clicks-128/multiband": {
+        "all": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": 480,
+            "median_samples": 240.0,
+            "misses": 0
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": 420,
+            "median_samples": -240.0,
+            "misses": 0
+          },
+          "event_count": 21,
+          "lookahead_samples": [
+            480
+          ],
+          "truth_count": 21
+        },
+        "bass": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": 480,
+            "median_samples": 240.0,
+            "misses": 0
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": 420,
+            "median_samples": -240.0,
+            "misses": 0
+          },
+          "event_count": 21,
+          "lookahead_samples": [
+            480
+          ],
+          "truth_count": 21
+        },
+        "mid": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": 480,
+            "median_samples": 240.0,
+            "misses": 0
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": 420,
+            "median_samples": -240.0,
+            "misses": 0
+          },
+          "event_count": 21,
+          "lookahead_samples": [
+            480
+          ],
+          "truth_count": 21
+        },
+        "treble": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": 480,
+            "median_samples": 240.0,
+            "misses": 0
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": 420,
+            "median_samples": -240.0,
+            "misses": 0
+          },
+          "event_count": 21,
+          "lookahead_samples": [
+            480
+          ],
+          "truth_count": 21
+        }
+      },
+      "clicks-174/combined": {
+        "all": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": 480,
+            "median_samples": 256.5,
+            "misses": 0
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": 463,
+            "median_samples": -223.5,
+            "misses": 0
+          },
+          "event_count": 28,
+          "lookahead_samples": [
+            480
+          ],
+          "truth_count": 28
+        },
+        "bass": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": null,
+            "median_samples": null,
+            "misses": 28
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": null,
+            "median_samples": null,
+            "misses": 28
+          },
+          "event_count": 0,
+          "lookahead_samples": [],
+          "truth_count": 28
+        },
+        "mid": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": null,
+            "median_samples": null,
+            "misses": 28
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": null,
+            "median_samples": null,
+            "misses": 28
+          },
+          "event_count": 0,
+          "lookahead_samples": [],
+          "truth_count": 28
+        },
+        "treble": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": null,
+            "median_samples": null,
+            "misses": 28
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": null,
+            "median_samples": null,
+            "misses": 28
+          },
+          "event_count": 0,
+          "lookahead_samples": [],
+          "truth_count": 28
+        }
+      },
+      "clicks-174/multiband": {
+        "all": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": 480,
+            "median_samples": 256.5,
+            "misses": 0
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": 463,
+            "median_samples": -223.5,
+            "misses": 0
+          },
+          "event_count": 28,
+          "lookahead_samples": [
+            480
+          ],
+          "truth_count": 28
+        },
+        "bass": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": 480,
+            "median_samples": 256.5,
+            "misses": 0
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": 463,
+            "median_samples": -223.5,
+            "misses": 0
+          },
+          "event_count": 28,
+          "lookahead_samples": [
+            480
+          ],
+          "truth_count": 28
+        },
+        "mid": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": 480,
+            "median_samples": 256.5,
+            "misses": 0
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": 463,
+            "median_samples": -223.5,
+            "misses": 0
+          },
+          "event_count": 28,
+          "lookahead_samples": [
+            480
+          ],
+          "truth_count": 28
+        },
+        "treble": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": 480,
+            "median_samples": 256.5,
+            "misses": 0
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": 463,
+            "median_samples": -223.5,
+            "misses": 0
+          },
+          "event_count": 28,
+          "lookahead_samples": [
+            480
+          ],
+          "truth_count": 28
+        }
+      },
+      "impulse/combined": {
+        "all": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": 480,
+            "median_samples": 480.0,
+            "misses": 0
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": 0,
+            "median_samples": 0.0,
+            "misses": 0
+          },
+          "event_count": 1,
+          "lookahead_samples": [
+            480
+          ],
+          "truth_count": 1
+        },
+        "bass": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": null,
+            "median_samples": null,
+            "misses": 1
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": null,
+            "median_samples": null,
+            "misses": 1
+          },
+          "event_count": 0,
+          "lookahead_samples": [],
+          "truth_count": 1
+        },
+        "mid": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": null,
+            "median_samples": null,
+            "misses": 1
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": null,
+            "median_samples": null,
+            "misses": 1
+          },
+          "event_count": 0,
+          "lookahead_samples": [],
+          "truth_count": 1
+        },
+        "treble": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": null,
+            "median_samples": null,
+            "misses": 1
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": null,
+            "median_samples": null,
+            "misses": 1
+          },
+          "event_count": 0,
+          "lookahead_samples": [],
+          "truth_count": 1
+        }
+      },
+      "impulse/multiband": {
+        "all": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": 480,
+            "median_samples": 480.0,
+            "misses": 0
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": 0,
+            "median_samples": 0.0,
+            "misses": 0
+          },
+          "event_count": 1,
+          "lookahead_samples": [
+            480
+          ],
+          "truth_count": 1
+        },
+        "bass": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": 480,
+            "median_samples": 480.0,
+            "misses": 0
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": 0,
+            "median_samples": 0.0,
+            "misses": 0
+          },
+          "event_count": 1,
+          "lookahead_samples": [
+            480
+          ],
+          "truth_count": 1
+        },
+        "mid": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": 480,
+            "median_samples": 480.0,
+            "misses": 0
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": 0,
+            "median_samples": 0.0,
+            "misses": 0
+          },
+          "event_count": 1,
+          "lookahead_samples": [
+            480
+          ],
+          "truth_count": 1
+        },
+        "treble": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": 480,
+            "median_samples": 480.0,
+            "misses": 0
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": 0,
+            "median_samples": 0.0,
+            "misses": 0
+          },
+          "event_count": 1,
+          "lookahead_samples": [
+            480
+          ],
+          "truth_count": 1
+        }
+      },
+      "panning/combined": {
+        "all": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": 0,
+            "median_samples": 0.0,
+            "misses": 0
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": 480,
+            "median_samples": -480.0,
+            "misses": 0
+          },
+          "event_count": 19,
+          "lookahead_samples": [
+            480
+          ],
+          "truth_count": 19
+        },
+        "bass": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": null,
+            "median_samples": null,
+            "misses": 19
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": null,
+            "median_samples": null,
+            "misses": 19
+          },
+          "event_count": 0,
+          "lookahead_samples": [],
+          "truth_count": 19
+        },
+        "mid": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": null,
+            "median_samples": null,
+            "misses": 19
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": null,
+            "median_samples": null,
+            "misses": 19
+          },
+          "event_count": 0,
+          "lookahead_samples": [],
+          "truth_count": 19
+        },
+        "treble": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": null,
+            "median_samples": null,
+            "misses": 19
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": null,
+            "median_samples": null,
+            "misses": 19
+          },
+          "event_count": 0,
+          "lookahead_samples": [],
+          "truth_count": 19
+        }
+      },
+      "panning/multiband": {
+        "all": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": 0,
+            "median_samples": 0.0,
+            "misses": 0
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": 480,
+            "median_samples": -480.0,
+            "misses": 0
+          },
+          "event_count": 19,
+          "lookahead_samples": [
+            480
+          ],
+          "truth_count": 19
+        },
+        "bass": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": 0,
+            "median_samples": 0.0,
+            "misses": 0
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": 480,
+            "median_samples": -480.0,
+            "misses": 0
+          },
+          "event_count": 19,
+          "lookahead_samples": [
+            480
+          ],
+          "truth_count": 19
+        },
+        "mid": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": 0,
+            "median_samples": 0.0,
+            "misses": 0
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": 480,
+            "median_samples": -480.0,
+            "misses": 0
+          },
+          "event_count": 19,
+          "lookahead_samples": [
+            480
+          ],
+          "truth_count": 19
+        },
+        "treble": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": 0,
+            "median_samples": 0.0,
+            "misses": 0
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": 480,
+            "median_samples": -480.0,
+            "misses": 0
+          },
+          "event_count": 19,
+          "lookahead_samples": [
+            480
+          ],
+          "truth_count": 19
+        }
+      },
+      "tone-steps/combined": {
+        "all": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": 96480,
+            "median_samples": 480.0,
+            "misses": 1
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": 96000,
+            "median_samples": 0.0,
+            "misses": 1
+          },
+          "event_count": 3,
+          "lookahead_samples": [
+            480
+          ],
+          "truth_count": 4
+        },
+        "bass": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": null,
+            "median_samples": null,
+            "misses": 4
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": null,
+            "median_samples": null,
+            "misses": 4
+          },
+          "event_count": 0,
+          "lookahead_samples": [],
+          "truth_count": 4
+        },
+        "mid": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": null,
+            "median_samples": null,
+            "misses": 4
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": null,
+            "median_samples": null,
+            "misses": 4
+          },
+          "event_count": 0,
+          "lookahead_samples": [],
+          "truth_count": 4
+        },
+        "treble": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": null,
+            "median_samples": null,
+            "misses": 4
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": null,
+            "median_samples": null,
+            "misses": 4
+          },
+          "event_count": 0,
+          "lookahead_samples": [],
+          "truth_count": 4
+        }
+      },
+      "tone-steps/multiband": {
+        "all": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": 96480,
+            "median_samples": 480.0,
+            "misses": 1
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": 96000,
+            "median_samples": 0.0,
+            "misses": 1
+          },
+          "event_count": 3,
+          "lookahead_samples": [
+            480
+          ],
+          "truth_count": 4
+        },
+        "bass": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": 96480,
+            "median_samples": 480.0,
+            "misses": 1
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": 96000,
+            "median_samples": 0.0,
+            "misses": 1
+          },
+          "event_count": 3,
+          "lookahead_samples": [
+            480
+          ],
+          "truth_count": 4
+        },
+        "mid": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": 96480,
+            "median_samples": 480.0,
+            "misses": 1
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": 96000,
+            "median_samples": 0.0,
+            "misses": 1
+          },
+          "event_count": 3,
+          "lookahead_samples": [
+            480
+          ],
+          "truth_count": 4
+        },
+        "treble": {
+          "availability": {
+            "false_positives": 0,
+            "max_abs_samples": 96480,
+            "median_samples": 480.0,
+            "misses": 1
+          },
+          "candidate": {
+            "false_positives": 0,
+            "max_abs_samples": 96000,
+            "median_samples": 0.0,
+            "misses": 1
+          },
+          "event_count": 3,
+          "lookahead_samples": [
+            480
+          ],
+          "truth_count": 4
+        }
+      }
+    },
+    "strength": {
+      "clicks-120/combined": {
+        "all": {
+          "below_tenth_fraction": 0.0,
+          "candidate": [
+            2.00735,
+            2.00735,
+            2.00735,
+            2.00735,
+            2.00735,
+            2.00735,
+            2.00735,
+            2.00735,
+            2.00735,
+            2.00735,
+            2.00735,
+            2.00735,
+            2.00735,
+            2.00735,
+            2.00735,
+            2.00735,
+            2.00735,
+            2.00735,
+            2.00735
+          ],
+          "candidate_samples": [
+            24000,
+            48000,
+            72000,
+            96000,
+            120000,
+            144000,
+            168000,
+            192000,
+            216000,
+            240000,
+            264000,
+            288000,
+            312000,
+            336000,
+            360000,
+            384000,
+            408000,
+            432000,
+            456000
+          ],
+          "reported": [
+            2.00735,
+            2.00735,
+            2.00735,
+            2.00735,
+            2.00735,
+            2.00735,
+            2.00735,
+            2.00735,
+            2.00735,
+            2.00735,
+            2.00735,
+            2.00735,
+            2.00735,
+            2.00735,
+            2.00735,
+            2.00735,
+            2.00735,
+            2.00735,
+            2.00735
+          ]
+        },
+        "bass": {
+          "below_tenth_fraction": null,
+          "candidate": [],
+          "candidate_samples": [],
+          "reported": []
+        },
+        "mid": {
+          "below_tenth_fraction": null,
+          "candidate": [],
+          "candidate_samples": [],
+          "reported": []
+        },
+        "treble": {
+          "below_tenth_fraction": null,
+          "candidate": [],
+          "candidate_samples": [],
+          "reported": []
+        }
+      },
+      "clicks-120/multiband": {
+        "all": {
+          "below_tenth_fraction": 0.0,
+          "candidate": [
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291
+          ],
+          "candidate_samples": [
+            24000,
+            48000,
+            72000,
+            96000,
+            120000,
+            144000,
+            168000,
+            192000,
+            216000,
+            240000,
+            264000,
+            288000,
+            312000,
+            336000,
+            360000,
+            384000,
+            408000,
+            432000,
+            456000
+          ],
+          "reported": [
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291
+          ]
+        },
+        "bass": {
+          "below_tenth_fraction": 0.0,
+          "candidate": [
+            2.478872,
+            2.478872,
+            2.478872,
+            2.478872,
+            2.478872,
+            2.478872,
+            2.478872,
+            2.478872,
+            2.478872,
+            2.478872,
+            2.478872,
+            2.478872,
+            2.478872,
+            2.478872,
+            2.478872,
+            2.478872,
+            2.478872,
+            2.478872,
+            2.478872
+          ],
+          "candidate_samples": [
+            24000,
+            48000,
+            72000,
+            96000,
+            120000,
+            144000,
+            168000,
+            192000,
+            216000,
+            240000,
+            264000,
+            288000,
+            312000,
+            336000,
+            360000,
+            384000,
+            408000,
+            432000,
+            456000
+          ],
+          "reported": [
+            2.478872,
+            2.478872,
+            2.478872,
+            2.478872,
+            2.478872,
+            2.478872,
+            2.478872,
+            2.478872,
+            2.478872,
+            2.478872,
+            2.478872,
+            2.478872,
+            2.478872,
+            2.478872,
+            2.478872,
+            2.478872,
+            2.478872,
+            2.478872,
+            2.478872
+          ]
+        },
+        "mid": {
+          "below_tenth_fraction": 0.0,
+          "candidate": [
+            0.832825,
+            0.832825,
+            0.832825,
+            0.832825,
+            0.832825,
+            0.832825,
+            0.832825,
+            0.832825,
+            0.832825,
+            0.832825,
+            0.832825,
+            0.832825,
+            0.832825,
+            0.832825,
+            0.832825,
+            0.832825,
+            0.832825,
+            0.832825,
+            0.832825
+          ],
+          "candidate_samples": [
+            24000,
+            48000,
+            72000,
+            96000,
+            120000,
+            144000,
+            168000,
+            192000,
+            216000,
+            240000,
+            264000,
+            288000,
+            312000,
+            336000,
+            360000,
+            384000,
+            408000,
+            432000,
+            456000
+          ],
+          "reported": [
+            0.832825,
+            0.832825,
+            0.832825,
+            0.832825,
+            0.832825,
+            0.832825,
+            0.832825,
+            0.832825,
+            0.832825,
+            0.832825,
+            0.832825,
+            0.832825,
+            0.832825,
+            0.832825,
+            0.832825,
+            0.832825,
+            0.832825,
+            0.832825,
+            0.832825
+          ]
+        },
+        "treble": {
+          "below_tenth_fraction": 0.0,
+          "candidate": [
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291
+          ],
+          "candidate_samples": [
+            24000,
+            48000,
+            72000,
+            96000,
+            120000,
+            144000,
+            168000,
+            192000,
+            216000,
+            240000,
+            264000,
+            288000,
+            312000,
+            336000,
+            360000,
+            384000,
+            408000,
+            432000,
+            456000
+          ],
+          "reported": [
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291,
+            61.393291
+          ]
+        }
+      },
+      "tone-steps/combined": {
+        "all": {
+          "below_tenth_fraction": 0.0,
+          "candidate": [
+            1.704008,
+            2.763192,
+            2.829724
+          ],
+          "candidate_samples": [
+            96000,
+            192000,
+            288000
+          ],
+          "reported": [
+            1.704008,
+            2.763192,
+            2.829724
+          ]
+        },
+        "bass": {
+          "below_tenth_fraction": null,
+          "candidate": [],
+          "candidate_samples": [],
+          "reported": []
+        },
+        "mid": {
+          "below_tenth_fraction": null,
+          "candidate": [],
+          "candidate_samples": [],
+          "reported": []
+        },
+        "treble": {
+          "below_tenth_fraction": null,
+          "candidate": [],
+          "candidate_samples": [],
+          "reported": []
+        }
+      },
+      "tone-steps/multiband": {
+        "all": {
+          "below_tenth_fraction": 0.0,
+          "candidate": [
+            18.328066,
+            57.953941,
+            104.617752
+          ],
+          "candidate_samples": [
+            96000,
+            192000,
+            288000
+          ],
+          "reported": [
+            18.328066,
+            57.953941,
+            104.617752
+          ]
+        },
+        "bass": {
+          "below_tenth_fraction": 0.0,
+          "candidate": [
+            3.279618,
+            10.370259,
+            18.08669
+          ],
+          "candidate_samples": [
+            96000,
+            192000,
+            288000
+          ],
+          "reported": [
+            3.279618,
+            10.370259,
+            18.08669
+          ]
+        },
+        "mid": {
+          "below_tenth_fraction": 0.0,
+          "candidate": [
+            18.328066,
+            57.953941,
+            104.617752
+          ],
+          "candidate_samples": [
+            96000,
+            192000,
+            288000
+          ],
+          "reported": [
+            18.328066,
+            57.953941,
+            104.617752
+          ]
+        },
+        "treble": {
+          "below_tenth_fraction": 0.0,
+          "candidate": [
+            1.021135,
+            3.228827,
+            5.995355
+          ],
+          "candidate_samples": [
+            96000,
+            192000,
+            288000
+          ],
+          "reported": [
+            1.021135,
+            3.228827,
+            5.995355
+          ]
+        }
+      }
+    },
+    "survival": {
+      "anti-phase/combined/normal/30/0": {
+        "events": {
+          "all": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          317,
+          697,
+          1
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "anti-phase/combined/normal/30/1": {
+        "events": {
+          "all": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          957,
+          20,
+          38
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "anti-phase/combined/normal/60/0": {
+        "events": {
+          "all": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          593,
+          411,
+          11
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "anti-phase/combined/normal/60/1": {
+        "events": {
+          "all": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          959,
+          20,
+          36
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "anti-phase/combined/timestamped/30/0": {
+        "events": {
+          "all": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          977,
+          19,
+          19
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "anti-phase/combined/timestamped/30/1": {
+        "events": {
+          "all": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          977,
+          19,
+          19
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "anti-phase/combined/timestamped/60/0": {
+        "events": {
+          "all": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          977,
+          19,
+          19
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "anti-phase/combined/timestamped/60/1": {
+        "events": {
+          "all": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          977,
+          19,
+          19
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "anti-phase/multiband/normal/30/0": {
+        "events": {
+          "all": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          290,
+          713,
+          12
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "anti-phase/multiband/normal/30/1": {
+        "events": {
+          "all": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          961,
+          20,
+          34
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "anti-phase/multiband/normal/60/0": {
+        "events": {
+          "all": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          589,
+          414,
+          12
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "anti-phase/multiband/normal/60/1": {
+        "events": {
+          "all": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          961,
+          20,
+          34
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "anti-phase/multiband/timestamped/30/0": {
+        "events": {
+          "all": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          977,
+          19,
+          19
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "anti-phase/multiband/timestamped/30/1": {
+        "events": {
+          "all": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          977,
+          19,
+          19
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "anti-phase/multiband/timestamped/60/0": {
+        "events": {
+          "all": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          977,
+          19,
+          19
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "anti-phase/multiband/timestamped/60/1": {
+        "events": {
+          "all": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          977,
+          19,
+          19
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "clicks-120/combined/normal/30/0": {
+        "events": {
+          "all": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          317,
+          697,
+          1
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "clicks-120/combined/normal/30/1": {
+        "events": {
+          "all": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          957,
+          20,
+          38
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "clicks-120/combined/normal/60/0": {
+        "events": {
+          "all": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          616,
+          398,
+          1
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "clicks-120/combined/normal/60/1": {
+        "events": {
+          "all": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          957,
+          19,
+          39
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "clicks-120/combined/timestamped/30/0": {
+        "events": {
+          "all": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          977,
+          19,
+          19
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "clicks-120/combined/timestamped/30/1": {
+        "events": {
+          "all": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          977,
+          19,
+          19
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "clicks-120/combined/timestamped/60/0": {
+        "events": {
+          "all": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          977,
+          19,
+          19
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "clicks-120/combined/timestamped/60/1": {
+        "events": {
+          "all": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          977,
+          19,
+          19
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "clicks-120/multiband/normal/30/0": {
+        "events": {
+          "all": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          279,
+          716,
+          20
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "clicks-120/multiband/normal/30/1": {
+        "events": {
+          "all": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          956,
+          20,
+          39
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "clicks-120/multiband/normal/60/0": {
+        "events": {
+          "all": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          578,
+          417,
+          20
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "clicks-120/multiband/normal/60/1": {
+        "events": {
+          "all": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          958,
+          19,
+          38
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "clicks-120/multiband/timestamped/30/0": {
+        "events": {
+          "all": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          977,
+          19,
+          19
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "clicks-120/multiband/timestamped/30/1": {
+        "events": {
+          "all": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          977,
+          19,
+          19
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "clicks-120/multiband/timestamped/60/0": {
+        "events": {
+          "all": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          977,
+          19,
+          19
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "clicks-120/multiband/timestamped/60/1": {
+        "events": {
+          "all": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          977,
+          19,
+          19
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "clicks-128/combined/normal/30/0": {
+        "events": {
+          "all": [
+            21,
+            21,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          311,
+          702,
+          4
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 21,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "clicks-128/combined/normal/30/1": {
+        "events": {
+          "all": [
+            21,
+            21,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          955,
+          22,
+          40
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 21,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "clicks-128/combined/normal/60/0": {
+        "events": {
+          "all": [
+            21,
+            21,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          599,
+          410,
+          8
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 21,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "clicks-128/combined/normal/60/1": {
+        "events": {
+          "all": [
+            21,
+            21,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          959,
+          21,
+          37
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 21,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "clicks-128/combined/timestamped/30/0": {
+        "events": {
+          "all": [
+            21,
+            21,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          975,
+          21,
+          21
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 21,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "clicks-128/combined/timestamped/30/1": {
+        "events": {
+          "all": [
+            21,
+            21,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          975,
+          21,
+          21
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 21,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "clicks-128/combined/timestamped/60/0": {
+        "events": {
+          "all": [
+            21,
+            21,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          975,
+          21,
+          21
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 21,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "clicks-128/combined/timestamped/60/1": {
+        "events": {
+          "all": [
+            21,
+            21,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          975,
+          21,
+          21
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 21,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "clicks-128/multiband/normal/30/0": {
+        "events": {
+          "all": [
+            21,
+            21,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            21,
+            21,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            21,
+            21,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            21,
+            21,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          307,
+          704,
+          6
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 21,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 21,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 21,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 21,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "clicks-128/multiband/normal/30/1": {
+        "events": {
+          "all": [
+            21,
+            21,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            21,
+            21,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            21,
+            21,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            21,
+            21,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          954,
+          22,
+          41
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 21,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 21,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 21,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 21,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "clicks-128/multiband/normal/60/0": {
+        "events": {
+          "all": [
+            21,
+            21,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            21,
+            21,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            21,
+            21,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            21,
+            21,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          595,
+          411,
+          11
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 21,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 21,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 21,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 21,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "clicks-128/multiband/normal/60/1": {
+        "events": {
+          "all": [
+            21,
+            21,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            21,
+            21,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            21,
+            21,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            21,
+            21,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          956,
+          21,
+          40
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 21,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 21,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 21,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 21,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "clicks-128/multiband/timestamped/30/0": {
+        "events": {
+          "all": [
+            21,
+            21,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            21,
+            21,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            21,
+            21,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            21,
+            21,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          975,
+          21,
+          21
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 21,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 21,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 21,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 21,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "clicks-128/multiband/timestamped/30/1": {
+        "events": {
+          "all": [
+            21,
+            21,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            21,
+            21,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            21,
+            21,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            21,
+            21,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          975,
+          21,
+          21
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 21,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 21,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 21,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 21,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "clicks-128/multiband/timestamped/60/0": {
+        "events": {
+          "all": [
+            21,
+            21,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            21,
+            21,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            21,
+            21,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            21,
+            21,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          975,
+          21,
+          21
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 21,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 21,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 21,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 21,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "clicks-128/multiband/timestamped/60/1": {
+        "events": {
+          "all": [
+            21,
+            21,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            21,
+            21,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            21,
+            21,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            21,
+            21,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          975,
+          21,
+          21
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 21,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 21,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 21,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 21,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "clicks-174/combined/normal/30/0": {
+        "events": {
+          "all": [
+            28,
+            28,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          311,
+          706,
+          7
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 28,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "clicks-174/combined/normal/30/1": {
+        "events": {
+          "all": [
+            28,
+            28,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          942,
+          29,
+          53
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 28,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "clicks-174/combined/normal/60/0": {
+        "events": {
+          "all": [
+            28,
+            28,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          597,
+          415,
+          12
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 28,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "clicks-174/combined/normal/60/1": {
+        "events": {
+          "all": [
+            28,
+            28,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          946,
+          28,
+          50
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 28,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "clicks-174/combined/timestamped/30/0": {
+        "events": {
+          "all": [
+            28,
+            28,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          968,
+          28,
+          28
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 28,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "clicks-174/combined/timestamped/30/1": {
+        "events": {
+          "all": [
+            28,
+            28,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          968,
+          28,
+          28
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 28,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "clicks-174/combined/timestamped/60/0": {
+        "events": {
+          "all": [
+            28,
+            28,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          968,
+          28,
+          28
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 28,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "clicks-174/combined/timestamped/60/1": {
+        "events": {
+          "all": [
+            28,
+            28,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          968,
+          28,
+          28
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 28,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "clicks-174/multiband/normal/30/0": {
+        "events": {
+          "all": [
+            28,
+            28,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            28,
+            28,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            28,
+            28,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            28,
+            28,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          310,
+          707,
+          7
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 28,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 28,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 28,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 28,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "clicks-174/multiband/normal/30/1": {
+        "events": {
+          "all": [
+            28,
+            28,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            28,
+            28,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            28,
+            28,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            28,
+            28,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          942,
+          29,
+          53
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 28,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 28,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 28,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 28,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "clicks-174/multiband/normal/60/0": {
+        "events": {
+          "all": [
+            28,
+            28,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            28,
+            28,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            28,
+            28,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            28,
+            28,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          596,
+          416,
+          12
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 28,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 28,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 28,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 28,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "clicks-174/multiband/normal/60/1": {
+        "events": {
+          "all": [
+            28,
+            28,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            28,
+            28,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            28,
+            28,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            28,
+            28,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          948,
+          28,
+          48
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 28,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 28,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 28,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 28,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "clicks-174/multiband/timestamped/30/0": {
+        "events": {
+          "all": [
+            28,
+            28,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            28,
+            28,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            28,
+            28,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            28,
+            28,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          968,
+          28,
+          28
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 28,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 28,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 28,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 28,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "clicks-174/multiband/timestamped/30/1": {
+        "events": {
+          "all": [
+            28,
+            28,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            28,
+            28,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            28,
+            28,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            28,
+            28,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          968,
+          28,
+          28
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 28,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 28,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 28,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 28,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "clicks-174/multiband/timestamped/60/0": {
+        "events": {
+          "all": [
+            28,
+            28,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            28,
+            28,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            28,
+            28,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            28,
+            28,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          968,
+          28,
+          28
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 28,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 28,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 28,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 28,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "clicks-174/multiband/timestamped/60/1": {
+        "events": {
+          "all": [
+            28,
+            28,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            28,
+            28,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            28,
+            28,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            28,
+            28,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          968,
+          28,
+          28
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 28,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 28,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 28,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 28,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "impulse/combined/normal/30/0": {
+        "events": {
+          "all": [
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          179,
+          417,
+          1
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 1,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "impulse/combined/normal/30/1": {
+        "events": {
+          "all": [
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          592,
+          2,
+          3
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 1,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "impulse/combined/normal/60/0": {
+        "events": {
+          "all": [
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          358,
+          238,
+          1
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 1,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "impulse/combined/normal/60/1": {
+        "events": {
+          "all": [
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          593,
+          1,
+          3
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 1,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "impulse/combined/timestamped/30/0": {
+        "events": {
+          "all": [
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          595,
+          1,
+          1
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 1,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "impulse/combined/timestamped/30/1": {
+        "events": {
+          "all": [
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          595,
+          1,
+          1
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 1,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "impulse/combined/timestamped/60/0": {
+        "events": {
+          "all": [
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          595,
+          1,
+          1
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 1,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "impulse/combined/timestamped/60/1": {
+        "events": {
+          "all": [
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          595,
+          1,
+          1
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 1,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "impulse/multiband/normal/30/0": {
+        "events": {
+          "all": [
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            1,
+            1,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          177,
+          418,
+          2
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 1,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 1,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 1,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 1,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "impulse/multiband/normal/30/1": {
+        "events": {
+          "all": [
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            1,
+            1,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          592,
+          2,
+          3
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 1,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 1,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 1,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 1,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "impulse/multiband/normal/60/0": {
+        "events": {
+          "all": [
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            1,
+            1,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          356,
+          239,
+          2
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 1,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 1,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 1,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 1,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "impulse/multiband/normal/60/1": {
+        "events": {
+          "all": [
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            1,
+            1,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          593,
+          1,
+          3
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 1,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 1,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 1,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 1,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "impulse/multiband/timestamped/30/0": {
+        "events": {
+          "all": [
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            1,
+            1,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          595,
+          1,
+          1
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 1,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 1,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 1,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 1,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "impulse/multiband/timestamped/30/1": {
+        "events": {
+          "all": [
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            1,
+            1,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          595,
+          1,
+          1
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 1,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 1,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 1,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 1,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "impulse/multiband/timestamped/60/0": {
+        "events": {
+          "all": [
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            1,
+            1,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          595,
+          1,
+          1
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 1,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 1,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 1,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 1,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "impulse/multiband/timestamped/60/1": {
+        "events": {
+          "all": [
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            1,
+            1,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            1,
+            1,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          595,
+          1,
+          1
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 1,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 1,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 1,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 1,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "panning/combined/normal/30/0": {
+        "events": {
+          "all": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          317,
+          697,
+          1
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "panning/combined/normal/30/1": {
+        "events": {
+          "all": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          957,
+          20,
+          38
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "panning/combined/normal/60/0": {
+        "events": {
+          "all": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          593,
+          411,
+          11
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "panning/combined/normal/60/1": {
+        "events": {
+          "all": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          959,
+          20,
+          36
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "panning/combined/timestamped/30/0": {
+        "events": {
+          "all": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          977,
+          19,
+          19
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "panning/combined/timestamped/30/1": {
+        "events": {
+          "all": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          977,
+          19,
+          19
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "panning/combined/timestamped/60/0": {
+        "events": {
+          "all": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          977,
+          19,
+          19
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "panning/combined/timestamped/60/1": {
+        "events": {
+          "all": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          977,
+          19,
+          19
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "panning/multiband/normal/30/0": {
+        "events": {
+          "all": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          290,
+          713,
+          12
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "panning/multiband/normal/30/1": {
+        "events": {
+          "all": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          961,
+          20,
+          34
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "panning/multiband/normal/60/0": {
+        "events": {
+          "all": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          589,
+          414,
+          12
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "panning/multiband/normal/60/1": {
+        "events": {
+          "all": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          961,
+          20,
+          34
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "panning/multiband/timestamped/30/0": {
+        "events": {
+          "all": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          977,
+          19,
+          19
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "panning/multiband/timestamped/30/1": {
+        "events": {
+          "all": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          977,
+          19,
+          19
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "panning/multiband/timestamped/60/0": {
+        "events": {
+          "all": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          977,
+          19,
+          19
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "panning/multiband/timestamped/60/1": {
+        "events": {
+          "all": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            19,
+            19,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          977,
+          19,
+          19
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 19,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "tone-steps/combined/normal/30/0": {
+        "events": {
+          "all": [
+            3,
+            3,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          241,
+          557,
+          1
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 3,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "tone-steps/combined/normal/30/1": {
+        "events": {
+          "all": [
+            3,
+            3,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          788,
+          4,
+          7
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 3,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "tone-steps/combined/normal/60/0": {
+        "events": {
+          "all": [
+            3,
+            3,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          480,
+          318,
+          1
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 3,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "tone-steps/combined/normal/60/1": {
+        "events": {
+          "all": [
+            3,
+            3,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          789,
+          3,
+          7
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 3,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "tone-steps/combined/timestamped/30/0": {
+        "events": {
+          "all": [
+            3,
+            3,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          793,
+          3,
+          3
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 3,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "tone-steps/combined/timestamped/30/1": {
+        "events": {
+          "all": [
+            3,
+            3,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          793,
+          3,
+          3
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 3,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "tone-steps/combined/timestamped/60/0": {
+        "events": {
+          "all": [
+            3,
+            3,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          793,
+          3,
+          3
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 3,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "tone-steps/combined/timestamped/60/1": {
+        "events": {
+          "all": [
+            3,
+            3,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          793,
+          3,
+          3
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 3,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 0,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "tone-steps/multiband/normal/30/0": {
+        "events": {
+          "all": [
+            3,
+            3,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            3,
+            3,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            3,
+            3,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            3,
+            3,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          235,
+          560,
+          4
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 3,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 3,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 3,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 3,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "tone-steps/multiband/normal/30/1": {
+        "events": {
+          "all": [
+            3,
+            3,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            3,
+            3,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            3,
+            3,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            3,
+            3,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          788,
+          4,
+          7
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 3,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 3,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 3,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 3,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "tone-steps/multiband/normal/60/0": {
+        "events": {
+          "all": [
+            3,
+            3,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            3,
+            3,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            3,
+            3,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            3,
+            3,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          474,
+          321,
+          4
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 3,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 3,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 3,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 3,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "tone-steps/multiband/normal/60/1": {
+        "events": {
+          "all": [
+            3,
+            3,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            3,
+            3,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            3,
+            3,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            3,
+            3,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          789,
+          3,
+          7
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 3,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 3,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 3,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 3,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "tone-steps/multiband/timestamped/30/0": {
+        "events": {
+          "all": [
+            3,
+            3,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            3,
+            3,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            3,
+            3,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            3,
+            3,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          793,
+          3,
+          3
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 3,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 3,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 3,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 3,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "tone-steps/multiband/timestamped/30/1": {
+        "events": {
+          "all": [
+            3,
+            3,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            3,
+            3,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            3,
+            3,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            3,
+            3,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          793,
+          3,
+          3
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 3,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 3,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 3,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 3,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "tone-steps/multiband/timestamped/60/0": {
+        "events": {
+          "all": [
+            3,
+            3,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            3,
+            3,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            3,
+            3,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            3,
+            3,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          793,
+          3,
+          3
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 3,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 3,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 3,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 3,
+            "sole_carrier_skipped": 0
+          }
+        }
+      },
+      "tone-steps/multiband/timestamped/60/1": {
+        "events": {
+          "all": [
+            3,
+            3,
+            0,
+            0,
+            0
+          ],
+          "bass": [
+            3,
+            3,
+            0,
+            0,
+            0
+          ],
+          "mid": [
+            3,
+            3,
+            0,
+            0,
+            0
+          ],
+          "treble": [
+            3,
+            3,
+            0,
+            0,
+            0
+          ]
+        },
+        "publications": [
+          793,
+          3,
+          3
+        ],
+        "skipped_flags": {
+          "all": {
+            "never_consumed_flags": 3,
+            "sole_carrier_skipped": 0
+          },
+          "bass": {
+            "never_consumed_flags": 3,
+            "sole_carrier_skipped": 0
+          },
+          "mid": {
+            "never_consumed_flags": 3,
+            "sole_carrier_skipped": 0
+          },
+          "treble": {
+            "never_consumed_flags": 3,
+            "sole_carrier_skipped": 0
+          }
+        }
+      }
+    },
+    "tone_levels": {
+      "combined": {
+        "all": {
+          "candidate": [
+            0.0,
+            1.704008,
+            2.763192,
+            2.829724
+          ],
+          "present": [
+            false,
+            true,
+            true,
+            true
+          ],
+          "reported": [
+            0.0,
+            1.704008,
+            2.763192,
+            2.829724
+          ],
+          "rho": 1.0
+        }
+      },
+      "multiband": {
+        "all": {
+          "candidate": [
+            0.0,
+            18.328066,
+            57.953941,
+            104.617752
+          ],
+          "present": [
+            false,
+            true,
+            true,
+            true
+          ],
+          "reported": [
+            0.0,
+            18.328066,
+            57.953941,
+            104.617752
+          ],
+          "rho": 1.0
+        },
+        "bass": {
+          "candidate": [
+            0.0,
+            3.279618,
+            10.370259,
+            18.08669
+          ],
+          "present": [
+            false,
+            true,
+            true,
+            true
+          ],
+          "reported": [
+            0.0,
+            3.279618,
+            10.370259,
+            18.08669
+          ],
+          "rho": 1.0
+        },
+        "mid": {
+          "candidate": [
+            0.0,
+            18.328066,
+            57.953941,
+            104.617752
+          ],
+          "present": [
+            false,
+            true,
+            true,
+            true
+          ],
+          "reported": [
+            0.0,
+            18.328066,
+            57.953941,
+            104.617752
+          ],
+          "rho": 1.0
+        },
+        "treble": {
+          "candidate": [
+            0.0,
+            1.021135,
+            3.228827,
+            5.995355
+          ],
+          "present": [
+            false,
+            true,
+            true,
+            true
+          ],
+          "reported": [
+            0.0,
+            1.021135,
+            3.228827,
+            5.995355
+          ],
+          "rho": 1.0
+        }
+      }
+    }
+  },
+  "phase2-no-onset-colours.json": {
+    "columns": [
+      "channel_id",
+      "virtual_time_s",
+      "r",
+      "g",
+      "b",
+      "r8",
+      "g8",
+      "b8"
+    ],
+    "measurement_commit": "542b9ed",
+    "traces": {
+      "pink-noise/normal": {
+        "rows": 302,
+        "sha256": "4e32ac8f41de9eead8b55ac9936da7ac4dc38b4eb842d1732bf1c65bfabb4cdb"
+      },
+      "pink-noise/timestamped": {
+        "rows": 300,
+        "sha256": "3f9dfd9e7b7cd9becb3aeaa89f6e4662a66826290dc29e3a4e5f5c0eb9883ec7"
+      },
+      "silence/normal": {
+        "rows": 182,
+        "sha256": "cd4437d3e1037cb5fd1120cfe36632507059f0ea9037bf8cf7dbed093f67686a"
+      },
+      "silence/timestamped": {
+        "rows": 180,
+        "sha256": "b26d1eb43e6abc2cb8a150e7664fc801891f754f48260eb0048bd4a3ea1d0ff2"
+      },
+      "sweep/normal": {
+        "rows": 1202,
+        "sha256": "4e5ed45a6e74a78a9ee3c4e5dbcddda0da7fbf018f0a2495287f61ec1a585866"
+      },
+      "sweep/timestamped": {
+        "rows": 1200,
+        "sha256": "e9ccd6db282cad834459d80d3c2d23176afe36c28e20d55a062248564c8ae509"
+      }
+    }
+  },
+  "preview01-accent-on.json": {
+    "baseline": "8f5385b6700c38906049cc0bd0691e05e12e42af",
+    "cases": [
+      {
+        "delay_ms": 0,
+        "route": "normal",
+        "sends_sha256": "719b3f1a649ce3cfe088d91825b38793bd81c0c36d55396588f5224074d4692e"
+      },
+      {
+        "delay_ms": 200,
+        "route": "normal",
+        "sends_sha256": "d12b033ba8abfb02084a21ff0bec8ed16193e9041e2d444a1fec60f2b4436177"
+      },
+      {
+        "delay_ms": 0,
+        "route": "timestamped",
+        "sends_sha256": "a2eedb3378ec49426eb0d632425a99c95b21d3be5ec5bec4262f529206d756e9"
+      }
+    ],
+    "config": "replay/default-config.json",
+    "fixture": "clicks-120"
+  }
+}

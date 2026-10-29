@@ -71,3 +71,11 @@ context and do not certify this implementation.
 Local round-trip tests are not evidence of completed LXC disaster recovery. Record
 live Hue/LMS/AirPlay recovery separately. See [configuration](configuration.md#backup-and-restore)
 for safety backups, offline runtime exclusion, API errors and format versions.
+
+
+The LMS VirtualPlayer is yeney-player from `third_party/yeney-core`, a virtual
+player synced to the listening room (YeneY/Sonos or another LMS player), delivering
+stereo float PCM through yeney-core SHM v1. `YeneyCoreShmStereoSource` names that
+reader; `SqueezeliteShmStereoSource` remains a deprecated alias for one release.
+Player-specific ingress owns timing knowledge. See the ROUTE-01
+[architecture](architecture.md); rendering and scheduling are shared.

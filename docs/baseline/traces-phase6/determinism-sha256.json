@@ -1,0 +1,22 @@
+{
+  "normal": {
+    "meta.json": "a248c473963595852f5c90af7fd216c0a04ec3fa7d3b0a6c97ef0deca02cb929",
+    "counters.json": "f6f116800d6003e7549d69d8f559f82cd1028e4ac60a6e6952783875064813ca",
+    "latency.csv": "6b575fd530287c3e924475c3cb6349f228d83e314a79d2fb107f4ba763ecf3a3",
+    "sends.csv": "9df6c2418c2bdd11d9e88bea4c3ef289d38968bd92f126bef2f82b5a5b1a23bb",
+    "renders.csv": "de273b337e20abbd670c820b99fc92b45a338c35c0585d30e96abf933e378b62",
+    "energy.csv": "af4963cf1e379a5c6d7f5d145959bba1e9c0f0b1617028a43787113f5769f551",
+    "events.csv": "5744768a1cd5ae1afeec5fdf588563bf7546da486b87fc8510052491c7c5c193",
+    "features.csv": "d7ac57223ecfed93b5d46b433a77fba595332b39bcf1347999dcce2994d772fe"
+  },
+  "timestamped": {
+    "meta.json": "dfeff03dfa3836fe4e8539d8bd0bcb15a5f64ef1b58c7355d4d9a0244ab2399b",
+    "counters.json": "44d0677408678a565bfa1f63b98804be468780e22279cc16afff7bd8fd005e90",
+    "latency.csv": "d2725b2f5c2155b8cbd8d44f7dcf4b736564f6853d1853bbf2715d5542a80ba3",
+    "sends.csv": "3c64639fb9232381a641b3e066216e411733a10d97926e4ee304da9c3db0b8a1",
+    "renders.csv": "59160a21c60eba5172d54a4bf6fbc951cf903ae66c85ffa689b2c05672e5cdcb",
+    "energy.csv": "1b41e30bdd5c28305c40c46627a21e5fc680673ebd23cd632990e016645672eb",
+    "events.csv": "47732c771d4d89d00131b3db9b8e67e2baa7586ffdac11384b0bb67311545f35",
+    "features.csv": "7b4ba36ee669615e828b0d8d023b36e5c205e559fa06cf8509b2c467c43e6a5c"
+  }
+}

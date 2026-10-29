@@ -215,19 +215,16 @@ slow consumer reduce the measured lead. The session keeps rolling p5 and p50
 percentiles over the latest 1,024 records, resetting on lifecycle/source changes.
 No startup log, saved measurement or guessed sender margin supplies this lead.
 
-PCM is analysed on arrival through the existing canonical pipeline. Play time
-and generation propagate through resampling and publication intervals; processor
-and DSP algorithms are unchanged. The existing 30 Hz output loop renders newly
-published intervals and queues their scenes at play time plus fine-tune. At each
-tick it sends the newest due scene, not a burst of stale output. The queue holds
-at most 1,000 scenes. Already-past targets send immediately. Spatial effects use
-the effective display time so an Earlier trim cannot create a negative-age,
-black scene, and a late scene is not artificially faded before its first send.
+PCM is analysed on arrival through canonical ingress. AudibleClock maps sample
+positions and supplies numeric lookahead. One RenderPipeline and Scheduler serve
+all VirtualPlayers. The scheduler wakes at max(ready, audible − lead − transport
+latency), coalesces continuous cadence slots and preserves event identities and
+envelopes. Event deadlines can send between cadence ticks within the capability
+send ceiling. Preview consumes the sent entry and exact output colours.
 
 Auto uses the measured lead. Earlier is limited to `max(0, p5 lead − P)`, with
 the existing ±1,000 ms outer bound and 10 ms UI steps; the scheduler enforces the
-bound again if lead decreases. Fixed adds its chosen delay to the scheduled
-play time; None adds no intentional delay. Pipe fallback keeps the existing
+bound again if lead decreases. Fixed applies its configured clock trim once; None adds no intentional trim. Pipe fallback keeps the existing
 non-negative delay behaviour. Processing P excludes the intentional queue wait.
 Flush, pause, discontinuity and source changes discard scheduled scenes.
 Hue ownership, five-second keepalive, idle_timeout=0 and output recovery from
@@ -310,7 +307,7 @@ restart therefore caused, rather than repaired, a long ingress gap.
 
 HueDriver still uses `EntertainmentSession(..., idle_timeout=0)`. The installed
 `hue-entertainment` 0.1.2 sender resends its last frame every five seconds; this
-keeps the bridge stream alive while music starts, plays or fills the delay buffer.
+keeps the bridge stream alive while music starts, plays or waits for an audible deadline.
 The library's own idle monitor stays disabled. Idle ownership is now a coupling
 policy, rather than a library timeout: `release_after_idle_s` defaults to 30
 seconds, with 0 disabling idle release. Pause, stop or absent new analyser
@@ -339,7 +336,7 @@ leaves output released. Automatic recovery and re-acquisition always call
 External and explicit release stay released until Take lights or a new explicit activation;
 continuing audio never takes the lights back. Scenes produced during release
 and re-acquisition are discarded. An output generation clears the early-tap
-scene schedule and regular delay buffer across ownership changes, independently
+shared scheduler across ownership changes, independently
 of the tap's existing flush/discontinuity generation.
 
 `on_release` selects restore (default), off or leave. Restore snapshots each
@@ -456,25 +453,26 @@ Details shows M, P, fine-tune and applied delay. Auto is
 available for AirPlay's virtual-player latency entry. Fixed, paused, measuring
 and unavailable states retain words and icons as well as colour.
 
-The existing 30 Hz scene output quantises the requested wait to a scene interval
-(about 33 ms). Measurement precision describes P, not absolute audible or lamp
+Continuous scenes follow the configured cadence; event deadlines wake exactly. Measurement precision describes P, not absolute audible or lamp
 alignment. No physical installation was accessed during development.
 
 ## LMS head start and generalised timed scheduling
 
-The timestamped output path now accepts either the AirPlay early tap or an LMS
-SHM player-clock timestamp (with a write-clock estimate for older players). The DSP is unchanged. In LMS sync-group
-mode, the virtual player's verified `playDelay` advances it relative to the real
-speaker. `startDelay` is only read: a non-zero value warns because start and
-steady-state offsets would differ. Manual follow mode and head start 0 retain the
-previous delay-buffer path.
+The LMS VirtualPlayer supplies native player-clock timestamps, with a write-clock
+estimate for older producers. Manual follow, head start 0 and sync-group sessions
+all enable this clock on the production reader. LmsAudibleClock adds the measured
+offset to the listening room and reports lookahead 0. Squeezebox and YeneY/Sonos
+room mappings are selected from player model metadata in player_manager; the
+Sonos reported pipeline delay belongs only to that mapping. AirPlay uses its own
+AudibleClock and measured tap lookahead. Rendering and scheduling are identical.
+In sync-group mode verified `playDelay` advances the virtual player relative to
+the speaker; `startDelay` is read and a nonzero value warns about unequal offsets.
 
 LMS `lms_timing` status is exclusive to sync-group mode. In follow mode it is
 null; the Light timing card uses the position probe’s measuring/stable state
 and live applied delay, without a head-start status line.
 
-LMS timed ingress enables the optional clock on the one production reader;
-manual follow mode keeps the reader’s existing unstamped lifecycle. The reader reads the optional `YNPT` v1 timing block at byte
+The one production reader enables native timing in every LMS session. It reads the optional `YNPT` v1 timing block at byte
 32888 under the same seqlock as PCM. Extension flags bit 0, mapping length,
 magic, version and nonzero rate must all validate. Each native stereo frame F
 is stamped from `anchor_play_mono_ns / 1e9 + (F - anchor_abs_frame) * 1000 /
@@ -482,7 +480,8 @@ rate_milli_hz`. This is the core pacer's scheduled play moment, whose consumptio
 advances LMS elapsed, rather than the time the SHM memcpy completed. Blocks may
 contain already-due audio (up to 20 ms accumulated credit); no extra look-ahead
 is added by the timing extension. Audible time adds the existing configured
-head start and speaker output delay. No Sonos probe/model is involved.
+head start and speaker output delay. The synced room reports its own pipeline delay; the player layer owns the
+measured offset to that room.
 
 The latest event is retained with `event_seq`, `event_abs_frame`, flags and a
 signed value. `SYNC_PAUSE` carries pause nanoseconds; `SYNC_SKIP` carries skipped
@@ -507,13 +506,13 @@ rejection, pause/seek guesses and bounds remain unchanged. Status reports
 `provenance: "player clock"` or `"write-clock estimate"`; the existing
 `audio_source: "LMS head start"` label and card presentation are unchanged.
 
-Audible time is player play time (or fitted write time) + configured head start +
-speaker output delay.
-Canonicalisation preserves this through existing play spans; fine-tune is applied
-once by SceneSchedule. Every publication is rendered and scheduled, including
-onsets between output ticks. The 30 Hz sender displays the newest due scene, as
-with AirPlay. A past target is sent on the next output tick, never held further.
-Negative trim is limited by measured lead p5 minus median processing.
+Audible time is the virtual player play time plus the measured room offset.
+The calibrated sync-group ingress already includes its verified head start and
+speaker offset, so the clock applies only fine-tune there, without double adding
+the room delay. Canonicalisation preserves these play spans. One scheduler
+coalesces continuous publications before rendering, retains event boundaries and
+wakes at exact deadlines. Negative trim is limited by measured lead minus
+processing; no source-specific scene scheduler remains.
 
 For the older-player fallback, a source generation/gap change, a predicted write outside its read bracket by more
 than 5 ms, a pause beyond the observed export-batch interval plus 5 ms (at least
@@ -524,8 +523,8 @@ sent. A poll gap over 15 ms does not prove a skip and is excluded from the fit.
 The Hue ownership and release generations continue to invalidate scheduled scenes.
 
 When lead p5 stays below p95 processing +40 ms for five continuous seconds, output
-uses the existing delay-buffer path and reports “Not enough head start, using delay
-instead”. Measurements continue through that path. Scheduling returns automatically
+uses the same pipeline with causal clock mapping and reports “Not enough head start, using delay
+instead”. Measurements continue through the shared pipeline. Scheduling returns automatically
 when measured lead reaches that threshold; its generation changes to discard old
 queued work. No receiver or player restart is used for fallback or recovery.
 See the LMS head-start procedure in configuration.md for owner calibration.
@@ -563,3 +562,11 @@ last seven residuals. These are clock-fit observations, not position-probe sampl
 The card names the observed speaker and retains its existing layout. A zero
 interval residual means the fit stays within its read brackets; it does not
 claim zero absolute clock error or zero physical lamp latency.
+
+
+The LMS VirtualPlayer is yeney-player from `third_party/yeney-core`, a virtual
+player synced to the listening room (YeneY/Sonos or another LMS player), delivering
+stereo float PCM through yeney-core SHM v1. `YeneyCoreShmStereoSource` names that
+reader; `SqueezeliteShmStereoSource` remains a deprecated alias for one release.
+Player-specific ingress owns timing knowledge. See the ROUTE-01
+[architecture](architecture.md); rendering and scheduling are shared.

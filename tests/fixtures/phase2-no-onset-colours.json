@@ -9,31 +9,33 @@
     "g8",
     "b8"
   ],
-  "measurement_commit": "542b9ed",
+  "measurement_commit": "bdf4bb3a113370b29cad47a20af674c096061e22",
   "traces": {
     "pink-noise/normal": {
-      "rows": 302,
-      "sha256": "4e32ac8f41de9eead8b55ac9936da7ac4dc38b4eb842d1732bf1c65bfabb4cdb"
+      "rows": 300,
+      "sha256": "5424c47cf5c8ef7e235044b3ef7f4d3392c150a39141f7be9e0489a89ab3cbd3"
     },
     "pink-noise/timestamped": {
-      "rows": 300,
-      "sha256": "3f9dfd9e7b7cd9becb3aeaa89f6e4662a66826290dc29e3a4e5f5c0eb9883ec7"
+      "rows": 298,
+      "sha256": "8f8c9cb1ef63054e749e40724f81ba9b59604da496b1821633005c818bd440f8"
     },
     "silence/normal": {
-      "rows": 182,
-      "sha256": "cd4437d3e1037cb5fd1120cfe36632507059f0ea9037bf8cf7dbed093f67686a"
+      "rows": 180,
+      "sha256": "2083c50cdd45a2925b414fd0d51d623dc5c54ece08e06dc46f79acd258366a34"
     },
     "silence/timestamped": {
-      "rows": 180,
-      "sha256": "b26d1eb43e6abc2cb8a150e7664fc801891f754f48260eb0048bd4a3ea1d0ff2"
+      "rows": 178,
+      "sha256": "79f71316fa4ab50c7af845fb7f4acdf363b2ea001ef3d71b0ceec778a778e7ad"
     },
     "sweep/normal": {
-      "rows": 1202,
-      "sha256": "4e5ed45a6e74a78a9ee3c4e5dbcddda0da7fbf018f0a2495287f61ec1a585866"
+      "rows": 1200,
+      "sha256": "2680f3910ac7303d3f4e6e299cdc41a574c7a39fb9ef94a4019e3dd0689a1ec7"
     },
     "sweep/timestamped": {
-      "rows": 1200,
-      "sha256": "e9ccd6db282cad834459d80d3c2d23176afe36c28e20d55a062248564c8ae509"
+      "rows": 1198,
+      "sha256": "9416c1cb1ce46a20707f0678e13eda4197b85c6454a98db5d76a7d6b4315b295"
     }
-  }
+  },
+  "previous_measurement_commit": "542b9ed",
+  "repin_reason": "ROUTE-01: one deadline scheduler and render clock; capability transport compensation; coalescing before render and publication-sequence attribution; no repeated EOS renders; normal traces record native play time without artificial tap lead. Signal-analysis pins are retained; previous scheduler pins are archived in route01-previous-pins.json."
 }

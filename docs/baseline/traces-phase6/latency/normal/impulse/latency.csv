@@ -1,0 +1,2 @@
+id,route,truth_sample,candidate_sample,availability_sample,candidate_ms,availability_ms,first_render_ms,first_send_ms,window_acquisition_ms,hop_ms,lookahead_ms,tick_wait_ms,schedule_wait_ms,schedule_error_ms
+replay-0001:all:240000,normal,240000,240000,240480,0.0,10.0,20.0,20.0,10.0,0.0,10.0,-0.0,0.0,

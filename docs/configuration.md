@@ -695,9 +695,10 @@ LampaStream waits for LMS registration in the background, then sets and verifies
 LMS CLI on port 9090. It never changes another player's preferences or writes
 `startDelay`. A non-zero `startDelay` is warned about: the initial offset would
 otherwise differ from the steady-state offset. Set it to 0 yourself in LMS.
-With head start 0, the existing analysis and delay-buffer path is used; activation
+With head start 0, native play time plus the measured room offset uses the same renderer and scheduler; activation
 sets the virtual player's `playDelay` to 0 to clear any previous head start.
-Manual follow mode leaves LMS preferences and the existing timing path unchanged.
+Manual follow mode leaves LMS preferences unchanged and maps native play time
+through the measured room offset.
 
 To calibrate your speaker:
 
@@ -827,8 +828,8 @@ it from the chosen preset; an explicit Fall overrides that value.
 
 Intensity lowers the effect's own colour to its floor continuously. Only a beat
 or texture event opens a bump. Sustained energy continues to select/blend effects
-but cannot hold open the accent. Pulse is symmetric where timestamped lookahead
-is available; the causal live route can only show its post-beat half. The
+but cannot hold open the accent. Pulse is symmetric where clock lookahead
+is available; causal clocks can only show its post-beat half. The
 capability hold can widen a short pulse on a slower output.
 
 The analyser's old method/delta/alpha/lookahead/gate/min-IOI controls and the
@@ -837,9 +838,17 @@ Their API fields have not been removed. Flux parameters now configure the
 **diagnostic** onset stream; old additive amount/weights/curve/release semantics
 are retained for the explicit offline diagnostic replay. The console beat shape
 uses Intensity and Fall. Palette-step, spatial routing and accent-off remain
-available. `onset_lead_s` continues to advance timestamped output independently
+available. `onset_lead_s` advances output within the clock’s available lookahead independently
 of Beat latency.
 
 Now Playing shows BPM, lock and confidence. Light timing shows separate beat and
 texture rates, AGC gain, trigger ratio and beat ticks; dashed ticks are predictions.
 Downbeat/bar position is an estimate from recent bass accents.
+
+
+The LMS VirtualPlayer is yeney-player from `third_party/yeney-core`, a virtual
+player synced to the listening room (YeneY/Sonos or another LMS player), delivering
+stereo float PCM through yeney-core SHM v1. `YeneyCoreShmStereoSource` names that
+reader; `SqueezeliteShmStereoSource` remains a deprecated alias for one release.
+Player-specific ingress owns timing knowledge. See the ROUTE-01
+[architecture](architecture.md); rendering and scheduling are shared.

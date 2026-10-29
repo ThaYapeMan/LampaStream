@@ -555,3 +555,85 @@ Validation: 2391 passed, 5 skipped in the full local Python suite; Ruff clean;
 Vitest 458 passed; Playwright 74 passed; Node 22.22.2 build reproduces the
 committed bundle. CI conclusions and external report provenance are recorded
 in the task report after the final push.
+
+
+## Phase 6 (ROUTE-01)
+
+Measured on the shared renderer and scheduler at runtime commit `8e8685a`.
+[Raw traces and counters](baseline/traces-phase6/) use canonical synthetic PCM;
+no owner LMS, player or light was contacted. Both clocks use the same analysis,
+render, preview and scheduling code. All event bands have lost == 0 across the
+112 regression variants; all-effects ACCENT lift and quantised floor checks pass.
+
+### LAT-01
+
+| Fixture | Clock | Send median / p95 / max ms | Schedule error max ms | Events | Lost |
+|---|---|---|---:|---:|---:|
+| clicks-120 | normal | 20.000 / 20.000 / 20.000 | — | 19/19 | 0 |
+| clicks-128 | normal | 17.917 / 30.417 / 36.667 | — | 21/21 | 0 |
+| clicks-174 | normal | 19.052 / 31.435 / 34.937 | — | 28/28 | 0 |
+| impulse | normal | 20.000 / 20.000 / 20.000 | — | 1/1 | 0 |
+| clicks-120 | timestamped | 1465.000 / 1465.000 / 1465.000 | 0.000 | 19/19 | 0 |
+| clicks-128 | timestamped | 1460.000 / 1465.000 / 1465.000 | 0.000 | 21/21 | 0 |
+| clicks-174 | timestamped | 1460.344 / 1464.529 / 1465.000 | 0.000 | 28/28 | 0 |
+| impulse | timestamped | 1465.000 / 1465.000 / 1465.000 | 0.000 | 1/1 | 0 |
+
+Normal medians remain ≤30 ms. Timestamped replay uses 1500 ms input head start,
+20 ms configured advance and 20 ms declared transport latency: raw sends fall at
+1460±5 ms, and effective output time is 1480±5 ms. Schedule error is measured
+against the actual capability-adjusted deadline, rather than a route alias.
+
+### PREVIEW-01
+
+| Clock | Room delay ms | Lamp advance ms | Events | Push minus audible ms | First periodic snapshot minus audible ms |
+|---|---:|---:|---:|---:|---:|
+| normal | 0 | 20 | 19/19 | 0 | 47 |
+| normal | 200 | 20 | 19/19 | -20 | 17 |
+| timestamped | 0 | 20 | 19/19 | -35 | 17 |
+| timestamped | 0 | 100 | 19/19 | -115 | 17 |
+
+Socket pushes come from the carrying sent entry, with exact colours and accent
+lifts. Browser activation waits for the audible clock. Changing lamp advance
+preserves all 19 preview activation times. The attached-preview SmoothLayerMixer
+field configuration completes the entire clicks fixture, 19/19, without exception.
+Outline hold is independent of envelope release, opacity confidence × strength;
+new events restart it. Duty is bounded by hold × rate.
+
+### BEAT-01
+
+| Fixture | Clock | Kicks recalled | False triggers | BPM | Lock s | On-beat | Duty ch0/ch1 | Median raw send ms | Lost |
+|---|---|---:|---:|---:|---:|---:|---|---:|---:|
+| breakbeat | normal | 17/17 | 0 | 173.913 | 3.920 | 1.000 | 58.2%/58.2% | 23.792 | 0 |
+| breakdown | normal | 15/15 | 0 | 119.760 | 2.980 | 1.000 | 42.0%/42.0% | 30.000 | 0 |
+| deep-house | normal | 24/24 | 0 | 121.984 | 3.430 | 1.000 | 59.2%/59.2% | 27.302 | 0 |
+| disco | normal | 20/20 | 0 | 100.000 | 3.470 | 1.000 | 49.0%/49.0% | 20.000 | 0 |
+| house | normal | 23/23 | 0 | 119.997 | 2.980 | 1.000 | 59.6%/59.6% | 30.000 | 0 |
+| pad-texture | normal | 0/0 | 0 | — | — | — | 0.0%/0.0% | — | 0 |
+| techno | normal | 25/25 | 0 | 127.786 | 3.290 | 1.000 | 62.6%/62.6% | 26.917 | 0 |
+| tempo-change | normal | 24/24 | 0 | 128.089 | 2.980 | 1.000 | 60.1%/60.1% | 36.167 | 0 |
+| breakbeat | timestamped | 17/17 | 0 | 173.913 | 3.920 | 1.000 | 69.7%/69.7% | 1452.750 | 0 |
+| breakdown | timestamped | 15/15 | 0 | 119.760 | 2.980 | 1.000 | 47.9%/47.9% | 1460.000 | 0 |
+| deep-house | timestamped | 24/24 | 0 | 121.984 | 3.430 | 1.000 | 65.4%/65.4% | 1456.479 | 0 |
+| disco | timestamped | 20/20 | 0 | 100.000 | 3.470 | 1.000 | 55.1%/55.1% | 1450.000 | 0 |
+| house | timestamped | 23/23 | 0 | 119.997 | 2.980 | 1.000 | 63.6%/63.6% | 1460.000 | 0 |
+| pad-texture | timestamped | 0/0 | 0 | — | — | — | 0.0%/0.0% | — | 0 |
+| techno | timestamped | 25/25 | 0 | 127.786 | 3.290 | 1.000 | 69.2%/69.2% | 1456.250 | 0 |
+| tempo-change | timestamped | 24/24 | 0 | 128.089 | 2.980 | 1.000 | 66.0%/66.0% | 1465.625 | 0 |
+
+Normal kick latencies retain the Phase-5 pins (house 30, techno 26.917,
+breakbeat 23.792, disco 20, deep-house 27.302 ms). Timestamped raw send latencies
+subtract the declared 20 ms transport cost. Coalescing continuous cadence slots
+before rendering, retaining unsent event envelopes and using the actual source
+publication sequence deliberately changes duty and byte hashes. In particular,
+timestamped techno duty is 69.25% versus 70.8% previously; kick recall, false
+triggers, BPM and lock remain unchanged. No signal detector threshold was repinned.
+
+Previous numeric/byte pins are archived verbatim in
+`tests/fixtures/route01-previous-pins.json`; each refreshed fixture records its
+measurement commit and reason. Normal traces now record native play time rather
+than an artificial tap lead. Canonical EOF does not repeat terminal features.
+Exact wake-ups and event-triggered sends apply on both clocks; calibration changes
+fence stale queued work rather than replaying a burst. Equal-clock sends.csv is
+byte-identical for clicks-120, house, techno and pad-texture. Determinism compares
+all eight trace files across independent processes. Host CPU measurements remain
+outside deterministic comparisons.

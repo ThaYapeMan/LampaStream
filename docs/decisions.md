@@ -362,3 +362,37 @@ no GPL/LGPL detector code or learned model was introduced.
   actual quantised sends reach ≤floor +0.10 on both routes and both rooms.
   Historical diagnostic guards remain byte-identical. Duty now integrates held
   quantised sends; earlier render-only duty probes are superseded.
+
+
+## ROUTE-01 architecture decision — 2026-10-28
+
+Adopt VirtualPlayers → one Analyser → generic AudioFeatures → one Renderer and
+scheduler → capability-described Outputs. Player-specific ingress delivers
+canonical PCM and an AudibleClock; player-kind timing knowledge stays in that
+mapping. After canonical ingress, analysis, rendering, preview and scheduling
+must not branch on source or output brand. Measure every change offline before
+deployment. See [architecture](architecture.md).
+
+The implementation removes the two source-specific render loops, SceneSchedule,
+the regular delay buffer and route flags in preview. One RenderPipeline invokes
+event view, effects, mixer, accent, envelopes and output boundary; one Scheduler
+handles cadence, exact event deadlines, transport latency and send limits.
+Coalescing retains event identities and strongest unsent envelopes. Player-kind
+selection occurs in player_manager, using LMS model/modelname metadata; native
+play time plus measured room offset applies even without configured head start.
+
+TransitionPhase advances only on the render clock, completion latches, and each
+TransitionScene owns its phase snapshot. Pure sampling at earlier/later times
+cannot alter mixer lifetime. Preview consumes sent scenes and exact colours;
+floorplan and dot outlines use per-event hold with confidence × strength opacity.
+
+Both clocks inherit exact wake-ups and event-triggered sends. Timestamped raw
+sends additionally compensate declared transport latency; acceptance adds that
+capability delay when comparing the original audible advance. Continuous cadence
+coalescing and correct source-publication attribution change archived byte pins;
+old values remain in route01-previous-pins.json. Signal-analysis pins, kick recall,
+false-trigger and latency limits stay enforced. Clean EOF drains future scenes;
+epoch invalidation and output ownership changes cancel old work. Replay analysis
+caches include the native playback coordinate, so zero-lead LMS analysis cannot
+be reused as an early-tap timestamped stream. No runtime
+dependencies, deployment or owner-device contact were introduced.

@@ -1,10 +1,24 @@
 {
-  "baseline": "8f5385b6700c38906049cc0bd0691e05e12e42af",
-  "fixture": "clicks-120",
-  "config": "replay/default-config.json",
+  "baseline": "bdf4bb3a113370b29cad47a20af674c096061e22",
   "cases": [
-    {"route": "normal", "delay_ms": 0, "sends_sha256": "719b3f1a649ce3cfe088d91825b38793bd81c0c36d55396588f5224074d4692e"},
-    {"route": "normal", "delay_ms": 200, "sends_sha256": "d12b033ba8abfb02084a21ff0bec8ed16193e9041e2d444a1fec60f2b4436177"},
-    {"route": "timestamped", "delay_ms": 0, "sends_sha256": "a2eedb3378ec49426eb0d632425a99c95b21d3be5ec5bec4262f529206d756e9"}
-  ]
+    {
+      "delay_ms": 0,
+      "route": "normal",
+      "sends_sha256": "9df6c2418c2bdd11d9e88bea4c3ef289d38968bd92f126bef2f82b5a5b1a23bb"
+    },
+    {
+      "delay_ms": 200,
+      "route": "normal",
+      "sends_sha256": "b2a410913c95996fd60f7bdee1d53b7523a774879ceb111bca3266cd28e030b8"
+    },
+    {
+      "delay_ms": 0,
+      "route": "timestamped",
+      "sends_sha256": "3c64639fb9232381a641b3e066216e411733a10d97926e4ee304da9c3db0b8a1"
+    }
+  ],
+  "config": "replay/default-config.json",
+  "fixture": "clicks-120",
+  "previous_baseline": "8f5385b6700c38906049cc0bd0691e05e12e42af",
+  "repin_reason": "ROUTE-01: one deadline scheduler and render clock; capability transport compensation; coalescing before render and publication-sequence attribution; no repeated EOS renders; normal traces record native play time without artificial tap lead. Signal-analysis pins are retained; previous scheduler pins are archived in route01-previous-pins.json."
 }

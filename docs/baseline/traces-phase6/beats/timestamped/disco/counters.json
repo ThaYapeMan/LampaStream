@@ -1,0 +1,120 @@
+{
+  "accent": {
+    "clipped_channels_count": 0,
+    "events_accented": 61,
+    "max_lift_lsb": 41.243804
+  },
+  "event_mapping_fallbacks": 0,
+  "event_queue_drops": 0,
+  "events": {
+    "all": {
+      "expired": 0,
+      "lost": 0,
+      "merged": 2,
+      "received": 61,
+      "triggered": 59
+    },
+    "bass": {
+      "expired": 0,
+      "lost": 0,
+      "merged": 0,
+      "received": 20,
+      "triggered": 20
+    },
+    "mid": {
+      "expired": 0,
+      "lost": 0,
+      "merged": 2,
+      "received": 11,
+      "triggered": 9
+    },
+    "treble": {
+      "expired": 0,
+      "lost": 0,
+      "merged": 0,
+      "received": 30,
+      "triggered": 30
+    }
+  },
+  "extra_sends": {
+    "max_per_drain": 1,
+    "minimum_interval_s": 0.02,
+    "sends": 30,
+    "smallest_gap_s": 0.031667
+  },
+  "latency": {
+    "timestamped": {
+      "availability_ms": {
+        "max": 22.666667,
+        "median": 12.666667,
+        "p95": 22.666667
+      },
+      "candidate_ms": {
+        "max": 0.0,
+        "median": -10.0,
+        "p95": 0.0
+      },
+      "first_render_ms": {
+        "max": 1465.0,
+        "median": 1455.0,
+        "p95": 1465.0
+      },
+      "first_send_ms": {
+        "max": 1470.0,
+        "median": 1470.0,
+        "p95": 1470.0
+      },
+      "hop_ms": {
+        "max": 0.0,
+        "median": 0.0,
+        "p95": 0.0
+      },
+      "lookahead_ms": {
+        "max": 0.0,
+        "median": 0.0,
+        "p95": 0.0
+      },
+      "schedule_error_ms": {
+        "max": 15.0,
+        "median": 5.0,
+        "p95": 15.0
+      },
+      "schedule_wait_ms": {
+        "max": 15.0,
+        "median": 5.0,
+        "p95": 15.0
+      },
+      "tick_wait_ms": {
+        "max": 1435.0,
+        "median": 1435.0,
+        "p95": 1435.0
+      },
+      "window_acquisition_ms": {
+        "max": 30.0,
+        "median": 20.0,
+        "p95": 30.0
+      }
+    }
+  },
+  "publication_queue_drops": 0,
+  "publications": {
+    "timestamped": {
+      "consumed": 340,
+      "published": 1380,
+      "render_reads": 418,
+      "repeat_reads": 39,
+      "repeated": 39,
+      "skipped": 1001
+    }
+  },
+  "scheduler": {
+    "coalesced_requests": 839,
+    "pruned_continuous_requests": 0
+  },
+  "sends": 369,
+  "sends_per_second": {
+    "max": 31,
+    "p50": 31.0,
+    "p95": 31.0
+  }
+}

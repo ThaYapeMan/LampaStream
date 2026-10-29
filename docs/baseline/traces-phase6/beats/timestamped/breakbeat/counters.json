@@ -1,0 +1,120 @@
+{
+  "accent": {
+    "clipped_channels_count": 0,
+    "events_accented": 49,
+    "max_lift_lsb": 41.218806
+  },
+  "event_mapping_fallbacks": 0,
+  "event_queue_drops": 0,
+  "events": {
+    "all": {
+      "expired": 0,
+      "lost": 0,
+      "merged": 6,
+      "received": 49,
+      "triggered": 43
+    },
+    "bass": {
+      "expired": 0,
+      "lost": 0,
+      "merged": 0,
+      "received": 29,
+      "triggered": 29
+    },
+    "mid": {
+      "expired": 0,
+      "lost": 0,
+      "merged": 1,
+      "received": 2,
+      "triggered": 1
+    },
+    "treble": {
+      "expired": 0,
+      "lost": 0,
+      "merged": 5,
+      "received": 18,
+      "triggered": 13
+    }
+  },
+  "extra_sends": {
+    "max_per_drain": 1,
+    "minimum_interval_s": 0.02,
+    "sends": 38,
+    "smallest_gap_s": 0.02
+  },
+  "latency": {
+    "timestamped": {
+      "availability_ms": {
+        "max": 22.666667,
+        "median": 15.770833,
+        "p95": 22.666667
+      },
+      "candidate_ms": {
+        "max": 0.0,
+        "median": -6.895833,
+        "p95": 0.0
+      },
+      "first_render_ms": {
+        "max": 1465.0,
+        "median": 1453.104167,
+        "p95": 1465.0
+      },
+      "first_send_ms": {
+        "max": 1470.0,
+        "median": 1453.104167,
+        "p95": 1470.0
+      },
+      "hop_ms": {
+        "max": 5.520833,
+        "median": 2.416667,
+        "p95": 5.202083
+      },
+      "lookahead_ms": {
+        "max": 0.0,
+        "median": 0.0,
+        "p95": 0.0
+      },
+      "schedule_error_ms": {
+        "max": 10.0,
+        "median": 0.0,
+        "p95": 10.0
+      },
+      "schedule_wait_ms": {
+        "max": 10.0,
+        "median": 0.0,
+        "p95": 10.0
+      },
+      "tick_wait_ms": {
+        "max": 1435.0,
+        "median": 1430.0,
+        "p95": 1435.0
+      },
+      "window_acquisition_ms": {
+        "max": 30.0,
+        "median": 20.0,
+        "p95": 30.0
+      }
+    }
+  },
+  "publication_queue_drops": 0,
+  "publications": {
+    "timestamped": {
+      "consumed": 376,
+      "published": 1378,
+      "render_reads": 400,
+      "repeat_reads": 12,
+      "repeated": 12,
+      "skipped": 990
+    }
+  },
+  "scheduler": {
+    "coalesced_requests": 845,
+    "pruned_continuous_requests": 0
+  },
+  "sends": 373,
+  "sends_per_second": {
+    "max": 32,
+    "p50": 31.0,
+    "p95": 32.0
+  }
+}

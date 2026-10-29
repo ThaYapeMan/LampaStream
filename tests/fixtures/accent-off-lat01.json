@@ -1,205 +1,207 @@
 {
-  "source_commit": "6986d9ad171beaed0a4b643cd37bab371a70abcf",
   "cases": [
     {
       "fixture": "anti-phase",
-      "route": "normal",
       "hashes": {
-        "sends.csv": "88c8c0514a7146730ac5fb27a52a69356b6bbdc414a3b9e5a285757397386487",
-        "features.csv": "94f64438950ee3cade8e068e0f55245264b9580adb73135bfba740d3688c97ad",
-        "energy.csv": "050623f61cf2ab2de06223b0dd9e09b5fca3b584f1f5a8f111f07f870a042d96",
-        "events.csv": "0c7815ca5c66ad3bda1be470189b4f3ed1575d14d8c5b4dac1b4333ef7749c3b"
-      }
+        "energy.csv": "c4a4479f60eadd1d907407e7a2816461705e179bda26b819ee6790d6cce7edf3",
+        "events.csv": "4043cb2f2405e5ad524966f0c7a23b9abe9c6ade51782c2eab0accd23240b283",
+        "features.csv": "8f3ec33180efaf1bebf64bdfa6f17cd1ebad27f1d9615fb6453c493e9bd68d9b",
+        "sends.csv": "1817bac4e71ffcfdb0d836c3b9f0f84b8361ef1a6b0895568950219a94a65598"
+      },
+      "route": "normal"
     },
     {
       "fixture": "anti-phase",
-      "route": "timestamped",
       "hashes": {
-        "sends.csv": "b7d67ae79ef928f2ac5d22f1eace05c34b9018ff549c20c4a48de425e1958941",
-        "features.csv": "43200b14504d674778b9bd7eac9f1b2a260a674f5f22c4e58ba1db60e40a6804",
-        "energy.csv": "7a4c74650c61bad8c52596097b084a023d8c7e9f1dde0835f6e120c8cad904a1",
-        "events.csv": "b952807aa412d0b8ce385d7daad6e2ee2d6d5c4f2ca89a232e51e313a9b3e613"
-      }
+        "energy.csv": "a2c7f24fd2c9cc00f6885a181c34c95ef4c8ee01328ba2d46266957cc72b809d",
+        "events.csv": "8745782542041845f8d23ca528a222793f11be5ae7b34fea473a849cbd7e4d8b",
+        "features.csv": "55bc2a7cf93c557261c038f347162217e855b85461d5a639a146f3d5806bdfd8",
+        "sends.csv": "97d7e401b9050a5e2de03039f2bbd122df09b8c9a1b184f5c2b7400898745e71"
+      },
+      "route": "timestamped"
     },
     {
       "fixture": "clicks-120",
-      "route": "normal",
       "hashes": {
-        "sends.csv": "85574c45d37cecb6e1cb91186da55438aa4d59380c3cf540dcd4790621097f87",
-        "features.csv": "c274f1e4f66cbdf56c900dc5304b6402d52f9f576f0a63dd9a180439ff18e72c",
-        "energy.csv": "eaef7ae43ccf3d11b324a499b9e5c765ba0deb45758f4ae85bce98648f7ecb00",
-        "events.csv": "6080fa12b85e20598b4caccd331ae8fdc8aaabb144f3378b26f00c49e126bd74"
-      }
+        "energy.csv": "af4963cf1e379a5c6d7f5d145959bba1e9c0f0b1617028a43787113f5769f551",
+        "events.csv": "5744768a1cd5ae1afeec5fdf588563bf7546da486b87fc8510052491c7c5c193",
+        "features.csv": "d7ac57223ecfed93b5d46b433a77fba595332b39bcf1347999dcce2994d772fe",
+        "sends.csv": "b1d7255444d9e876490cc1c65fcc8b9dffce1594d519d57aa0d558b3ccd8e1b9"
+      },
+      "route": "normal"
     },
     {
       "fixture": "clicks-120",
-      "route": "timestamped",
       "hashes": {
-        "sends.csv": "b540f98df93b345de22205d335d80b3548e3e6547fd79f7fc784eb0dcadae746",
-        "features.csv": "97e21c108522f8558df056e81ed796ea974812333045d9627252587ebb22b283",
-        "energy.csv": "e61bebc5ccac015e994ddb28623ad0971725cad7373755b04caf6acb1b5944bd",
-        "events.csv": "d7f15a0729dcefa21804d5a988901b3c4f571937a215b57a95897fa1014758ef"
-      }
+        "energy.csv": "1b41e30bdd5c28305c40c46627a21e5fc680673ebd23cd632990e016645672eb",
+        "events.csv": "47732c771d4d89d00131b3db9b8e67e2baa7586ffdac11384b0bb67311545f35",
+        "features.csv": "7b4ba36ee669615e828b0d8d023b36e5c205e559fa06cf8509b2c467c43e6a5c",
+        "sends.csv": "3bfacb2090b645875ad84bc2ca480414103cd9bf2ff61b1981332ad219016bf6"
+      },
+      "route": "timestamped"
     },
     {
       "fixture": "clicks-128",
-      "route": "normal",
       "hashes": {
-        "sends.csv": "ec092719dde417d5da0bfbebe672806ba0cd509dd91e41a874b19b640bbaccab",
-        "features.csv": "beb190a8d40f4ab1c77d8250da0a973162a1219501dd8b96d2a1451b96dff828",
-        "energy.csv": "5f0f670b9b9148a2f015aa5673bbe89d0025307b67b7fc2fe86a096a7b03637c",
-        "events.csv": "5058679f5c869fb2b4a692ae1ef92aa1c89b9e4dc577ac0b7ef422652004fb93"
-      }
+        "energy.csv": "047edaeaa0451d02790470a042cf31058c02f46fb8db42eee57acc9982e24ed9",
+        "events.csv": "05c82ea175e9d914e2089a493d509347d5ffee47f77688501bad679a8f5a2cb9",
+        "features.csv": "8e56820a69dc22908db856aa1b3eb8e496e62d237e1e2761f555e15de2f4f979",
+        "sends.csv": "37ba104a59403316e1a9aadc94e86559eea2e50153c12d978270471e59de1e0d"
+      },
+      "route": "normal"
     },
     {
       "fixture": "clicks-128",
-      "route": "timestamped",
       "hashes": {
-        "sends.csv": "9b492d140779da70766f42002ae524456aee958f71a49a77849b95d6ad559944",
-        "features.csv": "8c06e3882fa12d2cf27b58c41892e8b9be13ed2a9f2a00e8043f6c4f4c613a8c",
-        "energy.csv": "2933cb9a74fb731676558ecba19e0a88efabbc38129816d649a78be3e0f90ce4",
-        "events.csv": "df451219302575182d7ed136289e0b9905e25a17b4bab6ea248bb094d44e186a"
-      }
+        "energy.csv": "debdc56ca1874b35634b18fde4d42223d90c64844bf54a4aa4abd2a03fcd03ee",
+        "events.csv": "8fa66587325283c70ad9a800eb6e7da09dcc378001cd082db3dd374ccbc61817",
+        "features.csv": "12517c79015a9dd1117a9d7f1b17835c30cfaa1cf84a0bc4345ee430b412a602",
+        "sends.csv": "14ca677f26bb8db2a68b0752071fa9eef3e1783adf9bbdab2bdcafea8afdac87"
+      },
+      "route": "timestamped"
     },
     {
       "fixture": "clicks-174",
-      "route": "normal",
       "hashes": {
-        "sends.csv": "3b001c45b37f9bb7a10d40f670c95cd4c639ca2088e8accfd60c36f00f66dd6d",
-        "features.csv": "4f18d75a1b19f2d8e01c9564a4c5dfe798e01abf67236983f69140ce00d33788",
-        "energy.csv": "c6b1f8c96a37ec2463014e51d74794daadd90dd88f50868d8f1908bf74e0a63b",
-        "events.csv": "8dad0da77c79879255349bc6a801ba3e423aa34733b8931dd2aa1c57ac753347"
-      }
+        "energy.csv": "c203aaa4d19732f89e0f43f46de2633791bbeef43abacf4b1730866a4d70ca6d",
+        "events.csv": "2fcbac59e7cbaaf393d4b58f29a6dc3ba754d135ab5f3206123118992dcd7054",
+        "features.csv": "5af1a922e972fb5bf3f2bb2ae00696de17bf0f946c10b5af047cae28c833c107",
+        "sends.csv": "78c35a13d2c27ac26324256d09920b555f3af83bdf4caf23da628ccecf2e8da1"
+      },
+      "route": "normal"
     },
     {
       "fixture": "clicks-174",
-      "route": "timestamped",
       "hashes": {
-        "sends.csv": "7824c341fb70651040e53019aee72c64aeab11d0601b22e0768d2fcb9cba7de4",
-        "features.csv": "6623a41597bc55c4562bdee12d0974ca06125af45226acdeca7058c5eb7bad1a",
-        "energy.csv": "bf088bca64c9abb27c7bd8c648633b47e52f0c3e222934fa44534fe30190b8b9",
-        "events.csv": "223cd231b8b2e81d0c99552856e814a2cfd446ca68bbbe33f4ec15fe80085567"
-      }
+        "energy.csv": "658ae2e0eb5b4684c43ab42a1a483662c05f90273ce88063e49f89c010503bab",
+        "events.csv": "5a6fbfaba2df213059e0443d25df3810bca8d4ff70e6b8c9b091d655c92c8306",
+        "features.csv": "11c412fb1d80d9930a449830bc6862f253192adb7e8c6d1a9f3e0cdb956b7bbd",
+        "sends.csv": "c315419b6c345852ecc887947f1eaeede71195220a118704b02bb1e53410a934"
+      },
+      "route": "timestamped"
     },
     {
       "fixture": "impulse",
-      "route": "normal",
       "hashes": {
-        "sends.csv": "9d3fadfeb98540d3b544fc5f22a95fb780d7c1d65c660ccb13616652e707edf0",
-        "features.csv": "14fd25ed39311b937caab9d6b2e4a474f653d582ba5c8cb1ab9a4466fb765148",
-        "energy.csv": "d325e996320321f95b83b1787e215073a4444172acc972b1fe8a2ee1c385c4cb",
-        "events.csv": "6ab3890588cfb12752310200c2cc24e25b00f0d9e87e46d16877288a26b9005d"
-      }
+        "energy.csv": "262b6cd031ac51214ca1688e8b600ae870c0ec40b6300bbfe1fb10f2af55f6ea",
+        "events.csv": "eda8b65cbf62aecb837bd9847b123494afe410b57fda3a9fa988351f530ee6bd",
+        "features.csv": "18669bba0d390f3d94fc74fcd80d4e493eab127c694bbfc0c7dc6eb7c3d5ff5f",
+        "sends.csv": "a77662df2475e6951396820ec17ca4386ed276ccf8b6747e00e17664ae2bc310"
+      },
+      "route": "normal"
     },
     {
       "fixture": "impulse",
-      "route": "timestamped",
       "hashes": {
-        "sends.csv": "a9ccad13f4bf3b13fdce9880f357170aca2150e4aa96f27fb60babb2c717157b",
-        "features.csv": "e2f428793bea0fbd7c0dc9dff235554ebc5b8c2da3646b18376bcb9897d3da84",
-        "energy.csv": "291369e0be10518ac0f43e36dbb5ca712d77d33f3d1fe1070809bd2764265687",
-        "events.csv": "7cafa9665cc4e558c0aec33bba184efbd8f692c53fe74720716ddd2582b1fc3d"
-      }
+        "energy.csv": "d2ca7e11bf315466eeb086de5562a1d8570dcb43e053a766b287479d72c49e39",
+        "events.csv": "f9f00bf4e76d0123cda68ec7c1074467619f86322f69afd1750fc1632c81e869",
+        "features.csv": "bbb6837ac78a9571c71761308ff1594a56cb6571c6c57f02962394aaca34bef4",
+        "sends.csv": "4adcea8d9fa8baefa076fdb58a4a9172fe095cffa38547bfb0df001ca8cea56e"
+      },
+      "route": "timestamped"
     },
     {
       "fixture": "panning",
-      "route": "normal",
       "hashes": {
-        "sends.csv": "e7636bc19e000587faccf6e48ae7c6428cab00cb8b520b1b8cecb48c70fda41a",
-        "features.csv": "961f5d6fa8beacb266997d89a517f129780826f41a0fd88fd7ffc327c6ad7539",
-        "energy.csv": "a1afe515ba334871f72fa4bc311804d48e4ce217f5231b3aaff4c099ea8a9ad2",
-        "events.csv": "158db827442f703a3e75d5add05178e1d438fcc28f8af8ec98d9032345caaad4"
-      }
+        "energy.csv": "1eb0e30107148545dfda0c2331bef0a7a1246a575e17b6413ccdf1ad2cce35ac",
+        "events.csv": "c69cbe54aba98382a7527675a6676eb350e3223f64c4e4fba02884086e551627",
+        "features.csv": "53ebe445bf224046aaae521e49b6f841b67bd28a81d2ca542f13f29ac4395c34",
+        "sends.csv": "9a637137854f3d642db0a728ef7e58a1223914576088d471373b6e4d142752da"
+      },
+      "route": "normal"
     },
     {
       "fixture": "panning",
-      "route": "timestamped",
       "hashes": {
-        "sends.csv": "fc7cfde103b6e4541e4f0b4774768cc57b46252869529a068cf33aa08b654bf6",
-        "features.csv": "c2566b71e3ca29c7ddd064fc618d2b8668c6dfd611bd062f3d54edba35b88b23",
-        "energy.csv": "f14d30e6788c86d20c6e076c17b6097a1a5f441e388d382418aa03c6d4b8a6c8",
-        "events.csv": "be120fefbc3bbde43bdda0d55871ad501dd310269708bd431125051c7958d4d1"
-      }
+        "energy.csv": "63d8db97d2df335d456f12feddc025bcdbb4f4eb901d42f36e9c72f2a1aedcd3",
+        "events.csv": "308d375a8e81ef1d36109af514c097757bc83527b9b6792069a38dd2efb4c712",
+        "features.csv": "ecfc2da06920eb510751480a690577484fe389cc04594d1a6654aacb39a006cc",
+        "sends.csv": "6f537c6a053b0dfe63dd70c90d92baf2b3f07c3200a679a8d85979fd1dfad836"
+      },
+      "route": "timestamped"
     },
     {
       "fixture": "pink-noise",
-      "route": "normal",
       "hashes": {
-        "sends.csv": "e9d79781a9697324e4f4484615d5d99e3dda764eeaa23e2a3e19db738e56d9b9",
-        "features.csv": "6401d4c86312d7124e61dfdd9a9ce516e2dc5526fcb33fe34411fc03f654eb32",
-        "energy.csv": "e8128cce35992b3075184ee74ada014273bca128fbb81334a2de5ec8fbba49ef",
-        "events.csv": "ef4ad2fa6ab1ceb3c31f6b83149ec6d3dba07eacc85a9ab5880da3ca9cd27094"
-      }
+        "energy.csv": "f39bcdeb166d62916a1b45fe88f053165f4c18ae9116255fa3678af8b55802c8",
+        "events.csv": "bd9743c9526767f855e21e7b40dc955fbf91c9d531d220595468b5c2a3376374",
+        "features.csv": "8973a47226276729ee820e0f2f695fe2fc59dc3ecde3e9e0fc204d3e1581e629",
+        "sends.csv": "870dd770b77df04b46d6d893fb22abafcf658d8532e5b9bf3320f8d811937626"
+      },
+      "route": "normal"
     },
     {
       "fixture": "pink-noise",
-      "route": "timestamped",
       "hashes": {
-        "sends.csv": "c6e7e65ea02dac6fb3e79ce96d1b3b29d3115e29cfe9416ff79d80d1e89e044e",
-        "features.csv": "008959d66689c3b0bef7a53c9f0bab30ee44917a0347e1612b5d222acf7254f1",
-        "energy.csv": "75154eea018ea3316546e243595361e16d3ac26397b639cd28cf606a4ed867ad",
-        "events.csv": "93dd34eebf34c9b20c01e9de20d31ac54602a4186b78181d24a6c3c8c4c78116"
-      }
+        "energy.csv": "107a88d8646a0ca06fcd70fba42b1560c723af921c2dbe34d8529885e48df44a",
+        "events.csv": "cf93c8d1456f62754c520e61b81ec3a8cdb4b1234f8d1ca49a43af55be4aeb36",
+        "features.csv": "16fcc00d17953e95cbac4f2286c9fedb584bcf0489a8fdf4368e08be142025a1",
+        "sends.csv": "8e748af19e346901e2e748ce9a140f1505c2d9e46d5a3669cac2094894230155"
+      },
+      "route": "timestamped"
     },
     {
       "fixture": "silence",
-      "route": "normal",
       "hashes": {
-        "sends.csv": "f180f0b8fc9ccbf9e5a56687c19fc02f8df9bcff172f84e4d6e0d10e79164491",
+        "energy.csv": "9c1fae1cce15c8431fd796f1f0c291c1563fb0ecb5142ee39398bf0561ea52c8",
+        "events.csv": "1430f2b7d45695a4592ded56bc859cc34325e97aaaa6cce0ac38c20f48716378",
+        "features.csv": "2345ca46611c1fec697de6b7c1c9b4df1aace4d8e501c59bf580f2e23442f620",
+        "sends.csv": "47bbfacab436b910f8e5bc38ccc0da74ba0885a3e0fc8be462064ace3951f2fa"
+      },
+      "route": "normal"
+    },
+    {
+      "fixture": "silence",
+      "hashes": {
+        "energy.csv": "729026b608069b43a0bf8f52ea225cbc6e41131434d38f5577b2768bbe1b7572",
+        "events.csv": "1430f2b7d45695a4592ded56bc859cc34325e97aaaa6cce0ac38c20f48716378",
         "features.csv": "a458db0c241c121da3fd6b58db740cf6bc7fa67aa8be55ce6b75deed76923788",
-        "energy.csv": "ce13aa7dd86c8990594ae862b34f7168fa59ed9810dd8e8c56e0260f647b4d1e",
-        "events.csv": "1430f2b7d45695a4592ded56bc859cc34325e97aaaa6cce0ac38c20f48716378"
-      }
-    },
-    {
-      "fixture": "silence",
-      "route": "timestamped",
-      "hashes": {
-        "sends.csv": "a577e324e8b1d0a02e708095d6b961473126ea05bf7ca90573ee9920d80133d9",
-        "features.csv": "eb75250b5b9a3315c115c9ecd73f01146ab7df678434462a10388f91372c7191",
-        "energy.csv": "44fe7d78dc24aa07dcc371eaad61d1d472130f4af34dbdd1a301799daf8afb23",
-        "events.csv": "1430f2b7d45695a4592ded56bc859cc34325e97aaaa6cce0ac38c20f48716378"
-      }
+        "sends.csv": "c4f077142a61ad7df7107ad41205c42e0151f28336edc121dcc56904051e4342"
+      },
+      "route": "timestamped"
     },
     {
       "fixture": "sweep",
-      "route": "normal",
       "hashes": {
-        "sends.csv": "7e87815db212a976bd1d9209b92596476be136e7e7bad302efc34dbc2424dbd8",
-        "features.csv": "65aa5fe0fcc67cf5f271d3fe0bed781cc50f177ae300dc00099a75dbfe733938",
-        "energy.csv": "6bca61b5689ae1273c5c1a1e0aa1b3d75816e8123448a36b9a2a7c69ea491cfb",
-        "events.csv": "0d1dbb7f8361a3d8921f22b30dde1e13067824c595e66eafb97a2d6f34e27c99"
-      }
+        "energy.csv": "2915bc4e58ab367e433a79a48715265c02f5164b64cbe94d88becccaabb36e52",
+        "events.csv": "b9f8633d9d3a9274f3eb72444fb099d5a52668e2c9c6e814931e32953239c231",
+        "features.csv": "db2958b9ce5ced9def0d61b2c0b520b56a399b4be3cf981262d0ceaaf18669d0",
+        "sends.csv": "32668dbad7cacccfa82299e4f8ceeea1262b2aff7569f8b788bcac42ed0f930b"
+      },
+      "route": "normal"
     },
     {
       "fixture": "sweep",
-      "route": "timestamped",
       "hashes": {
-        "sends.csv": "2b167f46962d2a01433c9c4c0787e378abfab6e3c1ed1532a41abe0dca80256f",
-        "features.csv": "4352f0c450d52ad304acc4b6dc4c03e9a95f95bf8aa62735055e49bfd0b798c5",
-        "energy.csv": "899d0b278a8a8622e56ccff3a49a3ae92ebb5c257d6bbbf8df9eaac55783ae69",
-        "events.csv": "54a4fc587cbd0329e6e9f7cc676ea0ad891570e17d35af02d7e26efe1c489da8"
-      }
+        "energy.csv": "92b0c6c60f93f473cfead01b10288842a077bbb7485094253b7f6cdb38ac5209",
+        "events.csv": "abf4218873effd0f3d8a38796456da9c488b2439c79ef2a836379ddbd85b31dd",
+        "features.csv": "b1c269e96290c081ddcb61863824df4be4c8ccb17c075c7156b92f103967db21",
+        "sends.csv": "c0970ccf1edde46062e8237711c3e9b1618cd8c093553adad1139ca7f92088f0"
+      },
+      "route": "timestamped"
     },
     {
       "fixture": "tone-steps",
-      "route": "normal",
       "hashes": {
-        "sends.csv": "222926645e03742335128674c3197af948bb2b9e7e083e01039bc8b00b07d984",
-        "features.csv": "213a68f0acb349e5602b005bc324d1054bfd451eb6637e26cbe416edc958f1fe",
-        "energy.csv": "4a1919b84605703f671022902c91cce82a198d871d25dff47d9435b441eec8e7",
-        "events.csv": "3b14bb3aef0668cb5ea8079f4fa31a7866889010bb8583d5e200c2950f22cff4"
-      }
+        "energy.csv": "6b4d82436db29cbafc72f47f35f84a1cb0ebcbf47df8e3e4cbf90aae45599e81",
+        "events.csv": "20753ff603575cdc15db59423f8f64450b5b7e05e36b37d79a5667171c45ea7c",
+        "features.csv": "7a3e87fa9d567b6e4cad56a20efa1e3dccdfe2ce4867f9eeb1b3b5c291697273",
+        "sends.csv": "f6e7cb69fb61f6ebdefddef4e4e31c1ed51654ae6f56e83ac829976e25a554a7"
+      },
+      "route": "normal"
     },
     {
       "fixture": "tone-steps",
-      "route": "timestamped",
       "hashes": {
-        "sends.csv": "50582a53476bfd8c74089d8fad2205563ad39ddc6356e6eb4110ae789a5eee5a",
-        "features.csv": "e2f24a6c05226c04c845b6e7ccb58facc76367a3a58fb47fbea19fe8dceaa859",
-        "energy.csv": "73460aaf5f563af93d30cf389aa34d7889ae4d63cee42aa22e2891c6d976d1b1",
-        "events.csv": "8b2674d031eb2e2670e442ff9154cb82cb86f06ea6e76a1523780ac2e13d6808"
-      }
+        "energy.csv": "5ba3bc02bda3649a1e4d9421a0904406921f2b0eec7861b53881303912aa0bb4",
+        "events.csv": "ec5d97226b593cf92bb7f7f8a695a6c9a7ae14d231b4805027a85c308aad67ea",
+        "features.csv": "1ff3ec077d870253c57cfb81fd0a694773b74551c3edbc9aed69f286ceb191a6",
+        "sends.csv": "4aa7c5f15ca200e9fc29183e54e62cef0e63a75447a6a3d2b07193cd7424fc20"
+      },
+      "route": "timestamped"
     }
-  ]
+  ],
+  "source_commit": "bdf4bb3a113370b29cad47a20af674c096061e22",
+  "previous_source_commit": "6986d9ad171beaed0a4b643cd37bab371a70abcf",
+  "repin_reason": "ROUTE-01: one deadline scheduler and render clock; capability transport compensation; coalescing before render and publication-sequence attribution; no repeated EOS renders; normal traces record native play time without artificial tap lead. Signal-analysis pins are retained; previous scheduler pins are archived in route01-previous-pins.json."
 }

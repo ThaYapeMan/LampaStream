@@ -1,0 +1,32 @@
+{
+  "audible_clock": "AirPlayAudibleClock",
+  "config_sha256": "29efd598da52851e4ee1fa13fb26ac608bfbba4eada5100d9a619b37079983d9",
+  "delay_ms": 0,
+  "delay_schedule": [],
+  "duration_s": 12.0,
+  "format": {
+    "bits": 16,
+    "channels": 1,
+    "encoding": "wav-pcm",
+    "sample_rate": 48000
+  },
+  "git_commit": "8e8685a",
+  "input_sha256": "1f8498d30ad7b405b77c6b189431ebb0c34527b1732f240c0ac8602bb7ff90d5",
+  "lead_s": 1.5,
+  "numpy_version": "2.5.4",
+  "publications_per_tick": 0,
+  "python_version": "3.12.15",
+  "quantization_decimals": 6,
+  "render_hz": 30,
+  "render_pipeline": "shared",
+  "room_sha256": "b8aa6a0510b5747c6e19d2ade0d5f4eeeab06cdeb35bc8e04c0f12b80b50f6a5",
+  "route": "timestamped",
+  "seed": 0,
+  "start_s": 0,
+  "trace_version": 1,
+  "wall_time": {
+    "basis": "virtual",
+    "end_s": 13.567667,
+    "start_s": 0
+  }
+}

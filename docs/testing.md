@@ -281,12 +281,11 @@ Epoch UUID labels are normalized to `replay-0001`; no DSP algorithm is replaced.
 has arrived; a positive value caps delivery at that many per tick, creating a
 reproducible backlog. It never releases future records early. `--delay-ms` sets
 the normal-route probe; `--delay-schedule '[[0,500],[5,0]]'` changes it at virtual
-seconds, preserving today's burst-on-shrink behavior. `--lead-s` (default 1.5)
+seconds, fencing obsolete queued work when calibration changes. `--lead-s` (default 1.5)
 sets simulated timestamped play time relative to the reported sample. Normal
 playback does not use this lead; timestamped playback ignores the normal-only
 delay and delay-schedule options. A post-input tail covers delay/lead and two render
-intervals; the normal route deliberately retains production's terminal latest
-snapshot while the tail is rendered.
+intervals; canonical EOF drains pending deadlines without repeatedly rendering the terminal snapshot.
 
 ### Deterministic encoding and clocks
 
@@ -377,7 +376,7 @@ This prevents repeated flags from disappearing behind an ambiguous count.
 |---|---|
 | `render_id`, `sequence`, `channel_id` | One-based scene/render identity, consumed publication and room channel. Both layers render once per mixer invocation. |
 | `virtual_time_s`, `render_argument_s`, `route` | Actual virtual invocation time, time argument passed to the renderer, route. For early rendering the argument can be future play time; it is not detection availability. |
-| `play_time_s`, `scheduled_play_time_s`, `schedule_target_s` | Timestamped intended play time (two explicit aliases) and `max(ready,play)` target with zero replay trim; blank on normal route. Continuous sends retain cadence quantisation; timestamped event-boundary scenes wake at their exact deadline. |
+| `play_time_s`, `scheduled_play_time_s`, `schedule_target_s` | Raw feature play time, clock-mapped audible time, and actual scheduler deadline on either clock. `lead_s` and `transport_latency_s` record the deadline inputs. Continuous sends retain cadence quantisation; events wake at exact deadlines. |
 | `event_ids`, `onset_consumed` | IDs whose event envelopes exceed 0.5 in this scene, and the lossless since-previous-render event latch (0/1). |
 | `high_effect`, `low_effect` | Effect type identifiers used by the two layers. |
 | `onset_envelope`, `onset_envelope_bass`, `onset_envelope_mid`, `onset_envelope_treble` | Scene-time envelope values in [0,1]. |
@@ -710,9 +709,7 @@ clock advancement without another send are covered. Lamp byte pins are unchanged
 ### PREVIEW-01: pushed events and browser playback clock
 
 The 20 Hz `frame` and every-third-frame `spectrum` cadence is unchanged. Each
-socket also receives `event` messages independently of that producer: normal
-output publishes at the carrying send; timestamped output publishes from the
-already rendered post-accent scene as soon as its playback anchor is available.
+socket also receives `event` messages independently of that producer, from the scheduler’s sent entry and its exact post-boundary output colours.
 No output guard is sampled again. Event messages have `audible_monotonic`
 (server seconds), `event_count`, `bands`, `hold_s`, `release_s`, `policy`,
 `channel_colours` (16-bit RGB), `channel_accent_lifts`, `accent_value` and `events`.
@@ -732,8 +729,7 @@ valid pong it displays **unsynchronised** and draws arriving events immediately.
 
 With an offset, events enter a bounded browser queue and activate on the first
 requestAnimationFrame at or after `1000 * audible_monotonic - offset_ms`, never
-on an earlier animation frame. The outline and per-channel lifts share hold then
-`peak * exp(-(age - hold) / release)` decay and the configured retrigger policy.
+on an earlier animation frame. Outlines stay on for the hold only, with opacity confidence × strength. Per-channel lifts retain hold then `peak * exp(-(age - hold) / release)` decay and the configured retrigger policy.
 Event channel colours override continuous frame colours throughout hold. Periodic
 frames continue to update continuous values but cannot refresh scheduled event
 envelopes. `preview_reset` clears queued/active events on route/generation reset;
@@ -822,3 +818,29 @@ normal and timestamped routes, not only the pre-output render. The eight-code
 minimum is a peak guard; falling tails retain the one-code decay guard without
 being raised back to that minimum. Archived diagnostic rendering keeps its
 original quantisation policy and byte expectations.
+
+
+## ROUTE-01 shared-pipeline acceptance
+
+`pytest -n 0 -s tests/test_transition_sampling.py tests/test_route_pipeline.py`
+checks pure scene sampling at t+1 then t−1, monotonic transition completion,
+the attached-preview full clicks fixture (19/19 events), source/output-agnostic
+AST/grep enforcement, exact deadlines, bounded cadence coalescing and epoch
+invalidation. Clean EOF drains queued future scenes without repeating features.
+
+`python scripts/replay_chain.py --route equal --input tests/fixtures/replay/clicks-120.wav --config tests/fixtures/replay/default-config.json --out /tmp/route-equal`
+compares entire sends.csv bytes from LMS delay 0 and AirPlay lookahead 0.
+The regression also covers house, techno and pad-texture. Both routes use one
+RenderPipeline and Scheduler; only the clock implementation changes.
+
+Floorplan and dot outlines pulse for each event hold, restart on a new event,
+and use opacity confidence × strength. Release tails affect colour/lift only.
+Vitest integrates duty ≤ hold × rate; Playwright checks the visible pulse turns
+off. Rebuild with Node 22.22.2 and compare the packaged bundle byte for byte.
+
+`python scripts/measure_beats.py --route both --out /tmp/route-beats` reruns all
+eight Phase-5 fixtures on both clocks. Phase 6 records raw send latency and the
+output capability transport correction separately. EVENT-01 lost must remain 0;
+all kick identities must be attributed before latency is accepted. Previous pins
+are preserved in tests/fixtures/route01-previous-pins.json with explicit reasons
+in each refreshed fixture. Detector/tempo pins and latency thresholds remain.

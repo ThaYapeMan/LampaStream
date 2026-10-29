@@ -17,7 +17,7 @@ features. The frozen canonical pipeline is a subsystem within the broader model.
 
 | Entity | Role |
 |---|---|
-| **VirtualPlayer** | The player/audio-source integration boundary. LMS/yeney-player and AirPlay are implemented. It holds source identity and connection settings, not Spectrum, Beat or Effects logic. |
+| **VirtualPlayer** | The player/audio-source integration boundary: canonical PCM with sample positions/epochs and an AudibleClock. LMS/yeney-player and AirPlay are implemented; Spectrum, Beat and Effects stay source-independent. |
 | **Controller** | The physical lighting controller and its connection credentials. The current runtime output is Philips Hue Bridge; a Controller is separate from a Zone. |
 | **Zone** | A logical group of lights controlled together, currently mapped to a Hue Entertainment Area on its Controller. Formerly **LightProvider**. |
 | **Analyser** | Reusable analysis configuration: Spectrum engine selection, bands/cutoffs and onset algorithm/settings. It is source-independent. Formerly **AnalysisConfig**. |
@@ -141,8 +141,8 @@ See the [code map](docs/code-map.md) and [testing contract](docs/testing.md).
 
 | Player / source | Status | Ingress | Uses canonical analysis | Notes |
 |---|---|---|---|---|
-| LMS / yeney-player | IMPLEMENTED | Stereo shared memory from yeney-core SHM v1 | Yes | Shared canonical PCM analysis. |
-| AirPlay | IMPLEMENTED | shairport-sync → S16_LE stereo, 44.1 kHz named pipe → `AirPlayPipeStereoSource` | Yes, always | Same canonical pipeline factory and downstream Effects as LMS PCM. |
+| LMS VirtualPlayer / yeney-player | IMPLEMENTED | Stereo float PCM from yeney-core SHM v1 | Yes | Virtual player synced to the listening room; AudibleClock maps to room time. |
+| AirPlay VirtualPlayer | IMPLEMENTED | Managed shairport-sync early tap, with named-pipe fallback | Yes, always | Canonical PCM and receiver AudibleClock. |
 | Sonos (dedicated integration) | NOT PRESENT | — | — | Potential future adapter. A Sonos player exposed through a third-party LMS plugin can be followed through the LMS integration; this is not a native Sonos ingress. |
 | Roon | NOT PRESENT | — | — | Potential future adapter; no production Roon player type or ingress. |
 
@@ -156,7 +156,7 @@ use the shared canonicalizer, including conversion to 48 kHz canonical PCM.
 ### Internal analysis subsystem
 
 ```text
-LMS / yeney-player ─┐
+LMS VirtualPlayer (yeney-core) ─┐
 AirPlay ───────────┤
 future player ────┤
                   ▼
@@ -305,8 +305,9 @@ cd LampaStream
 sudo ./scripts/install-lampastream.sh
 ```
 
-The installer provisions dependencies, builds the pinned yeney-player producer and
-AirPlay 2 receiver, builds the frontend/native wheel, migrates saved configuration,
+The installer provisions dependencies, builds yeney-player from the pinned
+yeney-core submodule as the LMS VirtualPlayer synced to the listening room, builds
+the AirPlay 2 receiver and the frontend/native wheel, migrates saved configuration,
 verifies the installed artifacts, and starts the repository service. No manual
 package installation, producer patching or JSON migration is part of that workflow.
 

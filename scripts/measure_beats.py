@@ -87,13 +87,18 @@ def measure(path, out, *, route='normal', room='two-channel.json'):
 def main():
     command = argparse.ArgumentParser(description=__doc__)
     command.add_argument('--out', type=Path, default=ROOT/'docs/baseline/traces-phase5')
+    command.add_argument('--route', choices=('normal', 'timestamped', 'both'), default='normal')
     args = command.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
     rows = []
-    for path in sorted((ROOT/'tests/fixtures/replay/beats').glob('*.wav')):
-        result = measure(path, args.out/path.stem)
-        rows.append(result)
-        print(json.dumps(result, sort_keys=True), flush=True)
+    routes = ('normal', 'timestamped') if args.route == 'both' else (args.route,)
+    for route in routes:
+        for path in sorted((ROOT/'tests/fixtures/replay/beats').glob('*.wav')):
+            target = args.out/route/path.stem if args.route == 'both' else args.out/path.stem
+            result = measure(path, target, route=route)
+            result['route'] = route
+            rows.append(result)
+            print(json.dumps(result, sort_keys=True), flush=True)
     (args.out/'measurements.json').write_text(json.dumps(rows, indent=2, sort_keys=True)+'\n')
     return 0
 

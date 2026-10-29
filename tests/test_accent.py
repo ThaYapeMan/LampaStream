@@ -136,7 +136,7 @@ def test_spatial_selection_is_deterministic():
 @pytest.mark.parametrize('case', json.loads(
     (FIXTURES.parent / 'accent-off-lat01.json').read_text())['cases'],
     ids=lambda c: c['fixture']+'-'+c['route'])
-def test_accent_off_lat01_byte_identity(tmp_path, case):
+def test_accent_off_route01_byte_identity(tmp_path, case):
     import hashlib
     data = json.loads((FIXTURES / 'default-config.json').read_text())
     for effect in data['configuration']['effects']:
