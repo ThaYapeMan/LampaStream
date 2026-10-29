@@ -191,10 +191,6 @@ def test_node_bootstrap_pin_matches_ci_and_locked_jsdom_engine():
         assert f'Node {pin}' in (ROOT / 'docs' / doc).read_text()
 
 
-
-
-
-
 def test_airplay_metadata_build_fifo_and_service_arguments(tmp_path):
     text = (ROOT / 'scripts/setup-airplay.sh').read_text()
     # Execute the production configure argument block using a local capture executable.
@@ -212,10 +208,6 @@ def test_airplay_metadata_build_fifo_and_service_arguments(tmp_path):
     expected = 'p /run/lampastream/airplay.metadata 0600 lampastream lampastream -'
     assert expected in destination.read_text()
     assert '--metadata-enable --metadata-pipename=/run/lampastream/airplay.metadata' in text
-
-
-
-
 
 
 def _migration_functions(script_text: str) -> str:
@@ -476,7 +468,7 @@ def test_check_branch_calls_detect_layout():
     """Both modes report layout before verification."""
     text = SCRIPT.read_text()
     assert 'detect_layout\n' in text
-    assert text.index('detect_layout') < text.index('    verify "$PREFIX/.venv"')
+    assert text.index('\ndetect_layout\n') < text.index('    verify "$PREFIX/.venv"')
 
 
 def test_migrate_huesync_layout_updates_shairport_fifo_paths(tmp_path):
@@ -762,3 +754,11 @@ verify_services() { :; }
     else:
         assert 'CHECK COMPLETE' in result.stdout
     print(('verbose' if verbose else 'default') + ' harness output:\n' + result.stdout)
+
+
+def test_retired_producer_migration_is_absent():
+    text = SCRIPT.read_text()
+    assert 'squeezelite' not in text.lower()
+    assert not (ROOT / 'scripts/remove-owned-squeezelite.py').exists()
+    assert text.index('write-install-manifest.py') < text.index('mv -Tf')
+    assert text.index('mv -Tf') < text.index('systemctl restart avahi-daemon')

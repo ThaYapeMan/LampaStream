@@ -5,8 +5,7 @@ unrestricted publications and the synthetic two-channel capabilities room.
 Each directory contains counters.json, meta.json and events.csv. The default
 flash intensity is zero: envelope carriage is software evidence, not measured light.
 
-Phase-zero references are preserved unchanged in ../traces-phase0. Reproduce with:
-
+Phase-zero numerical references remain in ../traces-phase0.
 See [baseline regeneration commands](../README.md).
 
 See ../../testing.md for the seven-file schema and event disposition definitions.

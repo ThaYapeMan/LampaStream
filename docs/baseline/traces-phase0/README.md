@@ -16,11 +16,9 @@ with default model entities and a playable reference coupling. No running owner
 instance was queried, activated or modified. The room positions are synthetic;
 these are not measurements of the owner's area.
 
-Regenerate each pair from the repository root with:
+To regenerate each pair from the repository root, see [baseline regeneration commands](../README.md).
 
-See [baseline regeneration commands](../README.md).
-
-Replace FIXTURE with each committed WAV stem and ROUTE with normal/timestamped.
+Use each committed WAV stem and the normal/timestamped routes.
 Copy only counters.json and meta.json to `FIXTURE/ROUTE/`; keep the CSVs local.
 Meta records the actual executable revision and byte hashes. Later revisions
 will intentionally change git_commit even if numerical counters remain equal.
