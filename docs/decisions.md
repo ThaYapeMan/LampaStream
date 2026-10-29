@@ -405,3 +405,14 @@ fork. Remove its conflict scanner and manifest-based binary removal helper. The
 HueSync configuration/layout migration remains supported and unchanged. Installer
 output is quiet by default, replays complete diagnostics on failure, and accepts
 `--verbose` to show build progress and passing checks.
+
+## HOUSE-01: compact baseline evidence
+
+Commit only counters.json, meta.json, latency.csv, events.csv and determinism
+hash files as per-fixture baseline evidence. Remove energy.csv, features.csv,
+renders.csv and sends.csv in one ordinary commit without rewriting history;
+ignore these bulk files under docs/baseline/. Retain narrative reports and
+aggregate measurements. Regenerate bulk traces with the replay harness as
+documented in baseline/README.md. Tests already use the shared session replay
+cache, so no expected pins or production behavior change. Historical Git object
+size is not reclaimed by deleting files from the current tree.

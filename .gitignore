@@ -37,3 +37,9 @@ src/lampastream/cavacore/_libcavacore.so
 artifacts/**
 !artifacts/**/.gitkeep
 *.csv
+
+# Baseline bulk traces: regenerate locally with docs/baseline/README.md.
+/docs/baseline/**/energy.csv
+/docs/baseline/**/features.csv
+/docs/baseline/**/renders.csv
+/docs/baseline/**/sends.csv

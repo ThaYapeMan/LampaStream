@@ -7,10 +7,6 @@ flash intensity is zero: envelope carriage is software evidence, not measured li
 
 Phase-zero references are preserved unchanged in ../traces-phase0. Reproduce with:
 
-```sh
-.venv/bin/python scripts/replay_chain.py --input tests/fixtures/replay/FIXTURE.wav \
-  --config tests/fixtures/replay/default-config.json --route ROUTE --render-hz 30 \
-  --seed 0 --out /tmp/replay-FIXTURE-ROUTE
-```
+See [baseline regeneration commands](../README.md).
 
 See ../../testing.md for the seven-file schema and event disposition definitions.

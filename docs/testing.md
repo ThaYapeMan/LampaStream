@@ -222,17 +222,21 @@ LayerMixer → both Effect renderers → the **actual SyncEngine.run** route →
 TraceOutput. It starts no source worker, player, audio device, bridge or network
 service. `scripts/run_acceptance.py` and its existing interface are unchanged.
 
-```sh
-.venv/bin/python scripts/replay_chain.py \
-  --input tests/fixtures/replay/clicks-120.wav \
-  --config tests/fixtures/replay/default-config.json \
-  --route normal --render-hz 30 --seed 0 --out /tmp/replay-normal
-# Select timestamped playback with simulated 1.5-second lookahead:
-.venv/bin/python scripts/replay_chain.py \
-  --input tests/fixtures/replay/clicks-120.wav \
-  --config tests/fixtures/replay/default-config.json \
-  --route timestamped --lead-s 1.5 --out /tmp/replay-timestamped
-```
+Regeneration commands and historical revision guidance live in
+[baseline/README.md](baseline/README.md).
+
+Committed per-fixture baseline evidence consists only of `counters.json`,
+`meta.json`, `latency.csv`, `events.csv` and determinism hash files. `energy.csv`,
+`features.csv`, `renders.csv` and `sends.csv` are generated locally by the replay
+harness and ignored under `docs/baseline/`. Narrative reports and aggregate
+measurements remain alongside the evidence. Historical metadata may retain
+hashes of omitted files; those hashes describe the original replay revision.
+
+Tests do not read the removed baseline files. `tests/onset_regression_support.py`
+and `tests/replay_cache_support.py` regenerate their CSV inputs through the
+session replay cache shared by xdist workers. `tests/fixtures/` regression pins
+are independent expected values and remain unchanged.
+
 
 Integer PCM WAV (8/16/24/32-bit, mono/stereo) decodes with Python's wave module,
 without ffmpeg. Other local formats use run_acceptance's ffmpeg decode to 44.1 kHz
@@ -559,7 +563,7 @@ two-channel-fast.json provides the alternative output rate and precision.
 Phase 2 writes seven files. Phase-zero counters and metadata are preserved under
 baseline/traces-phase0; baseline/traces contains phase-two counters, metadata and
 event rows for every synthetic fixture and both routes. Full per-channel CSVs are
-regenerated with the same command above, with events.csv added to hash comparisons.
+regenerated with the command in baseline/README.md, with events.csv added to hash comparisons.
 
 The confirmation-hop coordinate must not be mistaken for the wall-clock instant
 at which the full STFT window became available. `publication_time_s` and
@@ -637,8 +641,8 @@ codes, timing and event dispositions. The initial cross-revision audit also
 compared every original renders.csv column (the new schema adds columns).
 `test_output_agnostic_onset_modules` includes accent.py.
 
-`docs/baseline/traces-phase4/` retains the requested four fixtures on both routes
-without overwriting older trace sets. renders.csv adds `accent_value`,
+`docs/baseline/traces-phase4/` retains compact evidence for four fixtures on both
+routes without overwriting older trace sets. Regenerated renders.csv adds `accent_value`,
 `accent_mode`, `pre_r/g/b`, `post_r/g/b`; `r/g/b` are now post-accent. Measurements
 are before output precision, which remains exercised in sends.csv by tests.
 The accent object in counters.json reports `events_accented`, `max_lift_lsb` for

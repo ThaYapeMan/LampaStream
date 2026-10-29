@@ -18,13 +18,7 @@ these are not measurements of the owner's area.
 
 Regenerate each pair from the repository root with:
 
-```sh
-.venv/bin/python scripts/replay_chain.py \
-  --input tests/fixtures/replay/FIXTURE.wav \
-  --config tests/fixtures/replay/default-config.json \
-  --route ROUTE --render-hz 30 --seed 0 \
-  --out /tmp/replay-FIXTURE-ROUTE
-```
+See [baseline regeneration commands](../README.md).
 
 Replace FIXTURE with each committed WAV stem and ROUTE with normal/timestamped.
 Copy only counters.json and meta.json to `FIXTURE/ROUTE/`; keep the CSVs local.
