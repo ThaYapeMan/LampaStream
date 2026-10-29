@@ -81,3 +81,23 @@ it('estimates server minus browser time with midpoint RTT and median jitter filt
   clock.pong(20, NaN, 30)
   expect(clock.offset).toBe(9000)
 })
+
+it('outline pulses use confidence times strength only during hold and restart per event', () => {
+  const scheduler = new PreviewScheduler()
+  for (let i = 0; i < 10; i++) {
+    const event = message(10 + i * .5, `pulse-${i}`)
+    event.events[0].confidence = .5
+    event.events[0].strength = .4
+    scheduler.enqueue(event, 0, 9000)
+  }
+  let activeMs = 0
+  for (let t = 0; t < 6000; t++) {
+    const sample = scheduler.sample(t)
+    if (sample.pulse > 0) {
+      activeMs++
+      expect(sample.pulse).toBe(.2)
+    }
+  }
+  expect(activeMs).toBe(10 * 80)
+  expect(scheduler.sample(6100).pulse).toBe(0)
+})

@@ -114,6 +114,7 @@ class AudiblePreview:
                 events.append(dict(id=event.id, audible_monotonic=audible,
                                    peaks=peaks, bands=sorted(event.bands),
                                    kind=event.kind, predicted=event.predicted,
+                                   confidence=event.confidence, strength=event.strength,
                                    on_beat=event.on_beat, beat_phase=event.beat_phase,
                                    bar_position=event.bar_position))
             channels = [dict(zip(('r', 'g', 'b'), c.to_16bit(), strict=True))

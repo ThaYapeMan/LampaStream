@@ -218,7 +218,7 @@ function CouplingSelector({
   )
 }
 
-type Props = Pick<PreviewState, 'colour' | 'channel_colours' | 'onset' | 'bars' | 'status'> & {
+type Props = Pick<PreviewState, 'colour' | 'channel_colours' | 'onset' | 'bars' | 'status' | 'outlinePulse'> & {
   expertMode?: boolean
   onOpenLatency?: () => void
   onOpenEffect?: (id: string) => void
@@ -234,7 +234,7 @@ type Props = Pick<PreviewState, 'colour' | 'channel_colours' | 'onset' | 'bars' 
   connected?: boolean
 }
 
-export function NowPlaying({ expertMode = false, colour, channel_colours, onset, onset_bass = false, onset_mid = false, onset_treble = false, mix = 0, sustained_energy = null, loudness_momentary_lufs = null, bars, normalised_bars, status, connected = true, onOpenLatency, onOpenEffect, onOpenEnergyProfile, last_energy_input = 0 }: Props) {
+export function NowPlaying({ expertMode = false, colour, channel_colours, onset, outlinePulse, onset_bass = false, onset_mid = false, onset_treble = false, mix = 0, sustained_energy = null, loudness_momentary_lufs = null, bars, normalised_bars, status, connected = true, onOpenLatency, onOpenEffect, onOpenEnergyProfile, last_energy_input = 0 }: Props) {
   const couplingId = status?.active_coupling_id ?? null
   const zoneId = status?.active_zone_id ?? null
 
@@ -469,7 +469,7 @@ export function NowPlaying({ expertMode = false, colour, channel_colours, onset,
                 <ColourSwatch r={colour.r} g={colour.g} b={colour.b} />
               </div>
               <div className="w-full" data-testid="floorplan-preview-size">
-                <FloorplanPreview channels={channels} colours={channel_colours} onset={onset} envelope={status?.onset_envelope} accentLifts={status?.channel_accent_lifts} />
+                <FloorplanPreview channels={channels} colours={channel_colours} onset={onset} pulse={outlinePulse} accentLifts={status?.channel_accent_lifts} />
               </div>
             </section>
             <section className="min-w-0 rounded-xl border p-4" aria-label="Analysis">

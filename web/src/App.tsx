@@ -77,7 +77,7 @@ export default function App() {
     window.addEventListener('hashchange', update)
     return () => { window.removeEventListener('popstate', update); window.removeEventListener('hashchange', update) }
   }, [])
-  const { colour, channel_colours, onset, onset_bass, onset_mid, onset_treble, mix, sustained_energy, last_energy_input, loudness_momentary_lufs, bars, normalised_bars, status, connected, reconnectAttempt } = usePreviewSocket()
+  const { colour, channel_colours, onset, outlinePulse, onset_bass, onset_mid, onset_treble, mix, sustained_energy, last_energy_input, loudness_momentary_lufs, bars, normalised_bars, status, connected, reconnectAttempt } = usePreviewSocket()
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -138,7 +138,7 @@ export default function App() {
                 {activeTab === 'palettes' && <Suspense fallback={<p role="status">Loading palettes…</p>}><Palettes zoneId={status?.active_zone_id} /></Suspense>}
                 {activeTab === 'music-settings' && <Suspense fallback={<p role="status">Loading settings…</p>}><MusicSettings /></Suspense>}
                 {activeTab === 'now-playing' && (
-                  <NowPlaying onOpenLatency={() => navigate('players', status?.timing_player_mac || status?.follow_target_mac || status?.sync_master)} onOpenEffect={id => { setEffectId(id); setActiveTab('effects') }} expertMode={expertMode} last_energy_input={last_energy_input} onOpenEnergyProfile={id => { setEnergyProfileId(id); setActiveTab('energy-profiles') }} colour={colour} channel_colours={channel_colours} onset={onset} onset_bass={onset_bass} onset_mid={onset_mid} onset_treble={onset_treble} mix={mix} sustained_energy={sustained_energy} loudness_momentary_lufs={loudness_momentary_lufs} bars={bars} normalised_bars={normalised_bars} status={status} connected={connected} />
+                  <NowPlaying onOpenLatency={() => navigate('players', status?.timing_player_mac || status?.follow_target_mac || status?.sync_master)} onOpenEffect={id => { setEffectId(id); setActiveTab('effects') }} expertMode={expertMode} last_energy_input={last_energy_input} onOpenEnergyProfile={id => { setEnergyProfileId(id); setActiveTab('energy-profiles') }} colour={colour} channel_colours={channel_colours} onset={onset} outlinePulse={outlinePulse} onset_bass={onset_bass} onset_mid={onset_mid} onset_treble={onset_treble} mix={mix} sustained_energy={sustained_energy} loudness_momentary_lufs={loudness_momentary_lufs} bars={bars} normalised_bars={normalised_bars} status={status} connected={connected} />
                 )}
                 {activeTab === 'backup' && <Backup />}
                 {activeTab === 'players' && <Players activeCouplingId={status?.active_coupling_id ?? null} status={status} selectedPlayer={selectedPlayer} onSelect={id => navigate('players', id)} onNowPlaying={() => navigate('now-playing')} />}

@@ -53,6 +53,7 @@ export interface PreviewState extends AccentFeatures {
   colour: { r: number; g: number; b: number }
   channel_colours: Array<{ r: number; g: number; b: number }>
   onset: boolean
+  outlinePulse?: number
   onset_bass: boolean
   onset_mid: boolean
   onset_treble: boolean
@@ -115,7 +116,7 @@ export function usePreviewSocket(): PreviewState {
           channel_accent_lifts: sample.lifts, accent_value: sample.accent,
           onset_age_s: Number.isFinite(sample.age) ? sample.age : null,
         }
-        setState(s => ({ ...s, ...features, channel_colours: channels, colour: channels[0] ?? s.colour,
+        setState(s => ({ ...s, ...features, outlinePulse: sample.pulse, channel_colours: channels, colour: channels[0] ?? s.colour,
           onset: sample.values.all > .5, onset_bass: sample.values.bass > .5,
           onset_mid: sample.values.mid > .5, onset_treble: sample.values.treble > .5,
           status: s.status ? { ...s.status, ...features } : null }))

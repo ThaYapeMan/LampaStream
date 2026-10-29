@@ -5,7 +5,8 @@ export interface PreviewEventMessage {
   type: 'event'
   audible_monotonic: number
   events: { id: unknown; audible_monotonic: number; peaks: Record<Band, number>; bands: string[];
-    channel_colours?: Colour[]; channel_accent_lifts?: number[]; accent_value?: number }[]
+    channel_colours?: Colour[]; channel_accent_lifts?: number[]; accent_value?: number;
+    confidence?: number; strength?: number }[]
   event_count: number
   hold_s: number
   release_s: number
@@ -31,7 +32,7 @@ export class PreviewClock {
   }
 }
 
-type Scheduled = { time: number; peaks: Record<Band, number>; message: PreviewEventMessage }
+type Scheduled = { confidence: number; strength: number; time: number; peaks: Record<Band, number>; message: PreviewEventMessage }
 export function envelope(peak: number, age: number, hold: number, release: number) {
   return age < 0 ? 0 : peak * Math.exp(-Math.max(0, age - hold) / Math.max(.000001, release))
 }
@@ -48,7 +49,7 @@ export class PreviewScheduler {
       if (this.seen.has(id)) continue
       this.seen.add(id)
       if (this.seen.size > 1000) this.seen.delete(this.seen.values().next().value!)
-      this.queue.push({ time: offset === null ? nowMs : event.audible_monotonic * 1000 - offset,
+      this.queue.push({ confidence: event.confidence ?? 1, strength: event.strength ?? event.peaks.all, time: offset === null ? nowMs : event.audible_monotonic * 1000 - offset,
         peaks: event.peaks, message: { ...message, ...event } })
     }
     this.queue.sort((a, b) => a.time - b.time)
@@ -78,7 +79,9 @@ export class PreviewScheduler {
     const age = this.last ? (nowMs - this.last.time) / 1000 : Infinity
     const message = this.last?.message
     const decay = message ? envelope(1, age, message.hold_s, message.release_s) : 0
-    return { values, age, colours: message && age < message.hold_s ? message.channel_colours : null,
+    const pulse = message && age >= 0 && age < message.hold_s
+      ? Math.max(0, Math.min(1, (this.last?.confidence ?? 0) * (this.last?.strength ?? 0))) : 0
+    return { values, age, pulse, colours: message && age < message.hold_s ? message.channel_colours : null,
       lifts: message?.channel_accent_lifts.map(value => value * decay) ?? [],
       accent: (message?.accent_value ?? 0) * decay }
   }
