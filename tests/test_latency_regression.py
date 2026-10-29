@@ -21,9 +21,10 @@ def test_software_latency(replay_cache, fixture, route, hz):
     else:
         # Deadline scheduling and truth-relative timing are independent checks.
         assert max(abs(float(row['schedule_error_ms'])) for row in rows) <= 5
-        # Default replay playback lead 1.5 s, positive light advance 20 ms;
+        # Add declared transport latency to the send: playback lead 1.5 s,
+        # configured light advance 20 ms remains unchanged at the output boundary;
         # midpoint estimation leaves at most half a 10 ms hop of truth error.
-        assert max(abs(float(row['first_send_ms'])-1480) for row in rows) <= 5
+        assert max(abs(float(row['first_send_ms'])+20-1480) for row in rows) <= 5
     for row in rows:
         terms = sum(float(row[k]) for k in ('window_acquisition_ms', 'hop_ms',
                     'lookahead_ms', 'tick_wait_ms', 'schedule_wait_ms'))
@@ -49,7 +50,7 @@ def test_bass_long_and_treble_short_align_on_same_click(replay_cache):
 
 @pytest.mark.parametrize('fixture', ['silence', 'sweep', 'pink-noise'])
 @pytest.mark.parametrize('route', ['normal', 'timestamped'])
-def test_idle_colour_bytes_match_phase_two(replay_cache, tmp_path, fixture, route):
+def test_idle_colour_bytes_match_route01_pin(replay_cache, tmp_path, fixture, route):
     import hashlib
     from pathlib import Path
 

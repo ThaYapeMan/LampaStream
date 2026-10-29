@@ -1,4 +1,4 @@
-"""Single-owner timestamped AirPlay ingress and bounded scene scheduling.
+"""Single-owner timestamped AirPlay VirtualPlayer ingress.
 
 Wire v1 is little-endian, 52-byte header and at most 1000 S16 stereo frames.
 The receiver writes records atomically below PIPE_BUF. No second FIFO consumer.
@@ -6,7 +6,6 @@ The receiver writes records atomically below PIPE_BUF. No second FIFO consumer.
 
 from __future__ import annotations
 
-import heapq
 import logging
 import os
 import stat
@@ -328,40 +327,3 @@ class EarlyAirPlaySource:
         if transition:
             return transition
         return self.pipe.read()
-
-
-class SceneSchedule:
-    """Bounded target-time queue; each output tick sends only the newest due scene."""
-
-    def __init__(self, capacity=1000):
-        self.queue = []
-        self.sequence = 0
-        self.capacity = capacity
-        self.generation = None
-
-    def reset(self, generation):
-        if generation != self.generation:
-            self.queue.clear()
-            self.generation = generation
-
-    def add(self, scene, play, ready, generation, trim_ms=0, provenance=None):
-        self.reset(generation)
-        self.sequence += 1
-        heapq.heappush(
-            self.queue, (max(ready, play + trim_ms / 1000), self.sequence, scene, provenance)
-        )
-        if len(self.queue) > self.capacity:
-            heapq.heappop(self.queue)
-
-    def next_due(self, generation):
-        """Earliest deadline on the monotonic clock, after generation fencing."""
-        self.reset(generation)
-        return self.queue[0][0] if self.queue else None
-
-    def due(self, now, generation):
-        self.reset(generation)
-        result = None
-        while self.queue and self.queue[0][0] <= now:
-            _, _, scene, provenance = heapq.heappop(self.queue)
-            result = scene, provenance
-        return result

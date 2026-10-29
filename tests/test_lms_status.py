@@ -245,3 +245,20 @@ def test_yeney_discovery_preserves_model_and_name_without_suffix(name):
     assert _parse_players(response) == [{
         "playerid": "aa:bb:cc:dd:ee:ff", "name": name, "modelname": "YeneY",
     }]
+
+
+def test_session_kind_discovery_uses_modelname_from_same_owned_connection(monkeypatch):
+    from unittest.mock import MagicMock
+
+    from lampastream import lms_status
+    connection = MagicMock()
+    connection.__enter__.return_value = connection
+    connection.recv.side_effect = [
+        b'aa status - 1 player_name%3ARoom time%3A1\n',
+        b'players 0 100 playerid%3Aaa model%3Asqueezelite modelname%3AYeneY\n',
+    ]
+    monkeypatch.setattr(lms_status.socket, 'create_connection', lambda *a, **k: connection)
+    status = lms_status.query_lms_status('offline.invalid', 'aa', include_model=True)
+    assert status.player_model == 'YeneY/squeezelite'
+    assert [call.args[0] for call in connection.sendall.call_args_list] == [
+        b'aa status - 1 tags:adglcK\n', b'players 0 100 tags:\n']

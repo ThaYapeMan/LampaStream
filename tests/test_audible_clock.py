@@ -25,8 +25,8 @@ def test_player_provenance_and_trim_remain_in_clock_mapping(kind, mode):
     features = AudioFeatures([], 0, 0, 0, 0, play_monotonic=10.)
     point = clock.at(480, 0, features, 1.)
     assert point.audible == pytest.approx(10.06)
-    assert point.lookahead_s > 0
-    assert clock.generation == 2
+    assert (point.lookahead_s > 0) == (kind is AirPlayAudibleClock)
+    assert clock.generation == (2, 0)
 
 
 def test_zero_lookahead_clock_points_are_equal():
@@ -39,3 +39,19 @@ def test_zero_lookahead_clock_points_are_equal():
 
 def test_legacy_reader_name_is_a_compatibility_alias():
     assert SqueezeliteShmStereoSource is YeneyCoreShmStereoSource
+
+
+@pytest.mark.parametrize('model,kind', [('YeneY/squeezelite', 'yeney-sonos'),
+                                      ('Sonos/sonos', 'yeney-sonos'),
+                                      ('Squeezebox Radio/baby', 'squeezebox')])
+def test_room_kind_selection_and_reported_delay_are_owned_by_clock(model, kind):
+    from lampastream.audible_clock import lms_clock_for_model
+    probe = SimpleNamespace(current_delay_ms=lambda: 350, player_delay=200)
+    clock = lms_clock_for_model(model, probe)
+    assert clock.kind == kind
+    assert clock.model == model.lower()
+    features = AudioFeatures([], 0, 0, 0, 0, received_monotonic=10.)
+    # The measured offset already includes the reported pipeline delay.
+    assert clock.at(0, 0, features, 11.).audible == pytest.approx(10.350)
+    if kind == 'yeney-sonos':
+        assert clock.reported_pipeline_delay_ms == 200

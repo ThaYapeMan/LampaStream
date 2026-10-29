@@ -35,16 +35,19 @@ class QuantisationGuard:
         return Colour(*guarded)
 
 
-class GuardedScene:
-    """Apply precision at sampling time; retain upstream scene metadata."""
+class BoundaryScene:
+    """Immutable output samples; precision state advances once at render time."""
 
-    def __init__(self, scene, guard, active, *, minimum_lift=True):
-        self.scene, self.guard, self.active = scene, guard, active
-        self.minimum_lift = minimum_lift
+    def __init__(self, scene, guard, positions, t, active, *, minimum_lift=True):
+        self.scene = scene
+        self.colours = {position: guard.colour(position, scene.color_at(position, t), active,
+                                               minimum_lift=minimum_lift)
+                        for position in positions}
 
     def __getattr__(self, name):
         return getattr(self.scene, name)
 
     def color_at(self, position, t):
-        return self.guard.colour(position, self.scene.color_at(position, t), self.active,
-                                 minimum_lift=self.minimum_lift)
+        if position in self.colours:
+            return self.colours[position]
+        return self.scene.color_at(position, t)

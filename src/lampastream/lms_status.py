@@ -31,6 +31,7 @@ class LmsPlayerStatus:
     mode: str | None = None
     waiting_to_play: bool = False
     time: float | None = None
+    player_model: str | None = None
     player_name: str | None = None      # display name of the queried player
     sync_master: str | None = None      # MAC of the sync-group master, None if standalone
     genre: str | None = None
@@ -53,7 +54,8 @@ def _recv_line(sock: socket.socket) -> bytes:
     return b"".join(chunks)
 
 
-def query_lms_status(host: str, mac: str, port: int = DEFAULT_PORT) -> LmsPlayerStatus:
+def query_lms_status(host: str, mac: str, port: int = DEFAULT_PORT, *,
+                     include_model: bool = False) -> LmsPlayerStatus:
     """Query a single player's status from the LMS CLI.
 
     *mac* is sent verbatim — LMS matches players by raw MAC and silently
@@ -74,8 +76,17 @@ def query_lms_status(host: str, mac: str, port: int = DEFAULT_PORT) -> LmsPlayer
     with socket.create_connection((host, port), timeout=_SOCKET_TIMEOUT_S) as sock:
         sock.sendall(command.encode("utf-8"))
         raw = _recv_line(sock).decode("utf-8", errors="replace").strip()
+        model = None
+        if include_model:
+            sock.sendall(b"players 0 100 tags:\n")
+            reply = _recv_line(sock).decode("utf-8", errors="replace").strip()
+            player = next((p for p in _parse_players(reply)
+                           if p.get("playerid", "").lower() == mac.lower()), {})
+            model = '/'.join(str(player[key]) for key in ('modelname', 'model')
+                             if player.get(key)) or None
     log.debug("LMS raw response: %r", raw[:400])
     result = _parse_status(raw)
+    result.player_model = model
     log.debug("LMS parsed: player_name=%r sync_master=%r sync_slaves=%r",
               result.player_name, result.sync_master, result.sync_slaves)
     return result

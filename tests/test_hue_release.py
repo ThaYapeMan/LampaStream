@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from lampastream.api import router
+from lampastream.audible_clock import AirPlayAudibleClock
 from lampastream.hue_output import HueDriver, HueOutputConfig
 from lampastream.hue_release import HueReleaseRest
 from lampastream.migration import convert
@@ -333,6 +334,18 @@ def test_early_tap_release_discards_old_scenes_and_keeps_tap_generation(monkeypa
                              received_monotonic=10, timing_generation=1)
 
     class Pipeline(CanonicalAnalysisPipeline):
+        def latest_hpss(self):
+            return False, 0., 0.
+
+        def latest_loudness(self):
+            return None, None
+
+        def latest_level(self):
+            return None
+
+        def latest(self):
+            return None
+
         def __init__(self):
             self.records = [SimpleNamespace(features=features(10.5))]
             self.seq = 1
@@ -355,7 +368,7 @@ def test_early_tap_release_discards_old_scenes_and_keeps_tap_generation(monkeypa
         probe = AirPlayAutoLatencyProbe(PlayerLatency(player_mac='ap', strategy='auto'),
                                        diagnostics, 0, Mock())
         engine = SyncEngine(None, Profile(accent_mode="off"), analyser=pipeline,
-                            probe=probe, timing=diagnostics)
+                            probe=probe, audible_clock=AirPlayAudibleClock(probe, diagnostics))
         engine._effect = SimpleNamespace(render=lambda f, t: f.play_monotonic, mix=0)
 
         async def tick(dt):
@@ -380,7 +393,7 @@ def test_early_tap_release_discards_old_scenes_and_keeps_tap_generation(monkeypa
         assert diagnostics.tap_generation == 1
         assert output.send.call_count == 1
         assert output.send.call_args.args[0] == 10.7
-        assert output.send.call_args.args[1] >= 10.7
+        assert output.send.call_args.args[1] >= 10.7-1e-10
     asyncio.run(run())
 
 

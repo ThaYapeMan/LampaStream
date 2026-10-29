@@ -97,7 +97,8 @@ def replay_preview(tmp_path, monkeypatch, route, delay=0, advance=.02):
             send(scene, t)
             from lampastream.audible_preview import render_metadata
             metadata = render_metadata(scene)
-            deadline = t+metadata.playback_shift if route == 'timestamped' else t
+            deadline = max(t, metadata.render_time+metadata.playback_shift,
+                *(engine._event_audible[event.id] for event in metadata.carried_events))
             lifts = []
             for position, colour in zip(
                     metadata.positions, replay.output.last_colours, strict=True):
@@ -105,7 +106,7 @@ def replay_preview(tmp_path, monkeypatch, route, delay=0, advance=.02):
                 lifts.append(max(0., colour.r-before.r, colour.g-before.g, colour.b-before.b))
             captures.append((deadline, len(captures), tuple(
                 dict(zip(('r', 'g', 'b'), c.to_16bit(), strict=True))
-                for c in replay.output.last_colours), metadata.features.onset_envelope, lifts))
+                for c in replay.output.last_colours), metadata.features.onset_envelope, lifts, t))
 
         replay.captures = captures
         replay.output.send = sent
@@ -131,9 +132,7 @@ def replay_preview(tmp_path, monkeypatch, route, delay=0, advance=.02):
     starts = [f['poll_time'] for i, f in enumerate(frames) if f.get('onset_envelope', 0) > .5
               and (i == 0 or frames[i-1].get('onset_envelope', 0) <= .5)]
     events = sorted(replay.engine.event_records.values(), key=lambda r: r['event'].candidate_sample)
-    targets = ([r['event'].play_monotonic for r in events] if route == 'timestamped' else
-               [c[0] for i, c in enumerate(replay.captures) if c[3] > .5
-                and (i == 0 or replay.captures[i-1][3] <= .5)])
+    targets = [replay.engine._audible_preview.events[r['event'].id][1] for r in events]
     offsets = [(actual-target)*1000 for actual, target in zip(starts, targets, strict=True)]
     assert min(offsets) >= -1e-6 and max(offsets) <= 50+1e-6, offsets
     for frame in frames:
@@ -143,10 +142,7 @@ def replay_preview(tmp_path, monkeypatch, route, delay=0, advance=.02):
                     key=lambda c: (c[0], c[1]))
         assert frame['channel_colours'] == list(shown[2])
         assert frame['channel_accent_lifts'] == shown[4]
-        if route == 'normal':
-            assert frame['audible_monotonic'] == shown[0]
-        else:
-            assert frame['audible_monotonic'] == frame['poll_time']
+        assert frame['audible_monotonic'] == frame['poll_time']
     pushes = [(stamp, message) for stamp, message in pushes if message['type'] == 'event']
     identities = [tuple(event['id']) for _, message in pushes for event in message['events']]
     assert len(identities) == len(set(identities)) == 19
@@ -156,13 +152,19 @@ def replay_preview(tmp_path, monkeypatch, route, delay=0, advance=.02):
         for event in message['events']:
             identity = tuple(event['id'])
             target = event['audible_monotonic']
+            assert target == replay.engine._audible_preview.events[identity][1]
+            assert sent_at <= target+1e-8
+            carrying = next(capture for capture in replay.captures
+                            if abs(capture[5]-sent_at) < 1e-8)
+            assert message['channel_colours'] == list(carrying[2])
+            source_event = replay.engine.event_records[identity]['event']
             if route == 'timestamped':
-                assert target == replay.engine.event_records[identity]['event'].play_monotonic
-                assert target - sent_at >= .05
+                assert target == pytest.approx(source_event.play_monotonic, abs=1e-8)
+            elif delay:
+                assert target == pytest.approx(
+                    source_event.play_monotonic-args.lead_s+delay/1000, abs=1e-8)
             else:
-                assert abs(target - sent_at) <= .001
-                capture = next(c for c in replay.captures if abs(c[0] - sent_at) < 1e-8)
-                assert message['channel_colours'] == list(capture[2])
+                assert target == pytest.approx(sent_at, abs=1e-8)
             residuals.append((sent_at - target) * 1000)
     assert all(abs((b['poll_time'] - a['poll_time']) - .05) < 1e-8
                for a, b in zip(frames, frames[1:], strict=False))
@@ -223,9 +225,8 @@ def test_band_holds_and_raw_flags_cannot_refresh_preview():
                          onset_events=(event,))
     from lampastream.audible_preview import AudiblePreview
     engine._audible_preview = AudiblePreview(.08, .25, 'restart')
-    engine._preview_timestamped = False
     engine._newest_onset = (None, 0.)
-    engine._audible_preview.register(event, now[0], False)
+    engine._audible_preview.register(event, now[0])
     scene = engine._render_scene(view, now[0])
     assert not engine.last_onset
     engine._preview_sent(scene, now[0], SimpleNamespace(last_colours=[]))
@@ -242,18 +243,18 @@ def test_band_holds_and_raw_flags_cannot_refresh_preview():
     assert not engine.last_onset_mid and not engine.last_onset_treble
 
 
-def test_preview_fences_future_events_when_route_or_generation_resets():
+def test_preview_fences_future_events_when_generation_resets():
     from lampastream.audible_preview import AudiblePreview
     from lampastream.types import OnsetEvent
 
     event = OnsetEvent(('test', 'all', 0), 'test', 0, 480, 1, 1, 1, 1,
                        frozenset({'all'}), 'all', play_monotonic=10.)
     preview = AudiblePreview(.08, .25, 'restart')
-    preview.register(event, 9.9, True)
+    preview.register(event, 10.)
     assert preview.snapshot(9.99)['onset_envelope'] == 0
-    preview.route(False)
+    preview.reset()
     assert not preview.snapshot(10.)['onset']
-    preview.register(event, 9.9, True)
+    preview.register(event, 10.)
     preview.reset()
     assert preview.snapshot(10.)['onset_envelope'] == 0
 
@@ -268,12 +269,12 @@ def test_timestamped_preview_envelope_and_accent_advance_without_another_send():
     preview = AudiblePreview(.08, .25, 'restart')
     event = OnsetEvent(('test', 'all', 0), 'test', 0, 480, 1, 1, 1, 1,
                        frozenset({'all'}), 'all', play_monotonic=10.)
-    preview.register(event, 9.98, True)
+    preview.register(event, 10.)
     scene = UniformScene(Colour(.1, .1, .1))
     features = AudioFeatures([], 0, 0, 0, 0, onset_envelope=1.)
     metadata = PreviewScene(scene, features, 9.98, .35, [.2], .02, scene,
                             (Position(0, 0, 0),), Profile(diagnostic_onsets=True))
-    preview.sent(metadata, 9.98, [Colour(.3, .3, .3)], True)
+    preview.sent(metadata, 9.98, [Colour(.3, .3, .3)])
     assert preview.snapshot(9.999)['onset_envelope'] == 0
     assert not preview.snapshot(9.999)['colours']
     peak = preview.snapshot(10.)
@@ -295,12 +296,12 @@ def test_event_push_coalesces_burst_and_retains_individual_clocks():
     for i, stamp in enumerate((10., 10.004, 10.02)):
         event = OnsetEvent(('burst', 'all', i), 'burst', i, 480, 1, 1, 1, 1,
                            frozenset({'all'}), 'all', play_monotonic=stamp)
-        preview.register(event, 9.9, True)
+        preview.register(event, stamp)
     scene = UniformScene(Colour(.3, .3, .3))
     metadata = PreviewScene(scene, AudioFeatures([], 0, 0, 0, 0), 10.02,
                             .35, [.2], 0., scene, (), Profile())
-    preview.push(metadata, 9., [], True)
-    preview.push(metadata, 9., [], True)
+    preview.sent(metadata, 9., [])
+    preview.sent(metadata, 9., [])
     messages = [message for message in messages if message['type'] == 'event']
     assert [message['event_count'] for message in messages] == [2, 1]
     stamps = [event['audible_monotonic'] for message in messages for event in message['events']]

@@ -232,7 +232,7 @@ def test_lms_activation_seeds_current_track_without_newsong(tmp_path):
             await manager._activate_lms(session, session.profile, player, None, None, [])
             manager._active = session
             await session.poller_task
-            query.assert_called_once_with('host', player.follow_player_mac)
+            query.assert_called_once_with('host', player.follow_player_mac, include_model=True)
             snapshot = manager.track_position
             assert snapshot.title == 'Already playing'
             assert snapshot.artist == 'Artist'
@@ -321,7 +321,7 @@ def test_sync_group_target_query_seeds_track_on_activation(tmp_path):
             await manager._activate_lms(session, session.profile, player, None, None, [])
             manager._active = session
             await session.follower._set_target('aa:bb:cc:00:00:01')
-            query.assert_called_once_with('host', 'aa:bb:cc:00:00:01')
+            query.assert_called_once_with('host', 'aa:bb:cc:00:00:01', include_model=True)
             assert manager.track_position.title == 'Playing in group'
             assert manager.track_position.position_s == 12
             await session.follower._set_target(None)

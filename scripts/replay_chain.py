@@ -30,8 +30,9 @@ sys.path.insert(0, str(ROOT / "src"))
 import run_acceptance as acceptance  # noqa: E402
 from replay_observers import PickerObserver, ScheduleObserver  # noqa: E402
 
-from lampastream import airplay_early  # noqa: E402
+from lampastream import scheduler as scheduling  # noqa: E402
 from lampastream import sync_engine as sync  # noqa: E402
+from lampastream.audible_clock import AirPlayAudibleClock, LmsAudibleClock  # noqa: E402
 from lampastream.canonicalizer import (  # noqa: E402
     AudioCanonicalizer,
     CanonicalData,
@@ -73,7 +74,8 @@ RENDER_COLUMNS = ["render_id", "virtual_time_s", "render_argument_s", "route", "
     "low_effect", "onset_consumed", "onset_envelope", "onset_envelope_bass",
     "onset_envelope_mid", "onset_envelope_treble", "onset_count_since_render", "onset_age_s",
     "channel_id", "r", "g", "b", "accent_value", "accent_mode",
-    "pre_r", "pre_g", "pre_b", "post_r", "post_g", "post_b"]
+    "pre_r", "pre_g", "pre_b", "post_r", "post_g", "post_b", "lead_s",
+    "transport_latency_s"]
 SEND_COLUMNS = ["send_id", "virtual_time_s", "route", "generation", "scene_id", "channel_id",
                 "r", "g", "b", "r8", "g8", "b8", "interval_ms", "event_ids"]
 
@@ -387,13 +389,10 @@ class Replay:
         render = engine._render_scene
 
         def traced(features, t):
-            record = self.queued.get(id(features), self.current)
-            if record is None and self.queued:
-                continuous = [r for r in self.queued.values()
-                              if r.effective_processor_ids != ("beat_detector",)]
-                record = min(continuous, key=lambda r:
-                             abs((r.features.play_monotonic or 0) -
-                                 (features.play_monotonic or 0)))
+            sequence = getattr(engine, "_render_sequence", None)
+            record = self.records[sequence-1] if sequence is not None else self.current
+            if record is None:
+                raise RuntimeError("Rendered features have no publication provenance")
             sequence = record.sequence
             self.tick_repeat_reads += int(self.reads[sequence] > 0)
             self.reads[sequence] += 1
@@ -431,10 +430,10 @@ class Replay:
                     "render_argument_s": t, "route": self.args.route,
                     "sequence": sequence, "play_time_s": features.play_monotonic
                     if self.args.route == "timestamped" else None,
-                    "scheduled_play_time_s": features.play_monotonic
-                        if self.args.route == "timestamped" else None,
-                    "schedule_target_s": max(self.now, features.play_monotonic)
-                        if self.args.route == "timestamped" else None,
+                    "scheduled_play_time_s": engine._render_audible,
+                    "schedule_target_s": engine._render_deadline,
+                    "lead_s": engine._render_lead,
+                    "transport_latency_s": self.output.capabilities.transport_latency_s,
                     "event_ids": active_ids,
                     "high_effect": self.high.effect_type, "low_effect": self.low.effect_type,
                     "onset_consumed": int(features.onset),
@@ -487,7 +486,11 @@ class Replay:
                                  processing=lambda *a: None)
         engine = sync.SyncEngine(None, self.high, analyser=self.pipeline,
             mellow_profile=self.low, probe=SimpleNamespace(current_delay_ms=delay),
-            timing=timing if self.args.route == "timestamped" else None)
+            audible_clock=(AirPlayAudibleClock(SimpleNamespace(current_delay_ms=delay), timing)
+                if self.args.route == "timestamped" else
+                AirPlayAudibleClock(SimpleNamespace(current_delay_ms=delay), timing, lookahead=0.)
+                if getattr(self.args, "equal_clock", None) == "airplay" else
+                LmsAudibleClock(SimpleNamespace(current_delay_ms=delay))))
         self.engine = engine
         self.observe_mixer(engine)
         # Changing the rate is isolated to this offline process/context. The
@@ -510,14 +513,14 @@ class Replay:
                 raise FinishedReplay
             self.release()
 
-        def make_schedule():
-            self.schedule = ScheduleObserver()
+        def make_schedule(capabilities, **kwargs):
+            self.schedule = ScheduleObserver(capabilities, **kwargs)
             return self.schedule
 
         await self.output.start()
         try:
             with patch.object(sync, "SEND_INTERVAL_S", interval), patch.object(
-                    airplay_early, "SceneSchedule", make_schedule):
+                    scheduling, "Scheduler", make_schedule):
                 await engine.run(self.output, clock=lambda: self.now, sleep=step)
         except FinishedReplay:
             pass
@@ -571,7 +574,9 @@ class Replay:
                 "max": max(counts)}, "publication_queue_drops": self.pipeline.pub_dropped_count,
             "event_queue_drops": self.pipeline.events_dropped_count,
             "event_mapping_fallbacks": self.engine.event_mapping_fallbacks,
-            "extra_sends": self.engine.extra_send_stats}
+            "extra_sends": self.engine.extra_send_stats,
+            "scheduler": {"coalesced_requests": len(self.schedule.coalesced),
+                          "pruned_continuous_requests": len(self.schedule.overflow)}}
 
     def latency_rows(self):
         """Join detected identities to sparse truth without changing detector decisions.
@@ -684,6 +689,8 @@ class Replay:
             "duration_s": self.sample_count / RATE, "git_commit": acceptance.git_commit(ROOT),
             "config_sha256": digest(self.args.config.read_bytes()), "seed": self.args.seed,
             "route": self.args.route, "render_hz": self.args.render_hz,
+            "audible_clock": type(self.engine.audible_clock).__name__,
+            "render_pipeline": "shared",
             "publications_per_tick": self.args.publications_per_tick,
             "delay_ms": self.args.delay_ms, "delay_schedule": self.args.delay_schedule,
             "lead_s": self.args.lead_s, "start_s": self.args.start,
@@ -700,7 +707,7 @@ def parser():
     result.add_argument("--input", type=Path, required=True)
     result.add_argument("--config", type=Path, required=True)
     result.add_argument("--coupling-id")
-    result.add_argument("--route", choices=("normal", "timestamped"), default="normal")
+    result.add_argument("--route", choices=("normal", "timestamped", "equal"), default="normal")
     result.add_argument("--render-hz", type=int, choices=(20, 30, 50, 60), default=30)
     result.add_argument("--publications-per-tick", type=int, default=0,
                         help="0: all available; positive: delivery cap per tick")
@@ -729,6 +736,30 @@ def main(argv=None):
             for pair in args.delay_schedule)):
         raise ValueError("--delay-schedule must be a list of nonnegative [seconds,ms] pairs")
     args.delay_schedule.sort()
+    if args.route == "equal":
+        import copy
+        hashes, traces = [], []
+        for kind in ("lms", "airplay"):
+            equal_args = copy.copy(args)
+            equal_args.equal_clock = kind
+            equal_args.delay_ms = equal_args.lead_s = 0.
+            equal_args.delay_schedule = []
+            equal_args.out = args.out/kind
+            random.seed(args.seed)
+            np.random.seed(args.seed % 2**32)
+            replay = Replay(equal_args)
+            try:
+                pcm, rate, fmt = decode(args.input, args.start, args.duration)
+                replay.analyse(pcm, rate)
+                asyncio.run(replay.run())
+                replay.save(fmt)
+                traces.append((equal_args.out/"sends.csv").read_bytes())
+                hashes.append(digest(traces[-1]))
+            finally:
+                replay.pipeline.stop()
+        assert traces[0] == traces[1], hashes
+        print(f"Equal clocks: byte-identical sends.csv ({hashes[0]})")
+        return 0
     started = time.perf_counter()
     # Seed only this offline execution; per-instance band RNGs are seeded too.
     random.seed(args.seed)

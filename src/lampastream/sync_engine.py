@@ -1,17 +1,10 @@
-"""The audio analysis and colour engine.
+"""Canonical analysis and the source-independent scene engine.
 
-Signal path (one layer at a time):
-
-    FifoReader      — reads cava's raw FIFO output in a background thread
-    BandNormaliser  — AGC: normalises each bar against its own rolling average
-    OnsetDetector   — spectral flux onset detection with EMA-based threshold
-    CavaPipeline    — wraps the three above; produces AudioFeatures each frame
-    ColourModeEffect— implements Renderer; maps AudioFeatures to a Scene using
-                      one of the two active ColorMode strategies
-    SyncEngine      — orchestrates AudioPipeline + Renderer + Output at 30 Hz,
-                      with an optional ring-buffer delay on the output
-
-Output transport details belong to drivers and their capabilities.
+VirtualPlayer ingress supplies canonical PCM and an AudibleClock. One analyser
+publishes generic AudioFeatures and events; RenderPipeline advances one renderer
+state on monotonic deadlines, and Scheduler sends capability-described scenes.
+Player-specific clocks are selected by PlayerManager. Transport details and brand
+constants belong to output drivers. CavaPipeline is a legacy derived-bars adapter.
 """
 
 from __future__ import annotations
@@ -45,7 +38,6 @@ from .latency import NoLatencyProbe
 from .loudness_analyzer import KWeightedLoudnessAnalyzer
 from .models import Profile
 from .onset_envelope import TriggerEnvelope
-from .output_boundary import GuardedScene, QuantisationGuard
 from .pcm_source import ONSET_WINDOW_SIZE, WINDOW_SIZE, PcmStft
 from .spectrum_engine import (
     AnalysisProcessor,
@@ -2974,28 +2966,13 @@ class SmoothLayerMixer(LayerMixer):
 
 
 class SyncEngine:
-    """Owns a CavaPipeline and a ColourModeEffect; drives them at a fixed rate
-    into whatever Output is passed to run().
+    """Session controls around one source-independent renderer and scheduler.
 
-    Delay buffer
-    ------------
-    A LatencyProbe is queried each tick for the current delay in milliseconds.
-    Every tick appends one slot (a rendered Scene or None for silent/absent
-    frames) and pops the oldest slot(s) to keep the buffer at the probe's
-    target depth.  This keeps the delay time-consistent: silent gaps advance
-    the buffer rather than compressing it.
-
-    The probe defaults to NoLatencyProbe (0 ms, zero overhead).
-    PlayerManager constructs the appropriate probe from the PlayerLatency config
-    and can install a new one live via update_probe() — for example when the
-    LMS sync master changes between polling cycles.
-
-    last_onset
-    ----------
-    Reflects the onset flag on the most recently analysed AudioFeatures,
-    *without* any output delay applied.  This is intentional: the GUI
-    preview uses it to let the user judge detection timing directly against
-    what they hear, not against the delayed light output.
+    The supplied AudibleClock maps canonical sample positions to room time.
+    All feature/event processing, rendering, preview and output scheduling then
+    follow one path. Output capabilities determine transport compensation and
+    the minimum send spacing. Scenes can be sampled at arbitrary times without
+    advancing render state.
     """
 
     def __init__(
@@ -3005,7 +2982,7 @@ class SyncEngine:
         probe: LatencyProbe | None = None,
         mellow_profile: Profile | None = None,
         analyser: AudioPipeline | None = None,
-        timing=None,
+        audible_clock=None,
     ) -> None:
         self.profile = profile
         if analyser is not None:
@@ -3024,10 +3001,10 @@ class SyncEngine:
         self._effect: LayerMixer = LayerMixer(profile, effective_mellow)
         self._shown_scene = None
         self._shown_t = 0.
-        self._timing = timing
-        self._scene_timing = deque()
+        self._preview_shift = 0.
         self._probe: LatencyProbe = probe if probe is not None else NoLatencyProbe()
-        self._delay_buffer: deque[Scene | None] = deque()
+        from .audible_clock import AudibleClock
+        self.audible_clock = audible_clock or AudibleClock(self._probe)
         self._preview_until = dict.fromkeys(("all", "bass", "mid", "treble"), -math.inf)
         self._preview_clock = time.monotonic
         self._last_onset: bool = False
@@ -3054,6 +3031,7 @@ class SyncEngine:
     def update_probe(self, probe: LatencyProbe) -> None:
         """Swap the latency probe live. Safe to call from the asyncio event loop."""
         self._probe = probe
+        self.audible_clock.probe = probe
 
     def update_profile(self, profile: Profile, mellow_profile: Profile | None = None) -> None:
         """Rebuild the effect with a new profile. Call after saving band/cutoff changes."""
@@ -3389,7 +3367,7 @@ class SyncEngine:
         if not isinstance(colours, (list, tuple)):
             colours = ()
         self._audible_preview.publish = getattr(self, "preview_publish", None)
-        self._audible_preview.sent(scene, stamp, colours, self._preview_timestamped)
+        self._audible_preview.sent(scene, stamp, colours)
 
     def _render_scene(self, features, t):
         scene = self._effect.render(features, t)
@@ -3408,19 +3386,10 @@ class SyncEngine:
         self.last_accent_features = features
         self.last_accent_value = self._accent.last_value
         from .audible_preview import PreviewScene
-        newest, stamp = getattr(self, "_newest_onset", (None, 0.))
-        shift = (newest.play_monotonic-stamp
-                 if newest is not None and newest.play_monotonic is not None else 0.)
         if callable(getattr(scene, "color_at", None)):
-            metadata = PreviewScene(scene, features, t, self._accent.last_value,
-                                self.last_channel_accent_lifts, shift, baseline,
+            return PreviewScene(scene, features, t, self._accent.last_value,
+                                self.last_channel_accent_lifts, self._preview_shift, baseline,
                                 self._accent_positions, self.profile)
-            if getattr(self, "_preview_timestamped", False):
-                self._audible_preview.publish = getattr(self, "preview_publish", None)
-                self._audible_preview.push(metadata, t,
-                    lambda: [scene.color_at(position, t)
-                             for position in self._accent_positions], True)
-            return metadata
         return scene
 
     def _onset_lift_enabled(self):
@@ -3434,54 +3403,17 @@ class SyncEngine:
                    or profile.onset_flash_intensity > 0 or profile.effect_type in {
             "flashes", "pulses", "splotches", "fireworks"} for profile in profiles)
 
-    def _map_event_play_times(self, records):
-        """Use the containing candidate interval, or count a nearest-record fallback."""
-        available = [record for record in records
-                     if record.features.play_monotonic is not None]
-        if not available:
-            return
-        mapped = []
-        for event in self._pending_onset_events:
-            if event.play_monotonic is None:
-                same_epoch = [record for record in available
-                              if getattr(record, "epoch", None) == event.epoch]
-                containing = [record for record in same_epoch
-                              if record.sample_pos <= event.candidate_sample < record.sample_end]
-                if containing:
-                    record = min(containing, key=lambda r: r.sample_end-r.sample_pos)
-                else:
-                    self.event_mapping_fallbacks += 1
-                    record = min(same_epoch or available, key=lambda r:
-                                 abs(getattr(r, "sample_pos", 0)-event.candidate_sample))
-                stamp = record.features.play_monotonic + (
-                    event.candidate_sample-getattr(record, "sample_pos", 0)) / _CAP_SAMPLE_RATE
-                event = replace(event, play_monotonic=stamp)
-                self.event_records[event.id]["event"] = event
-            mapped.append(event)
-        self._pending_onset_events = mapped
-
     @staticmethod
     def _onset_hop_midpoint(event):
         # Short-window candidates label the containing 10 ms hop, not a sample
         # estimate inside it. The midpoint bounds playback quantisation to ±5 ms.
         return .005 if event.bands != frozenset({"bass"}) else 0.0
 
-    def _event_view(self, features, t, *, timestamped=False):
-        """Project queued events onto scene time, independent of latest polling."""
+    def _event_view(self, features, t):
+        """Project canonical event times onto the single render clock."""
         due, future, future_times = [], [], []
         for event in self._pending_onset_events:
-            if timestamped:
-                stamp = event.play_monotonic
-                if stamp is None:
-                    stamp = features.play_monotonic + (
-                        event.candidate_sample - self._event_sample_reference) / _CAP_SAMPLE_RATE
-                    self.event_mapping_fallbacks += 1
-                stamp = stamp+self._onset_hop_midpoint(event)-self.profile.onset_lead_s
-            else:
-                stamp = self._event_source_times.get(event.id)
-                if stamp is None:
-                    stamp = event.received_monotonic - max(
-                        0, self._event_sample_reference - event.candidate_sample) / _CAP_SAMPLE_RATE
+            stamp = self._event_times[event.id]
             if stamp > t:
                 future.append(event)
                 future_times.append((event, stamp))
@@ -3494,7 +3426,7 @@ class SyncEngine:
                     self.event_counters[band]["expired"] += 1
                 continue
             due.append((event, stamp))
-            self._audible_preview.register(event, stamp if timestamped else t, timestamped)
+            self._audible_preview.register(event, self._event_audible[event.id])
         self._pending_onset_events = future
         if due:
             newest, newest_t = max(due, key=lambda item: item[1])
@@ -3566,29 +3498,27 @@ class SyncEngine:
                        **{f"onset_envelope_{band}": self._onset_envelopes[band].value(t)
                           for band in ("bass", "mid", "treble")})
 
+    def _features_for_render(self, features):
+        if not isinstance(self._analyser, CanonicalAnalysisPipeline):
+            return features
+        momentary, short_term = self._analyser.latest_loudness()
+        hpss_active, percussive, harmonic = self._analyser.latest_hpss()
+        return replace(features, hpss_active=hpss_active,
+            percussive_energy=percussive, harmonic_energy=harmonic,
+            level=self._analyser.latest_level(), loudness_momentary_lufs=momentary,
+            loudness_short_term_lufs=short_term)
+
     async def run(self, output: Output, *, clock=None, sleep=None) -> None:
-        """Send the latest available frame at a fixed rate until cancelled.
-
-        Deliberately does NOT try to send every frame cava produces — see the
-        SEND_INTERVAL_S comment above for why that overwhelmed the event loop
-        and starved this very coroutine, silently killing the Entertainment
-        stream via its own idle timeout.
-
-        Each tick, one slot is appended to the delay buffer (a rendered Scene
-        or None for absent/silent frames) and the oldest slot(s) are popped
-        to keep the buffer at the probe's current target depth.  The output
-        timestamp is taken at send time so spatial effects that use t for
-        animation stay consistent with the real display moment.
-        """
-        from .airplay_early import SceneSchedule
+        """Consume generic features through one renderer, scheduler and preview."""
+        from .accent import AccentLayer
+        from .audible_preview import AudiblePreview
+        from .render_pipeline import RenderPipeline
+        from .scheduler import RenderRequest, Scheduler
 
         clock = clock or time.monotonic
-        self._preview_clock = clock
         sleep = sleep or asyncio.sleep
+        self._preview_clock = clock
         capabilities = output_capabilities(output)
-        from .accent import AccentLayer
-
-        precision_guard = QuantisationGuard(capabilities)
         self._accent = AccentLayer()
         self._accent_positions = tuple(ch.position for ch in getattr(output, "channels", ()))
         self._onset_envelopes = {band: TriggerEnvelope(
@@ -3599,353 +3529,207 @@ class SyncEngine:
             max(1/capabilities.update_hz, capabilities.min_visible_hold_s),
             self.profile.beat_fall_ms/1000/math.log(10))
             for band in ("beat", "downbeat", "texture")}
-        from .audible_preview import AudiblePreview
         self._audible_preview = AudiblePreview(
             max(self.profile.onset_hold_s, capabilities.min_visible_hold_s),
             self.profile.onset_release_s, self.profile.onset_retrigger,
             getattr(self, "preview_publish", None))
-        self._preview_timestamped = False
-        self._newest_onset = None, 0.0
+        self._newest_onset = None, 0.
+        self._preview_shift = 0.
         self._event_sample_reference = 0
-        schedule = SceneSchedule()
-        output_generation = getattr(output, "output_generation", 0)
-        preview_generation = getattr(self._timing, "tap_generation", None)
-        output_minimum_sequence = None
         self.event_counters = {band: dict(received=0, merged=0, triggered=0, expired=0, lost=0)
                                for band in ("all", "bass", "mid", "treble")}
         self.event_records = {}
         self.event_mapping_fallbacks = 0
         self._pending_onset_events = []
-        self._event_source_times = {}
-        interval = 1 / self.profile.output_render_hz
+        self._event_times, self._event_audible = {}, {}
+        interval = 1/self.profile.output_render_hz
         next_tick = clock()
-        timestamped_tick = clock()
-        cadence_origin = timestamped_tick
-        last_send = -float("inf")
-        extra_requested = False
-        minimum_interval = 1 / (2 * capabilities.update_hz)
-        self.extra_send_stats = {"sends": 0, "minimum_interval_s": minimum_interval,
-                                 "smallest_gap_s": None, "max_per_drain": 0}
-        extra_sent_this_drain = 0
-        previous_delay_frames = round(self._probe.current_delay_ms()/1000/interval)
-
-        def record_extra(now):
-            nonlocal extra_sent_this_drain
-            extra_sent_this_drain += 1
-            stats = self.extra_send_stats
-            stats["sends"] += 1
-            stats["max_per_drain"] = max(stats["max_per_drain"], extra_sent_this_drain)
-            if math.isfinite(last_send):
-                gap = now-last_send
-                stats["smallest_gap_s"] = (gap if stats["smallest_gap_s"] is None
-                                           else min(gap, stats["smallest_gap_s"]))
-
-        async def wait_for_work():
-            # Audio workers own DSP; bounded polling only drains immutable events.
-            deadline = next_tick
-            due = schedule.next_due(output_generation)
-            if due is not None:
-                deadline = min(deadline, max(due, last_send+minimum_interval))
-            if self._delay_buffer and previous_delay_frames == 0:
-                deadline = min(deadline, last_send+minimum_interval)
-            poll = .005 if self.profile.diagnostic_onsets else .001
-            await sleep(max(0.000001, min(poll, deadline-clock())))
-
+        schedule = Scheduler(capabilities, interval=interval, origin=next_tick)
+        pipeline = RenderPipeline(self, capabilities, self._accent_positions)
+        last_send = -math.inf
+        minimum_interval = 1/(2*capabilities.update_hz)
+        self.extra_send_stats = dict(sends=0, minimum_interval_s=minimum_interval,
+                                    smallest_gap_s=None, max_per_drain=0)
+        minimum_sequence = None
+        latest = None
+        latest_sample = 0
+        latest_sequence = None
+        unmapped_events = []
+        generation = None
         while True:
-            extra_sent_this_drain = 0
-            if isinstance(self._analyser, CanonicalAnalysisPipeline):
-                for event in self._analyser.drain_events():
-                    if event.id in self.event_records:
-                        continue
-                    extra_requested = (extra_requested or self.profile.diagnostic_onsets
-                                       or event.kind == "beat")
-                    self._event_source_times[event.id] = event.received_monotonic
-                    event = replace(event, received_monotonic=clock())
-                    self._pending_onset_events.append(event)
-                    self.event_records[event.id] = {"event": event, "disposition": "received"}
-                    for band in event.bands | {"all"}:
-                        self.event_counters[band]["received"] += 1
+            now = clock()
             token = getattr(self._analyser, "pub_seq", None)
             observer = getattr(output, "observe_audio", None)
-            if observer is not None:
-                if isinstance(token, int):
-                    observer(token, token > 0)
-            generation = getattr(output, "output_generation", 0)
-            if (generation != output_generation
-                    or getattr(output, "accepting_frames", True) is False):
+            if observer is not None and isinstance(token, int):
+                observer(token, token > 0)
+            current_generation = (getattr(output, "output_generation", 0),
+                                  self.audible_clock.generation,
+                                  getattr(self._analyser, "_current_epoch_id", None))
+            if current_generation != generation:
+                schedule.reset(current_generation)
                 self._audible_preview.reset()
-                output_generation = generation
-                if isinstance(token, int):
-                    output_minimum_sequence = token
-                schedule.queue.clear()
-                self._delay_buffer.clear()
-                self._scene_timing.clear()
-                if isinstance(self._analyser, CanonicalAnalysisPipeline):
-                    self._analyser.drain_publications()
+                if generation is not None:
+                    latest = None
+                    for event in (*self._pending_onset_events, *unmapped_events):
+                        if self.event_records[event.id]["disposition"] == "received":
+                            self.event_records[event.id]["disposition"] = "expired"
+                            for band in event.bands | {"all"}:
+                                self.event_counters[band]["expired"] += 1
+                    self._pending_onset_events.clear()
+                    unmapped_events.clear()
+                    for envelope in (*self._onset_envelopes.values(),
+                                     *self._beat_envelopes.values()):
+                        envelope._triggers.clear()
+                    if current_generation[0] != generation[0]:
+                        minimum_sequence = token
+                generation = current_generation
+            if getattr(output, "accepting_frames", True) is False:
+                schedule.clear()
+                minimum_sequence = token
                 await sleep(interval)
                 continue
-            if self._timing is not None:
-                if preview_generation != self._timing.tap_generation:
-                    self._audible_preview.reset()
-                    preview_generation = self._timing.tap_generation
-                schedule.reset(self._timing.tap_generation)
-                if (self._timing.tap_source in {"early tap", "LMS head start"}
-                        and isinstance(self._analyser, CanonicalAnalysisPipeline)):
-                    self._probe.current_delay_ms()
-                    config = getattr(self._probe, "config", None)
-                    trim = config.trim_ms if config is not None else self._probe.current_delay_ms()
-                    if config is not None:
-                        data = self._timing.snapshot(after=self._timing.sequence)
-                        available = max(0, (data["lead_p5_ms"] or 0)
-                                        - (data["median_processing_ms"] or 0))
-                        trim = max(-available, trim)
-                    records = self._analyser.drain_publications()
-                    self._preview_timestamped = True
-                    self._audible_preview.route(True)
-                    self._map_event_play_times(records)
-                    continuous = [r for r in records
-                        if getattr(r, "effective_processor_ids", ()) not in {
-                            ("beat_detector",), ("beat_fusion",)}
-                        and r.features.play_monotonic is not None
-                        and r.features.timing_generation == self._timing.tap_generation]
-                    jobs = [(r.features.play_monotonic + trim/1000, r, False)
-                            for r in continuous]
-                    # Event boundaries are independent of the continuous hop grid.
-                    # Render one held lift exactly at its lead-adjusted play time.
-                    for event in self._pending_onset_events:
-                        if event.play_monotonic is None or not continuous:
-                            continue
-                        target = (event.play_monotonic+self._onset_hop_midpoint(event)
-                                  - self.profile.onset_lead_s)
-                        record = min(continuous, key=lambda r:
-                                     abs(r.features.play_monotonic-target))
-                        jobs.append((target, record, True))
-                        if self.profile.beat_mode == "Pulse" and event.kind == "beat":
-                            width = max(.08*(60/record.features.tempo_bpm
-                                        if record.features.tempo_bpm else .5),
-                                        self._beat_envelopes["beat"].hold_s)
-                            jobs.extend((target+width*offset, record, True)
-                                        for offset in (-1., -.5, .5, 1.))
-                            # Replace already queued cadence samples inside the
-                            # newly known pulse window, retaining their deadlines.
-                            jobs.extend((deadline, record, True)
-                                        for deadline in sorted({item[0] for item in schedule.queue
-                                            if target-width < item[0] < target+width}))
-                    for target, record, event_boundary in sorted(jobs, key=lambda job: job[0]):
-                        f = record.features
-                        if (f.play_monotonic is None
-                                or f.timing_generation != self._timing.tap_generation):
-                            continue
-                        self._event_sample_reference = getattr(record, "sample_pos", 0)
-                        scene_time = max(clock(), target)
-                        if event_boundary:
-                            f = replace(f, play_monotonic=scene_time)
-                        f = self._event_view(f, scene_time, timestamped=True)
-                        scene = self._render_scene(f, scene_time)
-                        if self._onset_lift_enabled():
-                            legacy = self.profile.diagnostic_onsets
-                            amplitude = (f.onset_envelope if legacy else
-                                         max(f.beat_envelope, .1*f.texture_envelope))
-                            scene = GuardedScene(scene, precision_guard,
-                                amplitude > precision_guard.lsb,
-                                minimum_lift=legacy or f.beat_envelope >= .5)
-                        ready = clock()
-                        recorder = getattr(self._timing, "scene_ready", None)
-                        if recorder is not None:
-                            recorder(f.received_monotonic, ready, f.play_monotonic)
-                        self._last_bars = f.bars
-                        self._last_mix, self._last_energy = self._effect.mix, f.full
-                        self._last_sustained_energy = f.sustained_energy
-                        slot = math.floor((target-cadence_origin)*self.profile.output_render_hz)
-                        if cadence_origin+slot/self.profile.output_render_hz < target:
-                            slot += 1
-                        send_target = (target if event_boundary else
-                                       cadence_origin+slot/self.profile.output_render_hz)
-                        schedule.add(scene, send_target, ready, f.timing_generation, 0,
-                                     (f.received_monotonic, ready))
-                    due = schedule.due(clock(), self._timing.tap_generation)
-                    if due is not None:
-                        scene, provenance = due
-                        sent = clock()
-                        output.send(scene, sent)
-                        self._shown_scene, self._shown_t = scene, sent
-                        self._preview_sent(scene, self._shown_t, output)
-                        if provenance[0] is not None:
-                            self._timing.processing(*provenance, sent)
-                    self._delay_buffer.clear()
-                    self._scene_timing.clear()
-                    now = clock()
-                    while timestamped_tick <= now+1e-10:
-                        timestamped_tick += interval
-                    deadline = schedule.next_due(self._timing.tap_generation)
-                    wake = (min(timestamped_tick, deadline)
-                            if deadline is not None else timestamped_tick)
-                    await sleep(max(0.0, wake-now))
+            records = []
+            events = []
+            if isinstance(self._analyser, CanonicalAnalysisPipeline):
+                records = self._analyser.drain_publications()
+                events = self._analyser.drain_events()
+            for record in records:
+                if (getattr(record, "effective_processor_ids", ()) in {
+                        ("beat_detector",), ("beat_fusion",)}):
                     continue
-                schedule.queue.clear()
-            self._preview_timestamped = False
-            self._audible_preview.route(False)
-            now = clock()
-            # Extra event scenes preserve configured delay without advancing its
-            # cadence-sized slot buffer. Coalescing retains held event envelopes.
-            if schedule.queue and now-last_send >= minimum_interval-1e-10:
-                due = schedule.due(now, generation)
-                if due is not None:
-                    scene, _ = due
-                    output.send(scene, now)
-                    self._shown_scene, self._shown_t = scene, now
-                    self._preview_sent(scene, self._shown_t, output)
-                    record_extra(now)
-                    last_send = now
-            # At cadences above the declared send ceiling, keep only the latest
-            # zero-delay continuous scene and wake at its first permitted send.
-            if (len(self._delay_buffer) == 1 and previous_delay_frames == 0
-                    and not extra_requested and now-last_send >= minimum_interval-1e-10):
-                scene = self._delay_buffer.popleft()
-                provenance = self._scene_timing.popleft() if self._scene_timing else None
-                if scene is not None:
-                    output.send(scene, now)
-                    self._shown_scene, self._shown_t = scene, now
-                    self._preview_sent(scene, self._shown_t, output)
-                    last_send = now
-                    if provenance is not None and self._timing is not None:
-                        self._timing.processing(*provenance, now)
+                f = self._features_for_render(record.features)
+                latest, latest_sample = f, getattr(record, "sample_pos", 0)
+                latest_sequence = getattr(record, "sequence", None)
+                point = self.audible_clock.at(latest_sample, latest_sample, f, now)
+                if point is not None:
+                    schedule.add(RenderRequest(f, latest_sample, point.audible,
+                        source_sequence=latest_sequence), now, cadence=True)
+            # Compatibility producers expose snapshots instead of publications.
+            if (not isinstance(self._analyser, CanonicalAnalysisPipeline)
+                    and now >= next_tick-1e-10):
+                latest = self._analyser.latest()
+            if latest is None and isinstance(self._analyser, CanonicalAnalysisPipeline):
+                latest = self._analyser.latest()
+                record = getattr(self._analyser, "_latest_pub", None)
+                latest_sample = getattr(record, "sample_pos", 0)
+                latest_sequence = getattr(record, "sequence", None)
+                if latest is not None:
+                    latest = self._features_for_render(latest)
+                    point = self.audible_clock.at(latest_sample, latest_sample, latest, now)
+                    if point is not None:
+                        schedule.add(RenderRequest(latest, latest_sample, point.audible,
+                            source_sequence=latest_sequence), now)
             cadence = now >= next_tick-1e-10
-            extra = extra_requested
-            if not cadence and not extra:
-                await wait_for_work()
-                continue
             if cadence:
                 while next_tick <= now+1e-10:
                     next_tick += interval
-            extra_requested = False
-            features = self._analyser.latest()
-            if (output_minimum_sequence is not None and isinstance(token, int)
-                    and token <= output_minimum_sequence):
-                features = None  # do not replay cached pre-release analysis
-            t = clock()
-
-            if features is not None:
+                if latest is not None and not isinstance(self._analyser, CanonicalAnalysisPipeline):
+                    point = self.audible_clock.at(latest_sample, latest_sample, latest, now)
+                    schedule.add(RenderRequest(latest, latest_sample, point.audible,
+                            source_sequence=latest_sequence), now)
+            incoming, unmapped_events = [*unmapped_events, *events], []
+            for event in incoming:
+                if event.id in self._event_times:
+                    continue
+                if event.id not in self.event_records:
+                    event = replace(event, received_monotonic=now)
+                    self.event_records[event.id] = dict(event=event, disposition="received")
+                    for band in event.bands | {"all"}:
+                        self.event_counters[band]["received"] += 1
+                elif self.event_records[event.id]["disposition"] != "received":
+                    continue
+                if latest is None:
+                    if now-event.received_monotonic <= self.profile.onset_max_age_s:
+                        unmapped_events.append(event)
+                    else:
+                        self.event_records[event.id]["disposition"] = "expired"
+                        for band in event.bands | {"all"}:
+                            self.event_counters[band]["expired"] += 1
+                    continue
+                point = self.audible_clock.at(event.candidate_sample, latest_sample, latest, now)
+                if point is None:
+                    self.event_records[event.id]["disposition"] = "expired"
+                    for band in event.bands | {"all"}:
+                        self.event_counters[band]["expired"] += 1
+                    continue
+                audible = point.audible
+                lead = min(point.lookahead_s, self.profile.onset_lead_s)
+                lead -= min(point.lookahead_s, self._onset_hop_midpoint(event))
+                compensation = min(capabilities.transport_latency_s, max(0., audible-now))
+                lamp = audible-lead-compensation
+                self._event_times[event.id] = lamp
+                self._event_audible[event.id] = max(now, audible)
+                self._pending_onset_events.append(event)
+                chosen = schedule.features_at(audible)
+                event_features = chosen.features if chosen is not None else latest
+                event_sample = chosen.sample if chosen is not None else latest_sample
+                event_sequence = chosen.source_sequence if chosen is not None else latest_sequence
+                schedule.add(RenderRequest(event_features, event_sample, audible, lead, (event,),
+                    source_sequence=event_sequence), now)
+                if self.profile.beat_mode == "Pulse" and event.kind == "beat":
+                    width = max(.08*(60/latest.tempo_bpm if latest.tempo_bpm else .5),
+                                self._beat_envelopes["beat"].hold_s)
+                    for offset in (-1., -.5, .5, 1.):
+                        target = audible+width*offset
+                        chosen = schedule.features_at(target)
+                        schedule.add(RenderRequest(
+                            chosen.features if chosen is not None else latest,
+                            chosen.sample if chosen is not None else latest_sample,
+                            target, lead, source_sequence=(chosen.source_sequence
+                                if chosen is not None else latest_sequence)), now)
+            if (minimum_sequence is not None and isinstance(token, int)
+                    and token <= minimum_sequence):
+                schedule.clear()
+            request = schedule.due(now)
+            if request is not None:
+                t = request.render_time
+                features = request.features
+                self._event_sample_reference = request.sample
+                self._render_sequence = request.source_sequence
+                self._render_audible = request.audible
+                self._render_lead = request.lead
+                self._render_deadline = request.render_time
+                previous = schedule.pending.features if schedule.pending is not None else None
+                scene, features = pipeline.render(features, t, request.audible, previous)
+                ready = clock()
+                # Exclude feature-queue residence from measured processing.
+                measured_ready = request.received_at + max(0., ready-now)
+                self.audible_clock.scene_ready(features.received_monotonic, measured_ready,
+                                              request.audible)
+                schedule.offer(request, scene, features, measured_ready, cadence)
                 self._last_bars = features.bars
-                # The freshest Spectrum record may omit delayed loudness.
-                # Copy only for rendering: PublicationRecord remains authoritative.
-                if isinstance(self._analyser, CanonicalAnalysisPipeline):
-                    momentary, short_term = self._analyser.latest_loudness()
-                    hpss_active, percussive, harmonic = self._analyser.latest_hpss()
-                    features = replace(features, hpss_active=hpss_active,
-                                       percussive_energy=percussive, harmonic_energy=harmonic,
-                                       level=self._analyser.latest_level(),
-                                       loudness_momentary_lufs=momentary,
-                                       loudness_short_term_lufs=short_term)
-                if isinstance(self._analyser, CanonicalAnalysisPipeline):
-                    latest = self._analyser._latest_pub
-                    self._event_sample_reference = latest.sample_end if latest else 0
-                    features = self._event_view(features, t)
-                # A known grid reserves the short detection window for the kick.
-                # Sending a quiet cadence sample here would make the beat wait
-                # another output minimum interval. Keep the previously shown
-                # scene instead; the event send still obeys the output ceiling.
-                beat_history = self._beat_envelopes["beat"]._triggers
-                if (cadence and not self.profile.diagnostic_onsets
-                        and self.profile.accent_mode != "off" and features.tempo_locked
-                        and features.tempo_bpm and beat_history
-                        and self._probe.current_delay_ms() == 0
-                        and not any(e.kind == "beat" for e in features.onset_events)):
-                    phase_time = (t-beat_history[-1][0]) % (60/features.tempo_bpm)
-                    if .005 <= phase_time <= .04:
-                        await wait_for_work()
-                        continue
-                scene: Scene = self._render_scene(features, t)
-                if self._onset_lift_enabled():
-                    legacy = self.profile.diagnostic_onsets
-                    amplitude = (features.onset_envelope if legacy else
-                                 max(features.beat_envelope, .1*features.texture_envelope))
-                    scene = GuardedScene(scene, precision_guard,
-                        amplitude > precision_guard.lsb,
-                        minimum_lift=legacy or features.beat_envelope >= .5)
-                self._last_mix = self._effect.mix
-                self._last_energy = features.full
+                self._last_mix, self._last_energy = self._effect.mix, features.full
                 self._last_sustained_energy = features.sustained_energy
-                if cadence:
-                    self._scene_timing.append(
-                        (features.received_monotonic, clock())
-                        if self._timing is not None and features.received_monotonic is not None
-                        else None)
-                if cadence:
-                    self._delay_buffer.append(scene)
-                else:
-                    target = max(t+self._probe.current_delay_ms()/1000,
-                                 last_send+minimum_interval)
-                    schedule.add(scene, target, t, generation)
-                self._diag_frame += 1
-                if self._diag_frame % 60 == 0:
-                    bars = features.bars
-                    n = len(bars)
-                    bars_mean = sum(bars) / n if bars else 0.0
-                    bars_max = max(bars) if bars else 0.0
-                    bass_frac = _hz_to_frac(
-                        self.profile.bass_hz,
-                        self.profile.lower_cutoff_freq,
-                        self.profile.higher_cutoff_freq,
-                    )
-                    mid_frac = _hz_to_frac(
-                        self.profile.mid_hz,
-                        self.profile.lower_cutoff_freq,
-                        self.profile.higher_cutoff_freq,
-                    )
-                    bass_hi = int(bass_frac * n)
-                    mid_hi = int(mid_frac * n)
-                    log.info(
-                        "[diag] method=%s frame=%d "
-                        "bars_mean=%.3f bars_max=%.3f "
-                        "bass_mean=%.3f mid_mean=%.3f treble_mean=%.3f",
-                        self.profile.onset_method,
-                        self._diag_frame,
-                        bars_mean,
-                        bars_max,
-                        _band_avg(bars, 0, bass_hi),
-                        _band_avg(bars, bass_hi, mid_hi),
-                        _band_avg(bars, mid_hi, n),
-                    )
-            elif cadence:
-                # None slot: advances the buffer in time without sending,
-                # so the delay stays consistent even during silent passages.
-                self._delay_buffer.append(None)
-                self._scene_timing.append(None)
-
-            delay_frames = max(
-                0, round(self._probe.current_delay_ms() / 1000.0 / interval)
-            )
-            delay_shrank = delay_frames < previous_delay_frames
-            if delay_frames == previous_delay_frames == 0:
-                while len(self._delay_buffer) > 1:
-                    self._delay_buffer.popleft()
-                    if self._scene_timing:
-                        self._scene_timing.popleft()
-            previous_delay_frames = delay_frames
-            while len(self._delay_buffer) > delay_frames:
-                if (delay_frames == 0 and not delay_shrank
-                        and clock()-last_send < minimum_interval-1e-10):
-                    break
-                entry = self._delay_buffer.popleft()
-                provenance = self._scene_timing.popleft() if self._scene_timing else None
-                if entry is not None:
-                    sent = clock()
-                    output.send(entry, sent)
-                    last_send = sent
-                    self._shown_scene, self._shown_t = entry, sent
-                    self._preview_sent(entry, self._shown_t, output)
-                    if provenance is not None and self._timing is not None:
-                        self._timing.processing(*provenance, sent)
-
-            if (not cadence and extra_sent_this_drain == 0 and schedule.queue
-                    and clock()-last_send >= minimum_interval-1e-10):
-                due = schedule.due(clock(), generation)
-                if due is not None:
-                    scene, _ = due
-                    output.send(scene, clock())
-                    self._shown_scene, self._shown_t = scene, clock()
-                    self._preview_sent(scene, self._shown_t, output)
-                    record_extra(clock())
-                    last_send = clock()
-            await wait_for_work()
+            reserve_until = None
+            if schedule.pending is not None:
+                pending_features = schedule.pending.features
+                history = self._beat_envelopes["beat"]._triggers
+                if (not self.profile.diagnostic_onsets and pending_features.tempo_locked
+                        and pending_features.tempo_bpm and history):
+                    period = 60/pending_features.tempo_bpm
+                    phase_time = (clock()-history[-1][0]) % period
+                    if .005 <= phase_time <= .04:
+                        reserve_until = clock()+.04-phase_time+.000001
+            entry = schedule.take(clock(), last_send, minimum_interval,
+                                  reserve_until=reserve_until)
+            if entry is not None:
+                sent = clock()
+                output.send(entry.scene, sent)
+                self._shown_scene, self._shown_t = entry.scene, sent
+                self._preview_sent(entry.scene, sent, output)
+                self.audible_clock.sent(entry.features.received_monotonic, entry.ready, sent)
+                if entry.events and not entry.cadence:
+                    stats = self.extra_send_stats
+                    stats["sends"] += 1
+                    stats["max_per_drain"] = 1
+                    if math.isfinite(last_send):
+                        gap = sent-last_send
+                        stats["smallest_gap_s"] = (gap if stats["smallest_gap_s"] is None
+                                                   else min(gap, stats["smallest_gap_s"]))
+                last_send = sent
+            due = schedule.next_due()
+            deadline = min(next_tick, due) if due is not None else next_tick
+            if schedule.pending is not None:
+                deadline = min(deadline, max(last_send+minimum_interval, schedule.blocked_until))
+            poll = .005 if self.profile.diagnostic_onsets else .001
+            await sleep(max(.000001, min(poll, deadline-clock())))

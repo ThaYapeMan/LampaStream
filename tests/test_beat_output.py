@@ -95,17 +95,24 @@ def test_actual_sent_colours_reach_floor_between_kicks(tmp_path, route, room):
         asyncio.run(replay.run())
         renders = {(r['render_id'], r['channel_id']): r for r in replay.renders}
         ratios = []
-        for send in replay.output.rows:
-            row = renders[send['scene_id'], send['channel_id']]
-            t = row['render_argument_s']-(args.lead_s-.02 if route == 'timestamped' else 0)
-            if 1 < t < 11 and .43 <= t % .5 <= .45:
-                pre = max(_linear(row[f'pre_{c}']) for c in 'rgb')
-                if replay.output.capabilities.colour_depth_bits == 8:
-                    sent = [send[c+'8']/255 for c in 'rgb']
-                else:
-                    sent = [int(send[c]*65535)/65535 for c in 'rgb']
-                post = max(_linear(v) for v in sent)
-                ratios.append(post/pre)
+        # Inspect the held quantised setpoint throughout the quiet window. A
+        # deadline scheduler need not emit a fresh frame inside this 20 ms window.
+        for beat in range(2, 22):
+            for offset in (.43, .44, .45):
+                audible = beat*.5+offset+(args.lead_s if route == 'timestamped' else 0.)
+                deadline = audible-replay.output.capabilities.transport_latency_s
+                for channel in {row['channel_id'] for row in replay.output.rows}:
+                    send = max((row for row in replay.output.rows
+                                if row['channel_id'] == channel
+                                and row['virtual_time_s'] <= deadline+1e-10),
+                               key=lambda row: row['virtual_time_s'])
+                    row = renders[send['scene_id'], channel]
+                    pre = max(_linear(row[f'pre_{c}']) for c in 'rgb')
+                    if replay.output.capabilities.colour_depth_bits == 8:
+                        sent = [send[c+'8']/255 for c in 'rgb']
+                    else:
+                        sent = [int(send[c]*65535)/65535 for c in 'rgb']
+                    ratios.append(max(_linear(v) for v in sent)/pre)
         assert ratios
         assert max(ratios) <= .7
     finally:

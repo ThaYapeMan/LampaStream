@@ -30,25 +30,29 @@ def test_long_stft_unchanged():
 
 
 def test_schedule_next_deadline_and_generation():
-    from lampastream.airplay_early import SceneSchedule
+    from lampastream.scheduler import RenderRequest, Scheduler
+    from lampastream.types import OutputCapabilities
 
-    schedule = SceneSchedule()
-    schedule.add('a', 1.012, 0, 1)
-    schedule.add('b', 1.017, 0, 1)
-    assert schedule.next_due(1) == 1.012
-    assert schedule.due(1.011, 1) is None
-    assert schedule.due(1.012, 1) == ('a', None)
-    assert schedule.next_due(1) == 1.017
-    assert schedule.next_due(2) is None
+    schedule = Scheduler(OutputCapabilities(transport_latency_s=0))
+    schedule.reset(1)
+    schedule.add(RenderRequest('a', 0, 1.012), 0)
+    schedule.add(RenderRequest('b', 0, 1.017), 0)
+    assert schedule.next_due() == 1.012
+    assert schedule.due(1.011) is None
+    assert schedule.due(1.012).features == 'a'
+    assert schedule.next_due() == 1.017
+    schedule.reset(2)
+    assert schedule.next_due() is None
 
 
 def test_slow_render_cannot_send_two_extras_in_one_drain(monkeypatch):
     import asyncio
     from types import SimpleNamespace
 
-    from lampastream import airplay_early
+    from lampastream import scheduler as scheduling
     from lampastream.models import Profile
     from lampastream.player_manager import _make_canonical_pipeline
+    from lampastream.scheduler import RenderRequest
     from lampastream.sync_engine import SyncEngine
     from lampastream.types import (
         AudioFeatures,
@@ -65,12 +69,12 @@ def test_slow_render_cannot_send_two_extras_in_one_drain(monkeypatch):
                       effective_spectrum_backend='v2', effective_processor_ids=('v2',))
     scene = UniformScene(Colour.BLACK)
 
-    class Schedule(airplay_early.SceneSchedule):
-        def __init__(self):
-            super().__init__()
-            self.add(scene, .025, 0, 0)
+    class Schedule(scheduling.Scheduler):
+        def __init__(self, capabilities, **kwargs):
+            super().__init__(capabilities, **kwargs)
+            self.add(RenderRequest(pipeline.latest(), 0, .025), 0)
 
-    monkeypatch.setattr(airplay_early, 'SceneSchedule', Schedule)
+    monkeypatch.setattr(scheduling, 'Scheduler', Schedule)
     engine = SyncEngine(None, Profile(), analyser=pipeline)
 
     def render(features, t):

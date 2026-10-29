@@ -181,22 +181,15 @@ def test_source_event_anchor_is_independent_of_drain_clock():
     assert engine.event_records[item.id]["event"].received_monotonic == 1.0
 
 
-def test_candidate_play_mapping_uses_containing_record_then_nearest():
+def test_clock_maps_containing_and_extrapolated_canonical_samples():
     from types import SimpleNamespace
 
-    from lampastream.sync_engine import SyncEngine
-    engine = object.__new__(SyncEngine)
-    first, second = event(480), event(2400)
-    engine._pending_onset_events = [first, second]
-    engine.event_records = {item.id: {"event": item} for item in (first, second)}
-    engine.event_mapping_fallbacks = 0
-    records = [SimpleNamespace(epoch="epoch", sample_pos=480, sample_end=960,
-                               features=SimpleNamespace(play_monotonic=10.0)),
-               SimpleNamespace(epoch="epoch", sample_pos=1920, sample_end=2400,
-                               features=SimpleNamespace(play_monotonic=10.03))]
-    engine._map_event_play_times(records)
-    assert [item.play_monotonic for item in engine._pending_onset_events] == [10.0, 10.04]
-    assert engine.event_mapping_fallbacks == 1
+    from lampastream.audible_clock import LmsAudibleClock
+    clock = LmsAudibleClock(timing=SimpleNamespace(tap_source='LMS head start'))
+    first = AudioFeatures([], 0, 0, 0, 0, play_monotonic=10.)
+    second = replace(first, play_monotonic=10.03)
+    assert clock.at(480, 480, first, 9.).audible == 10.
+    assert clock.at(2400, 1920, second, 9.).audible == 10.04
 
 
 def test_precision_guard_preserves_unlit_channels_and_holds_subcode_decay():

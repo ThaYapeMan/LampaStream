@@ -1,4 +1,4 @@
-"""Offline evidence only: current bugs are pinned explicitly, not repaired here."""
+"""Offline replay provenance, scheduling, determinism and output contracts."""
 from __future__ import annotations
 
 import csv
@@ -105,14 +105,13 @@ def test_all_trace_files_byte_identical_across_processes(tmp_path, effect, playb
         "counters.json", "meta.json", "latency.csv"}
 
 
-def test_pins_current_normal_delay_shrink_burst_not_a_fix(tmp_path):
+def test_clock_calibration_shrink_never_replays_an_old_delay_burst(tmp_path):
     out = tmp_path / "burst"
-    run(out, "--duration", "2", "--delay-ms", "500",
-        "--delay-schedule", "[[1,0]]")
+    run(out, "--duration", "2", "--delay-ms", "500", "--delay-schedule", "[[1,0]]")
     sends = [r for r in rows(out, "sends.csv") if r["channel_id"] == "0"]
-    burst = [r for r in sends if r["interval_ms"] and float(r["interval_ms"]) < 5]
-    assert len(burst) >= 10
-    assert len({r["virtual_time_s"] for r in burst}) == 1
+    gaps = [float(row["interval_ms"]) for row in sends if row["interval_ms"]]
+    assert gaps and min(gaps) >= 20-1e-6
+    assert len({row['virtual_time_s'] for row in sends}) == len(sends)
 
 
 def test_terminal_event_is_consumed_once(tmp_path):
@@ -122,24 +121,25 @@ def test_terminal_event_is_consumed_once(tmp_path):
                if r["channel_id"] == "0" and r["onset_consumed"] == "1"]
     assert len(renders) == 1  # Phase 2: event consumption is independent of repeated latest reads.
     assert len({r["sequence"] for r in renders}) == 1
-    assert counters["publications"]["normal"]["repeat_reads"] > 0
+    assert counters["events"]["all"]["lost"] == 0
+    # Canonical scenes stop when publications stop; heartbeat belongs to the driver.
 
 
-def test_timestamped_early_renders_use_play_time_and_send_uses_due_tick(references):
+def test_timestamped_requests_use_one_deadline_and_capability_transport_clock(references):
     out, counters = references["timestamped", 30]
     rendered = [r for r in rows(out, "renders.csv") if r["channel_id"] == "0"]
     assert rendered
     for render in rendered:
-        assert float(render["render_argument_s"]) == pytest.approx(
-            float(render["play_time_s"]), abs=1 / 60)
-        assert float(render["schedule_target_s"]) == pytest.approx(
-            float(render["play_time_s"]), abs=1e-6)
-    by_id = {r["render_id"]: r for r in rendered}
-    for send in rows(out, "sends.csv"):
-        error = float(send["virtual_time_s"]) - float(by_id[send["scene_id"]]["play_time_s"])
-        assert -1e-6 <= error <= 1 / 30 + 1e-6
-    # Current scheduler coalesces due scenes; it does not send every publication.
-    assert counters["sends"] < len(rendered)
+        target = float(render['schedule_target_s'])
+        assert float(render['render_argument_s']) == target
+        earliest = (float(render['scheduled_play_time_s'])-float(render['lead_s'])
+                    -float(render['transport_latency_s']))
+        assert earliest-1e-6 <= target <= earliest+1/30+1e-6
+    by_id = {row['render_id']: row for row in rendered}
+    for send in rows(out, 'sends.csv'):
+        target = float(by_id[send['scene_id']]['schedule_target_s'])
+        assert float(send['virtual_time_s']) >= target-1e-6
+    assert counters['scheduler']['coalesced_requests'] > 0
 
 
 @pytest.mark.parametrize("value", [0, .5, 1, .5 + 1 / 1024, .5 + 1 / 2048, 1 / 65535])
@@ -217,7 +217,9 @@ def test_delivery_cap_room_and_compact_api_fields(tmp_path):
     assert max(len(json.loads(r["delivered_sequences"])) for r in energy) == 3
     assert all(r["energy_source"] == "peak_envelope" for r in energy)
     # Phase 2: the one Beat-only publication bypasses continuous rendering.
-    assert counters["publications"]["timestamped"]["skipped"] == 1
+    assert counters['events']['all']['lost'] == 0
+    assert counters['scheduler']['coalesced_requests'] > 0
+    # The shared scheduler coalesces continuous requests before state advances.
 
 
 def test_subwindow_wav_still_has_complete_empty_trace_headers(tmp_path):

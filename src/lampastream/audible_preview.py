@@ -5,7 +5,6 @@ import heapq
 import math
 from dataclasses import dataclass, replace
 
-from .accent import AccentLayer
 from .onset_envelope import TriggerEnvelope
 
 BANDS = ("all", "bass", "mid", "treble")
@@ -22,6 +21,7 @@ class PreviewScene:
     baseline: object
     positions: tuple
     profile: object
+    carried_events: tuple = ()
 
     def __getattr__(self, name):
         return getattr(self.scene, name)
@@ -50,7 +50,6 @@ class AudiblePreview:
         self.until = dict.fromkeys(BANDS, -float('inf'))
         self.pending = []
         self.sequence = 0
-        self.timestamped = False
         self.colours = []
         self.metadata = None
         self.lifts = []
@@ -58,7 +57,7 @@ class AudiblePreview:
         self.count = 0
         self.current_events = ()
         self.latest_audible = None
-        self.accent = AccentLayer()
+        self.confirmed = set()
 
     def reset(self):
         if self.publish is not None:
@@ -66,35 +65,21 @@ class AudiblePreview:
         envelope = self.envelopes['all']
         self.__init__(envelope.hold_s, envelope.release_s, self.policy, self.publish)
 
-    def route(self, timestamped):
-        if timestamped != self.timestamped:
-            self.reset()
-            self.timestamped = timestamped
-
-    def register(self, event, lamp_time, timestamped):
-        self.route(timestamped)
+    def register(self, event, audible):
         if event.id in self.events:
             return
-        stamp = event.play_monotonic if timestamped else lamp_time
-        if stamp is None:
-            return
-        self.events[event.id] = (event, stamp)
-        if timestamped:
-            for band in event.bands | {'all'}:
-                self.envelopes[band].trigger(event.strength, stamp, self.policy)
+        self.events[event.id] = (event, audible)
         if len(self.events) > 1000:
             oldest = next(iter(self.events))
             self.events.pop(oldest)
             self.seen.discard(oldest)
             self.pushed.discard(oldest)
+            self.confirmed.discard(oldest)
 
-    def push(self, metadata, stamp, colours, timestamped):
+    def push(self, metadata, stamp, colours):
         """Publish once, independently of reads and the 20 Hz continuous socket."""
-        due = [(event, audible if timestamped else stamp)
-               for identity, (event, audible) in self.events.items()
-               if identity not in self.pushed and
-               (audible <= metadata.render_time + metadata.playback_shift + 1e-9
-                if timestamped else audible <= metadata.render_time)]
+        due = [(event, audible) for identity, (event, audible) in self.events.items()
+               if identity in self.confirmed and identity not in self.pushed]
         if not due:
             return
         if callable(colours):
@@ -133,36 +118,45 @@ class AudiblePreview:
             if self.publish is not None:
                 self.publish(payload)
 
-    def sent(self, scene, stamp, colours, timestamped):
+    def sent(self, scene, stamp, colours):
         metadata = render_metadata(scene)
         if metadata is None:
             return
-        self.route(timestamped)
         self.sequence += 1
         self.count = 0
         self.current_events = ()
         # Retain the exact post-boundary samples. Only their preview presentation
         # moves from the lamp event clock onto the event playback clock.
-        audible = stamp + metadata.playback_shift if timestamped else stamp
+        carried = {event.id for event in metadata.carried_events}
+        for identity, (event, audible) in list(self.events.items()):
+            if identity in self.confirmed:
+                continue
+            if identity in carried or audible <= metadata.render_time+metadata.playback_shift+1e-9:
+                audible = max(stamp, audible)
+                self.events[identity] = event, audible
+                self.confirmed.add(identity)
+                for band in event.bands | {'all'}:
+                    self.envelopes[band].trigger(event.strength, audible, self.policy)
+        audible = max(stamp, metadata.render_time+metadata.playback_shift,
+                      *(self.events[identity][1] for identity in carried
+                        if identity in self.events))
         lifts = []
         for position, colour in zip(metadata.positions, colours, strict=False):
             before = metadata.baseline.color_at(position, stamp)
             lifts.append(max(0., colour.r-before.r, colour.g-before.g, colour.b-before.b))
         heapq.heappush(self.pending, (audible, self.sequence, metadata, tuple(colours), lifts))
-        if not timestamped:
-            self.push(replace(metadata, lifts=lifts), stamp, colours, False)
+        self.push(replace(metadata, lifts=lifts), stamp, colours)
         self.snapshot(stamp)
 
     def snapshot(self, now):
         while self.pending and self.pending[0][0] <= now:
             self.sent_time, _, self.metadata, self.colours, self.lifts = heapq.heappop(self.pending)
-        limit = now if self.timestamped else (
-            self.metadata.render_time if self.metadata is not None else -float('inf'))
+        limit = now
         due = [(event, stamp) for identity, (event, stamp) in self.events.items()
-               if identity not in self.seen and stamp <= limit]
+               if identity in self.confirmed and identity not in self.seen and stamp <= limit]
         for event, stamp in due:
             self.seen.add(event.id)
-            audible = stamp if self.timestamped else self.sent_time
+            audible = stamp
             self.latest_audible = audible
             for band in event.bands | {'all'}:
                 self.until[band] = audible + .05
@@ -170,15 +164,13 @@ class AudiblePreview:
             self.count += len(due)
             self.current_events = tuple(event for event, _ in due)
         features = self.metadata.features if self.metadata else None
-        values = {band: (self.envelopes[band].value(now) if self.timestamped else
-                  getattr(features, 'onset_envelope' + ('' if band == 'all' else '_'+band), 0.))
-                  for band in BANDS}
+        values = {band: self.envelopes[band].value(now) for band in BANDS}
         active = {band: now <= self.until[band] for band in BANDS}
         newest = self.latest_audible
         accent_value = self.metadata.accent_value if self.metadata else 0.
-        if self.timestamped and features is not None:
-            audible_events = [(event, stamp) for event, stamp in self.events.values()
-                              if stamp <= now]
+        if features is not None:
+            audible_events = [(event, stamp) for identity, (event, stamp) in self.events.items()
+                              if identity in self.confirmed and stamp <= now]
             latest = max(audible_events, key=lambda item: item[1])[0] if audible_events else None
             view = replace(features, onset_events=(latest,) if latest else (),
                            onset_strength=latest.strength if latest else 0.,
@@ -191,7 +183,9 @@ class AudiblePreview:
                 divisor = max(profile.beat_divisor, 2 if profile.beat_mode == 'Alternate' else 1)
                 count = 0
                 pulse = 0.
-                for event, stamp in sorted(self.events.values(), key=lambda item: item[1]):
+                for event, stamp in sorted((value for identity, value in self.events.items()
+                                           if identity in self.confirmed),
+                                          key=lambda item: item[1]):
                     if event.kind == 'beat':
                         count += 1
                         if (count-1) % divisor or (event.predicted and not profile.beat_predicted):
@@ -217,10 +211,17 @@ class AudiblePreview:
                                                    else value('beat')),
                                downbeat_envelope=value('downbeat'),
                                texture_envelope=value('texture'))
-            self.accent.render(self.metadata.baseline, view, profile)
-            accent_value = self.accent.last_value
-        recent = [(event, stamp) for event, stamp in self.events.values()
-                  if now-1 < stamp <= now]
+            # Scale the sent accent's time course; never invoke a renderer while
+            # serving a snapshot. Scene samples and all rendering state stay pure.
+            original = (features.onset_envelope if profile.diagnostic_onsets else
+                        max(features.beat_envelope, .1*features.texture_envelope))
+            current = (view.onset_envelope if profile.diagnostic_onsets else
+                       max(view.beat_envelope, .1*view.texture_envelope))
+            accent_value = (self.metadata.accent_value*current/original
+                            if original > 1e-12 else 0.)
+            accent_value = min(1., max(0., accent_value))
+        recent = [(event, stamp) for identity, (event, stamp) in self.events.items()
+                  if identity in self.confirmed and now-1 < stamp <= now]
         rhythm = {key: getattr(features, key, default) for key, default in (
             ('tempo_bpm', None), ('tempo_alt_bpm', None), ('tempo_confidence', 0.),
             ('tempo_locked', False), ('beat_phase', 0.), ('agc_gain', 1.), ('trigger_ratio', 0.))}
@@ -231,7 +232,7 @@ class AudiblePreview:
                                  and now-8 < stamp < now+2])
         return {
             **rhythm,
-            'audible_monotonic': now if self.timestamped else self.sent_time,
+            'audible_monotonic': now,
             'colours': self.colours,
             'onset': active['all'], 'pcm_onset': active['all'],
             **{'onset_'+band: active[band] for band in BANDS[1:]},

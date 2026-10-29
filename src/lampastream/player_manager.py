@@ -26,6 +26,7 @@ from .airplay_config import (
 )
 from .airplay_early import EarlyAirPlaySource
 from .airplay_timing import AirPlayAutoLatencyProbe, TimingDiagnostics
+from .audible_clock import AirPlayAudibleClock, lms_clock_for_model
 from .hue_bridge import list_entertainment_areas
 from .hue_output import ChannelInfo, HueDriver, HueOutputConfig, get_channel_infos
 from .latency import AutoLatencyProbe, FixedLatencyProbe, NoLatencyProbe, latency_status
@@ -938,7 +939,9 @@ class PlayerManager:
                 if mac:
                     try:
                         observed_at = time.monotonic()
-                        status = await asyncio.to_thread(query_lms_status, player.lms_host, mac)
+                        status = await asyncio.to_thread(query_lms_status, player.lms_host, mac,
+                                                         include_model=True)
+                        self._select_room_clock(session, status.player_model)
                         self._detected_sync_master_name = status.player_name
                         if isinstance(session.track_source, LmsTrackPositionSource):
                             session.track_source.seed(mac, status, observed_at)
@@ -1018,7 +1021,8 @@ class PlayerManager:
         engine = SyncEngine(
             None, profile, probe=session.probe,
             mellow_profile=mellow_profile, analyser=pcm_analyser,
-            timing=(session.lms_timed_source.timing if session.lms_timed_source else None),
+            audible_clock=lms_clock_for_model("yeney-player", session.probe,
+                session.lms_timed_source.timing if session.lms_timed_source else None),
         )
         engine.preview_publish = self._publish_preview
         session.sync_engine = engine
@@ -1078,7 +1082,8 @@ class PlayerManager:
         pcm_analyser = _make_canonical_pipeline(pipe_source, profile)
 
         engine = SyncEngine(
-            None, profile, probe=session.probe, timing=self.airplay_timing,
+            None, profile, probe=session.probe,
+            audible_clock=AirPlayAudibleClock(session.probe, self.airplay_timing),
             mellow_profile=mellow_profile, analyser=pcm_analyser,
         )
         engine.preview_publish = self._publish_preview
@@ -1443,6 +1448,15 @@ class PlayerManager:
         if session.sync_engine:
             session.sync_engine.update_probe(probe)
 
+    def _select_room_clock(self, session, model):
+        if session.sync_engine is None:
+            return
+        previous = session.sync_engine.audible_clock
+        session.sync_engine.audible_clock = lms_clock_for_model(
+            model, session.probe, previous.timing)
+        log.info("Audible clock selected for room model %s: %s", model,
+                 type(session.sync_engine.audible_clock).__name__)
+
     async def _apply_probe_for_master(
         self, session: ActiveSession, master: str | None
     ) -> None:
@@ -1573,8 +1587,9 @@ class PlayerManager:
         try:
             observed_at = time.monotonic()
             master_status = await asyncio.to_thread(
-                query_lms_status, lms_host, follow_mac
+                query_lms_status, lms_host, follow_mac, include_model=True
             )
+            self._select_room_clock(session, master_status.player_model)
             self._detected_sync_master_name = master_status.player_name
             if isinstance(session.track_source, LmsTrackPositionSource):
                 session.track_source.seed(follow_mac, master_status, observed_at)

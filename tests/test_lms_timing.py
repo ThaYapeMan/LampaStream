@@ -6,6 +6,7 @@ import numpy as np
 import pytest
 
 from lampastream.api import VirtualPlayerCreateBody, VirtualPlayerPatchBody
+from lampastream.audible_clock import LmsAudibleClock
 from lampastream.lms_timing import WriteClock, configure_head_start
 from lampastream.migration import convert
 from lampastream.models import VirtualPlayer
@@ -235,8 +236,20 @@ def test_timed_output_renders_every_publication_without_latest_sampling(monkeypa
     records = [SimpleNamespace(features=replace(features, onset=i == 1)) for i in range(3)]
 
     class Pipeline(CanonicalAnalysisPipeline):
+        def latest_hpss(self):
+            return False, 0., 0.
+
+        def latest_loudness(self):
+            return None, None
+
+        def latest_level(self):
+            return None
+
         def __init__(self):
             self.records = records
+            self._pub_lock = __import__("threading").Lock()
+            self._latest_loudness_pub = self._latest_hpss_pub = None
+            self._latest_level = None
 
         def drain_events(self):
             return []
@@ -257,7 +270,7 @@ def test_timed_output_renders_every_publication_without_latest_sampling(monkeypa
     effect = SimpleNamespace(render=Mock(side_effect=render), mix=.2)
     engine = SyncEngine(None, Profile(accent_mode="off"), analyser=Pipeline(),
                         probe=NoLatencyProbe(),
-                        timing=diagnostics)
+                        audible_clock=LmsAudibleClock(NoLatencyProbe(), diagnostics))
     engine._effect = effect
     output = Mock(channels=[])
     output.send.side_effect = lambda *args: now.__setitem__(0, now[0] + .001)
@@ -275,15 +288,15 @@ def test_timed_output_renders_every_publication_without_latest_sampling(monkeypa
         except asyncio.CancelledError:
             pass
     asyncio.run(run())
-    assert effect.render.call_count == 3
-    assert effect.render.call_args_list[1].args[0].onset is False
+    assert effect.render.call_count == 1  # Same-deadline publications coalesce before rendering.
+    assert effect.render.call_args_list[0].args[0].onset is False
         # Publication booleans cannot fabricate events; intake owns the latch.
     output.send.assert_called_once()
     assert output.send.call_args.args[1] >= 10.5
 
     data = diagnostics.snapshot()
     assert data['median_processing_ms'] > 0
-    assert len([e for e in data['events'] if e['kind'] == 'scene-ready']) == 3
+    assert len([e for e in data['events'] if e['kind'] == 'scene-ready']) == 1
     assert data['events'][-1]['sent_monotonic'] >= 10.5
 
 

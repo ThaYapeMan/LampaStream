@@ -16,11 +16,11 @@ from lampastream.airplay_early import (
     PAUSE,
     RESUME,
     EarlyAirPlaySource,
-    SceneSchedule,
     TapFramer,
     TapRecord,
 )
 from lampastream.airplay_timing import AirPlayAutoLatencyProbe, TimingDiagnostics
+from lampastream.audible_clock import AirPlayAudibleClock, LmsAudibleClock
 from lampastream.canonicalizer import (
     AudioCanonicalizer,
     CanonicalData,
@@ -29,6 +29,8 @@ from lampastream.canonicalizer import (
     TemporarilyNoData,
 )
 from lampastream.models import PlayerLatency
+from lampastream.scheduler import RenderRequest, Scheduler
+from lampastream.types import OutputCapabilities
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -52,11 +54,12 @@ def record(*, lead=0.5, now=10, rtp=100, generation=1, flags=0, frames=352, drop
 def test_measured_lead_schedules_on_time_or_immediately(lead):
     now, processing = 10, 0.098
     tap = record(lead=lead)
-    schedule = SceneSchedule()
-    schedule.add("scene", tap.play_time, now + processing, 1)
+    schedule = Scheduler(OutputCapabilities(transport_latency_s=0))
+    schedule.reset(1)
+    schedule.add(RenderRequest("scene", 0, tap.play_time), now+processing)
     target = max(tap.play_time, now + processing)
-    assert schedule.due(target - 0.0001, 1) is None
-    assert schedule.due(target, 1) == ("scene", None)
+    assert schedule.due(target - 0.0001) is None
+    assert schedule.due(target).features == "scene"
     assert (target - tap.play_time) * 1000 == pytest.approx(max(0, 98 - lead * 1000))
     diagnostics = TimingDiagnostics(clock=lambda: now + processing)
     diagnostics.arrival(352, now)
@@ -157,11 +160,13 @@ def test_control_markers_invalidate_scheduled_scenes(ingress, flag):
     source, writer, _, _, diagnostics = ingress
     os.write(writer, record().encode())
     frame = next_frame(source)
-    schedule = SceneSchedule()
-    schedule.add("never heard", frame.play_monotonic, 10, frame.timing_generation)
+    schedule = Scheduler(OutputCapabilities(transport_latency_s=0))
+    schedule.reset(frame.timing_generation)
+    schedule.add(RenderRequest("never heard", 0, frame.play_monotonic), 10)
     os.write(writer, record(flags=flag, frames=0, generation=2).encode())
     assert isinstance(source.read(), StreamInvalidated)
-    assert schedule.due(20, diagnostics.tap_generation) is None
+    schedule.reset(diagnostics.tap_generation)
+    assert schedule.due(20) is None
     if flag == PAUSE:
         os.write(writer, record(rtp=452, generation=2).encode())
         assert isinstance(source.read(), TemporarilyNoData)
@@ -212,11 +217,11 @@ def test_canonicalizer_preserves_play_time_across_resampling(ingress):
 
 
 def test_slow_scene_consumer_is_bounded_and_sends_latest_due():
-    schedule = SceneSchedule(capacity=10)
+    schedule = Scheduler(OutputCapabilities(transport_latency_s=0), capacity=10)
     for i in range(100):
-        schedule.add(i, 10 + i / 100, 10, 1)
+        schedule.add(RenderRequest(i, 0, 10+i/100), 10)
     assert len(schedule.queue) == 10
-    assert schedule.due(20, 1) == (99, None)
+    assert schedule.due(20).features == 99
     assert not schedule.queue
 
 
@@ -378,8 +383,23 @@ def test_production_output_loop_obeys_targets_and_flush(monkeypatch, lead, flush
     )
 
     class TimedPipeline(CanonicalAnalysisPipeline):
+        def latest_hpss(self):
+            return False, 0., 0.
+
+        def latest_loudness(self):
+            return None, None
+
+        def latest_level(self):
+            return None
+
+        def latest(self):
+            return None
+
         def __init__(self):
             self.records = [SimpleNamespace(features=features)]
+            self._pub_lock = __import__("threading").Lock()
+            self._latest_pub = self._latest_loudness_pub = self._latest_hpss_pub = None
+            self._latest_level = None
 
         def drain_events(self):
             return []
@@ -394,7 +414,9 @@ def test_production_output_loop_obeys_targets_and_flush(monkeypatch, lead, flush
             PlayerLatency(player_mac="ap", strategy="auto"), diagnostics, 0, Mock()
         )
         engine = SyncEngine(
-            None, Profile(), analyser=TimedPipeline(), probe=probe, timing=diagnostics
+            None, Profile(), analyser=TimedPipeline(), probe=probe,
+            audible_clock=(AirPlayAudibleClock(probe, diagnostics) if source == "early tap"
+                           else LmsAudibleClock(probe, diagnostics))
         )
 
         async def tick(dt):
@@ -417,7 +439,7 @@ def test_production_output_loop_obeys_targets_and_flush(monkeypatch, lead, flush
         else:
             output.send.assert_called_once()
             sent = output.send.call_args.args[1]
-            assert max(10.098, 10 + lead) <= sent < max(10.098, 10 + lead) + SEND_INTERVAL_S
+            assert max(10.098, 10+lead)-1e-10 <= sent < max(10.098, 10+lead)+SEND_INTERVAL_S
 
     asyncio.run(run())
 
@@ -438,11 +460,13 @@ def test_metadata_pause_cancels_even_when_tap_marker_is_lost(ingress):
     source, writer, _, _, diagnostics = ingress
     os.write(writer, record().encode())
     frame = next_frame(source)
-    schedule = SceneSchedule()
-    schedule.add("cancelled", frame.play_monotonic, 10, frame.timing_generation)
+    schedule = Scheduler(OutputCapabilities(transport_latency_s=0))
+    schedule.reset(frame.timing_generation)
+    schedule.add(RenderRequest("cancelled", 0, frame.play_monotonic), 10)
     diagnostics.metadata("paus", "")
     assert isinstance(source.read(), StreamInvalidated)
-    assert schedule.due(20, diagnostics.tap_generation) is None
+    schedule.reset(diagnostics.tap_generation)
+    assert schedule.due(20) is None
     os.write(writer, record(rtp=452).encode())
     assert isinstance(source.read(), TemporarilyNoData)
     diagnostics.metadata("pres", "")

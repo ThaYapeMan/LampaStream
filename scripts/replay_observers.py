@@ -1,7 +1,7 @@
 """Non-mutating offline observers of current picker and schedule decisions."""
 from __future__ import annotations
 
-from lampastream.airplay_early import SceneSchedule
+from lampastream.scheduler import Scheduler
 
 
 class PickerObserver:
@@ -67,7 +67,7 @@ class PickerObserver:
         return row or {}
 
 
-class ScheduleObserver(SceneSchedule):
+class ScheduleObserver(Scheduler):
     """Observe overflow/coalescing while calling the unchanged scheduler methods."""
 
     def __init__(self, *args, **kwargs):
@@ -75,14 +75,16 @@ class ScheduleObserver(SceneSchedule):
         self.coalesced = set()
         self.overflow = set()
 
-    def add(self, scene, *args, **kwargs):
-        previous = {item[2].scene_id for item in self.queue} | {scene.scene_id}
-        super().add(scene, *args, **kwargs)
-        self.overflow.update(previous - {item[2].scene_id for item in self.queue})
+    def add(self, *args, **kwargs):
+        previous = {entry.sequence for entry in self.queue}
+        super().add(*args, **kwargs)
+        self.overflow.update((previous | {self.sequence})-
+                             {entry.sequence for entry in self.queue})
 
-    def due(self, now, generation):
-        candidates = {item[2].scene_id for item in self.queue if item[0] <= now}
-        result = super().due(now, generation)
+    def due(self, now):
+        candidates = [entry for entry in self.queue if entry.deadline <= now+1e-10]
+        result = super().due(now)
         if result is not None:
-            self.coalesced.update(candidates - {result[0].scene_id})
+            selected = next(entry.sequence for entry in candidates if entry.request is result)
+            self.coalesced.update({entry.sequence for entry in candidates}-{selected})
         return result

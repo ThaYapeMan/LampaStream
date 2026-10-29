@@ -1,7 +1,8 @@
 """Canonical PCM source adapters, bounded fanout, and shared STFT/HPSS helpers.
 
-Squeezelite and AirPlay preserve decoded stereo PCM and source lifecycle events
-for CanonicalAnalysisPipeline. TeePcmSource provides an optional secondary drain.
+The LMS VirtualPlayer (yeney-player from yeney-core) and the AirPlay VirtualPlayer
+preserve decoded stereo PCM and source lifecycle events for CanonicalAnalysisPipeline.
+TeePcmSource provides an optional secondary drain.
 """
 
 from __future__ import annotations
