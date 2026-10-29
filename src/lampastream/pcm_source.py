@@ -408,7 +408,7 @@ class YeneyCoreShmStereoSource:
         self._clock_event_seq: int | None = None
         self._clock_segments: list[tuple[int, PlayerClock | None]] = []
         # (st_dev, st_ino) at the time of mmap.  Used to detect SHM
-        # replacement (e.g. squeezelite recreated the segment with a fresh
+        # replacement (e.g. yeney-player recreated the segment with a fresh
         # inode while our mmap kept pointing at the unlinked file).  See
         # _detect_shm_replacement().
         self._shm_dev_ino: tuple[int, int] | None = None
@@ -445,7 +445,7 @@ class YeneyCoreShmStereoSource:
         producer running a newer v2 layout would be silently misinterpreted
         by this reader — activation is therefore rejected in either case
         with an actionable RuntimeError explaining how to rebuild
-        squeezelite.  Tests that need to exercise the v0 fall-through code
+        yeney-player from yeney-core.  Tests that need to exercise the v0 fall-through code
         path may pass ``require_v1=False`` explicitly.
         """
         path = _path if _path is not None else Path(f"/dev/shm/squeezelite-{mac}")
@@ -482,7 +482,7 @@ class YeneyCoreShmStereoSource:
             if require_v1:
                 self.close()
                 raise RuntimeError(
-                    f"Squeezelite SHM at {path} does not provide the v1 ABI "
+                    f"yeney-core SHM at {path} does not provide the v1 ABI "
                     f"(magic 0x{SHM_ABI_V1_MAGIC:08X} not found at offset "
                     f"{_V2_EXT_OFFSET}). "
                     "Rebuild yeney-player from the pinned yeney-core submodule using "
@@ -499,10 +499,10 @@ class YeneyCoreShmStereoSource:
                 if require_v1:
                     self.close()
                     raise RuntimeError(
-                        f"Squeezelite SHM at {path} advertises ABI version "
+                        f"yeney-core SHM at {path} advertises ABI version "
                         f"{ext.abi_version}, but this consumer only supports "
                         f"version {SHM_ABI_VERSION}.  Rebuild yeney-player "
-                        "from the pinned LampaStream producer fork, or upgrade "
+                        "from the pinned yeney-core submodule, or upgrade "
                         "LampaStream to a matching consumer."
                     )
                 self._unsupported_abi = True
@@ -583,7 +583,7 @@ class YeneyCoreShmStereoSource:
         """Return True when the file at ``self._path`` no longer matches the
         (dev, ino) tuple recorded at open() time.
 
-        squeezelite recreates its SHM segment with a fresh inode on restart
+        yeney-player recreates its SHM segment with a fresh inode on restart
         (the old file is unlinked and a new one created at the same path).
         Our existing mmap keeps referring to the old, now-orphan inode until
         we notice and remap.  A stat on the path each read cycle catches the
@@ -640,7 +640,7 @@ class YeneyCoreShmStereoSource:
         # generation/abs_write_pos/gap_seq are adopted from the new SHM.
         # Clear ``_unsupported_abi`` too — that flag belongs to the
         # rejected inode/mapping we are about to release, not to the
-        # SqueezeliteShmStereoSource instance for its whole lifetime.
+        # YeneyCoreShmStereoSource instance for its whole lifetime.
         # If the replacement segment ALSO carries an unsupported ABI we
         # re-set the flag below; if it is a valid v1 we adopt it and the
         # source recovers automatically (BLOCKER 3 audit round 3).
@@ -1012,7 +1012,7 @@ class YeneyCoreShmStereoSource:
         assert self._mm is not None
         _, buf_index, running, rate, updated = self._read_header()
 
-        # Sample-rate change: squeezelite restarted or a new track at a different rate.
+        # Sample-rate change: yeney-player restarted or a new track at a different rate.
         if self._prev_rate != 0 and rate != self._prev_rate:
             _log.warning(
                 "SHM stereo source: sample rate changed (%d → %d); invalidating epoch.",
@@ -1024,7 +1024,7 @@ class YeneyCoreShmStereoSource:
             self._prev_updated = updated
             return StreamInvalidated(cause=InvalidationCause.UNKNOWN, known_lost_samples=None)
 
-        # Running transition False→True: squeezelite restarted and is writing again.
+        # Running transition False→True: yeney-player restarted and is writing again.
         if running and not self._prev_running:
             _log.debug("SHM stereo source: running transition → True; invalidating epoch.")
             self._prev_index = buf_index
@@ -1124,7 +1124,7 @@ class YeneyCoreShmStereoSource:
         """
         # SHM replacement handling comes FIRST — before any short-circuit
         # tied to the current mapping — so a rejected v2/v0 inode does NOT
-        # permanently poison the SqueezeliteShmStereoSource instance.  If
+        # permanently poison the YeneyCoreShmStereoSource instance.  If
         # the backing object was replaced with a valid v1 while we were
         # in ``_unsupported_abi`` state, ``_remap_after_replacement``
         # clears that flag and adopts the new mapping automatically

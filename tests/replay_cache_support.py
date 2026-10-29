@@ -45,7 +45,7 @@ class DiskReplays:
             args.out = out
             replay = Replay(args)
             analysis_key = sha(json.dumps([common, args.start, args.duration,
-                                          args.lead_s], sort_keys=True).encode())
+                                          replay.playback_offset], sort_keys=True).encode())
             analysis = self.base/f'{analysis_key}.pickle'
             try:
                 with (self.base/f'{analysis_key}.analysis.lock').open('w') as analysis_lock:
