@@ -2,6 +2,8 @@ import { test, expect } from '@playwright/test'
 import { setupPreview } from './preview-fixture'
 
 test('preview outlines follow event holds and ignore continuous envelope tails', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-27T12:00:00Z') })
+  await page.clock.pauseAt(new Date('2026-10-27T12:00:01Z'))
   const socket = await setupPreview(page)
   const frame = page.getByTestId('floorplan-frame')
   const dot = page.getByTestId('floorplan-channel-1')
@@ -12,7 +14,7 @@ test('preview outlines follow event holds and ignore continuous envelope tails',
   await expect(frame).toHaveAttribute('stroke', 'white')
   await expect(dot).toHaveAttribute('stroke', 'white')
   await expect(dot).toHaveAttribute('stroke-opacity', '1')
-  await page.waitForTimeout(100)
+  await page.clock.runFor(100)
   send({ onset: false, onset_envelope: .7, channel_accent_lifts: [.2] })
   await expect(frame).toHaveAttribute('stroke', 'currentColor')
   await expect(dot).toHaveAttribute('stroke-opacity', '0')
