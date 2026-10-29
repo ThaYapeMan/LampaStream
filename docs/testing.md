@@ -848,3 +848,14 @@ output capability transport correction separately. EVENT-01 lost must remain 0;
 all kick identities must be attributed before latency is accepted. Previous pins
 are preserved in tests/fixtures/route01-previous-pins.json with explicit reasons
 in each refreshed fixture. Detector/tempo pins and latency thresholds remain.
+
+## CI notifications
+
+Workflow concurrency is keyed on the workflow and branch/ref with
+`cancel-in-progress: true`. A newer push cancels a still-running superseded run,
+so intermediate commits can keep preserving work while the final run completes
+and reports. Cancelled runs do not send failure notifications. Runs that finished
+before the next push still report their result. Remaining per-run e-mails are
+controlled in the owner's GitHub account under Settings → Notifications → Actions
+("Only notify for failed workflows", or unwatching Actions for this repository).
+These personal notification settings cannot be changed from the repository.
