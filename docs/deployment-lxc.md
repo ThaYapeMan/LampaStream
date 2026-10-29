@@ -79,3 +79,8 @@ stereo float PCM through yeney-core SHM v1. `YeneyCoreShmStereoSource` names tha
 reader; `SqueezeliteShmStereoSource` remains a deprecated alias for one release.
 Player-specific ingress owns timing knowledge. See the ROUTE-01
 [architecture](architecture.md); rendering and scheduling are shared.
+
+Installer output shows the detected layout, source commit and final summary.
+Successful checks are silent; failures retain their full diagnostics. Use
+`sudo scripts/install-lampastream.sh --check --verbose` for all verification
+results, or add `--verbose` to an installation for full build output.

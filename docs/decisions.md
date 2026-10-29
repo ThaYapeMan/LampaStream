@@ -396,3 +396,12 @@ epoch invalidation and output ownership changes cancel old work. Replay analysis
 caches include the native playback coordinate, so zero-lead LMS analysis cannot
 be reused as an early-tap timestamped stream. No runtime
 dependencies, deployment or owner-device contact were introduced.
+
+## HOUSE-01: retire completed producer migration
+
+The supported deployment uses yeney-player; current deployment and architecture
+documentation defines no upgrade path from the retired installer-owned Squeezelite
+fork. Remove its conflict scanner and manifest-based binary removal helper. The
+HueSync configuration/layout migration remains supported and unchanged. Installer
+output is quiet by default, replays complete diagnostics on failure, and accepts
+`--verbose` to show build progress and passing checks.

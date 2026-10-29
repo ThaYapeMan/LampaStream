@@ -191,79 +191,8 @@ def test_node_bootstrap_pin_matches_ci_and_locked_jsdom_engine():
         assert f'Node {pin}' in (ROOT / 'docs' / doc).read_text()
 
 
-@pytest.mark.parametrize('definition,conflict', [
-    ('{ path=/usr/bin/squeezelite ; argv[]=/usr/bin/squeezelite -o default ; }', True),
-    ('DAEMON=/usr/bin/squeezelite\nNAME=receiver', True),
-    ('DAEMON="/usr/bin/squeezelite"', True),
-    ('{ path=/usr/local/bin/squeezelite ; }', False),
-    ('{ path=/usr/local/bin/lampastream-squeezelite-fifo ; }', False),
-    ('/opt/lampastream/.venv/bin/lampastream', False),
-])
-def test_conflicting_squeezelite_definition(definition, conflict):
-    body = SCRIPT.read_text().split('squeezelite_conflict_definition() {', 1)[1].split('\n}', 1)[0]
-    result = subprocess.run(['bash', '-c', 'squeezelite_conflict_definition() {' + body +
-                             '\n}\nsqueezelite_conflict_definition "$1"', '-', definition])
-    assert (result.returncode == 0) == conflict
 
 
-@pytest.mark.parametrize('mode,stuck', [('install', False), ('install', True), ('check', False)])
-def test_conflicting_squeezelite_service_lifecycle(tmp_path, mode, stuck):
-    text = SCRIPT.read_text()
-    start = text.index('squeezelite_conflict_definition() {')
-    functions = text[start:text.index('verify_services() {')]
-    init = tmp_path / 'init.d'
-    init.mkdir()
-    (init / 'room-receiver').write_text('DAEMON=/usr/bin/squeezelite\n')
-    (init / 'room-receiver').chmod(0o755)
-    functions = functions.replace('/etc/init.d', str(init)).replace(
-        '/proc/[0-9]*/exe', str(tmp_path / 'proc/[0-9]*/exe'))
-    calls = tmp_path / 'calls'
-    stopped = tmp_path / 'stopped'
-    shell = f'''set -Eeuo pipefail
-log() {{ echo "$*"; }}
-fail() {{ echo "$*"; exit 1; }}
-systemctl() {{
- echo "$*" >> '{calls}'
- case "$1" in
- list-unit-files) printf 'autovt@.service alias\ngetty@.service enabled\n'
- printf 'squeezelite.service enabled\nlampastream-fifo.service enabled\n' ;;
- list-units) printf 'room-receiver.service loaded active running receiver\n'
- echo 'getty@tty1.service loaded active running Getty' ;;
- show)
-  case "$2" in
-   *@.service) echo 'Bare template is not queryable' >&2; return 1 ;;
-   getty@tty1.service) echo '/sbin/agetty'; return 0 ;;
-  esac
-  case "$3" in
-   --property=ExecStart)
-    case "$2" in
-     squeezelite.service) echo '/usr/local/bin/squeezelite' ;;
-     lampastream-fifo.service) echo '/usr/local/bin/lampastream-squeezelite-fifo' ;;
-     *) echo '{init}/room-receiver start' ;;
-    esac ;;
-   --property=SourcePath) [[ "$2" != room-receiver.service ]] || echo '{init}/room-receiver' ;;
-   --property=ActiveState) if [[ -f '{stopped}' ]]; then echo inactive; else echo active; fi ;;
-  esac ;;
- stop) {'true' if stuck else f"touch '{stopped}'"} ;;
- esac
- return 0
-}}
-''' + functions + f'\nsqueezelite_conflicts {mode}\n'
-    result = subprocess.run(['bash', '-c', shell], capture_output=True, text=True)
-    assert 'room-receiver.service (active)' in result.stdout
-    commands = calls.read_text().splitlines()
-    assert not any('@.service' in c for c in commands)
-    assert 'show getty@tty1.service --property=ExecStart --value' in commands
-    assert 'stop squeezelite.service' not in commands
-    assert 'stop lampastream-fifo.service' not in commands
-    if mode == 'install':
-        assert commands.index('disable room-receiver.service') < commands.index(
-            'stop room-receiver.service')
-        assert (result.returncode != 0) == stuck
-        assert ('did not stop' if stuck else 'disabled and stopped') in result.stdout
-    else:
-        assert not any(c.startswith(('stop ', 'disable ')) for c in commands)
-        assert not stopped.exists()
 
 
 def test_airplay_metadata_build_fifo_and_service_arguments(tmp_path):
@@ -285,77 +214,14 @@ def test_airplay_metadata_build_fifo_and_service_arguments(tmp_path):
     assert '--metadata-enable --metadata-pipename=/run/lampastream/airplay.metadata' in text
 
 
-@pytest.mark.parametrize('name,expected', [
-    ('receiver.sh', 'receiver.service'),
-    ('receiver room', r'receiver\x20room.service'),
-    ('receiver@', None),  # mangles to a bare template, also excluded
-])
-def test_sysv_conflict_names_are_queryable(tmp_path, name, expected):
-    text = SCRIPT.read_text()
-    start = text.index('squeezelite_conflict_definition() {')
-    functions = text[start:text.index('verify_services() {')]
-    init = tmp_path / 'init.d'
-    init.mkdir()
-    script = init / name
-    script.write_text('DAEMON=/usr/bin/squeezelite\n')
-    script.chmod(0o755)
-    (init / 'not-executable').write_text('DAEMON=/usr/bin/squeezelite\n')
-    functions = functions.replace('/etc/init.d', str(init)).replace(
-        '/proc/[0-9]*/exe', str(tmp_path / 'proc/[0-9]*/exe'))
-    calls = tmp_path / 'calls'
-    shell = f'''set -Eeuo pipefail
-log() {{ echo "$*"; }}
-fail() {{ echo "$*"; exit 1; }}
-systemctl() {{
- printf '%s\\n' "$*" >> '{calls}'
- case "$1" in
- list-unit-files|list-units) return 0 ;;
- show)
-  case "$2" in *@.service|not-executable.service) return 99 ;; esac
-  case "$3" in
-   --property=ExecStart) echo /usr/bin/squeezelite ;;
-   --property=ActiveState) echo inactive ;;
-  esac ;;
- *) return 98 ;; # check must never mutate the host
- esac
- return 0
-}}
-''' + functions + '\nsqueezelite_conflicts check\n'
-    result = subprocess.run(['bash', '-c', shell], capture_output=True, text=True)
-    assert result.returncode == 0, result.stderr
-    queries = [line for line in calls.read_text().splitlines() if line.startswith('show ')]
-    if expected is None:
-        assert queries == []
-    else:
-        assert queries == [f'show {expected} --property={prop} --value'
-                           for prop in ('ExecStart', 'SourcePath', 'ActiveState')]
 
 
-def test_non_template_inspection_failure_remains_fatal(tmp_path):
-    text = SCRIPT.read_text()
-    start = text.index('squeezelite_conflict_definition() {')
-    functions = text[start:text.index('verify_services() {')].replace(
-        '/etc/init.d', str(tmp_path / 'empty-init'))
-    shell = '''set -Eeuo pipefail
-log() { echo "$*"; }
-fail() { echo "$*"; exit 1; }
-systemctl() {
- case "$1" in
- list-unit-files) echo 'real.service enabled' ;;
- list-units) return 0 ;;
- show) echo 'Real inspection failure' >&2; return 42 ;;
- esac
-}
-''' + functions + '\nsqueezelite_conflicts check\n'
-    result = subprocess.run(['bash', '-c', shell], capture_output=True, text=True)
-    assert result.returncode == 42
-    assert 'Real inspection failure' in result.stderr
 
 
 def _migration_functions(script_text: str) -> str:
     """Extract the three layout functions from the installer."""
     start = script_text.index('detect_layout() {')
-    end = script_text.index('\ncase "${1:-}" in')
+    end = script_text.index('\n# Parse options')
     return script_text[start:end]
 
 
@@ -607,11 +473,10 @@ detect_layout
 
 
 def test_check_branch_calls_detect_layout():
-    """The --check branch must call detect_layout before squeezelite_conflicts."""
+    """Both modes report layout before verification."""
     text = SCRIPT.read_text()
-    check = text.split('if [[ "$CHECK" == 1 ]]; then', 1)[1].split('\nfi', 1)[0]
-    assert 'detect_layout' in check
-    assert text.index('detect_layout') < text.index('squeezelite_conflicts check')
+    assert 'detect_layout\n' in text
+    assert text.index('detect_layout') < text.index('    verify "$PREFIX/.venv"')
 
 
 def test_migrate_huesync_layout_updates_shairport_fifo_paths(tmp_path):
@@ -859,3 +724,41 @@ def test_pulled_submodule_pin_is_updated_before_cleanliness_check(tmp_path, dirt
         assert git(checkout, 'rev-parse', 'HEAD') == new
         assert not git(parent, 'status', '--porcelain', '--untracked-files=no')
     assert text.index('    update_submodules\n') < text.index('\nrepo_check\n')
+
+
+@pytest.mark.parametrize('verbose,broken', [(False, False), (True, False), (False, True)])
+def test_installer_output_contract(tmp_path, verbose, broken):
+    """Execute real option parsing/output lifecycle with target probes substituted."""
+    text = SCRIPT.read_text()
+    substitutions = '''
+platform() { :; }
+repo_check() { COMMIT=0123456789abcdef; SHORT=0123456; }
+detect_layout() { echo 'Layout: lampastream (test harness)'; }
+verify() {
+    echo 'FFTW: PASS'
+    echo 'AirPlay prerequisites: PASS'
+    BROKEN
+}
+systemd-analyze() { :; }
+verify_services() { :; }
+'''.replace('BROKEN', "fail 'verification diagnostic in full'" if broken else ':')
+    text = text.replace('\nplatform\n', substitutions + '\nplatform\n', 1)
+    # Keep repository discovery at its real location; execute no host operations.
+    text = text.replace('SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"',
+                        f'SCRIPT_DIR="{ROOT / "scripts"}"')
+    harness = tmp_path / 'installer.sh'
+    harness.write_text(text)
+    result = subprocess.run(['bash', str(harness), '--check',
+                             *(['--verbose'] if verbose else [])],
+                            capture_output=True, text=True)
+    assert (result.returncode != 0) == broken, result.stderr
+    assert 'Layout:' in result.stdout and 'Git commit:' in result.stdout
+    assert 'Squeezelite' not in result.stdout
+    assert ('PASS' in result.stdout) == verbose
+    if broken:
+        assert 'verification diagnostic in full' in result.stderr
+        assert 'FFTW: PASS' in result.stderr
+        assert 'CHECK COMPLETE' not in result.stdout
+    else:
+        assert 'CHECK COMPLETE' in result.stdout
+    print(('verbose' if verbose else 'default') + ' harness output:\n' + result.stdout)

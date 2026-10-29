@@ -77,77 +77,6 @@ verify() {
     repo_check
     printf 'AirPlay prerequisites: PASS\nRepository tracked state: CLEAN\n'
 }
-# Inspect executable paths, not service display names (SysV generators may rename units).
-squeezelite_conflict_definition() {
-    local definition="$1"
-    # Recognize previous LampaStream-owned paths during upgrades.
-    definition=${definition//\/usr\/local\/bin\/lampastream-squeezelite-fifo/}
-    definition=${definition//\/usr\/local\/bin\/squeezelite/}
-    [[ "$definition" =~ /[[:alnum:]_./-]*/squeezelite([[:space:]\"\';]|$) ]]
-}
-squeezelite_conflicts() {
-    local mode="$1" units loaded unit definition source script state found=0 active=0 processes exe
-    units=$(systemctl list-unit-files --type=service --no-legend --no-pager)
-    loaded=$(systemctl list-units --all --type=service --no-legend --no-pager --plain)
-    units+=$'\n'"$loaded"
-    # Include SysV services even when the generator has not loaded them yet.
-    for script in /etc/init.d/*; do
-        [[ -f "$script" && -x "$script" ]] || continue
-        if squeezelite_conflict_definition "$(cat "$script")"; then
-            # Match systemd-sysv-generator: strip .sh and mangle the unit name.
-            # In particular, spaces must not become multiple awk fields below.
-            unit=${script##*/}
-            unit=$(systemd-escape --mangle "${unit%.sh}")
-            units+=$'\n'"$unit"
-        fi
-    done
-    while read -r unit; do
-        [[ -n "$unit" ]] || continue
-        # Templates are definitions, not queryable service instances.
-        [[ "$unit" != *@.service ]] || continue
-        definition=$(systemctl show "$unit" --property=ExecStart --value)
-        source=$(systemctl show "$unit" --property=SourcePath --value)
-        if [[ "$source" == /etc/init.d/* && -f "$source" ]]; then
-            definition+=$'\n'"$(cat "$source")"
-        elif [[ "$unit" == squeezelite.service && -f /etc/init.d/squeezelite ]]; then
-            definition+=$'\n'"$(cat /etc/init.d/squeezelite)"
-        fi
-        squeezelite_conflict_definition "$definition" || continue
-        found=1
-        state=$(systemctl show "$unit" --property=ActiveState --value)
-        log "CONFLICT: unmanaged Squeezelite unit $unit ($state)"
-        [[ "$state" == inactive || "$state" == failed ]] || active=1
-        if [[ "$mode" == install ]]; then
-            systemctl disable "$unit"
-            # Deliberately separate: SysV disable --now can leave the process running.
-            systemctl stop "$unit"
-            state=$(systemctl show "$unit" --property=ActiveState --value)
-            [[ "$state" == inactive || "$state" == failed ]] ||
-                fail "Conflicting Squeezelite unit did not stop: $unit ($state)"
-            log "Conflicting Squeezelite disabled and stopped: $unit"
-        fi
-    done < <(printf '%s\n' "$units" | awk '{print $1}' | sort -u)
-    # Catch detached children too: an inactive unit alone is not proof of exit.
-    processes=0
-    for exe in /proc/[0-9]*/exe; do
-        local binary
-        binary=$(readlink "$exe") || continue # process may have exited during inspection
-        binary=${binary% (deleted)}
-        case "$binary" in
-            /usr/local/bin/squeezelite|/usr/local/bin/lampastream-squeezelite-fifo) continue ;;
-            */squeezelite)
-                processes=1
-                log "CONFLICT: unmanaged Squeezelite process ${exe%/exe} ($binary)" ;;
-        esac
-    done
-    if [[ "$mode" == install && "$processes" == 1 ]]; then
-        fail 'Unmanaged Squeezelite process remains; refusing to start competing audio services'
-    fi
-    [[ "$found" == 1 || "$processes" == 1 ]] || log 'Conflicting Squeezelite: not found'
-    if [[ "$mode" == check && ( "$processes" == 1 || "$active" == 1 ) ]]; then
-        fail 'Active unmanaged Squeezelite conflicts with LampaStream (read-only check)'
-    fi
-}
 verify_services() {
     local unit
     # is-active with multiple units succeeds if any is active; require every one.
@@ -232,35 +161,63 @@ cleanup_huesync_layout() {
     printf '      To reclaim space after verifying the new installation:\n'
     printf '        sudo rm -rf /opt/huesync\n'
 }
-case "${1:-}" in
-    --help|-h)
-        cat <<'HELP'
-Usage: sudo ./scripts/install-lampastream.sh [--check]
+# Parse options before any target probes or changes.
+CHECK=0
+VERBOSE=0
+for argument in "$@"; do
+    case "$argument" in
+        --check) CHECK=1 ;;
+        --verbose) VERBOSE=1 ;;
+        --help|-h)
+            cat <<'HELP'
+Usage: sudo ./scripts/install-lampastream.sh [--check] [--verbose]
 
   --check  Read-only verification of an existing LampaStream target installation.
            Requires Debian 13 (trixie), x86_64, with systemd running
            (/run/systemd/system). Does not install, migrate or modify the host.
            Use sudo to read private configuration.
+  --verbose  Show full build output and passing verification results.
 
 For local static/unit validation on development hosts, see docs/testing.md.
 HELP
-        exit 0 ;;
-    --check) [[ $# == 1 ]] || fail 'Unexpected arguments'; CHECK=1 ;;
-    '') CHECK=0 ;;
-    *) fail 'Unknown argument; use --help' ;;
-esac
+            exit 0 ;;
+        *) fail 'Unknown argument; use --help' ;;
+    esac
+done
+# Keep successful subprocess output private; replay it in full on failure.
+OUTPUT_LOG=""
+WORK=""
+exec 3>&1 4>&2
+restore_output() { exec 1>&3 2>&4; }
+finish() {
+    local status=$?
+    restore_output
+    if [[ "$status" != 0 && -n "$OUTPUT_LOG" ]]; then cat "$OUTPUT_LOG" >&2; fi
+    [[ -z "$OUTPUT_LOG" ]] || rm -f -- "$OUTPUT_LOG"
+    [[ -z "$WORK" ]] || rm -rf -- "$WORK"
+    return "$status"
+}
+trap finish EXIT
+quiet_output() {
+    if [[ "$VERBOSE" == 0 ]]; then
+        OUTPUT_LOG=$(mktemp /tmp/lampastream-install-output.XXXXXX)
+        exec >"$OUTPUT_LOG" 2>&1
+    fi
+}
 trap 'printf "ERROR: installation/check failed at line %s: %s\n" "$LINENO" "$BASH_COMMAND" >&2' ERR
 platform
+detect_layout
+printf 'Git commit: %s\n' "$(git -c safe.directory="$REPO_DIR" -C "$REPO_DIR" rev-parse HEAD)"
+quiet_output
 if [[ "$CHECK" == 0 ]]; then
     update_submodules
 fi
 repo_check
 if [[ "$CHECK" == 1 ]]; then
-    detect_layout
-    squeezelite_conflicts check
     verify "$PREFIX/.venv"
     systemd-analyze verify /etc/systemd/system/lampastream.service
     verify_services
+    restore_output
     log "CHECK COMPLETE: $COMMIT"
     exit 0
 fi
@@ -285,8 +242,6 @@ python3 -B "$REPO_DIR/scripts/manage-releases.py" check "$PREFIX"
 PREVIOUS_RELEASE=$(python3 -B "$REPO_DIR/scripts/manage-releases.py" previous "$PREFIX")
 log '2/7 Isolate committed sources and build the frontend/wheel'
 WORK=$(mktemp -d /var/tmp/lampastream-install.XXXXXX)
-cleanup() { rm -rf -- "$WORK"; }
-trap cleanup EXIT
 git -c safe.directory="$REPO_DIR" -C "$REPO_DIR" archive HEAD | tar -x -C "$WORK"
 curl --fail --location --retry 3 https://nodejs.org/dist/v22.22.2/node-v22.22.2-linux-x64.tar.xz -o "$WORK/node.tar.xz"
 printf '%s  %s\n' 88fd1ce767091fd8d4a99fdb2356e98c819f93f3b1f8663853a2dee9b438068a "$WORK/node.tar.xz" | sha256sum --check
@@ -319,13 +274,10 @@ git -c safe.directory="$CORE" -C "$CORE" archive HEAD | tar -x -C "$WORK/third_p
 git -c safe.directory="$CORE/third_party/alac" -C "$CORE/third_party/alac" archive HEAD | tar -x -C "$WORK/third_party/yeney-core/third_party/alac"
 make -C "$WORK/third_party/yeney-core" -j"$(nproc)" yeney-player
 "$WORK/third_party/yeney-core/yeney-player" --help
-# Stop conflicting package services and owned services before replacing binaries.
-squeezelite_conflicts install
+# Stop owned services before replacing binaries.
 for unit in lampastream shairport-sync nqptp; do
     if systemctl is-active --quiet "$unit"; then systemctl stop "$unit"; fi
 done
-# Read old provenance before writing the new release manifest or switching .venv.
-python3 -B "$WORK/scripts/remove-owned-squeezelite.py" "$PREFIX/.venv/../installation.json"
 install -m 0755 "$WORK/third_party/yeney-core/yeney-player" /usr/local/bin/yeney-player
 cmp "$WORK/third_party/yeney-core/yeney-player" /usr/local/bin/yeney-player
 install -d /usr/local/share/doc/lampastream/yeney-core
@@ -363,6 +315,7 @@ else
     python3 -B "$WORK/scripts/manage-releases.py" prune "$PREFIX"
 fi
 repo_check
+restore_output
 printf '\nINSTALLATION COMPLETE\nGit commit: %s\nPython: %s\nLMS player: /usr/local/bin/yeney-player\n' "$COMMIT" "$RELEASE/venv"
 sha256sum /usr/local/bin/yeney-player
 printf 'Logs: journalctl -u lampastream -u shairport-sync -u nqptp\nUI: http://<target>:8420\n'

@@ -57,43 +57,8 @@ def test_manifest_and_verifier(tmp_path, revision):
         verifier.verify_player(manifest, binary)
 
 
-@pytest.mark.parametrize('case', ['owned', 'foreign', 'packaged', 'missing', 'corrupt',
-                                  'no_digest', 'symlink', 'package_query_error'])
-def test_remove_only_owned_old_fork(tmp_path, case, monkeypatch):
-    cleanup = load_script('remove-owned-squeezelite.py')
-    binary = tmp_path / 'squeezelite'
-    manifest = tmp_path / 'installation.json'
-    binary.write_bytes(b'old owned fork')
-    digest = hashlib.sha256(binary.read_bytes()).hexdigest()
-    manifest.write_text(json.dumps({'squeezelite_sha256': digest}))
-    ownership_code = 0 if case == 'packaged' else 2 if case == 'package_query_error' else 1
-    monkeypatch.setattr(cleanup.subprocess, 'run',
-                        lambda *args, **kw: subprocess.CompletedProcess(args[0], ownership_code))
-    if case == 'foreign':
-        binary.write_bytes(case.encode())
-    elif case == 'missing':
-        manifest.unlink()
-    elif case == 'corrupt':
-        manifest.write_text('{')
-    elif case == 'no_digest':
-        manifest.write_text('{}')
-    elif case == 'symlink':
-        target = tmp_path / 'packaged-player'
-        binary.rename(target)
-        binary.symlink_to(target)
-    removed = cleanup.remove_owned_binary(binary, manifest)
-    assert removed == (case == 'owned')
-    assert binary.exists() == (case != 'owned')
-    if case == 'symlink':
-        assert target.read_bytes() == b'old owned fork'
 
 
-def test_old_manifest_read_before_release_switch():
-    installer = (ROOT / 'scripts/install-lampastream.sh').read_text()
-    assert installer.index('remove-owned-squeezelite.py') < installer.index(
-        'write-install-manifest.py')
-    assert '"$PREFIX/.venv/../installation.json"' in installer
-    assert '"$RELEASE" "$YENEY_CORE_REVISION"' in installer
 
 
 def test_real_yeney_player_shm_v1(tmp_path, monkeypatch):
