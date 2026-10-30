@@ -149,7 +149,8 @@ it('shows the stored response but disables both controls for CAVA Core', async (
 it.each([false, true])('shows detailed tempo only in expert mode=%s', async expertMode => {
   render(<NowPlaying {...props} expertMode={expertMode} status={{ ...status, tempo_bpm: 127.8, tempo_locked: true, tempo_confidence: .87 }} />)
   await ready()
-  expect(screen.getByTestId('track-tempo')).toHaveTextContent('128 BPM')
+  expect(screen.getByTestId('track-tempo')).toHaveTextContent('measured 128 BPM')
+  expect(screen.getByTestId('track-tempo').querySelector('.italic')).toHaveTextContent('measured')
   if (expertMode) expect(screen.getByTestId('tempo')).toHaveTextContent('Tempo 128 BPM · Locked · 87%')
   else expect(screen.queryByTestId('tempo')).toBeNull()
 })
