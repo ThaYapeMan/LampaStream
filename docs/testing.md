@@ -871,3 +871,8 @@ before the next push still report their result. Remaining per-run e-mails are
 controlled in the owner's GitHub account under Settings → Notifications → Actions
 ("Only notify for failed workflows", or unwatching Actions for this repository).
 These personal notification settings cannot be changed from the repository.
+
+To verify cancellation, push consecutive ticket commits while the earlier run is
+still queued or running, then inspect their Actions conclusions: the superseded
+run should be `cancelled`, and the final run should complete successfully. Runs
+created before the concurrency rule was added do not share its group.
