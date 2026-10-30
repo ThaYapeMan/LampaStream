@@ -1002,3 +1002,18 @@ preserves a pre-roll RTP anchor until track start becomes audible, and accepts
 DMAP duration. Numeric progress payloads are representative because the supplied
 journal logs lengths rather than values. No downstream source-specific logic is
 used; an unknown track origin remains unknown.
+
+## Change report CI evidence
+
+Every implementation report must list each pushed commit with its GitHub Actions
+run URL and conclusion. Include intermediate failures and cancellations, not only
+the final green commit. For a failure, identify the failing job/step and error,
+and the later commit that fixes it. A superseded cancellation is not proof of
+passing: link the completed verification for the final head. Reports also include
+pasted local command output rather than replacing it with test-count summaries.
+
+For the original BATCH-01 series, `d24e997` failed the bundle/source consistency
+check (built assets were missing) and all Python jobs at Ruff E501 in
+`tests/test_repository_installer.py:721`. `92182d5` supplied the assets and fixed
+the bundle check, but still failed that Ruff line. `efa5597` wrapped the decorator
+and passed CI. Backend failures there occurred at **Lint**, before pytest.
