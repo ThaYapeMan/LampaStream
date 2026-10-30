@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { SliderField } from '@/components/SliderField'
+import { BarFalloffControl } from '@/components/BarFalloffControl'
 import { cn } from '@/lib/utils'
 import {
   ONSET_METHODS,
@@ -58,6 +59,7 @@ interface Draft {
   beat_latency_ms: string
   name: string
   spectrum_backend: string
+  bar_falloff_s: string
   onset_method: string
   bars: string
   lower_cutoff_freq: string
@@ -82,6 +84,7 @@ function defaultDraft(a?: Analyser | null): Draft {
     band_normalise: a?.band_normalise ?? ANALYSER_DEFAULTS.band_normalise,
     name: a?.name ?? '',
     spectrum_backend: a?.spectrum_backend ?? ANALYSER_DEFAULTS.spectrum_backend,
+    bar_falloff_s: String(a?.bar_falloff_s ?? .3),
     onset_method: a?.onset_method ?? ANALYSER_DEFAULTS.onset_method,
     bars: String(a?.bars ?? ANALYSER_DEFAULTS.bars),
     lower_cutoff_freq: String(a?.lower_cutoff_freq ?? ANALYSER_DEFAULTS.lower_cutoff_freq),
@@ -420,6 +423,7 @@ function AnalyserWorkspace({ analyser, couplings, onSaved, onDeleted, onCloned, 
       const body = {
         name: draft.name.trim() || 'Unnamed',
         spectrum_backend: draft.spectrum_backend,
+        bar_falloff_s: Number(draft.bar_falloff_s),
         onset_lookahead_frames: Number(draft.onset_lookahead_frames),
         onset_delta_abs: Number(draft.onset_delta_abs),
         onset_min_ioi_ms: Number(draft.onset_min_ioi_ms),
@@ -543,6 +547,13 @@ function AnalyserWorkspace({ analyser, couplings, onSaved, onDeleted, onCloned, 
           {/* ── LEFT: Audio / Spectrum ─────────────────────────────────── */}
           <div className="px-5 py-5 space-y-5">
             <ColumnHeading title="Audio / Spectrum" />
+            <div data-testid="section-bar-decay">
+              <BarFalloffControl value={Number(draft.bar_falloff_s)}
+                onChange={value => setDraft(d => ({ ...d, bar_falloff_s: String(value) }))}
+                disabled={draft.spectrum_backend === 'cavacore' || saving}
+                reason={draft.spectrum_backend === 'cavacore' ? 'V2 only; CAVA Core uses its own bar decay.' : undefined} />
+            </div>
+            <div className="h-px bg-border/30" />
 
             <div data-testid="section-spectrum-engine">
               <ConfigSection

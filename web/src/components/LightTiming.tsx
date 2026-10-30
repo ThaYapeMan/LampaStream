@@ -39,23 +39,25 @@ export function lightTimingState(current: PlayerLatency | null | undefined, stat
   return { state, applied } as const
 }
 
-export function LightTiming({ status, onOpenLatency, playersView = false, controls, footer }: { status: SocketStatus | null; onOpenLatency?: () => void; playersView?: boolean; controls?: React.ReactNode; footer?: React.ReactNode }) {
+export function LightTiming({ status, onOpenLatency, expertMode = false, playersView = false, controls, footer }: { expertMode?: boolean; status: SocketStatus | null; onOpenLatency?: () => void; playersView?: boolean; controls?: React.ReactNode; footer?: React.ReactNode }) {
   const metadata = usePlayerMetadata(!playersView)
   const id = useId()
   const accents: AccentFeatures = status ?? {}
-  const accentDisplay = <div aria-label="Live accents" className="text-xs space-y-1">
+  const accentDisplay = expertMode && <section aria-label="Live accents (diagnostics)" className="text-xs space-y-2">
+    <h3 className="font-medium">Live accents (diagnostics)</h3>
+    <p>Onset envelope</p>
     {(['all', 'bass', 'mid', 'treble'] as const).map(band => {
       const value = (band === 'all' ? accents.onset_envelope : accents[`onset_envelope_${band}`]) ?? 0
-      return <label key={band} className="flex items-center gap-2">{band}<meter aria-label={`${band} envelope`} min={0} max={1} value={value} /><output>{value.toFixed(2)}</output></label>
+      return <label key={band} className="flex items-center gap-2">{band}<meter aria-label={`Onset envelope ${band}`} min={0} max={1} value={value} /><output>{value.toFixed(2)}</output></label>
     })}
-    <p>{(accents.beat_events_per_second ?? 0).toFixed(1)} beats/s · {(accents.texture_events_per_second ?? 0).toFixed(1)} texture/s</p>
-    <p>AGC {(accents.agc_gain ?? 1).toFixed(2)}× · Trigger ratio {(accents.trigger_ratio ?? 0).toFixed(2)}</p>
+    <p><span title="beats/s = detected beat events per second">{(accents.beat_events_per_second ?? 0).toFixed(1)} beats/s</span> · <span title="texture/s = non-beat events per second">{(accents.texture_events_per_second ?? 0).toFixed(1)} texture/s</span></p>
+    <p className="flex flex-wrap gap-x-2"><span title="AGC = bass gain applied by the trigger's automatic gain control">AGC {(accents.agc_gain ?? 1).toFixed(2)}×</span> · <span className="inline-flex gap-1 whitespace-nowrap" title="Trigger ratio = current bass level relative to the trigger threshold (≥1 fires)">Trigger ratio <output data-testid="trigger-ratio">{accents.trigger_ratio != null && Number.isFinite(accents.trigger_ratio) ? accents.trigger_ratio.toFixed(2) : '—'}</output></span></p>
     <svg viewBox="0 0 200 20" className="h-5 w-full" role="img" aria-label="Beat grid">
       {(accents.beat_grid ?? []).slice(-16).map((beat, index) => <line key={`${beat.time}-${index}`} x1={index*12+8} x2={index*12+8} y1={beat.predicted ? 7 : 2} y2="18" stroke="currentColor" strokeDasharray={beat.predicted ? '2 2' : undefined} />)}
     </svg>
     <p data-testid="preview-clock">Preview {status?.preview_clock?.offset_ms == null ? 'unsynchronised' : `offset ${status.preview_clock.offset_ms.toFixed(1)} ms · RTT ${status.preview_clock.rtt_ms?.toFixed(1)} ms`}</p>
     <p>Accent <output data-testid="accent-value">{(accents.accent_value ?? 0).toFixed(2)}</output></p>
-  </div>
+  </section>
   const [open, setOpen] = useState(() => { try { return localStorage.getItem('lightTimingOpen') !== '0' } catch { return true } })
   const airplay = status?.active_player_type === 'AirPlay' || status?.light_timing?.status?.source === 'airplay'
   const mac = status?.timing_player_mac || status?.follow_target_mac || status?.sync_master

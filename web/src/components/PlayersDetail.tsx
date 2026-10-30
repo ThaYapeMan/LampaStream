@@ -142,10 +142,12 @@ function PlayerIcon({
   )
 }
 function TimingCard({
+  expertMode = false,
   row,
   onReload,
   onNowPlaying
 }: {
+  expertMode?: boolean
   row: PlayerRow
   onReload: () => Promise<void>
   onNowPlaying?: () => void
@@ -203,7 +205,7 @@ function TimingCard({
   }
   return (
     <div className="players-timing space-y-3">
-      <LightTiming
+      <LightTiming expertMode={expertMode}
         status={timingStatus}
         playersView
         controls={
@@ -254,6 +256,7 @@ function TimingCard({
   )
 }
 export function PlayersDetail({
+  expertMode = false,
   rows,
   selected,
   onSelect,
@@ -264,6 +267,7 @@ export function PlayersDetail({
   status,
   activePlayerId
 }: {
+  expertMode?: boolean
   rows: PlayerRow[]
   selected?: PlayerRow
   onSelect: (id: string) => void
@@ -447,7 +451,7 @@ export function PlayersDetail({
             </p>
           </CardContent>
         </Card>
-        <TimingCard
+        <TimingCard expertMode={expertMode}
           key={`timing-card:${selected.id}`}
           row={selected}
           onReload={onReload}

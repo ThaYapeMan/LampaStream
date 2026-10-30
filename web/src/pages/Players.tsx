@@ -69,7 +69,7 @@ function FormRow({ label, children }: { label: string; children: React.ReactNode
   )
 }
 
-export function Players({ activeCouplingId = null, status = null, selectedPlayer, onSelect, onNowPlaying }: { activeCouplingId?: string | null; status?: SocketStatus | null; selectedPlayer?: string | null; onSelect?: (id: string) => void; onNowPlaying?: () => void }) {
+export function Players({ expertMode = false, activeCouplingId = null, status = null, selectedPlayer, onSelect, onNowPlaying }: { expertMode?: boolean; activeCouplingId?: string | null; status?: SocketStatus | null; selectedPlayer?: string | null; onSelect?: (id: string) => void; onNowPlaying?: () => void }) {
   const metadata = usePlayerMetadata()
   const [latencies, setLatencies] = useState<PlayerLatency[]>([])
   const [selection, setSelection] = useState(() => { try { return localStorage.getItem('lampastream.selectedPlayer') || '' } catch { return '' } })
@@ -232,7 +232,7 @@ export function Players({ activeCouplingId = null, status = null, selectedPlayer
         <Button size="sm" onClick={openNew}>Add player</Button>
       </div>
       {error && <p role="alert" className="text-destructive text-sm">{error}</p>}
-      <PlayersDetail rows={rows} selected={selected} onSelect={select} onEdit={openEdit} onDelete={handleDelete} onReload={load} onNowPlaying={onNowPlaying} status={status} activePlayerId={activeCoupling?.player_id} />
+      <PlayersDetail expertMode={expertMode} rows={rows} selected={selected} onSelect={select} onEdit={openEdit} onDelete={handleDelete} onReload={load} onNowPlaying={onNowPlaying} status={status} activePlayerId={activeCoupling?.player_id} />
 
       <Dialog open={editorOpen} onOpenChange={(o) => { if (!o) setEditorOpen(false) }}>
         <DialogContent className="max-w-md max-h-[90dvh] overflow-y-auto">

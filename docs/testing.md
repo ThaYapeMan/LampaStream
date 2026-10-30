@@ -1036,3 +1036,25 @@ has its progress cache invalidated on activation. Only an actual receiver restar
 invalidates metadata/queued PCM. Application shutdown joins readers before closing
 sources; failed joins retain ownership for retry. Tests cover standby join timeout,
 blocked analysis retirement and cancellation during source acquisition.
+
+### Send-back 2 UI diagnostics
+
+The track-line BPM explanation appears directly below the track block in normal
+mode. Expert mode adds the detailed Analysis tempo line and the labelled “Live
+accents (diagnostics)” block in Light timing (including the Players view).
+Meters identify onset envelopes; event rates use events/second, AGC uses × gain,
+and Trigger ratio is displayed relative to its threshold (1 is the ratio gate;
+other trigger gates still apply). Missing/non-finite ratios display `—` and the
+label/value stay together on narrow layouts.
+
+Both source adapters already supplied trigger statistics on preview frames; the
+REST and changed-status WebSocket packets omitted them. They now expose the same
+generic `agc_gain`/`trigger_ratio` values, with null for unavailable measurements.
+No route-specific branch was added. The literal blank reported in the field
+cannot be reproduced from the deployed source/bundle: it previously defaulted to
+`0.00`; no matching field socket trace or screenshot was supplied. The new
+placeholder distinguishes unknown data from zero and prevents an empty read-out.
+
+Bar decay is now the first control in the saved Analysers workspace, before the
+frequency controls, and comes before Frequency cutoffs in the live Spectrum
+editor. Both use the existing `bar_falloff_s` API field and the same help text.

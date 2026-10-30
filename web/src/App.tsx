@@ -141,7 +141,7 @@ export default function App() {
                   <NowPlaying onOpenLatency={() => navigate('players', status?.timing_player_mac || status?.follow_target_mac || status?.sync_master)} onOpenEffect={id => { setEffectId(id); setActiveTab('effects') }} expertMode={expertMode} last_energy_input={last_energy_input} onOpenEnergyProfile={id => { setEnergyProfileId(id); setActiveTab('energy-profiles') }} colour={colour} channel_colours={channel_colours} onset={onset} outlinePulse={outlinePulse} onset_bass={onset_bass} onset_mid={onset_mid} onset_treble={onset_treble} mix={mix} sustained_energy={sustained_energy} loudness_momentary_lufs={loudness_momentary_lufs} bars={bars} normalised_bars={normalised_bars} status={status} connected={connected} />
                 )}
                 {activeTab === 'backup' && <Backup />}
-                {activeTab === 'players' && <Players activeCouplingId={status?.active_coupling_id ?? null} status={status} selectedPlayer={selectedPlayer} onSelect={id => navigate('players', id)} onNowPlaying={() => navigate('now-playing')} />}
+                {activeTab === 'players' && <Players expertMode={expertMode} activeCouplingId={status?.active_coupling_id ?? null} status={status} selectedPlayer={selectedPlayer} onSelect={id => navigate('players', id)} onNowPlaying={() => navigate('now-playing')} />}
                 {activeTab === 'zones' && <Zones activeCouplingId={status?.active_coupling_id ?? null} />}
 
               </div>

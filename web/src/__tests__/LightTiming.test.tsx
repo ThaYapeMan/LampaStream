@@ -195,3 +195,25 @@ it('uses live idle delay only for an active session, including zero', () => {
   expect(lightTimingState(current, { ...status(current), active_coupling_id: 'c', applied_delay_ms: undefined }).applied).toBe(800)
   expect(lightTimingState(current, status(current)).applied).toBe(2253)
 })
+
+it('hides live accents diagnostics in normal mode', () => {
+  render(<LightTiming status={status()} />)
+  expect(screen.queryByRole('heading', { name: 'Live accents (diagnostics)' })).toBeNull()
+  expect(screen.queryByTestId('trigger-ratio')).toBeNull()
+})
+
+it.each([false, true])('labels expert diagnostics and units in playersView=%s', playersView => {
+  render(<LightTiming expertMode playersView={playersView} status={{ ...status(), trigger_ratio: 1.23 }} />)
+  expect(screen.getByRole('heading', { name: 'Live accents (diagnostics)' })).toBeVisible()
+  expect(screen.getAllByRole('meter', { name: /Onset envelope/ })).toHaveLength(4)
+  expect(screen.getByTestId('trigger-ratio')).toHaveTextContent('1.23')
+  expect(screen.getByTitle('beats/s = detected beat events per second')).toBeVisible()
+  expect(screen.getByTitle('texture/s = non-beat events per second')).toBeVisible()
+  expect(screen.getByTitle("AGC = bass gain applied by the trigger's automatic gain control")).toHaveTextContent('×')
+  expect(screen.getByTitle('Trigger ratio = current bass level relative to the trigger threshold (≥1 fires)')).toHaveTextContent('Trigger ratio 1.23')
+})
+
+it.each([undefined, null, NaN, Infinity])('shows a placeholder for absent or invalid trigger ratio %s', trigger_ratio => {
+  render(<LightTiming expertMode status={{ ...status(), trigger_ratio }} />)
+  expect(screen.getByTestId('trigger-ratio')).toHaveTextContent('—')
+})

@@ -1591,7 +1591,8 @@ class CanonicalAnalysisPipeline:
             tempo_confidence=self._beat_fusion.clock.confidence,
             tempo_locked=self._beat_fusion.clock.locked,
             agc_gain=self._beat_fusion.trigger.primary.gain,
-            trigger_ratio=self._beat_fusion.trigger.primary.ratio,
+            trigger_ratio=(self._beat_fusion.trigger.primary.ratio
+                           / self._beat_fusion.trigger.primary.threshold),
             onset=onset,
             onset_strength=onset_strength,
             onset_bass=onset_bass,

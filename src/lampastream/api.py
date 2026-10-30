@@ -720,7 +720,10 @@ async def get_status(request: Request):
         "max": round(max(bars), 4) if bars else None,
         "n": len(bars),
     }
+    from .audible_preview import diagnostic_status
+    trigger_status = diagnostic_status(getattr(manager, 'preview_frame', {}))
     return {
+        **trigger_status,
         "version": _VERSION_STRING,
         "active_coupling_id": manager.active_coupling_id,
         "active_coupling_name": manager.active_coupling_name,

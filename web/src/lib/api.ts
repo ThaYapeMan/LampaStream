@@ -271,8 +271,8 @@ export interface AccentFeatures {
   beat_phase?: number
   beat_events_per_second?: number
   texture_events_per_second?: number
-  agc_gain?: number
-  trigger_ratio?: number
+  agc_gain?: number | null
+  trigger_ratio?: number | null
   beat_grid?: { time: number; predicted: boolean }[]
   audible_monotonic?: number | null
   channel_accent_lifts?: number[]

@@ -941,3 +941,17 @@ it('round-trips canonical band normalisation', async () => {
   expect(toggle).toBeEnabled()
   expect(toggle).toBeChecked()
 })
+
+describe('Bar decay', () => {
+  it('is the first section above frequency controls and saves the existing API key', async () => {
+    const user = await renderAndSelect()
+    const decay = screen.getByTestId('section-bar-decay')
+    const frequency = screen.getByTestId('section-freq-range')
+    expect(decay.compareDocumentPosition(frequency) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(decay.parentElement?.querySelector('[data-testid^="section-"]')).toBe(decay)
+    const input = within(decay).getByTestId('bar-falloff-seconds')
+    await user.clear(input); await user.type(input, '0.65'); await user.tab()
+    await user.click(screen.getByTestId('analyser-save-btn'))
+    expect(mapi.updateAnalyser).toHaveBeenLastCalledWith('a1', expect.objectContaining({ bar_falloff_s: .65 }))
+  })
+})

@@ -237,6 +237,8 @@ async def _preview_frames(websocket, player_manager):
                 # Rebase only when delivering a changed status, including first connect.
                 # The comparison uses the stable source anchor, not a ticking clock.
                 status_dict["track"] = track.for_delivery() if track is not None else None
+                from .audible_preview import diagnostic_status
+                status_dict.update(diagnostic_status(preview or diagnostics))
                 await websocket.send_json(status_dict)
                 last_status_json = status_json
 

@@ -159,3 +159,22 @@ it('shows unlocked confidence on the expert tempo line', async () => {
   await ready()
   expect(screen.getByTestId('tempo')).toHaveTextContent('Tempo 128 BPM · Unlocked · 42%')
 })
+
+it('shows the BPM note directly after the track block in normal mode', async () => {
+  const rendered = view()
+  await ready()
+  const note = screen.getByTestId('bpm-note')
+  expect(screen.getByTestId('track-block').nextElementSibling).toBe(note)
+  expect(note).toHaveClass('text-xs', 'text-muted-foreground', 'italic', 'leading-snug')
+  expect(note).toHaveTextContent('BPM is measured from the audio, not read from the track; it dims while the tempo clock is locking and settles once locked.')
+  rendered.rerender(<NowPlaying {...props} status={status} expertMode />)
+  expect(screen.queryByTestId('bpm-note')).toBeNull()
+})
+
+it('places live Bar decay before Frequency cutoffs', async () => {
+  view(); await ready()
+  fireEvent.click(screen.getByRole('button', { name: /Frequency range and bands/ }))
+  const decay = screen.getByRole('heading', { name: 'Bar decay' })
+  const cutoffs = screen.getByText('Frequency cutoffs')
+  expect(decay.compareDocumentPosition(cutoffs) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+})

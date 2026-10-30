@@ -251,6 +251,17 @@ class AudiblePreview:
         }
 
 
+def diagnostic_status(snapshot):
+    """Measured trigger statistics at the generic status boundary, unknown as null."""
+    snapshot = snapshot if isinstance(snapshot, dict) else {}
+    result = {}
+    for key in ('agc_gain', 'trigger_ratio'):
+        value = snapshot.get(key)
+        result[key] = (value if isinstance(value, (int, float)) and math.isfinite(value)
+                       else None)
+    return result
+
+
 def coalesce_messages(messages):
     """Merge already available socket bursts without delaying normal-route sends."""
     result = []

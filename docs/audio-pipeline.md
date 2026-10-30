@@ -125,7 +125,8 @@ reader before releasing it, including failed activation and retried teardown.
 - **AirPlay:** the pinned Shairport build enables metadata and writes a separate
   `/run/lampastream/airplay.metadata` FIFO, owned by `lampastream` with mode `0600`.
   `core/minm` and `core/asar` supply title and artist. `ssnc/prgr` gives
-  start/current/end RTP timestamps; differences use unsigned 32-bit wraparound
+  start/current/end RTP timestamps; differences use wrapping 32-bit coordinates
+  with a signed pre-roll anchor when current precedes start
   and 44,100 frames/second. Configured ten-second `phbt` updates correct position;
   pause/resume/end events control interpolation. See the upstream
   [metadata protocol](https://github.com/mikebrady/shairport-sync-metadata-reader).
@@ -135,8 +136,11 @@ position when sending a changed status, so browsers do not need a synchronized
 server clock. The UI interpolates locally only while playing and connected,
 clamps at known duration, and shows unknown values as `—`. This is track progress,
 not a measurement of lighting/audio latency. Metadata availability depends on
-what the sender provides; live streams may have no duration. Activating midway
-through an AirPlay track may require a subsequent sender metadata update.
+what the sender provides; live streams may have no duration. The manager retains
+one receiver reader and metadata cache in standby, so coupling switches preserve
+already-announced track anchors. If the application itself starts after the only
+progress announcement, a subsequent sender update is still needed; track origins
+are never invented from wall time.
 
 Local tests cover CLI subscriptions, dynamic targets, real FIFO reads, RTP wrap,
 pause/seek/end, bounded parsing, teardown, and generic UI rendering. Live LMS,

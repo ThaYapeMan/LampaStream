@@ -451,11 +451,12 @@ export function NowPlaying({ expertMode = false, colour, channel_colours, onset,
         transport={playerType === 'LMS' && couplingId && status?.follow_target_mac ? {
           couplingId, targetMac: status.follow_target_mac, targetName: status.follow_target_name || status.follow_target_mac,
         } : undefined} />
+      {!expertMode && <p data-testid="bpm-note" className="text-xs text-muted-foreground italic leading-snug">BPM is measured from the audio, not read from the track; it dims while the tempo clock is locking and settles once locked.</p>}
 
       {status?.active_coupling_id && <LightsRow key={status.active_coupling_id}
         couplingId={status.active_coupling_id} output={status.output_status} />}
 
-      <LightTiming status={status} onOpenLatency={onOpenLatency} />
+      <LightTiming status={status} onOpenLatency={onOpenLatency} expertMode={expertMode} />
 
       <Card data-testid="live-preview-card">
         <CardHeader className="pb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
@@ -559,6 +560,9 @@ export function NowPlaying({ expertMode = false, colour, channel_colours, onset,
               </span>}
             </button>
             <div id={tuningId} hidden={!tuningOpen} className="space-y-4">
+              <BarFalloffControl value={pendingFalloff} onChange={setFalloff}
+                disabled={applying || !falloffEnabled}
+                reason={activeAnalyser?.spectrum_backend === 'cavacore' ? 'V2 only; CAVA Core uses its own bar falloff.' : !activeAnalyser ? 'Analyser unavailable.' : undefined} />
               {[
                 { title: 'Frequency cutoffs', fields: [
                   { label: 'Low cut', value: lowSlider, hz: pendingLower, change: setLowSlider, commit: handleLowCommit, id: 'low-cut-hz' },
@@ -575,9 +579,7 @@ export function NowPlaying({ expertMode = false, colour, channel_colours, onset,
                   onChange={field.change} disabled={applying} inputHz={field.hz}
                   inputMin={20} inputMax={20000} onInputCommit={field.commit} inputTestId={field.id} />)}
               </div>)}
-              <BarFalloffControl value={pendingFalloff} onChange={setFalloff}
-                disabled={applying || !falloffEnabled}
-                reason={activeAnalyser?.spectrum_backend === 'cavacore' ? 'V2 only; CAVA Core uses its own bar falloff.' : !activeAnalyser ? 'Analyser unavailable.' : undefined} />
+
               <div className="flex flex-wrap items-center gap-3">
                 <Button size="sm" className="min-h-11" onClick={handleApply} disabled={applying || (!hasChanges && !hasBandChanges && !hasFalloffChanges)} data-testid="apply-cutoffs">
                   {applying ? 'Applying…' : 'Apply'}
