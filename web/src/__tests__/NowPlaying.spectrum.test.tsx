@@ -145,3 +145,17 @@ it('shows the stored response but disables both controls for CAVA Core', async (
   expect(screen.getByTestId('bar-falloff-seconds')).toHaveValue(.3)
   expect(screen.getByTestId('apply-cutoffs')).toBeEnabled()
 })
+
+it.each([false, true])('shows detailed tempo only in expert mode=%s', async expertMode => {
+  render(<NowPlaying {...props} expertMode={expertMode} status={{ ...status, tempo_bpm: 127.8, tempo_locked: true, tempo_confidence: .87 }} />)
+  await ready()
+  expect(screen.getByTestId('track-tempo')).toHaveTextContent('128 BPM')
+  if (expertMode) expect(screen.getByTestId('tempo')).toHaveTextContent('Tempo 128 BPM · Locked · 87%')
+  else expect(screen.queryByTestId('tempo')).toBeNull()
+})
+
+it('shows unlocked confidence on the expert tempo line', async () => {
+  render(<NowPlaying {...props} expertMode status={{ ...status, tempo_bpm: 128.2, tempo_locked: false, tempo_confidence: .42 }} />)
+  await ready()
+  expect(screen.getByTestId('tempo')).toHaveTextContent('Tempo 128 BPM · Unlocked · 42%')
+})
