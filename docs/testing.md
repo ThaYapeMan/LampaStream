@@ -952,3 +952,25 @@ second `beats` list is unnecessary. The logger labels predicted events
 The synthetic 128 BPM socket test checks 0.46875 s spacing ± one 10 ms hop on the
 timestamped route. Normal output presentation can be clamped to actual output
 send time; that cadence can exceed one analysis hop and remains unchanged.
+
+### BATCH-01 send-back: reproducible AirPlay sender
+
+Install with `sudo scripts/install-ab-tools.sh` (or `--quiet`). The installer uses
+`scripts/requirements-ab-tools.txt`, the fully resolved lock generated from the
+v0.18.0 release-tested direct versions in `requirements-ab-tools.in`.
+`srptools==1.0.1` preserves the positional session API required by that release;
+2.x changes it. pyatv comes from the fixed fork commit recorded in both files.
+No runtime monkey patch or receiver configuration/build change is used.
+
+The fork reads `/info` statusFlags: only bit 7 permits `/pair-pin-start` for a
+transient session. It uses RTSP/1.0 control framing for transient pairing, matching
+the receiver's control protocol. Real-device end-to-end verification is still
+required; unit coverage verifies PIN/no-PIN exchange ordering and SRP step1.
+
+`scripts/ab-airplay-smoke.sh '<receiver-id>'` captures `atvremote --debug`, prints
+it on failure, and prints the last 50 local shairport-sync journal lines if the
+unit exists. Exit 2 means discovery/handshake/stream failure; exit 3 means the
+sender completed but no beats were reported. Other setup/socket failures exit 1.
+PIN prompts remain interactive. A Sonos-targeted stream may play successfully
+while the local Shairport analysis socket sees no PCM; in that case exit 3 is
+expected and distinguishes that from authentication failure.

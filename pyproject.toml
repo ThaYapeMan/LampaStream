@@ -18,7 +18,11 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-ab-tools = ["pyatv==0.18.0", "websockets>=13,<16"]
+ab-tools = [
+    "pyatv @ git+https://github.com/ThaYapeMan/pyatv.git@c5ee1f4281ccf129f5785fff8a2fc162916b18b4",
+    "srptools==1.0.1",
+    "websockets==15.0.1",
+]
 dev = [
     "pytest>=8.0",
     "pytest-xdist>=3.6",
@@ -36,6 +40,9 @@ lampastream = "lampastream.app:main"
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [tool.hatch.build.hooks.custom]
 

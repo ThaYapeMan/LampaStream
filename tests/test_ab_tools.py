@@ -142,3 +142,52 @@ def test_capture_requires_explicit_room_before_side_effects(monkeypatch):
     monkeypatch.delenv("AB_LMS_PLAYER", raising=False)
     with pytest.raises(RuntimeError, match="AB_LMS_PLAYER is required"):
         tool.capture("song", "receiver", None)
+
+
+@pytest.mark.parametrize("sender_exit,beats,code", [(1, 0, 2), (0, 0, 3)])
+def test_smoke_distinguishes_handshake_and_no_beats(
+    tmp_path, monkeypatch, sender_exit, beats, code
+):
+    tool = load("ab-tools")
+    monkeypatch.setattr(tool, "assert_route", lambda _: None)
+    monkeypatch.setattr(tool, "CREDS", tmp_path / "creds")
+    monkeypatch.setattr(tool, "observe", lambda *_: asyncio.sleep(0, result=beats))
+    diagnostics = Mock()
+    monkeypatch.setattr(tool, "smoke_diagnostics", diagnostics)
+
+    def run(args, **kwargs):
+        return SimpleNamespace(
+            stdout="Name: Receiver\nIdentifiers: receiver\n"
+            "Protocol: AirPlay, Credentials: None, Pairing: NotNeeded\n",
+            returncode=0,
+        )
+
+    monkeypatch.setattr(tool.subprocess, "run", run)
+    process = Mock()
+    process.wait.return_value = sender_exit
+    process.poll.return_value = sender_exit
+    spawn = Mock(return_value=process)
+    monkeypatch.setattr(tool.subprocess, "Popen", spawn)
+    with pytest.raises(tool.SmokeFailure) as error:
+        tool.smoke("receiver")
+    assert error.value.exit_code == code
+    assert "--debug" in spawn.call_args.args[0]
+    diagnostics.assert_called_once()
+
+
+def test_smoke_diagnostics_includes_debug_and_local_journal(tmp_path, monkeypatch, capsys):
+    tool = load("ab-tools")
+    log = tmp_path / "debug.log"
+    log.write_text("POST /pair-setup RTSP/1.0 -> failure")
+    monkeypatch.setattr(tool.shutil, "which", lambda _: "/bin/test")
+
+    def run(args, **kwargs):
+        if args[0] == "journalctl":
+            print("receiver journal diagnostic", file=kwargs["stdout"])
+            assert args[-3:] == ["50", "--no-pager"] or "-n" in args
+        return SimpleNamespace(returncode=0)
+
+    monkeypatch.setattr(tool.subprocess, "run", run)
+    tool.smoke_diagnostics(log)
+    text = capsys.readouterr().err
+    assert "POST /pair-setup" in text and "receiver journal diagnostic" in text

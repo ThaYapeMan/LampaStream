@@ -34,7 +34,10 @@ install_tools() {
     [[ -x /opt/lampastream/.venv/bin/python ]] || { echo 'Install LampaStream first' >&2; return 1; }
     apt-get update
     apt-get install -y --no-install-recommends ffmpeg tcpdump
-    /opt/lampastream/.venv/bin/python -m pip install 'pyatv==0.18.0' 'websockets>=13,<16'
+    local script_dir
+    script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+    /opt/lampastream/.venv/bin/python -m pip install -r "$script_dir/requirements-ab-tools.txt"
+    /opt/lampastream/.venv/bin/python -m pip check
     install -d -m 0700 /var/lib/lampastream/ab-tools
 }
 if [[ $QUIET == 1 ]]; then

@@ -790,3 +790,23 @@ def test_ab_tools_installer_output(tmp_path, quiet, broken):
 def test_ab_shell_entrypoints_syntax():
     for name in ('install-ab-tools.sh', 'ab-airplay-smoke.sh', 'ab-capture.sh'):
         subprocess.run(['bash', '-n', str(ROOT/'scripts'/name)], check=True)
+
+
+def test_ab_tools_pinned_set_resolves(tmp_path):
+    """Resolve the deployable fork/lock without installing into the service venv."""
+    import shutil
+
+    requirements = ROOT/'scripts/requirements-ab-tools.txt'
+    text = requirements.read_text()
+    assert 'srptools==1.0.1' in text
+    assert re.search(r'pyatv @ git\+https://github.com/ThaYapeMan/pyatv.git@[0-9a-f]{40}', text)
+    if compiler := shutil.which('uv'):
+        command = [compiler, 'pip', 'compile', str(requirements), '--python-version',
+                   f'{sys.version_info.major}.{sys.version_info.minor}',
+                   '--output-file', str(tmp_path/'resolved.txt')]
+    else:
+        command = [sys.executable, '-m', 'pip', 'install', '--dry-run', '--ignore-installed',
+                   '-r', str(requirements), '--report', str(tmp_path/'resolved.json')]
+    result = subprocess.run(command, capture_output=True, text=True)
+    print('Pinned sender resolution:\n'+result.stdout+result.stderr)
+    assert result.returncode == 0, result.stdout+result.stderr

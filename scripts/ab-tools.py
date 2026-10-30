@@ -23,7 +23,7 @@ from urllib.request import urlopen
 import websockets
 
 CREDS = Path("/var/lib/lampastream/ab-tools/airplay.creds")
-URL = "ws://127.0.0.1:8420/ws/preview"
+URL = os.environ.get("AB_PREVIEW_URL", "ws://127.0.0.1:8420/ws/preview")
 HOST = "192.168.178.23"
 HERE = Path(__file__).resolve().parent
 
@@ -117,71 +117,125 @@ def stop(process):
                 process.wait()
 
 
+class SmokeFailure(RuntimeError):
+    def __init__(self, message, code):
+        super().__init__(message)
+        self.exit_code = code
+
+
+def smoke_diagnostics(log_path):
+    print("=== pyatv debug log ===", file=sys.stderr)
+    print(log_path.read_text(errors="replace"), file=sys.stderr)
+    # A remote sender host may not have Shairport; only query a local unit.
+    if shutil.which("journalctl") and shutil.which("systemctl"):
+        unit = subprocess.run(["systemctl", "cat", "shairport-sync"], capture_output=True)
+        if unit.returncode == 0:
+            print("=== shairport-sync journal (last 50 lines) ===", file=sys.stderr)
+            subprocess.run(
+                ["journalctl", "-u", "shairport-sync", "-n", "50", "--no-pager"],
+                stdout=sys.stderr,
+                stderr=sys.stderr,
+                check=False,
+            )
+
+
 def smoke(receiver):
     assert_route("AirPlay")
     os.umask(0o077)
     CREDS.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     CREDS.parent.chmod(0o700)
-    # Scan prints name, identifiers and services; credentials are not included in artifacts.
-    run("atvremote", "scan")
-    scan = run(*sender(receiver, "scan"), capture=True).stdout
-    if receiver not in scan:
-        raise RuntimeError(f"Receiver {receiver} was not found")
-    # Pair only advertised protocols requiring it; pyatv persists the storage file.
-    for line in scan.splitlines():
-        if "Protocol:" not in line:
-            continue
-        protocol = (
-            "airplay"
-            if "Protocol: AirPlay," in line
-            else "raop"
-            if "Protocol: RAOP," in line
-            else None
-        )
-        if (
-            protocol
-            and "Credentials: None" in line
-            and ("Pairing: Mandatory" in line or "Pairing: Optional" in line)
-        ):
-            run(*sender(receiver, "--protocol", protocol, "pair"))
-    # Save storage also for receivers that advertise no pairing requirement.
-    run(*sender(receiver, "scan"), stdout=subprocess.DEVNULL)
-    if not CREDS.exists():
-        raise RuntimeError("pyatv did not create credential storage; pairing must be completed")
-    CREDS.chmod(0o600)
     with tempfile.TemporaryDirectory(prefix="ab-smoke-") as work:
-        pulse = Path(work) / "pulse.wav"
-        run(
-            "ffmpeg",
-            "-hide_banner",
-            "-loglevel",
-            "error",
-            "-y",
-            "-f",
-            "lavfi",
-            "-i",
-            "sine=frequency=60:sample_rate=44100:duration=10",
-            "-af",
-            "volume=if(lt(mod(t\\,0.5)\\,0.1)\\,1\\,0):eval=frame",
-            str(pulse),
-        )
+        log_path = Path(work) / "pyatv-debug.log"
+        log_path.touch()
+        with log_path.open("w") as debug:
 
-        # Subscribe before launching the stream, so the first pulse is observable.
-        async def test():
-            monitor = asyncio.create_task(observe(10, require_beats=True))
-            await asyncio.sleep(0.2)
-            process = subprocess.Popen(sender(receiver, f"stream_file={pulse}"))
+            def remote(*command, show=False):
+                result = subprocess.run(
+                    sender(receiver, "--debug", *command),
+                    text=True,
+                    stdout=subprocess.PIPE,
+                    stderr=debug,
+                )
+                debug.write(result.stdout)
+                debug.flush()
+                if show:
+                    print(result.stdout, flush=True)
+                if result.returncode:
+                    raise SmokeFailure("AirPlay discovery/pairing failed", 2)
+                return result.stdout
+
             try:
-                await monitor
-                result = await asyncio.to_thread(process.wait, 20)
-                if result:
-                    raise RuntimeError(f"AirPlay sender exited {result}")
-            finally:
-                stop(process)
-                monitor.cancel()
-                await asyncio.gather(monitor, return_exceptions=True)
+                scan = remote("scan", show=True)
+                if receiver.lower() not in scan.lower():
+                    raise SmokeFailure(f"Receiver {receiver} was not found", 2)
+                for line in scan.splitlines():
+                    protocol = (
+                        "airplay"
+                        if "Protocol: AirPlay," in line
+                        else "raop"
+                        if "Protocol: RAOP," in line
+                        else None
+                    )
+                    if (
+                        protocol
+                        and "Credentials: None" in line
+                        and ("Pairing: Mandatory" in line or "Pairing: Optional" in line)
+                    ):
+                        # Inherit stdin for interactive PIN entry, retain full diagnostics.
+                        result = subprocess.run(
+                            sender(receiver, "--debug", "--protocol", protocol, "pair"),
+                            stdout=None,
+                            stderr=debug,
+                        )
+                        if result.returncode:
+                            raise SmokeFailure("AirPlay pairing failed", 2)
+                if CREDS.exists():
+                    CREDS.chmod(0o600)
+                pulse = Path(work) / "pulse.wav"
+                run(
+                    "ffmpeg",
+                    "-hide_banner",
+                    "-loglevel",
+                    "error",
+                    "-y",
+                    "-f",
+                    "lavfi",
+                    "-i",
+                    "sine=frequency=60:sample_rate=44100:duration=10",
+                    "-af",
+                    "volume=if(lt(mod(t\\,0.5)\\,0.1)\\,1\\,0):eval=frame",
+                    str(pulse),
+                )
 
-        asyncio.run(test())
+                async def test():
+                    monitor = asyncio.create_task(observe(10))
+                    await asyncio.sleep(0.2)
+                    process = subprocess.Popen(
+                        sender(receiver, "--debug", f"stream_file={pulse}"),
+                        stdout=debug,
+                        stderr=debug,
+                    )
+                    try:
+                        try:
+                            result = await asyncio.to_thread(process.wait, 30)
+                        except subprocess.TimeoutExpired:
+                            raise SmokeFailure("AirPlay handshake/stream timed out", 2) from None
+                        if result:
+                            raise SmokeFailure(
+                                f"AirPlay handshake/stream failed (exit {result})", 2
+                            )
+                        if not await monitor:
+                            raise SmokeFailure("Stream ran but no beats detected on the socket", 3)
+                    finally:
+                        stop(process)
+                        monitor.cancel()
+                        await asyncio.gather(monitor, return_exceptions=True)
+
+                asyncio.run(test())
+            except BaseException:
+                debug.flush()
+                smoke_diagnostics(log_path)
+                raise
     print("Beats detected: yes — owner must verify lights react")
 
 
@@ -399,7 +453,7 @@ def main():
         else:
             capture(args.search, args.receiver, args.duration)
     except (Exception, KeyboardInterrupt) as error:
-        parser.exit(1, f"ERROR: {error or 'interrupted'}\n")
+        parser.exit(getattr(error, "exit_code", 1), f"ERROR: {error or 'interrupted'}\n")
 
 
 if __name__ == "__main__":
