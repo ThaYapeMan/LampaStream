@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 import { setupPreview } from './preview-fixture'
 
 for (const theme of ['light', 'dark']) {
-  test(`option B player icon geometry in ${theme}`, async ({ page }) => {
+  test(`option B player icon geometry in ${theme}`, async ({ page }, info) => {
     await setupPreview(page)
     let longNames = false
     const longName = 'piCorePlayer ' + 'long room name '.repeat(30)
@@ -71,9 +71,9 @@ for (const theme of ['light', 'dark']) {
     }
     await page.getByRole('option', { name: /LampaStream LMS/ }).click()
     await expect(page.locator('[data-player-icon="LMS"]').last()).toBeVisible()
-    await page.screenshot({ path: `../docs/designs/players-icons-b-lms-${theme}.png`, fullPage: true })
+    await page.screenshot({ path: info.outputPath(`players-icons-b-lms-${theme}.png`), fullPage: true })
     await sonos.click()
-    await page.screenshot({ path: `../docs/designs/players-icons-b-${theme}.png`, fullPage: true })
+    await page.screenshot({ path: info.outputPath(`players-icons-b-${theme}.png`), fullPage: true })
     console.log(theme, JSON.stringify(measurements))
     longNames = true
     await page.reload()

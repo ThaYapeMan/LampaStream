@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 import { setupPreview, geometry } from './preview-fixture'
 
 for (const theme of ['light', 'dark']) for (const kind of ['Sonos', 'LMS']) {
-  test(`bare timing glyphs ${kind} ${theme}`, async ({ page }) => {
+  test(`bare timing glyphs ${kind} ${theme}`, async ({ page }, info) => {
     const name = kind === 'Sonos' ? 'Study (Sonos)' : 'LampaStream LMS'
     const status = (name: string) => ({ follow_target_mac: 'fixture', follow_target_name: name,
       light_timing: { player_mac: 'fixture', name, strategy: 'auto', trim_ms: 0,
@@ -51,7 +51,7 @@ for (const theme of ['light', 'dark']) for (const kind of ['Sonos', 'LMS']) {
     expect(await geometry(page)).toEqual(currentGeometry)
     await diagram.evaluate((el, saved) => { el.innerHTML = saved.html; el.className = saved.classes }, original)
     await page.emulateMedia({ reducedMotion: 'reduce' })
-    const path = `../docs/designs/light-timing-icons${kind === 'LMS' ? '-lms' : ''}-${theme}.png`
+    const path = info.outputPath(`light-timing-icons${kind === 'LMS' ? '-lms' : ''}-${theme}.png`)
     await card.screenshot({ path })
     console.log(JSON.stringify({ theme, kind, screenshot: path, cardHeight: currentHeight, previousHeight, heightDelta: currentHeight - previousHeight, ...measurements }))
     const longName = name + ' long room name'.repeat(30)

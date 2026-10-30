@@ -8,7 +8,7 @@ const discoveries = [
 ]
 
 for (const theme of ['light', 'dark']) {
-  test(`suffix-free Sonos list, Follow picker and timing alias in ${theme}`, async ({ page }) => {
+  test(`suffix-free Sonos list, Follow picker and timing alias in ${theme}`, async ({ page }, info) => {
     await setupPreview(page, () => ({
       follow_target_mac: 'study', follow_target_name: 'Study', timing_player_name: 'Favourite room', applied_delay_ms: 1000,
       light_timing: { player_mac: 'study', name: 'Favourite room', strategy: 'auto', trim_ms: 0,
@@ -55,6 +55,6 @@ for (const theme of ['light', 'dark']) {
       const box = await glyph.boundingBox()
       expect([box!.width, box!.height]).toEqual([17, 17])
     }
-    await page.screenshot({ path: `../docs/designs/player-icons-no-suffix-${theme}.png`, fullPage: true })
+    await page.screenshot({ path: info.outputPath(`player-icons-no-suffix-${theme}.png`), fullPage: true })
   })
 }

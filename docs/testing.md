@@ -1058,3 +1058,36 @@ placeholder distinguishes unknown data from zero and prevents an empty read-out.
 Bar decay is now the first control in the saved Analysers workspace, before the
 frequency controls, and comes before Frequency cutoffs in the live Spectrum
 editor. Both use the existing `bar_falloff_s` API field and the same help text.
+
+## One gated master push per ticket
+
+Commit each part locally, then push **once per ticket**, unless the ticket
+explicitly overrides this rule. Before any master push, run the complete local
+gate in order; a failure means no push:
+
+```bash
+ruff check .
+python3 scripts/build_native.py
+LAMPASTREAM_REQUIRE_NATIVE=1 python3 -m pytest -v
+npm --prefix web test
+npm --prefix web run test:e2e
+npm --prefix web run build
+```
+
+`scripts/check-before-push.sh` runs these checks, stops at the first failure, and
+checks that the final production build matches the committed bundle. Browser
+tests serve that bundle; if stale, the gate fails and it must be committed before
+rerunning. Browser screenshots go to ignored Playwright test results, leaving
+tracked design evidence unchanged. The script prefers this checkout's `.venv`.
+
+Run `scripts/install-git-hooks.sh` once per checkout. It installs a `pre-push` hook
+for `refs/heads/master` only, including when an existing `core.hooksPath` is used,
+and preserves the pre-commit setup. The hook requires the checked-out, clean
+tracked HEAD and executes the full gate before allowing the ref update. The
+hook's gate output is the mandatory pre-push gate output for the report; it need
+not also be run a second time by hand. Git supports `--no-verify`, but bypassing
+the hook is **not allowed in Codex sessions**. Do not push around a failing gate.
+
+Every report includes the full gate output, summary and pushed-head CI link. A CI
+failure on master is a gate defect: identify the missed step and fix the gate
+before the next push. Superseded per-part pushes are no longer the default.

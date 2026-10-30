@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+ROOT=$(git rev-parse --show-toplevel)
+MASTER=0
+while read -r local_ref local_sha remote_ref remote_sha; do
+    if [[ "$remote_ref" == refs/heads/master ]]; then
+        MASTER=1
+        [[ "$local_sha" == "$(git rev-parse HEAD)" ]] || {
+            echo 'Master gate requires pushing the checked-out HEAD.' >&2; exit 1;
+        }
+    fi
+done
+if [[ "$MASTER" == 1 ]]; then
+    git diff --quiet && git diff --cached --quiet || {
+        echo 'Commit tracked changes before the master push gate.' >&2; exit 1;
+    }
+    exec "$ROOT/scripts/check-before-push.sh"
+fi
