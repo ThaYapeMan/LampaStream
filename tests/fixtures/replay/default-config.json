@@ -44,6 +44,8 @@
         "analyser_id": "analyser",
         "enabled": true,
         "energy_profile_id": "energy",
+        "follow_player_mac": null,
+        "follow_player_name": "",
         "id": "coupling",
         "manual_energy_profile_id": "",
         "manual_palette_id": "",
