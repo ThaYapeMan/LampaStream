@@ -743,7 +743,7 @@ an inline error.
 **Frequency range and bands** starts collapsed and remembers its disclosure state
 per browser. Its summary uses the live frequency values and the saved bar falloff
 (e.g. **falloff 0.30 s**). Expand it to edit Low cut, High cut, Bass / mid and
-Mid / treble, followed by **Response → Bar falloff**. The slider and number field
+Mid / treble, followed by **Bar decay → Decay time**. The slider and number field
 use seconds from **Crisp · 0.05 s** to **Smooth · 1.00 s**. Shorter falloff drops
 bars faster after a hit; longer falloff makes the lights smoother.
 
@@ -841,7 +841,7 @@ uses Intensity and Fall. Palette-step, spatial routing and accent-off remain
 available. `onset_lead_s` advances output within the clock’s available lookahead independently
 of Beat latency.
 
-Now Playing shows BPM, lock and confidence. Light timing shows separate beat and
+Now Playing shows integer BPM right-aligned on the artist/title line, muted until locked. Light timing shows separate beat and
 texture rates, AGC gain, trigger ratio and beat ticks; dashed ticks are predictions.
 Downbeat/bar position is an estimate from recent bass accents.
 

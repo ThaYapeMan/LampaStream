@@ -14,11 +14,11 @@ export function BarFalloffControl({ value, onChange, disabled, reason }: {
     setText(next.toFixed(2)); onChange(next)
   }
   return <section className="space-y-2" data-testid="bar-falloff-response">
-    <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Response</h3>
-    <label htmlFor={id} className="block text-sm">Bar falloff</label>
+    <h3 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Bar decay</h3>
+    <label htmlFor={id} className="block text-sm">Decay time</label>
     <div className="flex min-w-0 items-center gap-3">
       <Slider className="min-h-11 flex-1 data-[disabled]:opacity-50" min={.05} max={1} step={.01} value={[value]}
-        onValueChange={([next]) => onChange(next)} disabled={disabled} thumbLabel="Bar falloff"
+        onValueChange={([next]) => onChange(next)} disabled={disabled} thumbLabel="Decay time"
         aria-describedby={`${id}-help`} data-testid="bar-falloff-slider" />
       <div className="relative shrink-0">
         <Input id={id} type="number" min={.05} max={1} step={.01} value={text}
@@ -33,7 +33,7 @@ export function BarFalloffControl({ value, onChange, disabled, reason }: {
       <span>Crisp · 0.05 s</span><span>Smooth · 1.00 s</span>
     </div>
     <p id={`${id}-help`} className="text-xs text-muted-foreground">
-      How quickly a bar drops after a hit. Shorter makes the lights crisper; longer makes them smoother.
+      How quickly each band falls back after its sound stops. Shapes the spectrum that the preview and the effects see. The lights' own response is set in the Energy Profile.
       {reason && <span className="block mt-1">{reason}</span>}
     </p>
   </section>

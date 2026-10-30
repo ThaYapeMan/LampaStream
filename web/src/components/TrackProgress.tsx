@@ -10,8 +10,10 @@ function clock(seconds: number | null): string {
 }
 
 /** Generic delivery-time anchor; transport is an optional, separate capability. */
-export function TrackProgress({ track, connected, transport, showControls = !!transport }: {
+export function TrackProgress({ track, connected, transport, tempoBpm, tempoLocked, showControls = !!transport }: {
   track: TrackPosition | null
+  tempoBpm?: number | null
+  tempoLocked?: boolean
   connected: boolean
   transport?: { couplingId: string; targetName: string; targetMac?: string }
   showControls?: boolean
@@ -89,8 +91,8 @@ export function TrackProgress({ track, connected, transport, showControls = !!tr
     <div data-testid="track-block" className="w-full space-y-2.5 rounded-xl border border-border bg-card px-4 pt-3 pb-2.5 backdrop-blur-sm">
       <div data-testid="track-title" className="flex min-w-0 items-baseline gap-1 text-sm"
         title={[track?.title || 'Track information unavailable', track?.artist].filter(Boolean).join(' — ')}>
-        <span className="min-w-0 truncate font-medium text-foreground">{track?.title || 'Track information unavailable'}</span>
-        {track?.artist && <span className="shrink-0 max-w-[45%] truncate text-muted-foreground"> — <span>{track.artist}</span></span>}
+        <span className="min-w-0 truncate font-medium text-foreground">{track?.artist && <><span>{track.artist}</span> — </>}<span className="truncate font-medium">{track?.title || 'Track information unavailable'}</span></span>
+        {!!tempoBpm && tempoBpm > 0 && <span data-testid="track-tempo" className={`ml-auto shrink-0 text-right tabular-nums ${tempoLocked ? 'text-foreground' : 'text-muted-foreground'}`}>{Math.round(tempoBpm)} BPM</span>}
       </div>
       <div data-testid="track-progress-row" className="flex items-center gap-3 text-xs tabular-nums text-muted-foreground">
         <span className="w-12 shrink-0 text-right" data-testid="track-elapsed">{clock(elapsed)}</span>

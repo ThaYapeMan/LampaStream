@@ -108,7 +108,7 @@ it('drafts response, applies live, resets to saved, restores 0.30 and updates su
   expect(input).toHaveValue(.6)
   expect((input as HTMLInputElement).value).toBe('0.60')
   fireEvent.change(input, { target: { value: '0.10' } }); fireEvent.blur(input)
-  expect(screen.getByRole('slider', { name: 'Bar falloff' })).toHaveAttribute('aria-valuenow', '0.1')
+  expect(screen.getByRole('slider', { name: 'Decay time' })).toHaveAttribute('aria-valuenow', '0.1')
   fireEvent.click(screen.getByTestId('reset-cutoffs')); expect(input).toHaveValue(.6)
   fireEvent.click(screen.getByTestId('restore-defaults-cutoffs')); expect(input).toHaveValue(.3)
   // Reset the frequency drafts; only response should be sent for this Apply.
@@ -138,7 +138,7 @@ it('shows the stored response but disables both controls for CAVA Core', async (
   view(); await ready(); fireEvent.click(screen.getByRole('button', { name: /Frequency range and bands/ }))
   expect(screen.getByTestId('bar-falloff-seconds')).toHaveValue(.8)
   expect(screen.getByTestId('bar-falloff-seconds')).toBeDisabled()
-  expect(screen.getByRole('slider', { name: 'Bar falloff' })).toHaveAttribute('data-disabled')
+  expect(screen.getByRole('slider', { name: 'Decay time' })).toHaveAttribute('data-disabled')
   expect(screen.getByText('V2 only; CAVA Core uses its own bar falloff.')).toBeVisible()
   expect(screen.getByText('falloff stored for V2')).toBeVisible()
   fireEvent.click(screen.getByTestId('restore-defaults-cutoffs'))
