@@ -657,13 +657,13 @@ class Replay:
                     event_row.pop(key)
             event_row["bands"] = sorted(event_row["bands"])
             event_row["id"] = ":".join(map(str, event_row["id"]))
-            event_row.update({key: value for key, value in data.items() if key != "event"})
+            event_row.update({key: value for key, value in data.items()
+                              if key not in ("event", "detected_audible_monotonic")})
             event_rows.append(event_row)
         write_csv(out / "events.csv", event_rows, [
             "id", "epoch", "candidate_sample", "availability_sample", "lookahead_frames",
             "strength", "strength_raw", "confidence", "bands", "dominant_band",
             "play_monotonic", "received_monotonic", "disposition", "event_time",
-            "detected_audible_monotonic",
             "first_render_over_half_s", "first_send_s"] + ([] if self.args.diagnostic_onsets else
             ["band", "kind", "on_beat", "beat_phase", "bar_position", "predicted"]))
         write_csv(out / "energy.csv", self.energy)
