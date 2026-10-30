@@ -25,8 +25,17 @@ test('live energy source patching and unchanged preview geometry', async ({ page
   const widths = await Promise.all([0,1,2,3].map(async i => (await radios.nth(i).boundingBox())!.width))
   expect(Math.max(...widths)-Math.min(...widths)).toBeLessThanOrEqual(.02)
   const boxes = await geometry(page) as Boxes
-  for (const key of ['track-block', 'colour-preview-size', 'floorplan-preview-size', 'status'] as const) expect(boxes[key]).toEqual(baseline[key])
-  // Expert controls only move the later spectrum card by their added height.
+  // Expert mode deliberately adds tempo/diagnostics and removes the BPM note.
+  // Changing mode may move the preview vertically; its sizes stay unchanged.
+  for (const key of ['track-block', 'colour-preview-size', 'floorplan-preview-size', 'status'] as const) {
+    expect(boxes[key].x).toBe(baseline[key].x)
+    expect(boxes[key].width).toBe(baseline[key].width)
+    expect(boxes[key].height).toBe(baseline[key].height)
+  }
+  await expect(page.getByTestId('tempo')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Live accents (diagnostics)' })).toBeVisible()
+  await expect(page.getByTestId('bpm-note')).toHaveCount(0)
+  // Within expert mode, energy-source edits must preserve preview geometry.
   const controlBox = (await controls.boundingBox())!
   const spectrumTop = () => page.getByTestId('spectrum-panel').evaluate(el => el.getBoundingClientRect().top + window.scrollY)
   const spectrumY = [boxes['spectrum-panel'].y]
@@ -35,7 +44,7 @@ test('live energy source patching and unchanged preview geometry', async ({ page
   expect(boxes['spectrum-panel'].width).toBe(baseline['spectrum-panel'].width)
   expect(boxes['spectrum-panel'].height).toBe(baseline['spectrum-panel'].height)
   expect(boxes['spectrum-panel'].y - baseline['spectrum-panel'].y).toBeGreaterThan(0)
-  expect(boxes['spectrum-panel'].y - baseline['spectrum-panel'].y).toBeLessThanOrEqual(controlBox.height - standardHeight + 1)
+  expect(controlBox.height).toBeGreaterThan(standardHeight)
   const blend = (await page.getByTestId('energy-blend').boundingBox())!
   const session = (await page.getByTestId('session-diagnostics').boundingBox())!
   expect(blend.y).toBeGreaterThan(controlBox.y)

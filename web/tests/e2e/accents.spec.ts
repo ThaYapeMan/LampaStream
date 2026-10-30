@@ -16,9 +16,11 @@ test('Accent mode, amount and advanced controls PATCH and persist; live envelope
   })
   await page.reload()
   await expect(page.getByRole('link', { name: 'Accent test', exact: true }).first()).toBeVisible()
+  await expect(page.getByTestId('accent-value')).toHaveCount(0)
+  await page.getByLabel('Editor mode').selectOption('expert')
   socket().send(JSON.stringify({ type: 'frame', colour: { r: 0, g: 0, b: 0 },
     onset_envelope: .8, onset_envelope_bass: .7, onset_envelope_mid: .4, onset_envelope_treble: .2, accent_value: .28 }))
-  await expect(page.getByRole('meter', { name: 'bass envelope', exact: true })).toHaveAttribute('value', '0.7')
+  await expect(page.getByRole('meter', { name: 'Onset envelope bass', exact: true })).toHaveAttribute('value', '0.7')
   await expect(page.getByTestId('accent-value')).toHaveText('0.28')
   await page.getByRole('link', { name: 'Accent test', exact: true }).first().click()
   await page.getByText('Advanced', { exact: true }).click()
