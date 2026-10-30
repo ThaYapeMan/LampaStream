@@ -185,6 +185,18 @@ cleanliness. Separate cases must refuse genuine parent, submodule and nested
 submodule edits and preserve them. `--check` remains a read-only verification;
 `scripts/update.sh` pulls and delegates this ordering to the installer.
 
+`tests/test_repository_installer.py::test_installer_output_contract` executes the
+installer's option parsing and output lifecycle with host probes substituted.
+It checks quiet `--check`, `--check --verbose`, and full diagnostics on failure;
+no target service or owner device is contacted. The retirement contract rejects
+Squeezelite code in the installer and preserves manifest-before-switch and
+switch-before-restart ordering. Run the installer checks with:
+
+```sh
+.venv/bin/python -m pytest -q tests/test_repository_installer.py \
+  tests/test_installer.py tests/test_yeney_player.py
+```
+
 ### AirPlay timing
 
 AirPlay timing tests cover read-timestamp provenance, bounded median/MAD
