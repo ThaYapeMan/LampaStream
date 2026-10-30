@@ -663,6 +663,7 @@ class Replay:
             "id", "epoch", "candidate_sample", "availability_sample", "lookahead_frames",
             "strength", "strength_raw", "confidence", "bands", "dominant_band",
             "play_monotonic", "received_monotonic", "disposition", "event_time",
+            "detected_audible_monotonic",
             "first_render_over_half_s", "first_send_s"] + ([] if self.args.diagnostic_onsets else
             ["band", "kind", "on_beat", "beat_phase", "bar_position", "predicted"]))
         write_csv(out / "energy.csv", self.energy)

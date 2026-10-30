@@ -3426,7 +3426,8 @@ class SyncEngine:
                     self.event_counters[band]["expired"] += 1
                 continue
             due.append((event, stamp))
-            self._audible_preview.register(event, self._event_audible[event.id])
+            self._audible_preview.register(event, self._event_audible[event.id],
+                record["detected_audible_monotonic"])
         self._pending_onset_events = future
         if due:
             newest, newest_t = max(due, key=lambda item: item[1])
@@ -3672,6 +3673,7 @@ class SyncEngine:
                         self.event_counters[band]["expired"] += 1
                     continue
                 audible = point.audible
+                self.event_records[event.id]["detected_audible_monotonic"] = audible
                 lead = min(point.lookahead_s, self.profile.onset_lead_s)
                 lead -= min(point.lookahead_s, self._onset_hop_midpoint(event))
                 compensation = min(capabilities.transport_latency_s, max(0., audible-now))

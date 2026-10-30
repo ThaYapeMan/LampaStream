@@ -532,7 +532,8 @@ class PlayerManager:
     def _publish_preview(self, payload):
         if payload.get('type') == 'event':
             payload = dict(payload, events=[dict(event,
-                audible_t=self.track_time_at(event['audible_monotonic']))
+                audible_t=self.track_time_at(event['audible_monotonic']),
+                detected_audible_t=self.track_time_at(event['detected_audible_monotonic']))
                 for event in payload['events']])
         for listener in tuple(self._preview_listeners):
             try:

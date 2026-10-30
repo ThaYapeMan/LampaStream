@@ -42,9 +42,16 @@ def test_lms_records_decode_after_token_boundaries():
 
 def test_logger_keeps_exact_clock_and_unknown_track_time():
     logger = load("ab-logger")
-    event = dict(audible_t=3.125, audible_monotonic=999.0, strength=0.7, predicted=False)
+    event = dict(
+        detected_audible_t=3.125,
+        detected_audible_monotonic=999.0,
+        audible_t=7.0,
+        audible_monotonic=1001.0,
+        strength=0.7,
+        predicted=False,
+    )
     assert logger.beat_row(event, 1234)["audible_t"] == 3.125
-    assert logger.beat_row(dict(event, audible_t=None), 1234)["audible_t"] == 999.0
+    assert logger.beat_row(dict(event, detected_audible_t=None), 1234)["audible_t"] == 999.0
     assert logger.beat_row(dict(event, predicted=True), 1234)["source"] == "tempo_clock"
 
 
@@ -59,7 +66,15 @@ def test_logger_csv_real_socket(tmp_path):
                 json.dumps(
                     dict(
                         type="event",
-                        events=[dict(kind="beat", audible_t=4.6875, strength=0.8, predicted=False)],
+                        events=[
+                            dict(
+                                kind="beat",
+                                detected_audible_t=4.6875,
+                                detected_audible_monotonic=200.0,
+                                strength=0.8,
+                                predicted=False,
+                            )
+                        ],
                     )
                 )
             )

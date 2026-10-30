@@ -46,6 +46,7 @@ class AudiblePreview:
         self.pushed = set()
         self.policy = policy
         self.events = {}
+        self.detection_times = {}
         self.seen = set()
         self.until = dict.fromkeys(BANDS, -float('inf'))
         self.pending = []
@@ -65,13 +66,16 @@ class AudiblePreview:
         envelope = self.envelopes['all']
         self.__init__(envelope.hold_s, envelope.release_s, self.policy, self.publish)
 
-    def register(self, event, audible):
+    def register(self, event, audible, detected_audible=None):
         if event.id in self.events:
             return
         self.events[event.id] = (event, audible)
+        self.detection_times[event.id] = (audible if detected_audible is None
+                                          else detected_audible)
         if len(self.events) > 1000:
             oldest = next(iter(self.events))
             self.events.pop(oldest)
+            self.detection_times.pop(oldest, None)
             self.seen.discard(oldest)
             self.pushed.discard(oldest)
             self.confirmed.discard(oldest)
@@ -97,6 +101,7 @@ class AudiblePreview:
                 peaks = {band: min(1., max(0., event.strength))
                          if band in event.bands | {'all'} else 0. for band in BANDS}
                 events.append(dict(id=event.id, audible_monotonic=audible,
+                                   detected_audible_monotonic=self.detection_times[event.id],
                                    peaks=peaks, bands=sorted(event.bands),
                                    kind=event.kind, predicted=event.predicted,
                                    confidence=event.confidence, strength=event.strength,

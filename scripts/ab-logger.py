@@ -27,11 +27,13 @@ BEAT_FIELDS = ["audible_t", "wall_t", "strength", "source"]
 
 
 def beat_row(event, wall):
+    if event.get("detected_audible_monotonic") is None:
+        raise RuntimeError("Preview event lacks detection time; deploy the updated server")
     return dict(
         audible_t=(
-            event.get("audible_t")
-            if event.get("audible_t") is not None
-            else event.get("audible_monotonic")
+            event.get("detected_audible_t")
+            if event.get("detected_audible_t") is not None
+            else event["detected_audible_monotonic"]
         ),
         wall_t=wall,
         strength=event.get("strength"),

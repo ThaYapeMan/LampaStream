@@ -957,9 +957,21 @@ player boundary using the generic metadata anchor. They are null without a
 position anchor. Existing timestamped events already carry all detections, so a
 second `beats` list is unnecessary. The logger labels predicted events
 `tempo_clock`, on-grid confirmed events `fused`, and other beats `bass_trigger`.
-The synthetic 128 BPM socket test checks 0.46875 s spacing ± one 10 ms hop on the
-timestamped route. Normal output presentation can be clamped to actual output
-send time; that cadence can exceed one analysis hop and remains unchanged.
+The synthetic 128 BPM socket test checks detection-time spacing of 0.46875 s
+± one 10 ms hop on **both** the normal and timestamped routes.
+
+Live Hue output uses normal output capabilities (`supports_per_channel_timing=False`)
+and the same `/ws/preview` producer as the tests. A timestamped audio ingress
+(e.g. AirPlay early tap) does not make Hue an output with per-channel scheduling.
+`events[].audible_monotonic` and `events[].audible_t` remain presentation times:
+they may be clamped to actual send time, which is correct for preview activation.
+New `events[].detected_audible_monotonic` is the analyser candidate sample mapped
+to the AudibleClock **before** any scheduling/presentation clamp, and
+`events[].detected_audible_t` is its player-layer track coordinate (null when
+unknown). `ab-logger.py` uses only these detection-time fields per beat and fails
+clearly when connected to an older server lacking them. It never reconstructs
+detection time from message receipt or from presentation time. Scheduling,
+rendering, detection and thresholds remain unchanged.
 
 ### BATCH-01 send-back: reproducible AirPlay sender
 

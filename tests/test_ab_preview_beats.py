@@ -15,7 +15,7 @@ from lampastream.player_manager import PlayerManager
 from lampastream.track_position import AirPlayTrackPositionSource, LmsTrackPositionSource
 
 
-@pytest.mark.parametrize("route", ["timestamped"])
+@pytest.mark.parametrize("route", ["normal", "timestamped"])
 def test_128_bpm_pulse_events_on_socket(tmp_path, monkeypatch, route):
     app = importlib.import_module("lampastream.app")
     rate, period = 48000, 0.46875
@@ -97,10 +97,15 @@ def test_128_bpm_pulse_events_on_socket(tmp_path, monkeypatch, route):
         for event in message["events"]
         if event["kind"] == "beat" and not event["predicted"]
     ]
-    stamps = sorted(event["audible_monotonic"] for event in beats)
+    stamps = sorted(event["detected_audible_monotonic"] for event in beats)
     assert len(stamps) >= 20
     assert np.diff(stamps) == pytest.approx(np.full(len(stamps) - 1, period), abs=0.01)
     assert all(0 <= event["strength"] <= 1 for event in beats)
+    assert all(event["audible_monotonic"] >= event["detected_audible_monotonic"] for event in beats)
+    print(
+        f"{route}: {len(stamps)} beat events; detection spacing "
+        f"{np.diff(stamps).min():.8f}..{np.diff(stamps).max():.8f} s"
+    )
 
 
 @pytest.mark.parametrize("player_kind", ["AirPlay", "LMS"])
