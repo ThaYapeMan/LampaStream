@@ -9,6 +9,7 @@ See the [player-independent architecture](architecture.md) and the
 |---|---|
 | `pcm_source.YeneyCoreShmStereoSource` | yeney-core SHM v1 canonical ingress; deprecated `SqueezeliteShmStereoSource` alias for one release. |
 | `player_manager.PlayerManager` | VirtualPlayer/session ownership; selects the room/source clock and output driver. |
+| `airplay_receiver` | Manager-owned single receiver ingress; exclusive standby drain/analysis handoff and safe reader retirement. |
 | `audible_clock` | Canonical sample → audible monotonic time, lookahead, per-player calibration and generation fencing. YeneY/Sonos, Squeezebox, generic LMS and AirPlay knowledge ends here. |
 | `CanonicalAnalysisPipeline` | One canonical PCM/STFT/processor/publication/event pipeline. |
 | `render_pipeline.RenderPipeline` | One event view → effect/mixer → accent → immutable output boundary; retains unsent event envelopes. |

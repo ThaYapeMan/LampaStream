@@ -1177,7 +1177,7 @@ def test_lms_airplay_switches_release_every_session(tmp_path, monkeypatch, caplo
                 sessions.append(session)
                 await asyncio.sleep(0)  # start engine and metadata reader tasks
                 if coupling == airplay:
-                    assert session.track_source.read() is None
+                    assert session.track_source is manager._airplay_tracks
                 if playing and coupling == airplay:
                     writer = os.open(fifo, os.O_WRONLY | os.O_NONBLOCK)
                     try:

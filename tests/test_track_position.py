@@ -242,7 +242,7 @@ def test_lms_activation_seeds_current_track_without_newsong(tmp_path):
     asyncio.run(run())
 
 
-def test_airplay_stop_go_reopens_metadata_and_discards_previous_session(tmp_path):
+def test_airplay_stop_go_retains_live_receiver_metadata_until_shutdown(tmp_path):
     from unittest.mock import MagicMock
 
     async def run():
@@ -275,22 +275,22 @@ def test_airplay_stop_go_reopens_metadata_and_discards_previous_session(tmp_path
                          item('prgr', '0/44100/441000'))
                 await until(lambda: source.read() and source.read().duration_s == 10)
                 await manager.deactivate()
-                assert not source.running and manager.track_position is None
-                assert source.read() is None
-                assert manager._airplay_tracks is None
+                assert source.running and manager.track_position is None
+                assert source.read().title == 'Current song'
+                assert manager._airplay_tracks is source
                 next_session = ActiveSession(Profile())
                 await manager._activate_airplay(next_session, next_session.profile, None, None, [])
                 manager._active = next_session
-                assert next_session.track_source is replacement
-                assert manager.track_position is None
+                assert next_session.track_source is source
+                assert manager.track_position.title == 'Current song'
                 await asyncio.sleep(0.01)
-                os.write(writer, item('minm', 'New song', 'core') + item('pbeg') +
-                         item('prgr', '0/88200/441000'))
-                await until(lambda: replacement.read() and replacement.read().position_s == 2)
+                os.write(writer, item('mdst')+item('minm', 'New song', 'core')+item('mden')+
+                         item('pbeg')+item('prgr', '0/88200/441000'))
+                await until(lambda: source.read() and source.read().position_s == 2)
                 assert manager.track_position.title == 'New song'
                 assert manager.track_position.artist is None
                 os.write(writer, item('pend'))
-                await until(lambda: replacement.read() is None)
+                await until(lambda: source.read() is None)
                 await manager.close()
                 assert not source.running and not replacement.running
                 await manager.close()

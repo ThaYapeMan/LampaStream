@@ -1017,3 +1017,22 @@ check (built assets were missing) and all Python jobs at Ruff E501 in
 `tests/test_repository_installer.py:721`. `92182d5` supplied the assets and fixed
 the bundle check, but still failed that Ruff line. `efa5597` wrapped the decorator
 and passed CI. Backend failures there occurred at **Lint**, before pytest.
+
+### Mid-track coupling lifecycle (BATCH-01 send-back 2)
+
+`tests/test_midtrack_switch.py` uses continuous real FIFO PCM plus one metadata
+announcement and the actual canonical analyser, SyncEngine and scheduler. It
+switches both directions with an already-playing LMS ingress and checks fresh
+output and retained AirPlay position/duration. The old implementation reproduced
+EPIPE when switching away from AirPlay: closing its only read descriptor broke the
+receiver's ongoing writer before the next activation.
+
+PlayerManager now owns a single persistent AirPlay ingress from application
+startup. `AirPlayReceiver` drains decoded PCM in standby, joins the drain reader
+before handing that same source to analysis, and resumes draining only after the
+canonical worker stops. No second FIFO reader or second analyser is introduced.
+The receiver metadata reader also stays alive; an unchanged receiver no longer
+has its progress cache invalidated on activation. Only an actual receiver restart
+invalidates metadata/queued PCM. Application shutdown joins readers before closing
+sources; failed joins retain ownership for retry. Tests cover standby join timeout,
+blocked analysis retirement and cancellation during source acquisition.

@@ -43,9 +43,12 @@ pass unchanged. UI and preview use the same generic track contract.
 
 Mid-track activation has a separate lifecycle issue: it opened the metadata
 reader only for an active AirPlay coupling and unconditionally invalidated its
-cache after receiver preparation, even if the receiver never restarted. That is
-handled in the following send-back's session lifecycle work; it cannot be repaired
-by fabricating progress in the UI.
+cache after receiver preparation, even if the receiver never restarted. Send-back 2 fixes this by keeping the receiver's single PCM reader and metadata
+reader manager-owned in standby, with exclusive read handoff to analysis. The
+regression test also reproduces an EPIPE when the previous session closed the
+only audio reader under a still-playing receiver; keeping that descriptor alive
+and draining prevents the receiver from losing its output. Neither condition can
+be repaired by fabricating progress in the UI.
 
 Owner acceptance remains necessary: Apple Music position/length on the deployed
 receiver, with LMS unchanged. Raw diagnostic progress values are needed to prove

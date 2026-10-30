@@ -54,6 +54,7 @@ async def on_startup() -> None:
         app.state.storage.set_active_coupling_id(None)
         # Remove owned segments left by a previous crash.
         app.state.player_manager.cleanup_orphaned_shm()
+        app.state.player_manager.start()
     except BaseException:
         lease.__exit__(None, None, None)
         app.state.configuration_lease = None

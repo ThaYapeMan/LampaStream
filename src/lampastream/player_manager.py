@@ -25,6 +25,7 @@ from .airplay_config import (
     timing_settings,
 )
 from .airplay_early import EarlyAirPlaySource
+from .airplay_receiver import AirPlayReceiver
 from .airplay_timing import AirPlayAutoLatencyProbe, TimingDiagnostics
 from .audible_clock import AirPlayAudibleClock, lms_clock_for_model
 from .hue_bridge import list_entertainment_areas
@@ -354,6 +355,7 @@ class ActiveSession:
         self.head_start_task: asyncio.Task | None = None
         self.unsync_task: asyncio.Task | None = None
         self.track_source: TrackPositionSource | None = None
+        self.airplay_receiver: AirPlayReceiver | None = None
         self.safety_task: asyncio.Task | None = None
 
 
@@ -364,14 +366,32 @@ class PlayerManager:
         self.airplay_timing = TimingDiagnostics()
         self._active: ActiveSession | None = None
         self._session_lock = asyncio.Lock()
-        # Metadata belongs to the active receiver session; restart supplies fresh events.
+        # Receiver PCM and metadata remain readable while another coupling is active.
         self._airplay_tracks: AirPlayTrackPositionSource | None = None
+        self._airplay_receiver: AirPlayReceiver | None = None
         self._airplay_rollback_attempted = False
         self._airplay_safety_message: str | None = None
         self.latency_warning: str | None = None
         self._detected_sync_master: str | None = None
         self._detected_sync_master_name: str | None = None
         _RUN_DIR.mkdir(parents=True, exist_ok=True)
+
+    def start(self):
+        """Keep one receiver reader alive from application startup, including standby."""
+        if self._airplay_tracks is None:
+            self._airplay_tracks = AirPlayTrackPositionSource(timing=self.airplay_timing)
+        self._airplay_tracks.open()
+        if self._airplay_receiver is None:
+            ingress = EarlyAirPlaySource(timing=self.airplay_timing,
+                pipe=AirPlayPipeStereoSource(timing=self.airplay_timing))
+            receiver = AirPlayReceiver(ingress)
+            try:
+                receiver.start()
+            except OSError:
+                ingress.close()
+                log.debug("Receiver FIFO not available yet; acquisition will retry")
+            else:
+                self._airplay_receiver = receiver
 
     @property
     def music_status(self):
@@ -766,6 +786,7 @@ class PlayerManager:
         previous = (self._active.coupling.name
                     if self._active and self._active.coupling else "stopped")
         await self._deactivate_unlocked()
+        self.start()
 
         player = self.storage.get_virtual_player(coupling.player_id)
         zone = self.storage.get_zone(coupling.zone_id)
@@ -1079,20 +1100,26 @@ class PlayerManager:
         fallback. It drains the unused pipe and never restarts the receiver.
         """
         self.latency_warning = self._airplay_safety_message
-        if self._airplay_tracks is None:
-            self._airplay_tracks = AirPlayTrackPositionSource(timing=self.airplay_timing)
+        self.start()
         session.track_source = self._airplay_tracks
-        session.track_source.open()
-        ingress = EarlyAirPlaySource(timing=self.airplay_timing,
-                                     pipe=AirPlayPipeStereoSource(timing=self.airplay_timing))
+        if self._airplay_receiver is None:
+            raise RuntimeError("AirPlay receiver FIFO is unavailable")
+        receiver = self._airplay_receiver
+        try:
+            ingress = await self._receiver_operation(receiver.acquire)
+        except BaseException:
+            if receiver.leased:
+                receiver.release()
+            raise
+        session.airplay_receiver = receiver
         pipe_source = TeePcmSource(ingress)
-        pipe_source.open()
         session.shm_source = pipe_source
-        await self._receiver_operation(
+        changed = await self._receiver_operation(
             self._configure_shairport_name, profile.display_name or profile.player_name)
-        self._airplay_tracks.invalidate()
-        self.airplay_timing.reset()
-        ingress.discard_pending()
+        if changed:
+            self._airplay_tracks.invalidate()
+            self.airplay_timing.reset("receiver restarted")
+            ingress.discard_pending()
         await self._apply_airplay_probe(session)
         session.safety_task = asyncio.create_task(self._watch_airplay_delivery(session))
 
@@ -1126,12 +1153,13 @@ class PlayerManager:
 
     async def close(self) -> None:
         """Application shutdown, including the persistent receiver metadata reader."""
-        try:
-            await self.deactivate()
-        finally:
-            if self._airplay_tracks is not None:
-                await self._airplay_tracks.close()
-                self._airplay_tracks = None
+        await self.deactivate()
+        if self._airplay_receiver is not None:
+            await asyncio.to_thread(self._airplay_receiver.close)
+            self._airplay_receiver = None
+        if self._airplay_tracks is not None:
+            await self._airplay_tracks.close()
+            self._airplay_tracks = None
 
     async def deactivate(self) -> None:
         async with self._session_lock:
@@ -1155,9 +1183,8 @@ class PlayerManager:
     async def _teardown_session(self, session: ActiveSession) -> None:
         session.stopping = True
         if session.track_source is not None:
-            await session.track_source.close()
-            if session.track_source is self._airplay_tracks:
-                self._airplay_tracks = None
+            if session.track_source is not self._airplay_tracks:
+                await session.track_source.close()
             session.track_source = None
         for attribute in ("head_start_task", "unsync_task", "safety_task", "music_task",
                           "poller_task", "task"):
@@ -1194,7 +1221,11 @@ class PlayerManager:
                     "after the worker exits. No replacement session has been started."
                 )
         if session.shm_source is not None:
-            session.shm_source.close()
+            if session.airplay_receiver is not None:
+                session.airplay_receiver.release()
+                session.airplay_receiver = None
+            else:
+                session.shm_source.close()
             session.shm_source = None
         await session.probe.stop()
         if session.hue_driver:

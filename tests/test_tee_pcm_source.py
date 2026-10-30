@@ -161,9 +161,10 @@ def test_canonical_worker_input_and_output_byte_parity(monkeypatch):
 
 @pytest.mark.parametrize('ingress', ['lms', 'airplay'])
 def test_manager_activation_swap_and_teardown_reuse_tee(tmp_path, monkeypatch, ingress):
-    import lampastream.player_manager as pm
+    from itertools import repeat
 
-    source = Source([TemporarilyNoData()])
+    import lampastream.player_manager as pm
+    source = Source(repeat(TemporarilyNoData()))
     source.discard_pending = MagicMock()
     source_factory = MagicMock(return_value=source)
     monkeypatch.setattr(pm, 'YeneyCoreShmStereoSource', source_factory)
@@ -204,8 +205,10 @@ def test_manager_activation_swap_and_teardown_reuse_tee(tmp_path, monkeypatch, i
         assert tee.drain_secondary(1)[0] is result
         assert source.closed == 0
         await manager._teardown_session(session)
+        assert source.closed == (0 if ingress == 'airplay' else 1)
+        assert session.shm_source is None
+        await manager.close()
         assert source.closed == 1
         assert not tee.running
-        assert session.shm_source is None
 
     asyncio.run(exercise())
