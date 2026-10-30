@@ -187,7 +187,7 @@ submodule edits and preserve them. `--check` remains a read-only verification;
 
 `tests/test_repository_installer.py::test_installer_output_contract` executes the
 installer's option parsing and output lifecycle with host probes substituted.
-It checks quiet `--check`, `--check --verbose`, and full diagnostics on failure;
+It checks full-output `--check`, explicit `--quiet`, `--verbose`, and full diagnostics on failure;
 no target service or owner device is contacted. The retirement contract rejects
 Squeezelite code in the installer and preserves manifest-before-switch and
 switch-before-restart ordering. Run the installer checks with:
@@ -876,3 +876,5 @@ To verify cancellation, push consecutive ticket commits while the earlier run is
 still queued or running, then inspect their Actions conclusions: the superseded
 run should be `cancelled`, and the final run should complete successfully. Runs
 created before the concurrency rule was added do not share its group.
+
+Installer output (BATCH-01): full build, subprocess and passing check output is the default, including `--check`. Use `--quiet` for the short form; failures replay full diagnostics and exit non-zero in either mode. `--verbose` remains an alias for the default.

@@ -80,7 +80,8 @@ reader; `SqueezeliteShmStereoSource` remains a deprecated alias for one release.
 Player-specific ingress owns timing knowledge. See the ROUTE-01
 [architecture](architecture.md); rendering and scheduling are shared.
 
-Installer output shows the detected layout, source commit and final summary.
-Successful checks are silent; failures retain their full diagnostics. Use
-`sudo scripts/install-lampastream.sh --check --verbose` for all verification
-results, or add `--verbose` to an installation for full build output.
+Installer output shows every step and subprocess result by default. Add `--quiet`
+for layout, source commit and final summary only. Failures include full diagnostics
+in both modes; `--verbose` remains an alias of the default.
+
+Installer output (BATCH-01): full build, subprocess and passing check output is the default, including `--check`. Use `--quiet` for the short form; failures replay full diagnostics and exit non-zero in either mode. `--verbose` remains an alias for the default.

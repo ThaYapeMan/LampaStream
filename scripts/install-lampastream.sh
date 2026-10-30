@@ -163,20 +163,22 @@ cleanup_huesync_layout() {
 }
 # Parse options before any target probes or changes.
 CHECK=0
-VERBOSE=0
+VERBOSE=1
 for argument in "$@"; do
     case "$argument" in
         --check) CHECK=1 ;;
         --verbose) VERBOSE=1 ;;
+        --quiet) VERBOSE=0 ;;
         --help|-h)
             cat <<'HELP'
-Usage: sudo ./scripts/install-lampastream.sh [--check] [--verbose]
+Usage: sudo ./scripts/install-lampastream.sh [--check] [--quiet] [--verbose]
 
   --check  Read-only verification of an existing LampaStream target installation.
            Requires Debian 13 (trixie), x86_64, with systemd running
            (/run/systemd/system). Does not install, migrate or modify the host.
            Use sudo to read private configuration.
-  --verbose  Show full build output and passing verification results.
+  --quiet    Hide successful subprocess output; replay full diagnostics on failure.
+  --verbose  Show full output (the default).
 
 For local static/unit validation on development hosts, see docs/testing.md.
 HELP

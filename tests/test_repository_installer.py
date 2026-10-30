@@ -718,8 +718,8 @@ def test_pulled_submodule_pin_is_updated_before_cleanliness_check(tmp_path, dirt
     assert text.index('    update_submodules\n') < text.index('\nrepo_check\n')
 
 
-@pytest.mark.parametrize('verbose,broken', [(False, False), (True, False), (False, True)])
-def test_installer_output_contract(tmp_path, verbose, broken):
+@pytest.mark.parametrize('mode,broken', [('', False), ('--verbose', False), ('--quiet', False), ('', True), ('--quiet', True)])
+def test_installer_output_contract(tmp_path, mode, broken):
     """Execute real option parsing/output lifecycle with target probes substituted."""
     text = SCRIPT.read_text()
     substitutions = '''
@@ -741,19 +741,19 @@ verify_services() { :; }
     harness = tmp_path / 'installer.sh'
     harness.write_text(text)
     result = subprocess.run(['bash', str(harness), '--check',
-                             *(['--verbose'] if verbose else [])],
+                             *([mode] if mode else [])],
                             capture_output=True, text=True)
     assert (result.returncode != 0) == broken, result.stderr
     assert 'Layout:' in result.stdout and 'Git commit:' in result.stdout
     assert 'Squeezelite' not in result.stdout
-    assert ('PASS' in result.stdout) == verbose
+    assert ('PASS' in result.stdout) == (mode != '--quiet')
     if broken:
         assert 'verification diagnostic in full' in result.stderr
-        assert 'FFTW: PASS' in result.stderr
+        assert 'FFTW: PASS' in (result.stderr if mode == '--quiet' else result.stdout)
         assert 'CHECK COMPLETE' not in result.stdout
     else:
         assert 'CHECK COMPLETE' in result.stdout
-    print(('verbose' if verbose else 'default') + ' harness output:\n' + result.stdout)
+    print((mode or 'default') + ' harness output:\n' + result.stdout + result.stderr)
 
 
 def test_retired_producer_migration_is_absent():

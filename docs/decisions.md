@@ -423,3 +423,7 @@ Keep per-part commits and pushes for recoverability. Workflow-level concurrency
 uses the workflow name and branch/ref and cancels in-progress superseded runs.
 Every existing job and step remains unchanged. Account notification preferences
 remain owner-controlled; completed failures still report normally.
+
+## 2026-10-30 — BATCH-01 installer output reversal
+
+Restore full installer/check output by default at the owner’s request. HOUSE-01’s quiet mode remains available explicitly with `--quiet`; `--verbose` is a compatibility alias. Failure diagnostics and exit status are unchanged. The earlier decision is retained as history.
