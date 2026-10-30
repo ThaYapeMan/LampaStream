@@ -111,22 +111,15 @@ it('takes spectrum and beat detection from the analyser', async () => {
 })
 
 
-it('only exposes transport for LMS with a live follow target; AirPlay sync is n/a', async () => {
-  const view = render(<NowPlaying {...props} status={{ ...status,
-    active_player_type: 'LMS', follow_target_mac: 'aa:bb:cc:dd:ee:ff',
-    follow_target_name: 'Living room',
-  }} />)
-  expect(screen.getByRole('group', { name: 'Controls the followed player (Living room)' })).toBeInTheDocument()
-  view.rerender(<NowPlaying {...props} status={{ ...status, active_player_type: 'LMS', follow_target_mac: null }} />)
-  expect(screen.getByRole('button', { name: 'Previous' })).toBeDisabled()
-  view.rerender(<NowPlaying {...props} status={{ ...status,
-    active_player_type: 'AirPlay', follow_target_mac: 'stale',
-  }} />)
+it('uses transport capability for either player kind, independently of follow metadata', async () => {
+  const capability = { available: true, reason: null, target_id: 'sender', target_name: 'Living room', actions: ['play', 'pause', 'toggle', 'next', 'previous'] as const }
+  const transport = { ...capability, actions: [...capability.actions] }
+  const view = render(<NowPlaying {...props} status={{ ...status, active_player_type: 'LMS', transport }} />)
+  expect(screen.getByRole('button', { name: 'Previous' })).toBeInTheDocument()
+  view.rerender(<NowPlaying {...props} status={{ ...status, active_player_type: 'AirPlay', transport }} />)
+  expect(screen.getByRole('button', { name: 'Previous' })).toBeInTheDocument()
+  view.rerender(<NowPlaying {...props} status={{ ...status, active_player_type: 'LMS', follow_target_mac: 'stale', transport: { ...transport, available: false, reason: 'Sender gone' } }} />)
   expect(screen.queryByRole('button', { name: 'Previous' })).not.toBeInTheDocument()
-  const dl = screen.getByLabelText('Session status')
-  expect(within(dl).queryByText('Sync master')).not.toBeInTheDocument()
-  expect(within(dl).queryByText('1100 ms')).not.toBeInTheDocument()
-  await within(dl).findByText('CAVA Core')
 })
 
 

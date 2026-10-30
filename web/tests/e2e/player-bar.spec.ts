@@ -24,6 +24,7 @@ test('player bar geometry and tap/hold controls at 1400px', async ({ page }, tes
     active_coupling_id: 'c', active_player_type: 'LMS', active_zone_id: 'z',
     effect_type: 'spectrum_rgb',
     follow_target_mac: 'aa:bb:cc:dd:ee:ff', follow_target_name: 'Room',
+    transport: { available: true, reason: null, target_id: 'aa:bb:cc:dd:ee:ff', target_name: 'Room', actions: ['play', 'pause', 'toggle', 'next', 'previous', 'seek_forward', 'seek_backward'] },
     processes: { lms_player: true }, applied_delay_ms: 1100,
     sync_master: 'aa:bb:cc:dd:ee:ff', sync_master_name: 'Room',
     track: { title: 'Jealous (Extended Mix)', artist: 'Mochakk', position_s: 26, duration_s: 345, playing },
@@ -91,7 +92,7 @@ test('player bar geometry and tap/hold controls at 1400px', async ({ page }, tes
   await expect(next).toBeDisabled()
   const noTrack = await measure()
   expect(noTrack.controls).toEqual(paused.controls)
-  socket!.send(JSON.stringify(status(false, { active_player_type: 'AirPlay' })))
+  socket!.send(JSON.stringify(status(false, { active_player_type: 'AirPlay', transport: { available: false, reason: 'No sender', actions: [] } })))
   await expect(page.getByTestId('track-controls')).toHaveCount(0)
   expect((await bar.boundingBox())!.width).toBe(playing.bar.width)
 })

@@ -12,6 +12,7 @@ export interface TrackPosition {
 }
 
 export interface SocketStatus extends AccentFeatures {
+  transport?: { available: boolean; reason: string | null; actions: import('@/lib/api').TransportAction[]; target_id: string | null; target_name: string | null }
   preview_clock?: { offset_ms: number | null; epoch_offset_ms?: number | null; rtt_ms: number | null }
   music?: import('@/lib/api').MusicStatus | null
   timing_player_mac?: string | null

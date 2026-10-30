@@ -178,6 +178,8 @@ class AirPlayTrackPositionSource:
     MAX_ITEM = 12 * 1024 * 1024  # up to 8 MB artwork plus base64/XML framing
 
     def __init__(self, path: str = '/run/lampastream/airplay.metadata', *, timing=None):
+        from .airplay_transport import DacpTransport
+        self.transport = DacpTransport()
         self._path = Path(path)
         self._timing = timing
         self._task: asyncio.Task | None = None
@@ -191,6 +193,7 @@ class AirPlayTrackPositionSource:
 
     def open(self) -> None:
         if not self.running:
+            self.transport.start()
             self._task = asyncio.create_task(self._run(), name='airplay-track-position')
 
     @property
@@ -201,6 +204,7 @@ class AirPlayTrackPositionSource:
         return self._snapshot
 
     def _clear(self) -> None:
+        self.transport.reset()
         self._generation += 1
         self._snapshot, self._start, self._batch, self._buffer = None, None, None, b''
         self._track_id = None
@@ -211,6 +215,7 @@ class AirPlayTrackPositionSource:
         self._clear()
 
     async def close(self) -> None:
+        await self.transport.close()
         if self._task is not None:
             self._task.cancel()
             try:
@@ -350,6 +355,10 @@ class AirPlayTrackPositionSource:
         self._snapshot = replace(self._snapshot, **changes)
 
     def _item(self, kind: str, code: str, data: str) -> None:
+        if kind == 'ssnc':
+            self.transport.update(code, data)
+            if code in ('pend', 'aend'):
+                self.transport.reset()
         if kind == 'ssnc' and self._timing is not None:
             self._timing.metadata(code, data)
         if kind == 'core' and code in ('minm', 'asar', 'asgn', 'asal'):

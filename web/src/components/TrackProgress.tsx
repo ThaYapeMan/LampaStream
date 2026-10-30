@@ -15,7 +15,7 @@ export function TrackProgress({ track, connected, transport, tempoBpm, tempoLock
   tempoBpm?: number | null
   tempoLocked?: boolean
   connected: boolean
-  transport?: { couplingId: string; targetName: string; targetMac?: string }
+  transport?: { couplingId: string; targetName: string; actions?: TransportAction[]; targetMac?: string }
   showControls?: boolean
 }) {
   const [elapsed, setElapsed] = useState<number | null>(track?.position_s ?? null)
@@ -65,7 +65,11 @@ export function TrackProgress({ track, connected, transport, tempoBpm, tempoLock
     }
     finally { pending.current = false }
   }
+  function canSeek(action: TransportAction) {
+    return !transport?.actions || transport.actions.includes(action)
+  }
   function beginHold(pointerId: number, tap: TransportAction, seek: TransportAction) {
+    if (!canSeek(seek)) return
     if (disabled || gesture.current) return
     const current = {
       pointerId, held: false, tap,
@@ -128,7 +132,7 @@ export function TrackProgress({ track, connected, transport, tempoBpm, tempoLock
                 onPointerCancel={cancelHold} onPointerLeave={cancelHold}
                 onClick={e => {
                   // Pointer taps dispatch on release; keyboard/AT clicks have detail=0.
-                  if (middle || e.detail === 0) void send(action)
+                  if (middle || e.detail === 0 || !canSeek(action === 'next' ? 'seek_forward' : 'seek_backward')) void send(action)
                 }}>
                 <span data-testid={`glyph-${action}`} className={middle ? 'block h-9 w-9' : 'block h-7 w-7'}>
                   <Icon aria-hidden="true" className={`h-full w-full ${middle && !track?.playing ? 'translate-x-[6%]' : ''}`} />

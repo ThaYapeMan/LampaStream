@@ -733,6 +733,8 @@ async def get_status(request: Request):
         "active_coupling_id": manager.active_coupling_id,
         "active_coupling_name": manager.active_coupling_name,
         "active_player_type": manager.active_player_type,
+        "transport": (manager.transport_capability
+                      if isinstance(manager.transport_capability, dict) else None),
         "analysis_stopping": manager.analysis_stopping,
         "follow_mode": manager.follow_mode if isinstance(manager.follow_mode, str) else None,
         "sync_master": manager.detected_sync_master,
@@ -1455,7 +1457,8 @@ async def control_coupling_transport(coupling_id: str, body: TransportBody, requ
     except RuntimeError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except OSError as exc:
-        raise HTTPException(status_code=502, detail="LMS transport command failed") from exc
+        raise HTTPException(
+            status_code=502, detail=str(exc) or "Player transport command failed") from exc
     return {"ok": True, "target_mac": target}
 
 

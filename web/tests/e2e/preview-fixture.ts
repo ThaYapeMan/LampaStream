@@ -26,6 +26,7 @@ export async function setupPreview(page: Page, timingStatus: () => Record<string
       active_player_type: 'LMS', follow_mode: 'manual', active_zone_id: 'z', active_bars_source: 'pcm_pipeline',
       effect_type: 'spectrum_rgb', processes: { lms_player: true }, applied_delay_ms: 1100,
       follow_target_mac: 'aa:bb:cc:dd:ee:ff', follow_target_name: 'Room',
+    transport: { available: true, reason: null, target_id: 'aa:bb:cc:dd:ee:ff', target_name: 'Room', actions: ['play', 'pause', 'toggle', 'next', 'previous', 'seek_forward', 'seek_backward'] },
       track: { title: 'Jealous (Extended Mix)', artist: 'Mochakk', position_s: 26, duration_s: 345, playing: true }, ...timingStatus() }))
     ws.send(JSON.stringify({ type: 'spectrum', bars: [.6,.6,.2,.2,.2,.2,.4,.4,.4,.4], normalised_bars: Array(10).fill(.33) }))
   })

@@ -447,10 +447,12 @@ export function NowPlaying({ expertMode = false, colour, channel_colours, onset,
 
       <TrackProgress track={status?.track ?? null} connected={connected}
         tempoBpm={status?.tempo_bpm} tempoLocked={status?.tempo_locked}
-        showControls={playerType !== 'AirPlay'}
-        transport={playerType === 'LMS' && couplingId && status?.follow_target_mac ? {
-          couplingId, targetMac: status.follow_target_mac, targetName: status.follow_target_name || status.follow_target_mac,
+        showControls={!!status?.transport?.available}
+        transport={status?.transport?.available && couplingId ? {
+          couplingId, targetMac: status.transport.target_id || '',
+          targetName: status.transport.target_name || 'Active player', actions: status.transport.actions,
         } : undefined} />
+      {status?.transport && !status.transport.available && status.transport.reason && <p className="text-xs text-muted-foreground" role="status">{status.transport.reason}</p>}
       {!expertMode && <p data-testid="bpm-note" className="text-xs text-muted-foreground italic leading-snug">BPM is measured from the audio, not read from the track; it dims while the tempo clock is locking and settles once locked.</p>}
 
       {status?.active_coupling_id && <LightsRow key={status.active_coupling_id}

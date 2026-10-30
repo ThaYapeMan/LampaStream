@@ -1561,7 +1561,7 @@ def test_transport_missing_coupling_invalid_action_and_cli_failure(client, trans
     exchange.side_effect = OSError("offline")
     response = client.post(f"/api/couplings/{coupling.id}/transport", json={"action": "stop"})
     assert response.status_code == 502
-    assert response.json()["detail"] == "LMS transport command failed"
+    assert response.json()["detail"] == "offline"
 
 
 def test_transport_status_uses_current_target_and_matching_name(client, transport_session):
@@ -1965,3 +1965,19 @@ def test_coupling_room_save_patch_and_legacy_payload(client):
     payload.pop('follow_player_name')
     payload['name'] = 'Legacy room'
     assert client.post('/api/couplings', json=payload).json()['follow_player_mac'] is None
+
+
+def test_airplay_transport_endpoint_routes_to_the_active_player(client, transport_session):
+    from types import SimpleNamespace
+
+    from lampastream.models import VirtualPlayerType
+    manager, session, exchange, coupling = transport_session
+    session.player_type = VirtualPlayerType.AIRPLAY
+    control = AsyncMock(return_value='AABB')
+    manager._airplay_tracks = SimpleNamespace(
+        transport=SimpleNamespace(control=control), close=AsyncMock())
+    response = client.post(f'/api/couplings/{coupling.id}/transport', json={'action': 'toggle'})
+    assert response.status_code == 200
+    assert response.json()['target_mac'] == 'AABB'
+    control.assert_awaited_once_with('toggle')
+    exchange.assert_not_called()

@@ -206,6 +206,8 @@ async def _preview_frames(websocket, player_manager):
                 "active_zone_id": player_manager.active_zone_id,
                 "active_energy_profile_id": player_manager.active_energy_profile_id,
                 "active_player_type": player_manager.active_player_type,
+                "transport": (player_manager.transport_capability
+                              if isinstance(player_manager.transport_capability, dict) else None),
                 "timing_player_mac": (player_manager.timing_player_mac
                                       if isinstance(player_manager.timing_player_mac, str)
                                       else None),

@@ -477,12 +477,27 @@ class PlayerManager:
             return self._detected_sync_master_name or target
         return target
 
+    @property
+    def transport_capability(self):
+        session = self._active
+        if session and not session.stopping:
+            if session.player_type == VirtualPlayerType.AIRPLAY and self._airplay_tracks:
+                return self._airplay_tracks.transport.capability
+            target = self.follow_target_mac
+            if target and session.follower:
+                return dict(available=True,
+                            actions=["play", "pause", "toggle", "stop", "next", "previous",
+                                     "seek_forward", "seek_backward"],
+                            reason=None, target_id=target, target_name=self.follow_target_name)
+        return dict(available=False, actions=[], reason="No controllable player is active",
+                    target_id=None, target_name=None)
+
     async def control_followed_player(self, coupling_id: str, action: TransportAction) -> str:
         session = self._active
         if not session or session.stopping or self.active_coupling_id != coupling_id:
             raise RuntimeError("Coupling is not active")
-        # AirPlay transport needs Shairport's DACP/MPRIS remote-control path;
-        # it is deliberately outside this LMS-only endpoint.
+        if session.player_type == VirtualPlayerType.AIRPLAY and self._airplay_tracks:
+            return await self._airplay_tracks.transport.control(action)
         target = self.follow_target_mac
         if target is None or session.follower is None:
             raise RuntimeError("No controllable followed LMS player")
