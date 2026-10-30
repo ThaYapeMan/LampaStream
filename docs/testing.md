@@ -1091,3 +1091,28 @@ the hook is **not allowed in Codex sessions**. Do not push around a failing gate
 Every report includes the full gate output, summary and pushed-head CI link. A CI
 failure on master is a gate defect: identify the missed step and fix the gate
 before the next push. Superseded per-part pushes are no longer the default.
+
+### Sender protocol version for receiver compatibility
+
+The smoke and capture commands accept `--protocol-version {auto,1,2}` (default
+`auto`). Each command writes `protocols.raop.protocol_version` in the receiver's
+existing pyatv storage **before streaming**, including resetting an earlier forced
+setting to auto. The CLI argument quotes the enum value as a string. The selected
+version is printed, and the actual used version is extracted from the sender's
+debug log. Capture records both in its manifest and retains `airplay-sender.log`.
+The existing pinned pyatv 0.18.0 fork already honors this setting; no fork change
+is needed.
+
+Use **1 for shairport-sync**: pyatv's AirPlay 2 session offers NTP, whereas
+Shairport's AirPlay 2 session requires PTP. Its classic ANNOUNCE-based RAOP path
+accepts NTP, and produces the same decoded PCM for the canonical pipeline. Use
+**auto for Sonos/HomePod**. No PTP implementation, receiver build/configuration
+change, or OwnTone substitution is involved.
+
+```bash
+sudo scripts/ab-airplay-smoke.sh 'bc:24:11:f0:46:75' --protocol-version 1
+sudo scripts/ab-airplay-smoke.sh '48:A6:B8:20:39:64' --protocol-version auto
+sudo env AB_LMS_PLAYER='<room>' AB_LMS_COUPLING='<LMS id>' AB_AIRPLAY_COUPLING='<AirPlay id>' \
+  AB_TRACK_PATH=/tmp/ab/track.flac scripts/ab-capture.sh 'Just A Little Bit More' \
+  'bc:24:11:f0:46:75' --protocol-version 1
+```

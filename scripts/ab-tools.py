@@ -113,6 +113,28 @@ def sender(receiver, *command):
     return ["atvremote", "--storage-filename", str(CREDS), "--id", receiver, *command]
 
 
+def select_protocol_version(receiver, version, remote=None):
+    if version not in ("auto", "1", "2"):
+        raise ValueError("Protocol version must be auto, 1 or 2")
+    # pyatv's CLI otherwise converts "1" to int, while this enum requires str.
+    command = "change_setting=protocols.raop.protocol_version," + json.dumps(version)
+    if remote is None:
+        run(*sender(receiver, command), capture=True)
+    else:
+        remote(command)
+    print(f"AirPlay protocol version selected for {receiver}: {version}", flush=True)
+
+
+def report_protocol_version(log_path):
+    found = re.findall(
+        r"Using AirPlay version (?:AirPlayMajorVersion\.AirPlayV)?([12])",
+        log_path.read_text(errors="replace"),
+    )
+    actual = found[-1] if found else None
+    print(f"AirPlay protocol version used: {actual or 'not reported; see debug log'}", flush=True)
+    return actual
+
+
 async def observe(seconds, require_beats=None):
     seen, frames = 0, 0
     async with websockets.connect(URL, open_timeout=5) as ws:
@@ -176,7 +198,7 @@ def smoke_diagnostics(log_path):
             )
 
 
-def smoke(receiver):
+def smoke(receiver, protocol_version="auto"):
     assert_route("AirPlay")
     os.umask(0o077)
     CREDS.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -226,6 +248,7 @@ def smoke(receiver):
                         )
                         if result.returncode:
                             raise SmokeFailure("AirPlay pairing failed", 2)
+                select_protocol_version(receiver, protocol_version, remote)
                 if CREDS.exists():
                     CREDS.chmod(0o600)
                 pulse = Path(work) / "pulse.wav"
@@ -257,6 +280,8 @@ def smoke(receiver):
                             result = await asyncio.to_thread(process.wait, 30)
                         except subprocess.TimeoutExpired:
                             raise SmokeFailure("AirPlay handshake/stream timed out", 2) from None
+                        debug.flush()
+                        report_protocol_version(log_path)
                         if result:
                             raise SmokeFailure(
                                 f"AirPlay handshake/stream failed (exit {result})", 2
@@ -303,7 +328,7 @@ def utc():
     return datetime.now(UTC).isoformat()
 
 
-def capture(search, receiver, requested_duration):
+def capture(search, receiver, requested_duration, protocol_version="auto"):
     couplings = capture_couplings()
     original = api("/status").get("active_coupling_id")
     player_name = os.environ.get("AB_LMS_PLAYER")
@@ -324,6 +349,7 @@ def capture(search, receiver, requested_duration):
     if not address_match:
         raise RuntimeError("AirPlay receiver was not found during preflight")
     receiver_address = address_match.group(1)
+    select_protocol_version(receiver, protocol_version)
     songs = records(cli("titles", 0, 5, f"search:{search}", "tags:adut"), "id")
     song = next(
         (
@@ -375,6 +401,7 @@ def capture(search, receiver, requested_duration):
         player=player,
         player_name=player_name,
         receiver_id=receiver,
+        sender_protocol_version=protocol_version,
         runs={},
         coupling_ids=couplings,
         original_coupling_id=original,
@@ -433,7 +460,13 @@ def capture(search, receiver, requested_duration):
                         cli(player, "status", "-", 1, "tags:adut")
                     )
                 else:
-                    stream = subprocess.Popen(sender(receiver, f"stream_file={track_path}"))
+                    sender_log = out / "airplay-sender.log"
+                    with sender_log.open("w") as sender_debug:
+                        stream = subprocess.Popen(
+                            sender(receiver, "--debug", f"stream_file={track_path}"),
+                            stdout=sender_debug,
+                            stderr=sender_debug,
+                        )
                     active.append(stream)
                     deadline = time.monotonic() + seconds
                     while stream.poll() is None and time.monotonic() < deadline:
@@ -443,6 +476,7 @@ def capture(search, receiver, requested_duration):
                     if stream.poll() not in (None, 0):
                         raise RuntimeError("AirPlay sender failed")
                     stop(stream)
+                    manifest["sender_protocol_version_used"] = report_protocol_version(sender_log)
                 # Let the logger finish and flush its trailing interval.
                 log.wait(timeout=seconds + 5 if label == "airplay" else 8)
                 if log.returncode:
@@ -505,18 +539,20 @@ def main():
     sub = parser.add_subparsers(dest="mode", required=True)
     smoke_parser = sub.add_parser("smoke")
     smoke_parser.add_argument("receiver")
+    smoke_parser.add_argument("--protocol-version", choices=("auto", "1", "2"), default="auto")
     cap = sub.add_parser("capture")
     cap.add_argument("search")
     cap.add_argument("receiver")
+    cap.add_argument("--protocol-version", choices=("auto", "1", "2"), default="auto")
     cap.add_argument("duration", type=float, nargs="?")
     args = parser.parse_args()
     # SIGTERM must unwind the same cleanup as Ctrl-C.
     signal.signal(signal.SIGTERM, lambda *_: (_ for _ in ()).throw(KeyboardInterrupt()))
     try:
         if args.mode == "smoke":
-            smoke(args.receiver)
+            smoke(args.receiver, args.protocol_version)
         else:
-            capture(args.search, args.receiver, args.duration)
+            capture(args.search, args.receiver, args.duration, args.protocol_version)
     except (Exception, KeyboardInterrupt) as error:
         parser.exit(getattr(error, "exit_code", 1), f"ERROR: {error or 'interrupted'}\n")
 

@@ -212,3 +212,25 @@ def test_smoke_diagnostics_includes_debug_and_local_journal(tmp_path, monkeypatc
     tool.smoke_diagnostics(log)
     text = capsys.readouterr().err
     assert "POST /pair-setup" in text and "receiver journal diagnostic" in text
+
+
+@pytest.mark.parametrize("version", ["auto", "1", "2"])
+def test_sender_protocol_version_is_persisted_as_string(version, monkeypatch):
+    tool = load("ab-tools")
+    remote = Mock()
+    tool.select_protocol_version("receiver", version, remote)
+    remote.assert_called_once_with(
+        "change_setting=protocols.raop.protocol_version," + json.dumps(version)
+    )
+    invoke = Mock()
+    monkeypatch.setattr(tool, "run", invoke)
+    tool.select_protocol_version("receiver", version)
+    assert invoke.call_args.args == tuple(tool.sender("receiver", remote.call_args.args[0]))
+
+
+def test_sender_reports_actual_version_from_debug(tmp_path, capsys):
+    tool = load("ab-tools")
+    path = tmp_path / "debug"
+    path.write_text("DEBUG Using AirPlay version AirPlayMajorVersion.AirPlayV1\n")
+    assert tool.report_protocol_version(path) == "1"
+    assert "protocol version used: 1" in capsys.readouterr().out
