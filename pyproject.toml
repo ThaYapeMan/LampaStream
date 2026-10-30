@@ -18,6 +18,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+ab-tools = ["pyatv==0.18.0", "websockets>=13,<16"]
 dev = [
     "pytest>=8.0",
     "pytest-xdist>=3.6",

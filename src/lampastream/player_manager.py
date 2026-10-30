@@ -521,7 +521,19 @@ class PlayerManager:
         self._preview_listeners.add(listener)
         return lambda: self._preview_listeners.discard(listener)
 
+    def track_time_at(self, audible_monotonic):
+        """Map a room clock timestamp to track seconds using the player's anchor."""
+        track = self.track_position
+        if track is None or track.position_s is None:
+            return None
+        value = track.position_s + (audible_monotonic-track.observed_at if track.playing else 0.)
+        return max(0., min(value, track.duration_s) if track.duration_s is not None else value)
+
     def _publish_preview(self, payload):
+        if payload.get('type') == 'event':
+            payload = dict(payload, events=[dict(event,
+                audible_t=self.track_time_at(event['audible_monotonic']))
+                for event in payload['events']])
         for listener in tuple(self._preview_listeners):
             try:
                 listener(payload)
@@ -537,6 +549,9 @@ class PlayerManager:
         if not isinstance(snapshot, dict) or not snapshot:
             return {}
         snapshot = dict(snapshot)
+        mapper = getattr(self, 'track_time_at', None)
+        snapshot['audible_t'] = (mapper(snapshot['audible_monotonic'])
+                                 if callable(mapper) else None)
         colours = snapshot.pop("colours", ())
         snapshot["onset_events"] = [dict(asdict(e), bands=sorted(e.bands))
                                     for e in snapshot.get("onset_events", ())]

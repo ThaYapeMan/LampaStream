@@ -878,3 +878,77 @@ run should be `cancelled`, and the final run should complete successfully. Runs
 created before the concurrency rule was added do not share its group.
 
 Installer output (BATCH-01): full build, subprocess and passing check output is the default, including `--check`. Use `--quiet` for the short form; failures replay full diagnostics and exit non-zero in either mode. `--verbose` remains an alias for the default.
+
+## AB-01 same-track measurement tools
+
+Architecture check: these scripts drive players; they do not change analysis or
+receiver configuration. Optional `.[ab-tools]` dependencies are separate from the
+service runtime. On LXC 112 after the owner deploys:
+
+```bash
+cd /opt/lampastream-src
+sudo scripts/install-ab-tools.sh              # full output; --quiet is optional
+sudo /opt/lampastream/.venv/bin/atvremote scan
+sudo scripts/ab-airplay-smoke.sh '<receiver-id>'
+```
+
+Select the AirPlay coupling for the smoke test first. The script pairs advertised
+AirPlay/RAOP services when needed and reuses pyatv file storage at
+`/var/lib/lampastream/ab-tools/airplay.creds` (directory 0700, file 0600). Pairing
+can require interactive PIN entry. It generates a 60 Hz tone gated at 2 Hz,
+streams ten seconds, and fails if preview reports no beats. Verify the lights
+visually. It never changes Shairport mode/configuration or patches pyatv.
+Sender command syntax and credential storage follow the
+[official pyatv CLI documentation](https://pyatv.dev/documentation/atvremote/).
+
+```bash
+sudo env AB_LMS_PLAYER='<exact YeneY/Sonos room name>' \
+  AB_TRACK_PATH=/tmp/ab/track.flac \
+  scripts/ab-capture.sh 'Just A Little Bit More' '<receiver-id>'
+```
+
+Duration defaults to LMS track duration + 5 seconds; an optional third argument
+limits each run. Track lookup is read-only and chooses the first FLAC among five
+LMS results, printing title/artist/duration/path and room MAC. Local FLAC duration
+must agree within one second (duration agreement does not prove file identity).
+The logger subscribes before playback. Owned tcpdump/logger/sender processes and
+the LMS room are stopped even on interruption. Unique working directories retain
+partial evidence on failure. Successful captures end by printing a tarball path
+in `/tmp/ab/`; credentials are excluded.
+
+**Open routing constraint:** the service analyses only its active coupling.
+Changing that coupling via the current activation API persists configuration.
+Because this ticket prohibits configuration writes, the tool does not activate
+couplings. The LMS coupling must be active initially and the owner must switch
+to AirPlay during the settle interval. The script checks the active player kind
+before each run and aborts rather than recording the wrong pipeline. Thus the
+fully unattended two-route capture remains incomplete under the current scope.
+
+The standalone logger can also be used with an already active route:
+
+```bash
+/opt/lampastream/.venv/bin/python scripts/ab-logger.py airplay 386 --out /tmp/ab
+```
+
+`*-tempo.csv` contains one frame per second, `*-beats.csv` every individual beat.
+Unknown track time falls back to the AudibleClock monotonic coordinate, never
+wall time. Until the AirPlay field regression is reproduced and fixed, an
+AirPlay CSV may therefore use a monotonic origin rather than track seconds.
+`wall_t`/`t_wall` are Unix wall-clock receipt times only.
+
+### Preview beat wire fields
+
+`/ws/preview` already sends lossless `type: "event"` messages independently of the
+20 Hz frame poll. Each `events[]` record has `id`, `kind` (`beat` or `onset`),
+`audible_monotonic` (seconds on the room's monotonic AudibleClock), `strength`,
+`predicted`, `on_beat`, `confidence`, `beat_phase`, `bar_position`, and band/colour
+fields. Do not count repeated frame indicators as new beats.
+
+AB-01 adds `events[].audible_t` and `frame.audible_t`, track seconds mapped at the
+player boundary using the generic metadata anchor. They are null without a
+position anchor. Existing timestamped events already carry all detections, so a
+second `beats` list is unnecessary. The logger labels predicted events
+`tempo_clock`, on-grid confirmed events `fused`, and other beats `bass_trigger`.
+The synthetic 128 BPM socket test checks 0.46875 s spacing ± one 10 ms hop on the
+timestamped route. Normal output presentation can be clamped to actual output
+send time; that cadence can exceed one analysis hop and remains unchanged.

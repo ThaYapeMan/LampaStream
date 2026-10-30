@@ -718,7 +718,8 @@ def test_pulled_submodule_pin_is_updated_before_cleanliness_check(tmp_path, dirt
     assert text.index('    update_submodules\n') < text.index('\nrepo_check\n')
 
 
-@pytest.mark.parametrize('mode,broken', [('', False), ('--verbose', False), ('--quiet', False), ('', True), ('--quiet', True)])
+@pytest.mark.parametrize('mode,broken', [
+    ('', False), ('--verbose', False), ('--quiet', False), ('', True), ('--quiet', True)])
 def test_installer_output_contract(tmp_path, mode, broken):
     """Execute real option parsing/output lifecycle with target probes substituted."""
     text = SCRIPT.read_text()
@@ -762,3 +763,30 @@ def test_retired_producer_migration_is_absent():
     assert not (ROOT / 'scripts/remove-owned-squeezelite.py').exists()
     assert text.index('write-install-manifest.py') < text.index('mv -Tf')
     assert text.index('mv -Tf') < text.index('systemctl restart avahi-daemon')
+
+
+@pytest.mark.parametrize('quiet,broken', [
+    (False, False), (True, False), (False, True), (True, True)])
+def test_ab_tools_installer_output(tmp_path, quiet, broken):
+    text = (ROOT/'scripts/install-ab-tools.sh').read_text()
+    start = text.index('install_tools() {')
+    end = text.index('\nif [[ $QUIET', start)
+    text = text[:start]+('install_tools() { echo "pip and apt diagnostics"; '
+        + ('echo "tool install failed" >&2; return 7;' if broken else ':;')+' }\n')+text[end:]
+    path = tmp_path/'ab-install.sh'
+    path.write_text(text)
+    result = subprocess.run(['bash', str(path), *(['--quiet'] if quiet else [])],
+                            text=True, capture_output=True)
+    assert (result.returncode != 0) == broken
+    if broken:
+        assert 'tool install failed' in result.stderr
+        assert 'pip and apt diagnostics' in result.stdout+result.stderr
+    else:
+        assert ('pip and apt diagnostics' in result.stdout) == (not quiet)
+        assert 'installation complete' in result.stdout
+    print(f'AB tools quiet={quiet} broken={broken}:\n{result.stdout}{result.stderr}')
+
+
+def test_ab_shell_entrypoints_syntax():
+    for name in ('install-ab-tools.sh', 'ab-airplay-smoke.sh', 'ab-capture.sh'):
+        subprocess.run(['bash', '-n', str(ROOT/'scripts'/name)], check=True)

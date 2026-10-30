@@ -1,0 +1,144 @@
+"""Measurement tools: wire records, exact timestamps, and sender failure cleanup."""
+
+import asyncio
+import importlib.util
+import json
+from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import Mock
+
+import pytest
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+def load(name):
+    spec = importlib.util.spec_from_file_location(name, ROOT / "scripts" / f"{name}.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_lms_records_decode_after_token_boundaries():
+    tool = load("ab-tools")
+    songs = tool.records(
+        "titles 0 5 id%3A42 title%3AJust%20A%20Little artist%3AMau%20P "
+        "url%3Afile%3A%2F%2F%2Fmusic%2Ftrack.flac duration%3A381 id%3A43 title%3AOther",
+        "id",
+    )
+    assert len(songs) == 2
+    assert songs[0] == {
+        "id": "42",
+        "title": "Just A Little",
+        "artist": "Mau P",
+        "url": "file:///music/track.flac",
+        "duration": "381",
+    }
+    assert (
+        tool.sender("id with spaces", "stream_file=/tmp/test file.flac")[-1]
+        == "stream_file=/tmp/test file.flac"
+    )
+
+
+def test_logger_keeps_exact_clock_and_unknown_track_time():
+    logger = load("ab-logger")
+    event = dict(audible_t=3.125, audible_monotonic=999.0, strength=0.7, predicted=False)
+    assert logger.beat_row(event, 1234)["audible_t"] == 3.125
+    assert logger.beat_row(dict(event, audible_t=None), 1234)["audible_t"] == 999.0
+    assert logger.beat_row(dict(event, predicted=True), 1234)["source"] == "tempo_clock"
+
+
+def test_logger_csv_real_socket(tmp_path):
+    import websockets
+
+    logger = load("ab-logger")
+
+    async def exercise():
+        async def send(ws):
+            await ws.send(
+                json.dumps(
+                    dict(
+                        type="event",
+                        events=[dict(kind="beat", audible_t=4.6875, strength=0.8, predicted=False)],
+                    )
+                )
+            )
+            for _ in range(20):
+                await ws.send(
+                    json.dumps(
+                        dict(
+                            type="frame",
+                            audible_t=4.6875,
+                            tempo_bpm=128,
+                            tempo_confidence=0.9,
+                            tempo_locked=True,
+                        )
+                    )
+                )
+                await asyncio.sleep(0.01)
+
+        async with websockets.serve(send, "127.0.0.1", 0) as server:
+            port = server.sockets[0].getsockname()[1]
+            await logger.log("test", 0.1, tmp_path, f"ws://127.0.0.1:{port}")
+
+    asyncio.run(exercise())
+    assert "4.6875" in (tmp_path / "test-beats.csv").read_text()
+    assert "128" in (tmp_path / "test-tempo.csv").read_text()
+
+
+def test_capture_stops_owned_processes_and_player_on_sender_failure(tmp_path, monkeypatch):
+    tool = load("ab-tools")
+    monkeypatch.setenv("AB_LMS_PLAYER", "Room")
+    track = tmp_path / "track.flac"
+    track.touch()
+    monkeypatch.setenv("AB_TRACK_PATH", str(track))
+    creds = tmp_path / "creds"
+    creds.touch()
+    monkeypatch.setattr(tool, "CREDS", creds)
+    monkeypatch.setattr(tool, "assert_route", lambda _: None)
+    monkeypatch.setattr(tool.shutil, "which", lambda _: "/bin/test")
+    monkeypatch.setattr(tool.tempfile, "mkdtemp", lambda **_: str(tmp_path))
+    monkeypatch.setattr(tool.time, "sleep", lambda _: None)
+    monkeypatch.setattr(tool, "observe", lambda *a, **k: asyncio.sleep(0))
+    monkeypatch.setattr(
+        tool,
+        "run",
+        lambda *a, **k: SimpleNamespace(
+            stdout="Address: 127.0.0.1"
+            if a[0] == "atvremote"
+            else json.dumps({"format": {"duration": "381"}, "streams": [{"codec_name": "flac"}]})
+        ),
+    )
+    calls = []
+
+    def cli(*args):
+        calls.append(args)
+        if args[0] == "titles":
+            return "id:1 title:Track duration:381 url:file:///track.flac"
+        if args[0] == "players":
+            return "playerindex:0 name:Room playerid:aa:bb"
+        return "mode:stop"
+
+    monkeypatch.setattr(tool, "cli", cli)
+    processes = []
+
+    def popen(args, **kwargs):
+        process = Mock()
+        process.poll.return_value = 1 if "atvremote" in args else None
+        process.returncode = 0
+        processes.append(process)
+        return process
+
+    monkeypatch.setattr(tool.subprocess, "Popen", popen)
+    monkeypatch.setattr(tool, "logger", lambda *args: popen(["logger"]))
+    with pytest.raises(RuntimeError, match="AirPlay sender failed"):
+        tool.capture("Track", "receiver", 0.001)
+    assert calls[-1] == ("aa:bb", "stop")
+    assert all(process.send_signal.called for process in processes[:-1])
+
+
+def test_capture_requires_explicit_room_before_side_effects(monkeypatch):
+    tool = load("ab-tools")
+    monkeypatch.delenv("AB_LMS_PLAYER", raising=False)
+    with pytest.raises(RuntimeError, match="AB_LMS_PLAYER is required"):
+        tool.capture("song", "receiver", None)
