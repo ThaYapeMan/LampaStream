@@ -36,7 +36,7 @@ install_tools() {
     apt-get install -y --no-install-recommends ffmpeg tcpdump
     local script_dir
     script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
-    /opt/lampastream/.venv/bin/python -m pip install -r "$script_dir/requirements-ab-tools.txt"
+    /opt/lampastream/.venv/bin/python -m pip install --force-reinstall -r "$script_dir/requirements-ab-tools.txt"
     /opt/lampastream/.venv/bin/python -m pip check
     install -d -m 0700 /var/lib/lampastream/ab-tools
 }

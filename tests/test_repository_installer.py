@@ -799,6 +799,8 @@ def test_ab_tools_pinned_set_resolves(tmp_path):
     requirements = ROOT/'scripts/requirements-ab-tools.txt'
     text = requirements.read_text()
     assert 'srptools==1.0.1' in text
+    # Upstream and fork intentionally share version 0.18.0: pip otherwise skips it.
+    assert 'pip install --force-reinstall -r' in (ROOT/'scripts/install-ab-tools.sh').read_text()
     assert re.search(r'pyatv @ git\+https://github.com/ThaYapeMan/pyatv.git@[0-9a-f]{40}', text)
     if compiler := shutil.which('uv'):
         command = [compiler, 'pip', 'compile', str(requirements), '--python-version',
