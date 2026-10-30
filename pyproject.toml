@@ -15,11 +15,12 @@ dependencies = [
     "Pillow>=10.4",
     "httpx>=0.27",
     "soxr>=1.0",
+    "zeroconf>=0.148,<1",
 ]
 
 [project.optional-dependencies]
 ab-tools = [
-    "pyatv @ git+https://github.com/ThaYapeMan/pyatv.git@c5ee1f4281ccf129f5785fff8a2fc162916b18b4",
+    "pyatv @ git+https://github.com/ThaYapeMan/pyatv.git@917cef27e7df8b962557ff77201b49fc2a4b1a37",
     "srptools==1.0.1",
     "websockets==15.0.1",
 ]

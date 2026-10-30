@@ -109,11 +109,13 @@ def test_capture_stops_owned_processes_and_player_on_sender_failure(tmp_path, mo
     monkeypatch.setenv("AB_TRACK_PATH", str(track))
     creds = tmp_path / "creds"
     creds.touch()
+    monkeypatch.setattr(tool, "check_receiver_idle", lambda _: None)
     monkeypatch.setattr(tool, "CREDS", creds)
     monkeypatch.setattr(tool, "capture_couplings", lambda: {"lms": "lms", "airplay": "airplay"})
     monkeypatch.setattr(tool, "api", lambda *a: {"active_coupling_id": "original"})
     monkeypatch.setattr(tool, "activate", lambda _: None)
     monkeypatch.setattr(tool, "restore_coupling", lambda _: None)
+    monkeypatch.setattr(tool, "check_receiver_idle", lambda _: None)
     monkeypatch.setattr(tool, "assert_route", lambda _: None)
     monkeypatch.setattr(tool.shutil, "which", lambda _: "/bin/test")
     monkeypatch.setattr(tool.tempfile, "mkdtemp", lambda **_: str(tmp_path))
@@ -170,6 +172,7 @@ def test_smoke_distinguishes_handshake_and_no_beats(
     tmp_path, monkeypatch, sender_exit, beats, code
 ):
     tool = load("ab-tools")
+    monkeypatch.setattr(tool, "check_receiver_idle", lambda _: None)
     monkeypatch.setattr(tool, "assert_route", lambda _: None)
     monkeypatch.setattr(tool, "CREDS", tmp_path / "creds")
     monkeypatch.setattr(tool, "observe", lambda *_: asyncio.sleep(0, result=beats))
@@ -234,3 +237,16 @@ def test_sender_reports_actual_version_from_debug(tmp_path, capsys):
     path.write_text("DEBUG Using AirPlay version AirPlayMajorVersion.AirPlayV1\n")
     assert tool.report_protocol_version(path) == "1"
     assert "protocol version used: 1" in capsys.readouterr().out
+
+
+def test_busy_status_and_play_lock_failures_use_exit_four(tmp_path):
+    tool = load('ab-tools')
+    tool.reject_busy(4)
+    with pytest.raises(tool.SmokeFailure, match='receiver busy with another sender') as caught:
+        tool.reject_busy(4 | (1 << 11))
+    assert caught.value.exit_code == 4
+    log = tmp_path/'sender.log'
+    log.write_text('RTSP/1.0 453 Not Enough Bandwidth')
+    with pytest.raises(tool.SmokeFailure) as caught:
+        tool.reject_busy_log(log)
+    assert caught.value.exit_code == 4

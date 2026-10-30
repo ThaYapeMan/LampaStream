@@ -58,7 +58,7 @@ protobuf==6.33.6
     # via
     #   -r scripts/requirements-ab-tools.in
     #   pyatv
-pyatv @ git+https://github.com/ThaYapeMan/pyatv.git@c5ee1f4281ccf129f5785fff8a2fc162916b18b4
+pyatv @ git+https://github.com/ThaYapeMan/pyatv.git@917cef27e7df8b962557ff77201b49fc2a4b1a37
     # via -r scripts/requirements-ab-tools.in
 pycparser==3.12
     # via cffi

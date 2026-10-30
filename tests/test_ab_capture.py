@@ -26,6 +26,7 @@ def capture_tool(tmp_path, monkeypatch):
     (tmp_path / "track").touch()
     creds = tmp_path / "creds"
     creds.touch()
+    monkeypatch.setattr(tool, "check_receiver_idle", lambda _: None)
     monkeypatch.setattr(tool, "CREDS", creds)
     monkeypatch.setattr(tool.shutil, "which", lambda _: "/bin/test")
     monkeypatch.setattr(tool.time, "sleep", lambda _: None)

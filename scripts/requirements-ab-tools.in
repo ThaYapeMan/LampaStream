@@ -1,6 +1,6 @@
 # pyatv v0.18.0 release requirements, including its tested srptools API.
 # Fork: conditional transient PIN request and RTSP control framing.
-pyatv @ git+https://github.com/ThaYapeMan/pyatv.git@c5ee1f4281ccf129f5785fff8a2fc162916b18b4
+pyatv @ git+https://github.com/ThaYapeMan/pyatv.git@917cef27e7df8b962557ff77201b49fc2a4b1a37
 aiohttp==3.13.5
 async-timeout==5.0.1;python_version<'3.11'
 cryptography==49.0.0

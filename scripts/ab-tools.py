@@ -2,6 +2,7 @@
 """Owner-operated A/B measurements; temporary coupling selection is restored on exit."""
 
 import argparse
+import array
 import asyncio
 import json
 import math
@@ -10,6 +11,7 @@ import re
 import shutil
 import signal
 import socket
+import stat
 import subprocess
 import sys
 import tarfile
@@ -22,7 +24,7 @@ from urllib.request import Request, urlopen
 
 import websockets
 
-CREDS = Path("/var/lib/lampastream/ab-tools/airplay.creds")
+CREDS = Path(os.environ.get("AB_AIRPLAY_CREDS", "/var/lib/lampastream/ab-tools/airplay.creds"))
 URL = os.environ.get("AB_PREVIEW_URL", "ws://127.0.0.1:8420/ws/preview")
 HOST = "192.168.178.23"
 HERE = Path(__file__).resolve().parent
@@ -110,7 +112,8 @@ def restore_coupling(identity):
 
 
 def sender(receiver, *command):
-    return ["atvremote", "--storage-filename", str(CREDS), "--id", receiver, *command]
+    hosts = ["--scan-hosts", os.environ["AB_SCAN_HOSTS"]] if os.environ.get("AB_SCAN_HOSTS") else []
+    return ["atvremote", "--storage-filename", str(CREDS), *hosts, "--id", receiver, *command]
 
 
 def select_protocol_version(receiver, version, remote=None):
@@ -182,6 +185,72 @@ class SmokeFailure(RuntimeError):
         self.exit_code = code
 
 
+BUSY_MESSAGE = "receiver busy with another sender (stop AirPlay on the other device first)"
+
+
+def reject_busy(flags):
+    if int(flags) & (1 << 11):
+        raise SmokeFailure(BUSY_MESSAGE, 4)
+
+
+def check_receiver_idle(receiver):
+    async def probe():
+        from pyatv import scan
+        from pyatv.const import Protocol
+        from pyatv.support.http import decode_bplist_from_body, http_connect
+        hosts = os.environ.get("AB_SCAN_HOSTS")
+        devices = await scan(asyncio.get_running_loop(), identifier=receiver,
+                             hosts=hosts.split(",") if hosts else None, timeout=2)
+        if not devices:
+            raise SmokeFailure("AirPlay receiver not found during busy check", 2)
+        device = devices[0]
+        service = device.get_service(Protocol.RAOP) or device.get_service(Protocol.AirPlay)
+        connection = await http_connect(str(device.address), service.port)
+        try:
+            # A separate, short-lived control connection: never the classic stream.
+            response = await connection.send_and_receive(
+                "GET", "/info", protocol="RTSP/1.0", headers={"CSeq": "1"})
+            info = decode_bplist_from_body(response) if response.code == 200 else {}
+            reject_busy(info.get("statusFlags", 0))
+        finally:
+            connection.close()
+    async def bounded():
+        async with asyncio.timeout(5):
+            await probe()
+    asyncio.run(bounded())
+
+
+def reject_busy_log(path):
+    if re.search(r"(?:RTSP/1\.0 453|code[=: ]+453|failed.*play.lock)",
+                 path.read_text(errors="replace"), re.I):
+        raise SmokeFailure(BUSY_MESSAGE, 4)
+
+
+async def observe_pcm(path, seconds):
+    """Sole reader of an isolated test receiver, never of the deployed audio FIFO."""
+    path = Path(path)
+    if not stat.S_ISFIFO(path.stat().st_mode):
+        raise ValueError("--pcm-pipe must name an isolated receiver FIFO")
+    fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK)
+    count = nonzero = peak = 0
+    try:
+        deadline = time.monotonic() + seconds
+        while time.monotonic() < deadline:
+            try:
+                data = os.read(fd, 65536)
+            except BlockingIOError:
+                data = b""
+            samples = array.array("h", data[:len(data) // 2 * 2])
+            count += len(samples)
+            nonzero += sum(abs(value) > 8 for value in samples)  # exclude pipe dithering noise
+            peak = max(peak, max((abs(value) for value in samples), default=0))
+            await asyncio.sleep(.005)
+    finally:
+        os.close(fd)
+    print(f"Local receiver PCM: samples={count}, nonzero={nonzero}, peak={peak}", flush=True)
+    return nonzero
+
+
 def smoke_diagnostics(log_path):
     print("=== pyatv debug log ===", file=sys.stderr)
     print(log_path.read_text(errors="replace"), file=sys.stderr)
@@ -198,8 +267,10 @@ def smoke_diagnostics(log_path):
             )
 
 
-def smoke(receiver, protocol_version="auto"):
-    assert_route("AirPlay")
+def smoke(receiver, protocol_version="auto", pcm_pipe=None, debug_log=None):
+    if not pcm_pipe:
+        assert_route("AirPlay")
+    check_receiver_idle(receiver)
     os.umask(0o077)
     CREDS.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     CREDS.parent.chmod(0o700)
@@ -268,7 +339,8 @@ def smoke(receiver, protocol_version="auto"):
                 )
 
                 async def test():
-                    monitor = asyncio.create_task(observe(10))
+                    monitor = asyncio.create_task(
+                        observe_pcm(pcm_pipe, 15) if pcm_pipe else observe(10))
                     await asyncio.sleep(0.2)
                     process = subprocess.Popen(
                         sender(receiver, "--debug", f"stream_file={pulse}"),
@@ -282,6 +354,7 @@ def smoke(receiver, protocol_version="auto"):
                             raise SmokeFailure("AirPlay handshake/stream timed out", 2) from None
                         debug.flush()
                         report_protocol_version(log_path)
+                        reject_busy_log(log_path)
                         if result:
                             raise SmokeFailure(
                                 f"AirPlay handshake/stream failed (exit {result})", 2
@@ -298,7 +371,12 @@ def smoke(receiver, protocol_version="auto"):
                 debug.flush()
                 smoke_diagnostics(log_path)
                 raise
-    print("Beats detected: yes — owner must verify lights react")
+            finally:
+                debug.flush()
+                if debug_log:
+                    shutil.copyfile(log_path, debug_log)
+    print("Non-silent PCM detected" if pcm_pipe else
+          "Beats detected: yes — owner must verify lights react")
 
 
 def logger(label, duration, out):
@@ -342,6 +420,7 @@ def capture(search, receiver, requested_duration, protocol_version="auto"):
             raise RuntimeError(f"Missing tool: {command}; run install-ab-tools.sh")
     if not CREDS.is_file():
         raise RuntimeError("AirPlay credential storage missing; run ab-airplay-smoke.sh first")
+    check_receiver_idle(receiver)
     run("systemctl", "is-active", "--quiet", "lampastream")
     asyncio.run(observe(0.3))
     receiver_scan = run(*sender(receiver, "scan"), capture=True).stdout
@@ -474,6 +553,7 @@ def capture(search, receiver, requested_duration, protocol_version="auto"):
                             raise RuntimeError("Logger exited during AirPlay run")
                         time.sleep(0.2)
                     if stream.poll() not in (None, 0):
+                        reject_busy_log(out / "airplay-sender.log")
                         raise RuntimeError("AirPlay sender failed")
                     stop(stream)
                     manifest["sender_protocol_version_used"] = report_protocol_version(sender_log)
@@ -539,6 +619,8 @@ def main():
     sub = parser.add_subparsers(dest="mode", required=True)
     smoke_parser = sub.add_parser("smoke")
     smoke_parser.add_argument("receiver")
+    smoke_parser.add_argument("--pcm-pipe", help="sole reader of an isolated local test receiver")
+    smoke_parser.add_argument("--debug-log", help="retain complete sender debug log")
     smoke_parser.add_argument("--protocol-version", choices=("auto", "1", "2"), default="auto")
     cap = sub.add_parser("capture")
     cap.add_argument("search")
@@ -550,7 +632,7 @@ def main():
     signal.signal(signal.SIGTERM, lambda *_: (_ for _ in ()).throw(KeyboardInterrupt()))
     try:
         if args.mode == "smoke":
-            smoke(args.receiver, args.protocol_version)
+            smoke(args.receiver, args.protocol_version, args.pcm_pipe, args.debug_log)
         else:
             capture(args.search, args.receiver, args.duration, args.protocol_version)
     except (Exception, KeyboardInterrupt) as error:

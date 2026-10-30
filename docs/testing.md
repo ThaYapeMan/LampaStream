@@ -1134,3 +1134,110 @@ estimate immediately. Tests exercise both switch directions with continuous
 receiver PCM, a live metadata anchor, new clocks/probes/preview state, a poisoned
 278-second saved estimate, and renderer output within three seconds. The CLI
 replay separately verifies same-URL own-player seeking and latency recovery.
+
+## Local AirPlay sender receiver (BATCH-01 send-back 4)
+
+Sender changes must first pass against this isolated receiver on the development
+host, not LXC 112. The deployed receiver is not rebuilt or reconfigured. Tested
+sources are shairport-sync **4.3.7** (`0b1c4391ffd398e7b145eb4b98416261380adeea`)
+and nqptp **1.2.4** (`591f425d9da69f1c4e09f3ad09611b758937b3e5`), both SMI 10.
+Do not substitute nqptp master (currently SMI 11).
+
+Install build dependencies, then build as the development user:
+
+```bash
+sudo apt-get install -y autoconf automake libtool pkg-config libavahi-client-dev \
+  libconfig-dev libpopt-dev libssl-dev libsoxr-dev libplist-dev libsodium-dev \
+  libgcrypt20-dev libavcodec-dev libavformat-dev libavutil-dev libdaemon-dev avahi-daemon
+
+git clone --depth 1 --branch 4.3.7 https://github.com/mikebrady/shairport-sync.git /tmp/batch-04-shairport
+cd /tmp/batch-04-shairport
+autoreconf -fi
+./configure --prefix=/tmp/batch-04-tools --sysconfdir=/tmp/batch-04-tools/etc \
+  --with-airplay-2 --with-pipe --with-metadata --with-avahi --with-ssl=openssl --with-soxr
+make -j4
+
+git clone --depth 1 --branch 1.2.4 https://github.com/mikebrady/nqptp.git /tmp/batch-04-nqptp
+cd /tmp/batch-04-nqptp
+autoreconf -fi
+./configure --prefix=/tmp/batch-04-tools
+make -j4
+```
+
+Ensure the local system D-Bus/Avahi service is running. In separate terminals,
+start nqptp (its PTP ports need privilege in this container), then the receiver
+**as codex**, with verbosity 3 and an isolated pipe on port 17000:
+
+```bash
+sudo /tmp/batch-04-nqptp/nqptp -vv
+mkdir -p /tmp/batch-04-receiver
+mkfifo /tmp/batch-04-receiver/audio /tmp/batch-04-receiver/metadata
+cat > /tmp/batch-04-receiver/shairport-sync.conf <<'CONFIG'
+general = { name = "LampaStream-Codex-Test"; port = 17000; output_backend = "pipe"; interpolation = "soxr"; };
+pipe = { name = "/tmp/batch-04-receiver/audio"; };
+metadata = { enabled = "yes"; pipe_name = "/tmp/batch-04-receiver/metadata"; };
+sessioncontrol = { allow_session_interruption = "no"; };
+CONFIG
+/tmp/batch-04-shairport/shairport-sync -vvv -c /tmp/batch-04-receiver/shairport-sync.conf
+```
+
+From the checkout, use the installed sender environment. The local receiver ID
+below belongs to this development host; use the ID from `atvremote scan` elsewhere.
+`AB_SCAN_HOSTS` optionally restricts discovery to the local receiver address.
+`--pcm-pipe` selects standalone local verification instead of the service's
+route/socket guard, becomes the sole pipe reader, and checks signal above
+8 quantisation codes to exclude dithering noise. Never attach it to the deployed
+receiver pipe, which already has its canonical PCM reader. `--debug-log` retains
+the complete sender log. `AB_AIRPLAY_CREDS` keeps local storage isolated.
+
+```bash
+AB_AIRPLAY_CREDS=/tmp/batch-04-receiver/airplay.creds AB_SCAN_HOSTS=192.168.178.27 \
+  scripts/ab-airplay-smoke.sh 'bc:24:11:9d:18:d0' --protocol-version 1 \
+  --pcm-pipe /tmp/batch-04-receiver/audio --debug-log /tmp/local-pyatv-debug.log
+```
+
+The pinned sender now uses an open classic session for this hybrid receiver and
+announces L16 without ALAC format parameters. Required pairing uses encryption on
+the same connection as ANNOUNCE. See the [draft upstream PR](research/pyatv-classic-session-pr.md).
+The independent busy probe sends a bounded, header-minimal GET /info on a separate
+connection, without DACP-ID/Active-Remote, so it cannot replace the live sender's
+remote-control metadata. Both smoke and capture refuse statusFlags bit 11 or a
+raced RTSP 453 play-lock failure with **exit 4**:
+`receiver busy with another sender (stop AirPlay on the other device first)`.
+Exit 2 remains sender/discovery failure; exit 3 means no detected signal/beats.
+
+After local proof, the owner can refresh the pinned tooling, activate the AirPlay
+coupling, stop the other AirPlay sender, and run on LXC 112:
+
+```bash
+sudo scripts/install-ab-tools.sh
+sudo scripts/ab-airplay-smoke.sh 'bc:24:11:f0:46:75' --protocol-version 1
+```
+
+## Remembered LMS rooms and player transport
+
+Each coupling persists `follow_player_mac` and `follow_player_name`. Legacy
+couplings inherit their manual VirtualPlayer room on first activation. Explicit
+room selection belongs to the coupling and does not change a shared VirtualPlayer.
+An existing automatic sync-group coupling keeps its automatic behavior until a
+room is explicitly chosen. Activation uses the saved MAC directly and refreshes
+only the name using a read-only LMS `players` query; an offline server leaves the
+saved identity intact. Only **Choose LMS room** in the routing editor lists rooms.
+
+The supplied receiver build string is
+`4.3.7-dirty-AirPlay2-smi10-OpenSSL-Avahi-pipe-soxr-metadata-sysconfdir:/usr/local/etc`.
+It has neither D-Bus nor MPRIS, so AIRPLAY-02 uses DACP: the existing sole metadata
+reader supplies `daid`/`acre`, and the player resolves
+`iTunes_Ctrl_<DACP-ID>._dacp._tcp.local.` with a five-second cache. Commands use
+bounded HTTP GET with Active-Remote; missing senders and rejected commands give a
+clear reason. Pausing retains transport identity; receiver restart/disconnection
+or sender replacement invalidates it.
+
+Both LMS and AirPlay publish the same `transport` capability in REST status and
+preview websocket status: available, reason, supported actions and target identity.
+The track row renders controls from that capability only. DACP supports
+play/pause/toggle/next/previous; hold-to-seek is enabled only when advertised (LMS).
+The italic “measured” label before the track BPM is identical in both editor modes.
+Field acceptance still requires Apple Music → AirPlay and pause/play/next from
+the page on the owner's iPhone; fake-sender tests prove the protocol, not that
+specific device's remote-control permission.
