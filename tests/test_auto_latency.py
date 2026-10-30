@@ -437,3 +437,32 @@ def test_three_rejections_restart_burst_without_losing_last_good_delay():
     assert probe.state == 'stable'
     assert probe.delay == previous + 50
     assert saved[-1][0] == 1000
+
+
+def test_stale_track_positions_never_become_a_consistent_room_delay():
+    probe, _, _, _, saved = fixture_probe(measured_delay_ms=278380)
+    assert probe.current_delay_ms() < 5000
+    for now in range(5, 26, 3):
+        assert not probe.accept(278.345, now)
+    assert not saved
+    assert not probe.samples
+    for now in range(26, 38, 3):
+        assert probe.accept(.350, now)
+    assert probe.current_delay_ms() == 350
+    assert saved[-1][0] == 350
+
+
+def test_out_of_range_position_pair_realigns_own_player_once(monkeypatch):
+    probe, follower, context, now, saved = fixture_probe()
+    monkeypatch.setattr(probe, '_value', lambda *args: (0, now[0]))
+    monkeypatch.setattr(probe, '_pair', lambda: 278.345)
+
+    async def run():
+        await probe.tick()
+        follower.realign_own_player.assert_called_once_with(context[0].track)
+        now[0] += 6
+        await probe.tick()
+        follower.realign_own_player.assert_called_once()
+        assert not saved
+        assert probe.current_delay_ms() < 5000
+    asyncio.run(run())

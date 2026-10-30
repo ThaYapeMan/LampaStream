@@ -12,7 +12,7 @@ export interface TrackPosition {
 }
 
 export interface SocketStatus extends AccentFeatures {
-  preview_clock?: { offset_ms: number | null; rtt_ms: number | null }
+  preview_clock?: { offset_ms: number | null; epoch_offset_ms?: number | null; rtt_ms: number | null }
   music?: import('@/lib/api').MusicStatus | null
   timing_player_mac?: string | null
   timing_player_name?: string | null
@@ -125,6 +125,8 @@ export function usePreviewSocket(): PreviewState {
     }
     animation = requestAnimationFrame(animate)
 
+    const ping = () => ws?.send(JSON.stringify({ type: 'ping', client_ms: performance.now() }))
+
     function connect() {
       const proto = location.protocol === 'https:' ? 'wss:' : 'ws:'
       ws = new WebSocket(`${proto}//${location.host}/ws/preview`)
@@ -134,7 +136,6 @@ export function usePreviewSocket(): PreviewState {
         clock = new PreviewClock()
         scheduler = new PreviewScheduler()
         eventMode = false
-        const ping = () => ws?.send(JSON.stringify({ type: 'ping', client_ms: performance.now() }))
         ping()
         if (pingTimer) clearInterval(pingTimer)
         pingTimer = setInterval(ping, 2000)
@@ -164,8 +165,12 @@ export function usePreviewSocket(): PreviewState {
         if (msg.type === 'pong') {
           clock.pong(msg.client_ms as number, msg.server_monotonic as number, performance.now())
           setState(s => ({ ...s, status: s.status ? { ...s.status,
-            preview_clock: { offset_ms: clock.offset, rtt_ms: clock.rtt } } : null }))
+            preview_clock: { offset_ms: clock.residual, epoch_offset_ms: clock.offset, rtt_ms: clock.rtt } } : null }))
         } else if (msg.type === 'preview_reset') {
+          clock = new PreviewClock()
+          ping()
+          setState(s => ({ ...s, status: s.status ? { ...s.status,
+            preview_clock: { offset_ms: null, rtt_ms: null } } : null }))
           scheduler = new PreviewScheduler()
           eventMode = true
         } else if (msg.type === 'event') {
@@ -266,7 +271,7 @@ export function usePreviewSocket(): PreviewState {
         } else if (msg.type === 'status') {
           const { type: _ignored, ...fields } = msg
           setState((s) => ({ ...s, status: { ...s.status, ...fields,
-            preview_clock: { offset_ms: clock.offset, rtt_ms: clock.rtt } } as unknown as SocketStatus }))
+            preview_clock: { offset_ms: clock.residual, epoch_offset_ms: clock.offset, rtt_ms: clock.rtt } } as unknown as SocketStatus }))
         }
       }
     }

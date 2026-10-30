@@ -436,6 +436,8 @@ class LmsFollower:
 
     def _seed_playback(self) -> None:
         """Start an already-playing track on each manual connect/reconnect."""
+        # A retained queue must earn a new alignment in this connection.
+        self._own_url = None
         try:
             self._transport_mode = self._query_mode(self._follow_mac)
             if self._transport_mode == "play" and not self._stop_event.is_set():
@@ -453,8 +455,9 @@ class LmsFollower:
                 if (self._query_mode(self._lampastream_mac) == "play"
                         and self._get_current_url(self._lampastream_mac) == url):
                     self._own_mode = "play"
-                    self._own_url = url
-                    return None
+                    # LMS retains the queue and position across player restarts.
+                    # Identical URLs prove content identity, never position alignment.
+                    return url
                 if self._stop_event.is_set():
                     return None
             return url if self._send_play(url) else None
@@ -462,7 +465,7 @@ class LmsFollower:
         return None
 
     def _align_seed_position(self, seeded_url: str) -> None:
-        """Seek only a newly seeded stream, once LMS reports it playing.
+        """Align a new session/reconnection, including a retained same-URL queue.
 
         Poll readiness rather than assuming a fixed decoder startup delay. The
         CLI cannot prove audible output or seekability; target verification is
@@ -495,11 +498,11 @@ class LmsFollower:
                         or track != self._track_generation
                         or (own.duration is not None and target >= own.duration)):
                     return
+                _cli_exchange(self._host, self._port,
+                              f"{self._lampastream_mac} time {target:.3f}\n")
                 self._own_mode = "play"
                 self._own_url = seeded_url
                 self._position_transition()
-                _cli_exchange(self._host, self._port,
-                              f"{self._lampastream_mac} time {target:.3f}\n")
                 log.info("LMS follower own-player alignment: seek=%.3fs", target)
                 return
             time.sleep(0.1)

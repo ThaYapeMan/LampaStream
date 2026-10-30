@@ -32,7 +32,7 @@ test('future event outlines wait for audible time and timing shows offset and RT
   await page.clock.pauseAt(new Date('2026-10-27T12:00:01Z'))
   const socket = await setupPreview(page, () => ({}), true)
   await page.getByLabel('Editor mode').selectOption('expert')
-  await expect(page.getByTestId('preview-clock')).toContainText('offset 9000.0 ms · RTT 0.0 ms')
+  await expect(page.getByTestId('preview-clock')).toContainText('sync error 0.0 ms · RTT 0.0 ms')
   const now = await page.evaluate(() => performance.now())
   await page.evaluate(() => {
     const target = document.querySelector('[data-testid="floorplan-frame"]')!

@@ -79,6 +79,10 @@ def latency_status(config, *, state="idle", strategy=None, delay=None, reason=No
     }
 
 
+# Larger position differences describe misaligned tracks, not room latency.
+MAX_AUTO_DELAY_MS = 5000
+
+
 class AutoLatencyProbe:
     """Bounded, asynchronous LMS position sampling; the output getter never waits.
 
@@ -96,7 +100,11 @@ class AutoLatencyProbe:
         self.rejected_samples = 0
         self.samples = deque(maxlen=7)
         self.sample_times = deque(maxlen=7)
-        self.delay = max(0, (config.measured_delay_ms or 0) + config.trim_ms)
+        measured = config.measured_delay_ms or 0
+        # Discard persisted estimates poisoned by the old same-URL reuse path.
+        if not 0 <= measured < MAX_AUTO_DELAY_MS:
+            measured = 0
+        self.delay = max(0, measured + config.trim_ms)
         self.player_delay = None
         self.last_sample = None
         self.next_sample = 0.0
@@ -167,17 +175,20 @@ class AutoLatencyProbe:
 
     def accept(self, residual, now):
         finite = math.isfinite(residual)
+        plausible = finite and abs(residual * 1000) < MAX_AUTO_DELAY_MS
         stamp = time.time()
-        if finite:
+        if plausible:
             self.raw_samples.append((residual, stamp, now))
         median = (statistics.median(value for value, _, _ in self.raw_samples)
                   if self.raw_samples else None)
         inliers = [(value, timestamp, sampled_at)
                    for value, timestamp, sampled_at in self.raw_samples
                    if abs(value - median) <= .060 + 1e-12]
-        accepted = finite and abs(residual - median) <= .060 + 1e-12
+        accepted = plausible and abs(residual - median) <= .060 + 1e-12
         reason = ("within 60 ms of window median" if accepted else
-                  "non-finite residual" if not finite else "outside 60 ms of window median")
+                  "non-finite residual" if not finite else
+                  "position mismatch exceeds room-latency range" if not plausible else
+                  "outside 60 ms of window median")
         logging.getLogger(__name__).info(
             "latency sample: residual_ms=%s %s: %s; window_median_ms=%s inliers=%d",
             round(residual * 1000, 3) if finite else residual,
@@ -217,6 +228,8 @@ class AutoLatencyProbe:
         estimate = statistics.median(value + rate * (now - sampled_at)
                                      for value, _, sampled_at in inliers)
         measured = round(estimate * 1000) + (self.player_delay or 0)
+        if not 0 <= measured < MAX_AUTO_DELAY_MS:
+            return False
         target = max(0, measured + self.config.trim_ms)
         self.delay = target if self.first else self.delay + max(-50, min(50, target - self.delay))
         self.first = False
@@ -292,9 +305,10 @@ class AutoLatencyProbe:
         if self.stopping or context != self.follower.latency_context():
             return
         self.accept(residual, now)
-        if (now >= self.burst_end and len(self.samples) >= 4
-                and statistics.median(self.samples) < -.3
-                and self.realign_track != context.track):
+        misaligned = math.isfinite(residual) and abs(residual * 1000) >= MAX_AUTO_DELAY_MS
+        behind = (now >= self.burst_end and len(self.samples) >= 4
+                  and statistics.median(self.samples) < -.3)
+        if (misaligned or behind) and self.realign_track != context.track:
             self.realign_track = context.track
             await self._owned_call(self.follower.realign_own_player, context.track)
             self.samples.clear()

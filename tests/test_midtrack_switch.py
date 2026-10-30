@@ -34,6 +34,9 @@ def test_midtrack_receiver_survives_airplay_lms_airplay(tmp_path, monkeypatch, i
     storage.save_virtual_player(lms_player)
     lms = replace(airplay, id="lms-coupling", name="LMS Room", player_id="lms")
     storage.save_coupling(lms)
+    from lampastream.models import PlayerLatency
+    storage.save_player_latency(PlayerLatency(
+        "02:00:00:00:00:02", strategy="auto", measured_delay_ms=278380))
     manager = pm.PlayerManager(storage)
     fifo, metadata = tmp_path / "audio", tmp_path / "metadata"
     os.mkfifo(fifo)
@@ -112,6 +115,7 @@ def test_midtrack_receiver_survives_airplay_lms_airplay(tmp_path, monkeypatch, i
 
         def __init__(self, *_):
             self.sends = 0
+            self.stamps = []
             drivers.append(self)
 
         async def start(self):
@@ -125,6 +129,7 @@ def test_midtrack_receiver_survives_airplay_lms_airplay(tmp_path, monkeypatch, i
 
         def send(self, scene, stamp):
             self.sends += 1
+            self.stamps.append(stamp)
 
     monkeypatch.setattr(pm, "HueDriver", Driver)
     stopped, broken = threading.Event(), threading.Event()
@@ -169,6 +174,50 @@ def test_midtrack_receiver_survives_airplay_lms_airplay(tmp_path, monkeypatch, i
                 await asyncio.sleep(0.01)
 
     async def exercise():
+        from lampastream.audible_clock import AirPlayAudibleClock, LmsAudibleClock
+        from lampastream.latency import AutoLatencyProbe
+        from lampastream.lms_follower import LmsFollower
+
+        clocks, probes, previews = [], [], []
+
+        async def check_session():
+            session = manager._active
+            if session.player_type != VirtualPlayerType.AIRPLAY:
+                # Install the real manual-follow probe with the poisoned field
+                # estimate; position sampling itself is covered by the CLI replay.
+                session.follower = LmsFollower(
+                    "127.0.0.1", "02:00:00:00:00:02", session.profile.player_mac)
+                await manager._apply_probe_for_master(session, session.follower.target_mac)
+                assert isinstance(session.probe, AutoLatencyProbe)
+                assert session.probe.current_delay_ms() < 5000
+                assert session.probe.context is None
+                assert not session.latency_preferences
+                for i in range(7):
+                    assert not session.probe.accept(278.345, 5 + i * 3)
+                for i in range(4):
+                    assert session.probe.accept(.350, 26 + i * 3)
+                assert session.probe.current_delay_ms() == 350
+                assert isinstance(session.sync_engine.audible_clock, LmsAudibleClock)
+                assert session.sync_engine.audible_clock.timing is None
+            else:
+                assert isinstance(session.sync_engine.audible_clock, AirPlayAudibleClock)
+                assert session.sync_engine.audible_clock.timing is manager.airplay_timing
+            clock = session.sync_engine.audible_clock
+            assert all(clock is not previous for previous in clocks)
+            assert all(session.probe is not previous for previous in probes)
+            from lampastream.types import AudioFeatures
+            now = time.monotonic()
+            features = AudioFeatures([], 0, 0, 0, 0,
+                                     received_monotonic=now, play_monotonic=now)
+            assert now <= clock.at(0, 0, features, now).audible < now + 5
+            clocks.append(clock)
+            probes.append(session.probe)
+            await until(lambda: drivers[-1].sends > 2)
+            assert abs(time.monotonic() - drivers[-1].stamps[-1]) < 3
+            preview = session.sync_engine._audible_preview
+            assert all(preview is not previous for previous in previews)
+            previews.append(preview)
+
         thread = None
         try:
             await manager.activate_coupling(airplay if initial == "AirPlay" else lms)
@@ -178,17 +227,22 @@ def test_midtrack_receiver_survives_airplay_lms_airplay(tmp_path, monkeypatch, i
             await until(
                 lambda: manager._airplay_tracks.read() is not None and drivers[-1].sends > 2
             )
+            await check_session()
+            assert manager.airplay_timing.snapshot()["playback_since"] is not None
             if initial == "LMS":
                 await manager.activate_coupling(airplay)
-                await until(lambda: drivers[-1].sends > 2)
+                await check_session()
                 assert manager.track_position.title == "Already playing"
             assert not writer_errors
+            receiver_anchor = manager.airplay_timing.snapshot()["playback_since"]
+            assert receiver_anchor is not None
             await manager.activate_coupling(lms)
-            await until(lambda: drivers[-1].sends > 2)
+            await check_session()
+            assert manager.airplay_timing.snapshot()["playback_since"] == receiver_anchor
             await asyncio.sleep(0.05)
             assert not broken.is_set(), "AirPlay FIFO lost its only reader during LMS switch"
             await manager.activate_coupling(airplay)
-            await until(lambda: drivers[-1].sends > 2)
+            await check_session()
             assert manager.track_position.title == "Already playing"
             assert manager.track_position.duration_s == 381.0
             assert manager._active.task is not None and not manager._active.task.done()

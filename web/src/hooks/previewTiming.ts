@@ -20,6 +20,7 @@ export class PreviewClock {
   private samples: number[] = []
   offset: number | null = null
   rtt: number | null = null
+  residual: number | null = null
   pong(clientMs: number, serverSeconds: number, receivedMs: number) {
     const rtt = receivedMs - clientMs
     if (!Number.isFinite(rtt) || rtt < 0 || rtt > 2000 || !Number.isFinite(serverSeconds)) return
@@ -28,6 +29,9 @@ export class PreviewClock {
     const sorted = [...this.samples].sort((a, b) => a - b)
     const middle = Math.floor(sorted.length / 2)
     this.offset = sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2
+    // Epoch translation is arbitrary (server uptime versus page age). Report
+    // the latest synchronization residual, keeping the epoch for scheduling.
+    this.residual = this.samples[this.samples.length - 1] - this.offset
     this.rtt = rtt
   }
 }

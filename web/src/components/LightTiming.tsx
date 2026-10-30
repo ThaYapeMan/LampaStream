@@ -55,7 +55,7 @@ export function LightTiming({ status, onOpenLatency, expertMode = false, players
     <svg viewBox="0 0 200 20" className="h-5 w-full" role="img" aria-label="Beat grid">
       {(accents.beat_grid ?? []).slice(-16).map((beat, index) => <line key={`${beat.time}-${index}`} x1={index*12+8} x2={index*12+8} y1={beat.predicted ? 7 : 2} y2="18" stroke="currentColor" strokeDasharray={beat.predicted ? '2 2' : undefined} />)}
     </svg>
-    <p data-testid="preview-clock">Preview {status?.preview_clock?.offset_ms == null ? 'unsynchronised' : `offset ${status.preview_clock.offset_ms.toFixed(1)} ms · RTT ${status.preview_clock.rtt_ms?.toFixed(1)} ms`}</p>
+    <p data-testid="preview-clock">Preview {status?.preview_clock?.offset_ms == null ? 'unsynchronised' : `sync error ${status.preview_clock.offset_ms.toFixed(1)} ms · RTT ${status.preview_clock.rtt_ms?.toFixed(1)} ms`}</p>
     <p>Accent <output data-testid="accent-value">{(accents.accent_value ?? 0).toFixed(2)}</output></p>
   </section>
   const [open, setOpen] = useState(() => { try { return localStorage.getItem('lightTimingOpen') !== '0' } catch { return true } })

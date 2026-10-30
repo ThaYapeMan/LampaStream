@@ -802,3 +802,23 @@ def test_new_event_waits_for_confirmation_query_and_discards_stale_result(monkey
         assert follower._transport_mode == 'pause'
 
     asyncio.run(run())
+
+
+def test_reused_same_url_realigns_retained_lms_position_within_three_seconds():
+    """Field replay: the LMS queue survives AP with own=344.345s, room=66s."""
+    async def run():
+        server = MockLmsServer()
+        server.modes = {FOLLOW_MAC: 'play', LAMPASTREAM_MAC: 'play'}
+        server.positions = {FOLLOW_MAC: 66., LAMPASTREAM_MAC: 344.345}
+        port = await server.start()
+        follower = LmsFollower('127.0.0.1', FOLLOW_MAC, LAMPASTREAM_MAC, cli_port=port)
+        task = follower.start()
+        try:
+            assert await _wait_for(
+                lambda: abs(server.positions[LAMPASTREAM_MAC] - 66.) < 1, timeout=3)
+            assert not server.play_commands()  # Keep decoder/queue, align its position.
+            assert follower.latency_context().same_track
+        finally:
+            await _stop_follower(follower, task)
+            await server.stop()
+    asyncio.run(run())

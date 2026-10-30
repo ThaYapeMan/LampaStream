@@ -1116,3 +1116,21 @@ sudo env AB_LMS_PLAYER='<room>' AB_LMS_COUPLING='<LMS id>' AB_AIRPLAY_COUPLING='
   AB_TRACK_PATH=/tmp/ab/track.flac scripts/ab-capture.sh 'Just A Little Bit More' \
   'bc:24:11:f0:46:75' --protocol-version 1
 ```
+
+For coupling-switch acceptance, keep music playing and switch AirPlay → LMS →
+AirPlay without releasing/reconnecting the lights. Output should resume within
+seconds. The LMS follower realigns its own retained queue even when its URL still
+matches the room; a matching URL alone does not establish matching positions.
+Automatic latency rejects position differences of five seconds or more and
+realigns only the virtual player. Previously stored out-of-range automatic
+estimates are discarded on session creation; fixed settings remain explicit.
+
+The preview clock shows **sync error**, the latest midpoint sample's residual
+against the median clock mapping, plus RTT. The diagnostic `epoch_offset_ms`
+retains the server-monotonic minus browser-performance epoch translation. That
+translation may legitimately be days; it is used for scheduling and is not an
+output delay. Preview resets discard queued events and start a fresh clock
+estimate immediately. Tests exercise both switch directions with continuous
+receiver PCM, a live metadata anchor, new clocks/probes/preview state, a poisoned
+278-second saved estimate, and renderer output within three seconds. The CLI
+replay separately verifies same-URL own-player seeking and latency recovery.

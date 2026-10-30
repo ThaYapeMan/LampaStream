@@ -40,7 +40,7 @@ it('pings on connection and every two seconds, schedules outlines and holds even
   expect(result.current.onset_envelope).toBe(1)
   expect(result.current.channel_colours[0]).toEqual({ r: 1, g: 0, b: 0 })
   expect(result.current.status?.onset_envelope).toBe(1)
-  expect(result.current.status?.preview_clock).toEqual({ offset_ms: 9000, rtt_ms: 0 })
+  expect(result.current.status?.preview_clock).toEqual({ offset_ms: 0, epoch_offset_ms: 9000, rtt_ms: 0 })
   act(() => vi.advanceTimersByTime(100))
   expect(result.current.channel_colours[0]).toEqual({ r: 0, g: 1, b: 0 })
   act(() => vi.advanceTimersByTime(1384))
@@ -60,4 +60,27 @@ it('draws immediately while unsynchronised and cancels future events on reset', 
   act(() => socket.receive({ type: 'preview_reset' }))
   act(() => vi.advanceTimersByTime(17))
   expect(result.current.onset_envelope).toBe(0)
+})
+
+it('starts a fresh preview anchor and drops pending events on both coupling switches', () => {
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'performance', 'requestAnimationFrame', 'cancelAnimationFrame'] })
+  vi.stubGlobal('WebSocket', Socket)
+  const { result } = renderHook(usePreviewSocket)
+  const socket = Socket.current
+  act(() => socket.onopen())
+  act(() => socket.receive({ type: 'status', active_coupling_id: 'AirPlay' }))
+  for (const coupling of ['LMS', 'AirPlay']) {
+    act(() => socket.receive({ type: 'pong', client_ms: performance.now(), server_monotonic: 2761359 + performance.now() / 1000 }))
+    act(() => socket.receive(event(2761359 + performance.now() / 1000 + 278)))
+    const pings = socket.sent.length
+    act(() => socket.receive({ type: 'preview_reset' }))
+    expect(socket.sent).toHaveLength(pings + 1)
+    expect(result.current.status?.preview_clock?.offset_ms).toBeNull()
+    act(() => socket.receive({ type: 'status', active_coupling_id: coupling }))
+    act(() => socket.receive({ type: 'pong', client_ms: performance.now(), server_monotonic: 2761359 + performance.now() / 1000 }))
+    expect(Math.abs(result.current.status!.preview_clock!.offset_ms!)).toBeLessThan(1000)
+    act(() => socket.receive(event(2761359 + performance.now() / 1000 + .05)))
+    act(() => vi.advanceTimersByTime(64))
+    expect(result.current.onset_envelope).toBeGreaterThan(0)
+  }
 })

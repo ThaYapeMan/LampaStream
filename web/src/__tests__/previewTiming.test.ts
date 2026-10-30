@@ -101,3 +101,16 @@ it('outline pulses use confidence times strength only during hold and restart pe
   expect(activeMs).toBe(10 * 80)
   expect(scheduler.sample(6100).pulse).toBe(0)
 })
+
+it('reports synchronization residual separately from a 32-day server epoch', () => {
+  const clock = new PreviewClock()
+  clock.pong(1000, 2761359.1725 + 1.001, 1002)
+  expect(clock.offset).toBeCloseTo(2761359172.5)
+  expect(clock.residual).toBe(0)
+  clock.pong(3000, 2761359.1725 + 3.003, 3002)
+  expect(Math.abs(clock.residual!)).toBeLessThan(1000)
+  const scheduler = new PreviewScheduler()
+  scheduler.enqueue(message((clock.offset! + 3500) / 1000), 3002, clock.offset)
+  expect(scheduler.sample(3499).values.all).toBe(0)
+  expect(scheduler.sample(3500).values.all).toBe(1)
+})
