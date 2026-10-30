@@ -416,3 +416,10 @@ aggregate measurements. Regenerate bulk traces with the replay harness as
 documented in baseline/README.md. Tests already use the shared session replay
 cache, so no expected pins or production behavior change. Historical Git object
 size is not reclaimed by deleting files from the current tree.
+
+## HOUSE-01: cancel superseded CI runs
+
+Keep per-part commits and pushes for recoverability. Workflow-level concurrency
+uses the workflow name and branch/ref and cancels in-progress superseded runs.
+Every existing job and step remains unchanged. Account notification preferences
+remain owner-controlled; completed failures still report normally.
