@@ -185,6 +185,8 @@ class AirPlayTrackPositionSource:
         self._buffer = b''
         self._start: int | None = None
         self._batch: dict | None = None
+        self._track_id: str | None = None
+        self._progress_pending = False
         self._generation = 0
 
     def open(self) -> None:
@@ -201,6 +203,8 @@ class AirPlayTrackPositionSource:
     def _clear(self) -> None:
         self._generation += 1
         self._snapshot, self._start, self._batch, self._buffer = None, None, None, b''
+        self._track_id = None
+        self._progress_pending = False
 
     def invalidate(self) -> None:
         """Discard cached metadata when the owning manager restarts the receiver."""
@@ -299,6 +303,20 @@ class AirPlayTrackPositionSource:
                         self._batch.update(changes)
                     else:
                         self._update(**changes)
+            elif kind == 'core' and code in ('mper', 'astm'):
+                changes = {}
+                if code == 'mper' and len(data) == 8:
+                    changes['_identity'] = data.hex()
+                elif code == 'astm' and len(data) == 4:
+                    duration = int.from_bytes(data, 'big') / 1000
+                    if duration > 0:
+                        changes['duration_s'] = duration
+                if self._batch is not None:
+                    self._batch.update(changes)
+                else:
+                    self._track_id = changes.pop('_identity', self._track_id)
+                    if changes:
+                        self._update(**changes)
             elif kind == 'core' and code == 'gnre' and len(data) == 2:
                 genres = {7: 'hip-hop', 8: 'jazz', 9: 'metal', 13: 'pop', 14: 'r&b',
                           15: 'rap', 17: 'rock', 18: 'techno', 26: 'ambient',
@@ -327,7 +345,8 @@ class AirPlayTrackPositionSource:
 
     def _update(self, **changes) -> None:
         old = self._snapshot or TrackPosition()
-        self._snapshot = replace(old, position_s=old.position_now(), observed_at=time.monotonic())
+        self._snapshot = replace(old, position_s=old.position_now(),
+                                 observed_at=max(time.monotonic(), old.observed_at))
         self._snapshot = replace(self._snapshot, **changes)
 
     def _item(self, kind: str, code: str, data: str) -> None:
@@ -344,32 +363,47 @@ class AirPlayTrackPositionSource:
             if code == 'mdst':
                 self._batch = {'title': None, 'artist': None, 'genre': None, 'album': None}
             elif code == 'mden' and self._batch is not None:
-                if self._snapshot and self._snapshot.title != self._batch["title"]:
-                    self._start = None
-                    self._update(position_s=None, duration_s=None,
-                                 artwork_data=None, artwork_hash=None)
+                identity = self._batch.pop('_identity', self._track_id)
+                changed = ((self._track_id is not None and identity != self._track_id)
+                           or (self._snapshot and self._snapshot.title is not None
+                               and self._snapshot.title != self._batch['title']))
+                if changed:
+                    self._update(artwork_data=None, artwork_hash=None)
+                    if not self._progress_pending:
+                        self._start = None
+                        self._update(position_s=None, duration_s=None)
+                self._track_id = identity
                 self._update(**self._batch)
                 self._batch = None
+                self._progress_pending = False
             elif code == 'prgr':
                 start, current, end = (int(x) for x in data.split('/'))
                 if not all(0 <= x <= 0xffffffff for x in (start, current, end)):
                     return
-                elapsed, duration = (current - start) % 2**32, (end - start) % 2**32
+                duration = (end - start) % 2**32
+                elapsed = ((current - start + 2**31) % 2**32) - 2**31
                 if duration and elapsed > duration:
                     return
+                self._progress_pending |= self._start != start
                 self._start = start
-                self._update(position_s=elapsed / 44100,
-                             duration_s=duration / 44100 if duration else None)
+                # Buffered senders can announce progress before track start is
+                # audible. Preserve that future RTP anchor across DMAP refreshes.
+                self._update(position_s=max(0, elapsed) / 44100,
+                             duration_s=duration / 44100 if duration else None,
+                             observed_at=time.monotonic()+max(0, -elapsed) / 44100)
             elif code == 'phbt' and self._start is not None:
                 current = int(data.split('/')[0])
                 if 0 <= current <= 0xffffffff:
-                    elapsed = ((current - self._start) % 2**32) / 44100
+                    elapsed = ((current - self._start + 2**31) % 2**32) - 2**31
                     duration = self._snapshot.duration_s if self._snapshot else None
-                    if duration is None or elapsed <= duration:
-                        self._update(position_s=elapsed)
+                    if duration is None or elapsed / 44100 <= duration:
+                        self._update(position_s=max(0, elapsed) / 44100,
+                                     observed_at=time.monotonic()+max(0, -elapsed) / 44100)
             elif code in ('pbeg', 'pres', 'prsm'):
                 self._update(playing=True)
             elif code in ('paus', 'pfls'):
                 self._update(playing=False)
             elif code in ('pend', 'aend'):
                 self._snapshot, self._start, self._batch = None, None, None
+                self._track_id = None
+                self._progress_pending = False

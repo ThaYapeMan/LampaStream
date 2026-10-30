@@ -1,19 +1,53 @@
-# BATCH-01 AirPlay progress investigation
+# AirPlay progress investigation — BATCH-01 send-back 1
 
 Architecture check: canonical PCM → one analyser → renderer/scheduler → outputs.
-Progress acquisition remains in `track_position.py`; room-time mapping remains in
-`audible_clock.py`. No player-specific downstream changes are justified.
+Progress, metadata identity and duration stay in `track_position.py`; per-kind
+sample-to-room-time mapping stays in `audible_clock.py`. No AirPlay branch was
+added downstream.
 
-The requested `25aedb4..8d886f7` range contains no changes to the metadata parser,
-Shairport installer, socket delivery or TrackProgress component. The player-manager
-changes select AudibleClock implementations and enable the native LMS play clock;
-they do not change the AirPlay TrackPositionSource attachment or its delivery.
-The existing simulated XML tests already cover prgr, RTP wrap, pause/resume,
-seek, heartbeat and end; player clock invariant tests pass unchanged.
+## History and field evidence
 
-Consequently this inspection does **not** identify a first bad commit or establish
-the field root cause. Naming ROUTE-01 as the cause would be unsupported. No
-speculative production fix has been applied. To complete the investigation, capture
-the single metadata reader's incoming `prgr`/metadata ordering on the affected
-receiver (do not attach another FIFO reader), along with the delivered track
-snapshot. This part remains open pending reproduction of the field sequence.
+`be3de77..25aedb4` has no changes to the metadata reader, player manager,
+Shairport setup, socket delivery or TrackProgress component. In
+`25aedb4..8d886f7`, the manager selects new AudibleClock implementations and the
+native LMS play clock; progress parsing, delivery and receiver configuration are
+unchanged. Neither inspection establishes a first-bad commit. The field state
+and event order matter, so a version correlation alone does not prove causality.
+
+The owner journal `/home/codex/src/sps.txt` shows Apple Music buffered stream type
+103 and actual **pipe** writes in this order: `pbeg`, `pres`, `prgr`, DMAP
+`mdst`/`mper`/`astm`/title/`mden`, a metadata refresh, another `prgr`, another
+metadata refresh, then `phbt` heartbeats. Thus buffered sessions do supply
+progress; this is not a receiver-wide absence of progress. The journal records
+progress lengths but not the three RTP values. `airplay-timing.json` was absent;
+it would have supplied those values and receiver-reader timing generations.
+
+## Reproduced player-reader defects and fixes
+
+- The first title batch cleared an existing progress anchor because the earlier
+  playback-only snapshot had `title=None`. Keep that newly supplied anchor.
+- Pre-roll progress with current RTP before start was interpreted as a huge
+  unsigned elapsed value and discarded. Retain a signed wrapping RTP anchor,
+  with position zero until the track start becomes audible. Preserve its future
+  monotonic anchor across metadata updates; subsequent heartbeats correct it.
+- `core/astm` (big-endian milliseconds) was ignored. Decode duration in the player
+  metadata adapter. `core/mper` (persistent identity) distinguishes a new track,
+  even if its title is unchanged, and clears old progress when no replacement
+  anchor was supplied. Do not invent position when no track origin is known.
+
+`tests/test_airplay_progress.py` reproduces these defects before the fix and
+checks progress/duration after the journal's event ordering. Numeric payloads in
+the tests are representative, not claimed to be a capture from the journal.
+Existing wrapping RTP, pause/resume/end, LMS status and ROUTE-01 audio-clock tests
+pass unchanged. UI and preview use the same generic track contract.
+
+Mid-track activation has a separate lifecycle issue: it opened the metadata
+reader only for an active AirPlay coupling and unconditionally invalidated its
+cache after receiver preparation, even if the receiver never restarted. That is
+handled in the following send-back's session lifecycle work; it cannot be repaired
+by fabricating progress in the UI.
+
+Owner acceptance remains necessary: Apple Music position/length on the deployed
+receiver, with LMS unchanged. Raw diagnostic progress values are needed to prove
+which of the reproduced cases explains every field symptom; no unsupported
+culprit commit is named.

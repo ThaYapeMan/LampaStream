@@ -994,3 +994,11 @@ sender completed but no beats were reported. Other setup/socket failures exit 1.
 PIN prompts remain interactive. A Sonos-targeted stream may play successfully
 while the local Shairport analysis socket sees no PCM; in that case exit 3 is
 expected and distinguishes that from authentication failure.
+
+AirPlay progress regression coverage includes the owner's buffered-session event
+ordering (`pbeg/pres`, `prgr`, DMAP `mper/astm` title batches, `phbt`, pause/end).
+The player adapter retains newly received progress across first metadata delivery,
+preserves a pre-roll RTP anchor until track start becomes audible, and accepts
+DMAP duration. Numeric progress payloads are representative because the supplied
+journal logs lengths rather than values. No downstream source-specific logic is
+used; an unknown track origin remains unknown.
