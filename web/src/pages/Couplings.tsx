@@ -360,27 +360,20 @@ function CouplingWorkspace({
     zoneId: coupling?.zone_id ?? '',
     analyserId: coupling?.analyser_id ?? '',
     energyProfileId: coupling?.energy_profile_id ?? '',
+    followMac: coupling?.follow_player_mac ?? null,
+    followName: coupling?.follow_player_name ?? '',
   })
   const [savingRouting, setSavingRouting] = useState(false)
   const [routingError, setRoutingError] = useState<string | null>(null)
 
-  const [followPlayerName, setFollowPlayerName] = useState<string | undefined>(undefined)
-
-  // Resolve LMS follow player name
-  useEffect(() => {
-    const player = players.find(p => p.id === coupling?.player_id)
-    if (!player || player.type !== 'LMS' || !player.follow_player_mac || !player.lms_host) {
-      setFollowPlayerName(undefined)
-      return
-    }
-    listLmsPlayers(player.lms_host)
-      .then(lmsPlayers => {
-        const found = lmsPlayers.find(lp => lp.playerid === player.follow_player_mac)
-        setFollowPlayerName(found?.name)
-      })
-      .catch(() => setFollowPlayerName(undefined))
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  const followPlayerName = coupling?.follow_player_name || coupling?.follow_player_mac || undefined
+  const [rooms, setRooms] = useState<{ playerid: string; name: string }[]>([])
+  async function chooseRoom() {
+    const player = players.find(p => p.id === draft.playerId)
+    if (!player?.lms_host) { setRoutingError('Configure an LMS server on the virtual player first'); return }
+    try { setRooms(await listLmsPlayers(player.lms_host)) }
+    catch (error) { setRoutingError(error instanceof Error ? error.message : 'Could not list LMS rooms') }
+  }
 
   async function handleSaveName() {
     if (!coupling || name.trim() === coupling.name) return
@@ -411,6 +404,8 @@ function CouplingWorkspace({
     try {
       const body = {
         player_id: draft.playerId,
+        follow_player_mac: draft.followMac,
+        follow_player_name: draft.followName,
         zone_id: draft.zoneId,
         analyser_id: draft.analyserId,
         energy_profile_id: draft.energyProfileId,
@@ -439,6 +434,8 @@ function CouplingWorkspace({
       zoneId: coupling!.zone_id,
       analyserId: coupling!.analyser_id,
       energyProfileId: coupling!.energy_profile_id,
+      followMac: coupling!.follow_player_mac ?? null,
+      followName: coupling!.follow_player_name ?? '',
     })
     setRoutingError(null)
     setIsEditingRouting(false)
@@ -521,10 +518,19 @@ function CouplingWorkspace({
                 label="Virtual Player"
                 options={playerOptions}
                 value={draft.playerId}
-                onChange={v => setDraft(d => ({ ...d, playerId: v }))}
+                onChange={v => { setRooms([]); setDraft(d => ({ ...d, playerId: v, followMac: null, followName: '' })) }}
                 placeholder="Select virtual player…"
                 onNavigateCreate={onNavigate ? () => onNavigate('players') : undefined}
               />
+              {players.find(p => p.id === draft.playerId)?.type === 'LMS' && <div className="my-3 space-y-2">
+                <p className="text-sm">Followed room: {draft.followName || draft.followMac || 'From virtual player on first activation'}</p>
+                <Button variant="outline" size="sm" onClick={() => void chooseRoom()}>Choose LMS room</Button>
+                {rooms.length > 0 && <select aria-label="Followed LMS room" value={draft.followMac ?? ''}
+                  onChange={e => { const room = rooms.find(r => r.playerid === e.target.value); if (room) setDraft(d => ({ ...d, followMac: room.playerid, followName: room.name })) }}>
+                  <option value="" disabled>Select room…</option>
+                  {rooms.map(room => <option key={room.playerid} value={room.playerid}>{room.name}</option>)}
+                </select>}
+              </div>}
               <NodeConnector />
               <RoutingEditorNode
                 label="Analyser"

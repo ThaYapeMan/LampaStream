@@ -816,6 +816,8 @@ class Coupling:
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     name: str = "New Coupling"
     player_id: str = ""
+    follow_player_mac: str | None = None  # None migrates from the legacy VirtualPlayer
+    follow_player_name: str = ""
     analyser_id: str = ""
     zone_id: str = ""
     energy_profile_id: str = ""
@@ -835,6 +837,8 @@ class Coupling:
             "id": self.id,
             "name": self.name,
             "player_id": self.player_id,
+            "follow_player_mac": self.follow_player_mac,
+            "follow_player_name": self.follow_player_name,
             "analyser_id": self.analyser_id,
             "zone_id": self.zone_id,
             "energy_profile_id": self.energy_profile_id,

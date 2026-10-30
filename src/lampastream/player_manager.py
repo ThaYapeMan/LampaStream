@@ -16,6 +16,7 @@ import shutil
 import subprocess
 import tempfile
 import time
+from dataclasses import replace
 from pathlib import Path
 
 from .airplay_config import (
@@ -33,7 +34,7 @@ from .hue_output import ChannelInfo, HueDriver, HueOutputConfig, get_channel_inf
 from .latency import AutoLatencyProbe, FixedLatencyProbe, NoLatencyProbe, latency_status
 from .lms_discovery import discover_lms
 from .lms_follower import LmsFollower, LmsSyncGroupObserver, TransportAction
-from .lms_status import query_lms_status, query_lms_sync_peers, unsync_player
+from .lms_status import list_lms_players, query_lms_status, query_lms_sync_peers, unsync_player
 from .models import BridgeConfig, Controller, Coupling, Profile, VirtualPlayerType
 from .pcm_source import (
     AirPlayPipeStereoSource,
@@ -776,6 +777,28 @@ class PlayerManager:
         async with self._session_lock:
             await self._activate_coupling(coupling)
 
+    async def _prepare_follow_room(self, coupling, player):
+        """Resolve a coupling-owned room without discovering or mutating its player."""
+        if player.type != VirtualPlayerType.LMS:
+            return player
+        if coupling.follow_player_mac is None:
+            coupling.follow_player_mac = (player.follow_player_mac
+                                          if player.follow_mode == "manual" else "")
+        mac = coupling.follow_player_mac
+        if mac:
+            mac = coupling.follow_player_mac = mac.lower()
+        if mac and player.lms_host:
+            try:
+                rooms = await asyncio.to_thread(list_lms_players, player.lms_host)
+                room = next((r for r in rooms if r["playerid"].lower() == mac.lower()), None)
+                if room:
+                    coupling.follow_player_name = room["name"]
+            except (OSError, ValueError):
+                log.warning("Could not refresh saved LMS room name; using cached identity")
+        self.storage.save_coupling(coupling)
+        return replace(player, follow_player_mac=mac or "",
+                       follow_mode="manual" if mac else player.follow_mode)
+
     async def _activate_coupling(self, coupling: Coupling) -> None:
         """Activate a Coupling, resolving all linked entities natively.
 
@@ -818,6 +841,8 @@ class PlayerManager:
             raise ValueError(
                 f"Zone references missing Controller {zone.controller_id!r}"
             )
+
+        player = await self._prepare_follow_room(coupling, player)
 
         bridge = _controller_to_bridge(controller)
         areas = await list_entertainment_areas(bridge)
@@ -1040,7 +1065,8 @@ class PlayerManager:
         source.use_player_clock = True
         session.lms_timed_source = None
         session.head_start = None
-        if player and player.follow_mode == "sync_group":
+        if (player and player.follow_mode == "sync_group"
+                and not session.coupling.follow_player_mac):
             if player.head_start_ms:
                 source = LmsTimedSource(source, player,
                                         lambda: session.track_source.read()
@@ -1371,7 +1397,8 @@ class PlayerManager:
     def follow_mode(self) -> str | None:
         if self._active and self._active.coupling:
             player = self.storage.get_virtual_player(self._active.coupling.player_id)
-            return player.follow_mode if player else None
+            return ("manual" if self._active.coupling.follow_player_mac else
+                    player.follow_mode if player else None)
         return None
 
     @property
@@ -1381,7 +1408,7 @@ class PlayerManager:
                 or not getattr(session, "coupling", None)):
             return None
         player = self.storage.get_virtual_player(session.coupling.player_id)
-        if player is None or player.follow_mode != "sync_group":
+        if player is None or self.follow_mode != "sync_group":
             return None
         source = getattr(session, "lms_timed_source", None)
         if source:
@@ -1586,9 +1613,11 @@ class PlayerManager:
         if session.coupling:
             vp = self.storage.get_virtual_player(session.coupling.player_id)
             if vp:
-                if vp.follow_mode == "sync_group":
+                if vp.follow_mode == "sync_group" and not session.coupling.follow_player_mac:
                     return  # The session observer owns dynamic target/probe updates.
-                follow_mac = vp.follow_player_mac or None
+                follow_mac = (session.coupling.follow_player_mac
+                              if session.coupling.follow_player_mac is not None
+                              else vp.follow_player_mac) or None
 
         lms_host = profile.lms_host
         if not lms_host:
@@ -1632,6 +1661,8 @@ class PlayerManager:
             return
 
         self._detected_sync_master = follow_mac
+        self._detected_sync_master_name = (session.coupling.follow_player_name
+                                           if session.coupling else None)
         try:
             observed_at = time.monotonic()
             master_status = await asyncio.to_thread(
@@ -1643,7 +1674,8 @@ class PlayerManager:
                 session.track_source.seed(follow_mac, master_status, observed_at)
         except Exception as exc:
             log.debug("Could not fetch name for follow player %s: %s", follow_mac, exc)
-            self._detected_sync_master_name = None
+            # Preserve the coupling-owned name when the optional status query fails.
+            pass
         await self._apply_probe_for_master(session, follow_mac)
 
     async def _diag_sync_both(

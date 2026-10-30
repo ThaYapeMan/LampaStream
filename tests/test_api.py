@@ -1943,3 +1943,25 @@ def test_accent_patch_reaches_runtime(client, role):
     assert client.patch(f'/api/effects/{effect_id}', json=body).status_code == 200
     profile = client._manager.update_render.call_args.args[0 if role == 'high' else 1]
     assert all(getattr(profile, key) == value for key, value in body.items())
+
+
+def test_coupling_room_save_patch_and_legacy_payload(client):
+    test_create_coupling(client)
+    original = client.get('/api/couplings').json()[0]
+    payload = {key: original[key] for key in (
+        'player_id', 'analyser_id', 'zone_id', 'energy_profile_id', 'enabled')}
+    payload.update(name='Remembered room', follow_player_mac='aa:bb:cc:dd:ee:ff',
+                   follow_player_name='Living room')
+    response = client.post('/api/couplings', json=payload)
+    assert response.status_code == 201
+    identity = response.json()['id']
+    assert client.get(f'/api/couplings/{identity}').json()['follow_player_name'] == 'Living room'
+    response = client.patch(f'/api/couplings/{identity}', json={
+        'follow_player_mac': 'aa:bb:cc:dd:ee:01', 'follow_player_name': 'Kitchen'})
+    assert response.status_code == 200
+    assert client._storage.get_coupling(identity).follow_player_name == 'Kitchen'
+    assert client._storage.get_coupling(identity).follow_player_mac == 'aa:bb:cc:dd:ee:01'
+    payload.pop('follow_player_mac')
+    payload.pop('follow_player_name')
+    payload['name'] = 'Legacy room'
+    assert client.post('/api/couplings', json=payload).json()['follow_player_mac'] is None

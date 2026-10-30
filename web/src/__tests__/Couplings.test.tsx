@@ -185,7 +185,7 @@ describe('VirtualPlayer — LMS type', () => {
 
   it('shows LMS and Follow Player label with resolved name', async () => {
     const player = { id: 'p1', type: 'LMS', lms_host: '192.168.1.100', lms_port: 9000, player_name: 'LampaStream LMS', display_name: '', player_mac: '', follow_player_mac: 'aa:bb:cc:dd:ee:ff' }
-    const coupling = { id: 'c1', name: 'LMS Coupling', player_id: 'p1', zone_id: 'z1', analyser_id: 'a1', energy_profile_id: 'ep1', enabled: true }
+    const coupling = { id: 'c1', name: 'LMS Coupling', player_id: 'p1', zone_id: 'z1', analyser_id: 'a1', energy_profile_id: 'ep1', enabled: true, follow_player_mac: 'aa:bb:cc:dd:ee:ff', follow_player_name: 'Study (Sonos)' }
     const ep = { id: 'ep1', name: 'Profile', low_energy_effect_id: 'e1', high_energy_effect_id: 'e1', blend_start: 0.3, blend_end: 0.7, blend_response: 1 }
     const fx = { id: 'e1', name: 'Spectrum RGB', effect_type: 'spectrum_rgb', effect_speed: 1, effect_decay: 0.3, sensitivity: 1, brightness_floor: 0, bass_hz: 250, mid_hz: 2000, exertion_clip: 3, onset_flash_intensity: 0 }
 
@@ -204,6 +204,7 @@ describe('VirtualPlayer — LMS type', () => {
       expect(within(playerNode).getByText(/Follow Player.*Study \(Sonos\)/i)).toBeDefined()
     })
     expect(within(playerNode).queryByText(/Advertised Player/i)).toBeNull()
+    expect(mapi.listLmsPlayers).not.toHaveBeenCalled()
   })
 
   it('does not show Advertised Player for LMS', async () => {
@@ -383,4 +384,18 @@ it('coupling light release settings save independently of routing', async () => 
   fireEvent.change(input, { target: { value: '0' } })
   fireEvent.blur(input)
   await waitFor(() => expect(api.updateCoupling).toHaveBeenCalledWith('release', { release_after_idle_s: 0, on_release: 'restore' }))
+})
+
+it('lists rooms only when choosing a replacement and saves the coupling room', async () => {
+  vi.clearAllMocks()
+  const coupling = { id: 'c1', name: 'Saved room', player_id: 'p1', zone_id: 'z1', analyser_id: 'a1', energy_profile_id: 'ep1', enabled: true, follow_player_mac: 'aa:bb:cc:dd:ee:ff', follow_player_name: 'Cached room' }
+  setupDefaultMocks({ players: [{ id: 'p1', type: 'LMS', lms_host: '192.168.1.100', player_name: 'LampaStream' }], couplings: [coupling], listLmsPlayersResult: [{ playerid: 'aa:bb:cc:dd:ee:01', name: 'New room' }] })
+  const user = await renderAndSelectCoupling('c1')
+  expect(mapi.listLmsPlayers).not.toHaveBeenCalled()
+  await user.click(screen.getByRole('button', { name: 'Edit routing' }))
+  expect(mapi.listLmsPlayers).not.toHaveBeenCalled()
+  await user.click(screen.getByRole('button', { name: 'Choose LMS room' }))
+  await user.selectOptions(await screen.findByLabelText('Followed LMS room'), 'aa:bb:cc:dd:ee:01')
+  await user.click(screen.getByRole('button', { name: 'Save routing' }))
+  expect(api.updateCoupling).toHaveBeenCalledWith('c1', expect.objectContaining({ follow_player_mac: 'aa:bb:cc:dd:ee:01', follow_player_name: 'New room' }))
 })

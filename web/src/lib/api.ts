@@ -368,6 +368,8 @@ export interface EnergyProfile {
 }
 
 export interface Coupling {
+  follow_player_mac?: string | null
+  follow_player_name?: string
   release_after_idle_s?: number
   on_release?: "restore" | "off" | "leave"
   manual_palette_id?: string

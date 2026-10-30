@@ -381,6 +381,8 @@ class CouplingCreateBody(CouplingReleaseBody):
 
     name: str
     player_id: str
+    follow_player_mac: str | None = None
+    follow_player_name: str = ""
     analyser_id: str
     zone_id: str
     energy_profile_id: str
@@ -402,6 +404,8 @@ class CouplingPatchBody(CouplingReleaseBody):
     """
 
     model_config = ConfigDict(extra="forbid")
+    follow_player_mac: str | None = None
+    follow_player_name: str | None = None
     # Coupling meta (no session action)
     name: str | None = None
     enabled: bool | None = None
@@ -460,9 +464,9 @@ _C_DEACTIVATE_FIELDS: frozenset[str] = frozenset({
     # Changing these requires a full LMS player + analysis + DTLS restart because
     # a new process (player_id) or a new Zone cannot be hot-swapped into a
     # running session.
-    "player_id", "zone_id",
+    "player_id", "zone_id", "follow_player_mac",
     "lms_host", "lms_port", "player_name", "display_name", "alsa_device",
-    "follow_player_mac", "follow_mode", "head_start_ms", "speaker_output_delay_ms",
+    "follow_mode", "head_start_ms", "speaker_output_delay_ms",
 })
 # FK fields that do NOT require a full restart — handled via lighter live-update
 # paths in _apply_coupling_action().
@@ -513,6 +517,7 @@ _C_FK_FIELDS: frozenset[str] = frozenset({
 # via setattr(coupling, field, value) in the patch handler.
 _C_COUPLING_DIRECT_FIELDS: frozenset[str] = frozenset({
     "name", "enabled", "release_after_idle_s", "on_release",
+    "follow_player_mac", "follow_player_name",
 })
 
 
@@ -1395,6 +1400,8 @@ async def create_coupling(request: Request, body: CouplingCreateBody):
         on_release=body.on_release,
         name=body.name,
         player_id=body.player_id,
+        follow_player_mac=body.follow_player_mac,
+        follow_player_name=body.follow_player_name,
         analyser_id=body.analyser_id,
         zone_id=body.zone_id,
         energy_profile_id=body.energy_profile_id,
