@@ -916,13 +916,21 @@ the LMS room are stopped even on interruption. Unique working directories retain
 partial evidence on failure. Successful captures end by printing a tarball path
 in `/tmp/ab/`; credentials are excluded.
 
-**Open routing constraint:** the service analyses only its active coupling.
-Changing that coupling via the current activation API persists configuration.
-Because this ticket prohibits configuration writes, the tool does not activate
-couplings. The LMS coupling must be active initially and the owner must switch
-to AirPlay during the settle interval. The script checks the active player kind
-before each run and aborts rather than recording the wrong pipeline. Thus the
-fully unattended two-route capture remains incomplete under the current scope.
+The capture script requires `AB_LMS_COUPLING` and `AB_AIRPLAY_COUPLING` in
+addition to `AB_LMS_PLAYER`. If either is absent it lists available coupling IDs
+and names. It records the original active coupling, activates the two existing
+couplings through the same API used by the UI, verifies each route before logger
+startup, and restores the original coupling (or inactive state) on success,
+failure and Ctrl-C. It does not edit coupling definitions, player settings or
+receiver configuration. `manifest.json` records the selected IDs, original ID,
+restore success/error and cleanup errors, including partial runs.
+
+```bash
+sudo env AB_LMS_PLAYER='<exact YeneY/Sonos room name>' \
+  AB_LMS_COUPLING='<LMS coupling id>' AB_AIRPLAY_COUPLING='<AirPlay coupling id>' \
+  AB_TRACK_PATH=/tmp/ab/track.flac \
+  scripts/ab-capture.sh 'Just A Little Bit More' '<receiver-id>'
+```
 
 The standalone logger can also be used with an already active route:
 

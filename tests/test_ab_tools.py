@@ -95,6 +95,10 @@ def test_capture_stops_owned_processes_and_player_on_sender_failure(tmp_path, mo
     creds = tmp_path / "creds"
     creds.touch()
     monkeypatch.setattr(tool, "CREDS", creds)
+    monkeypatch.setattr(tool, "capture_couplings", lambda: {"lms": "lms", "airplay": "airplay"})
+    monkeypatch.setattr(tool, "api", lambda *a: {"active_coupling_id": "original"})
+    monkeypatch.setattr(tool, "activate", lambda _: None)
+    monkeypatch.setattr(tool, "restore_coupling", lambda _: None)
     monkeypatch.setattr(tool, "assert_route", lambda _: None)
     monkeypatch.setattr(tool.shutil, "which", lambda _: "/bin/test")
     monkeypatch.setattr(tool.tempfile, "mkdtemp", lambda **_: str(tmp_path))
@@ -140,6 +144,8 @@ def test_capture_stops_owned_processes_and_player_on_sender_failure(tmp_path, mo
 def test_capture_requires_explicit_room_before_side_effects(monkeypatch):
     tool = load("ab-tools")
     monkeypatch.delenv("AB_LMS_PLAYER", raising=False)
+    monkeypatch.setattr(tool, "capture_couplings", lambda: {})
+    monkeypatch.setattr(tool, "api", lambda *a: {})
     with pytest.raises(RuntimeError, match="AB_LMS_PLAYER is required"):
         tool.capture("song", "receiver", None)
 

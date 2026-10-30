@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Owner-operated A/B measurements; never changes receiver or service configuration."""
+"""Owner-operated A/B measurements; temporary coupling selection is restored on exit."""
 
 import argparse
 import asyncio
@@ -18,7 +18,7 @@ import time
 from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import quote, unquote
-from urllib.request import urlopen
+from urllib.request import Request, urlopen
 
 import websockets
 
@@ -62,14 +62,51 @@ def records(response, key):
     return result
 
 
+def api(path, method="GET"):
+    request = Request(
+        "http://127.0.0.1:8420/api" + path,
+        method=method,
+        data=b"{}" if method == "POST" else None,
+        headers={"Content-Type": "application/json"},
+    )
+    with urlopen(request, timeout=30) as response:
+        return json.load(response)
+
+
 def assert_route(expected):
-    with urlopen("http://127.0.0.1:8420/api/status", timeout=5) as response:
-        status = json.load(response)
+    status = api("/status")
     if status.get("active_player_type") != expected:
         raise RuntimeError(
-            f"Activate the {expected} coupling before this run; "
-            "capture will not alter LampaStream configuration"
+            f"Route guard refused: expected {expected}, got {status.get('active_player_type')}"
         )
+
+
+def capture_couplings():
+    selected = {
+        label: os.environ.get(f"AB_{label.upper()}_COUPLING") for label in ("lms", "airplay")
+    }
+    available = api("/couplings")
+    if not all(selected.values()):
+        print("Available couplings:", flush=True)
+        for coupling in available:
+            print(f"  {coupling['id']}  {coupling['name']}", flush=True)
+        raise RuntimeError("AB_LMS_COUPLING and AB_AIRPLAY_COUPLING are required")
+    if any(identity not in {c["id"] for c in available} for identity in selected.values()):
+        raise RuntimeError("A selected coupling ID does not exist")
+    return selected
+
+
+def activate(identity):
+    api(f"/couplings/{quote(identity, safe='')}/activate", "POST")
+
+
+def restore_coupling(identity):
+    if identity is None:
+        api("/couplings/deactivate", "POST")
+    else:
+        activate(identity)
+    if api("/status").get("active_coupling_id") != identity:
+        raise RuntimeError("Original coupling was not restored")
 
 
 def sender(receiver, *command):
@@ -267,6 +304,8 @@ def utc():
 
 
 def capture(search, receiver, requested_duration):
+    couplings = capture_couplings()
+    original = api("/status").get("active_coupling_id")
     player_name = os.environ.get("AB_LMS_PLAYER")
     if not player_name:
         raise RuntimeError("AB_LMS_PLAYER is required (exact LMS room name)")
@@ -280,7 +319,6 @@ def capture(search, receiver, requested_duration):
         raise RuntimeError("AirPlay credential storage missing; run ab-airplay-smoke.sh first")
     run("systemctl", "is-active", "--quiet", "lampastream")
     asyncio.run(observe(0.3))
-    assert_route("LMS")
     receiver_scan = run(*sender(receiver, "scan"), capture=True).stdout
     address_match = re.search(r"Address:\s+(\S+)", receiver_scan)
     if not address_match:
@@ -338,13 +376,17 @@ def capture(search, receiver, requested_duration):
         player_name=player_name,
         receiver_id=receiver,
         runs={},
-        clock_coordinates=("track seconds when available; otherwise "
-                           "raw AudibleClock monotonic seconds"),
+        coupling_ids=couplings,
+        original_coupling_id=original,
+        clock_coordinates=(
+            "track seconds when available; otherwise raw AudibleClock monotonic seconds"
+        ),
     )
     active = []
     armed = False
     try:
         for label in ("lms", "airplay"):
+            activate(couplings[label])
             assert_route("LMS" if label == "lms" else "AirPlay")
             manifest["runs"][label] = {"start": utc()}
             if label == "lms":
@@ -408,7 +450,7 @@ def capture(search, receiver, requested_duration):
                 stop(packet)
             manifest["runs"][label]["end"] = utc()
             if label == "lms":
-                print("Settling for 15 seconds; select the AirPlay coupling now", flush=True)
+                print("Settling for 15 seconds", flush=True)
                 time.sleep(15)
                 asyncio.run(observe(2, require_beats=False))
         (out / "shairport-sync.log").write_text(
@@ -419,19 +461,42 @@ def capture(search, receiver, requested_duration):
         (out / "lampastream-version.txt").write_text(
             run("git", "-C", "/opt/lampastream-src", "rev-parse", "HEAD", capture=True).stdout
         )
-        (out / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
-        archive = base / ("ab-" + datetime.now().strftime("%Y%m%d-%H%M") + ".tar.gz")
-        if archive.exists():
-            archive = base / (archive.name.removesuffix(".tar.gz") + "-" + out.name + ".tar.gz")
-        with tarfile.open(archive, "w:gz") as tar:
-            for path in sorted(out.iterdir()):
-                if not path.name.startswith("."):
-                    tar.add(path, arcname=path.name)
+    except BaseException as error:
+        manifest["error"] = str(error) or type(error).__name__
+        raise
     finally:
+        cleanup_errors = []
         for process in reversed(active):
-            stop(process)
+            try:
+                stop(process)
+            except Exception as error:
+                cleanup_errors.append(str(error))
         if armed:
-            cli(player, "stop")
+            try:
+                cli(player, "stop")
+            except Exception as error:
+                cleanup_errors.append(f"LMS stop: {error}")
+        restore = dict(requested_id=original, success=False)
+        try:
+            restore_coupling(original)
+            restore["success"] = True
+        except Exception as error:
+            restore["error"] = str(error)
+            cleanup_errors.append(f"Coupling restore: {error}")
+        manifest["restore"] = restore
+        manifest["cleanup_errors"] = cleanup_errors
+        (out / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+        if cleanup_errors:
+            print("Cleanup failed: " + "; ".join(cleanup_errors), file=sys.stderr)
+            if sys.exc_info()[0] is None:
+                raise RuntimeError("Capture cleanup/restore failed; see " + str(out))
+    archive = base / ("ab-" + datetime.now().strftime("%Y%m%d-%H%M") + ".tar.gz")
+    if archive.exists():
+        archive = base / (archive.name.removesuffix(".tar.gz") + "-" + out.name + ".tar.gz")
+    with tarfile.open(archive, "w:gz") as tar:
+        for path in sorted(out.iterdir()):
+            if not path.name.startswith("."):
+                tar.add(path, arcname=path.name)
     print(archive, flush=True)
 
 
