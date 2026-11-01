@@ -189,6 +189,7 @@ def test_midtrack_receiver_survives_airplay_lms_airplay(tmp_path, monkeypatch, i
                     "127.0.0.1", "02:00:00:00:00:02", session.profile.player_mac)
                 await manager._apply_probe_for_master(session, session.follower.target_mac)
                 assert isinstance(session.probe, AutoLatencyProbe)
+                initial_delay = session.probe.current_delay_ms()
                 assert session.probe.current_delay_ms() < 5000
                 assert session.probe.context is None
                 assert not session.latency_preferences
@@ -196,7 +197,8 @@ def test_midtrack_receiver_survives_airplay_lms_airplay(tmp_path, monkeypatch, i
                     assert not session.probe.accept(278.345, 5 + i * 3)
                 for i in range(4):
                     assert session.probe.accept(.350, 26 + i * 3)
-                assert session.probe.current_delay_ms() == 350
+                assert session.probe.target_delay == 350
+                assert abs(session.probe.current_delay_ms() - initial_delay) < 15
                 assert isinstance(session.sync_engine.audible_clock, LmsAudibleClock)
                 assert session.sync_engine.audible_clock.timing is None
             else:

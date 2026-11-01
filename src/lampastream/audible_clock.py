@@ -49,7 +49,8 @@ class AudibleClock:
         return ClockPoint(anchor+offset+max(0., delay))
 
     def _set_calibration(self, value):
-        if self._calibration is not None and value != self._calibration:
+        if (self._calibration is not None and value != self._calibration
+                and not getattr(self.probe, "smooth_corrections", False)):
             self._revision += 1
         self._calibration = value
 
@@ -97,7 +98,7 @@ class LmsAudibleClock(AudibleClock):
         if features.play_monotonic is not None and self.timing is None:
             delay = self.probe.current_delay_ms()/1000 if self.probe is not None else 0.
             self._set_calibration(("delay", delay))
-            return ClockPoint(features.play_monotonic+(sample-reference)/48000+max(0., delay),
+            return ClockPoint(features.play_monotonic+(sample-reference)/48000+delay,
                               self.lookahead_s)
         return super().at(sample, reference, features, now)
 

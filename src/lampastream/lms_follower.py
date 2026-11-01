@@ -146,7 +146,7 @@ class LmsFollower:
         if once and self._auto_aligned_track == track:
             return
         if (not self._stop_event.is_set() and track == self._track_generation
-                and self.latency_context().playing and self._mirrored_url):
+                and self._transport_mode == "play" and self._mirrored_url):
             if once:
                 self._auto_aligned_track = track
             self._align_seed_position(self._mirrored_url)
@@ -331,7 +331,9 @@ class LmsFollower:
         if command == "playlist" and sub.startswith("newsong"):
             await self._cancel_pause_confirmation()
             self._transport_mode = "play"
-            await asyncio.to_thread(self._mirror_track)
+            url = await asyncio.to_thread(self._mirror_track)
+            if url:
+                await self._owned_transport_call(self.realign_own_player, self._track_generation)
             return
 
         # listen 1 carries both commands and playlist state notifications.
@@ -502,6 +504,7 @@ class LmsFollower:
                               f"{self._lampastream_mac} time {target:.3f}\n")
                 self._own_mode = "play"
                 self._own_url = seeded_url
+                self._auto_aligned_track = track
                 self._position_transition()
                 log.info("LMS follower own-player alignment: seek=%.3fs", target)
                 return

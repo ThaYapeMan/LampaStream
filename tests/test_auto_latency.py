@@ -32,7 +32,7 @@ def fixture_probe(**fields):
 
 
 def test_median_outlier_precision_and_window():
-    probe, _, _, _, saved = fixture_probe()
+    probe, _, _, _, saved = fixture_probe(measured_delay_ms=1000)
     probe.player_delay = 0
     for value in [1.00, 1.02, .98, 1.01, 1.03, .99, 1.00]:
         assert probe.accept(value, 5)
@@ -45,36 +45,30 @@ def test_median_outlier_precision_and_window():
     assert saved[-1][0] == 1005
 
 
-def test_first_estimate_then_fifty_ms_limit_and_arithmetic():
-    probe, _, _, _, _ = fixture_probe(trim_ms=-100, measured_delay_ms=500)
+def test_first_estimate_and_refinements_are_elapsed_time_bounded():
+    probe, _, _, now, saved = fixture_probe(trim_ms=-100, measured_delay_ms=500)
     probe.player_delay = 200
     assert probe.current_delay_ms() == 400
-    for value in [1, 1.01]:
-        probe.accept(value, 5)
-        assert probe.current_delay_ms() == 400
-    probe.accept(.99, 11)
-    assert probe.current_delay_ms() == 400
-    probe.accept(1, 12)
-    assert probe.current_delay_ms() == 1100
-    for value in [1.3] * 12:
-        old = probe.current_delay_ms()
-        probe.accept(value, 14)
-        assert abs(probe.current_delay_ms() - old) <= 50
-    assert probe.current_delay_ms() == 1400
-    probe.accept(1.3, 17)
-    assert probe.current_delay_ms() == 1400
+    for value in (1, 1.01, .99, 1):
+        probe.accept(value, now[0])
+    assert probe.current_delay_ms() == 400  # consensus cannot jump
+    assert saved[-1][0] == 1200
+    for _ in range(1400):
+        previous = probe.current_delay_ms()
+        now[0] += .1
+        assert abs(probe.current_delay_ms() - previous) <= .500001
+    assert probe.current_delay_ms() == pytest.approx(1100)
 
-
-def test_disagreeing_first_samples_do_not_jump_and_negative_clamps():
-    probe, _, _, _, _ = fixture_probe(trim_ms=-1000)
-    for value in [.1, .35, .49]:
-        probe.accept(value, 5)
+def test_disagreeing_first_samples_do_not_jump_and_signed_offsets_work():
+    probe, _, _, now, _ = fixture_probe(measured_delay_ms=-200)
+    for value in (.1, .35, .49):
+        probe.accept(value, now[0])
     assert probe.first
-    for value in [.3, .3, .3]:
-        probe.accept(value, 5)
+    assert probe.current_delay_ms() == -200
+    for value in (-.2,) * 8:
+        probe.accept(value, now[0])
     assert not probe.first
-    assert probe.current_delay_ms() == 0
-
+    assert probe.current_delay_ms() == -200
 
 @pytest.mark.parametrize('connected,playing,same', [(False, True, True),
                                                     (True, False, True), (True, True, False)])
@@ -102,7 +96,8 @@ def test_burst_steady_guard_and_preference_once():
         own_times = [t for t, mac, cmd in calls if mac == OWN and cmd == 'time ?']
         assert own_times == list(range(5, 36, 3)) + [50]
         assert sum(cmd.startswith('playerpref') for _, _, cmd in calls) == 1
-        assert probe.current_delay_ms() == 1100
+        assert probe.target_delay == 1100
+        assert probe.current_delay_ms() <= 5 * (now[0] - 5)
         contexts[0] = replace(contexts[0], transition=2, changed_at=60)
         for second in range(61, 65):
             now[0] = second
@@ -142,23 +137,19 @@ def test_transition_during_pair_discards_sample():
     asyncio.run(run())
 
 
-def test_negative_residual_realigns_only_once_per_track():
+def test_negative_residual_never_seeks_a_running_track():
     async def run():
-        probe, follower, contexts, now, _ = fixture_probe()
+        probe, follower, _, now, _ = fixture_probe()
         probe.cache[FOLLOW] = 0
-        probe._pair = lambda: -.5
-        for second in range(5, 81):
+        probe._pair = lambda: -.2
+        for second in range(5, 100):
             now[0] = second
+            before = probe.current_delay_ms()
             await probe.tick()
-        follower.realign_own_player.assert_called_once_with(1)
-        assert probe.current_delay_ms() == 0
-        contexts[0] = replace(contexts[0], track=2, transition=2, changed_at=81)
-        for second in range(81, 130):
-            now[0] = second
-            await probe.tick()
-        assert follower.realign_own_player.call_count == 2
+            assert abs(probe.current_delay_ms() - before) < 1e-6
+        follower.realign_own_player.assert_not_called()
+        assert probe.current_delay_ms() == -200
     asyncio.run(run())
-
 
 def test_fake_cli_only_positions_and_one_preference_no_paused_or_stopped_requests():
     async def run():
@@ -190,7 +181,8 @@ def test_fake_cli_only_positions_and_one_preference_no_paused_or_stopped_request
                 now[0] += 100
                 await probe.tick()
                 assert commands == previous
-            assert probe.current_delay_ms() == 1125
+            assert probe.target_delay == 1125
+            assert probe.current_delay_ms() <= 5 * (now[0] - 14)
         finally:
             server.close()
             await server.wait_closed()
@@ -255,11 +247,12 @@ def test_preference_absence_is_cached_and_lowering_is_bounded():
             now[0] = second
             await probe.tick()
         assert queries.count('playerpref playDelay ?') == 1
-        assert probe.delay == 1000
+        assert probe.target_delay == 1000
+        assert probe.delay == 0
         for _ in range(7):
             previous = probe.delay
             probe.accept(.7, 15)
-            assert -50 <= probe.delay - previous <= 0
+            assert abs(probe.delay - previous) <= 5
     asyncio.run(run())
 
 
@@ -333,7 +326,7 @@ def test_auto_alignment_once_survives_probe_refresh_but_explicit_seek_is_relayed
     assert follower._align_seed_position.call_count == 2
 
 
-def test_trim_refresh_preserves_estimate_and_first_step_allowance(tmp_path):
+def test_trim_refresh_preserves_estimate_and_slew_limit(tmp_path):
     async def run():
         storage = Storage(tmp_path / 'config.json')
         config = PlayerLatency(FOLLOW, strategy='auto')
@@ -351,9 +344,10 @@ def test_trim_refresh_preserves_estimate_and_first_step_allowance(tmp_path):
         await manager._apply_probe_for_master(session, FOLLOW)
         assert session.probe is probe
         assert not probe.first and len(probe.samples) == 4
-        assert probe.current_delay_ms() == 1000
+        assert probe.current_delay_ms() == 0
         probe.accept(1, 8)
-        assert probe.current_delay_ms() == 1050
+        assert probe.delay == 15
+        assert probe.target_delay == 2000
     asyncio.run(run())
 
 
@@ -388,7 +382,7 @@ def test_recent_samples_are_bounded_timestamped_and_detached(monkeypatch):
                                                (1.004, [-.430])])
 def test_field_excursions_cannot_poison_initial_consensus(baseline, excursions, caplog):
     import logging
-    probe, _, _, _, saved = fixture_probe()
+    probe, _, _, _, saved = fixture_probe(measured_delay_ms=round(baseline * 1000))
     with caplog.at_level(logging.INFO, logger='lampastream.latency'):
         stable_at = None
         for i in range(40):
@@ -401,16 +395,18 @@ def test_field_excursions_cannot_poison_initial_consensus(baseline, excursions, 
             if probe.state == 'stable':
                 assert abs(probe.delay - baseline * 1000) <= 10
     assert stable_at <= 7
-    assert len(caplog.records) == 40
+    samples = [r for r in caplog.records if r.message.startswith("latency sample:")]
+    assert len(samples) == 40
     assert all('window_median_ms=' in r.message and 'inliers=' in r.message
-               for r in caplog.records)
+               for r in samples)
     assert any('rejected' in r.message for r in caplog.records)
     assert len(probe.raw_samples) == 9
 
 
 def test_slow_field_drift_is_followed_within_twenty_ms():
-    probe, _, _, _, saved = fixture_probe()
+    probe, _, _, now, saved = fixture_probe(measured_delay_ms=432)
     for second in range(0, 361, 3):
+        now[0] = second
         if second > 30 and second % 15:
             continue
         value = .432 + .0007 * second
@@ -435,7 +431,8 @@ def test_three_rejections_restart_burst_without_losing_last_good_delay():
     for i in range(4):
         probe.accept(1, 63 + i * 3)
     assert probe.state == 'stable'
-    assert probe.delay == previous + 50
+    assert probe.target_delay == 1000
+    assert probe.delay - previous <= 5 * (72 - 9)
     assert saved[-1][0] == 1000
 
 
@@ -448,21 +445,21 @@ def test_stale_track_positions_never_become_a_consistent_room_delay():
     assert not probe.samples
     for now in range(26, 38, 3):
         assert probe.accept(.350, now)
-    assert probe.current_delay_ms() == 350
+    assert probe.target_delay == 350
+    assert probe.current_delay_ms() < 350
     assert saved[-1][0] == 350
 
 
-def test_out_of_range_position_pair_realigns_own_player_once(monkeypatch):
-    probe, follower, context, now, saved = fixture_probe()
+def test_out_of_range_position_pair_never_seeks_mid_track(monkeypatch):
+    probe, follower, _, now, saved = fixture_probe()
     monkeypatch.setattr(probe, '_value', lambda *args: (0, now[0]))
     monkeypatch.setattr(probe, '_pair', lambda: 278.345)
 
     async def run():
         await probe.tick()
-        follower.realign_own_player.assert_called_once_with(context[0].track)
         now[0] += 6
         await probe.tick()
-        follower.realign_own_player.assert_called_once()
+        follower.realign_own_player.assert_not_called()
         assert not saved
-        assert probe.current_delay_ms() < 5000
+        assert probe.current_delay_ms() == 0
     asyncio.run(run())

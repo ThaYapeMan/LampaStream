@@ -566,7 +566,7 @@ def test_manual_reconnect_skips_only_already_playing_same_url(
     asyncio.run(run())
 
 
-def test_seed_seeks_current_position_only_after_play_and_newsong_never_seeks():
+def test_startup_and_newsong_each_align_once():
     async def run():
         server = MockLmsServer()
         server.modes[FOLLOW_MAC] = 'play'
@@ -586,7 +586,7 @@ def test_seed_seeks_current_position_only_after_play_and_newsong_never_seeks():
             await server.send_newsong(FOLLOW_MAC)
             assert await _wait_for(lambda: len(server.play_commands()) == 2)
             await asyncio.sleep(0.1)
-            assert [c for c in server.received if ' time ' in c and not c.endswith('?')] == seeks
+            assert len([c for c in server.received if ' time ' in c and not c.endswith('?')]) == 2
         finally:
             await _stop_follower(follower, task)
             await server.stop()

@@ -452,7 +452,7 @@ def test_follow_mode_retains_live_auto_probe_status(tmp_path, state, head_start)
     config = PlayerLatency(player_mac='speaker', strategy='auto', measured_delay_ms=0)
     probe = AutoLatencyProbe(config, Mock(), Mock())
     probe.state = state
-    probe.delay = 1530
+    probe.delay = probe.target_delay = 1530
     probe.samples.extend([1.52, 1.53, 1.54])
     probe.sample_times.extend([1, 2, 3])
     session = ActiveSession(Profile(), coupling=Coupling(player_id=player.id),

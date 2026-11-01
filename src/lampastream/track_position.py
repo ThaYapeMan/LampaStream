@@ -77,6 +77,8 @@ class LmsTrackPositionSource:
         self._task: asyncio.Task | None = None
         self._snapshot: TrackPosition | None = None
         self._selected: str | None = None
+        self._correction = 0.
+        self._correction_at = 0.
 
     def open(self) -> None:
         if not self.running:
@@ -88,15 +90,38 @@ class LmsTrackPositionSource:
 
     def read(self) -> TrackPosition | None:
         # Never expose the old room while the asynchronous connection switches.
-        return self._snapshot if self._selected == self._target() else None
+        if self._selected != self._target() or self._snapshot is None:
+            return None
+        bound = max(0., time.monotonic() - self._correction_at) * .005
+        return replace(self._snapshot, position_s=(
+            self._snapshot.position_s + max(-bound, min(bound, self._correction))
+            if self._snapshot.position_s is not None else None))
+
+    def _set_snapshot(self, snapshot):
+        old = self.read()
+        self._correction = 0.
+        self._correction_at = time.monotonic()
+        if (old is not None and snapshot is not None and old.playing and snapshot.playing
+                and (old.title, old.artist) == (snapshot.title, snapshot.artist)
+                and old.position_s is not None and snapshot.position_s is not None):
+            predicted = old.position_s + snapshot.observed_at - old.observed_at
+            error = snapshot.position_s - predicted
+            # Large changes are a seek/track transition. Small subscription
+            # corrections follow the same 5 ms/s bound as the room clock.
+            if abs(error) <= .5:
+                snapshot = replace(snapshot, position_s=predicted)
+                self._correction = error
+        self._snapshot = snapshot
 
     def seed(self, target: str, status: LmsPlayerStatus, observed_at: float) -> None:
         """Reuse the session's initial status query, without another CLI request."""
         if (self._selected == target and self._snapshot
                 and self._snapshot.observed_at > observed_at):
             return  # a subscription update arrived while the query was in flight
+        if self._selected != target:
+            self._snapshot = None
         self._selected = target
-        self._snapshot = (TrackPosition(
+        self._set_snapshot(TrackPosition(
             status.title, status.artist, status.time, status.duration,
             status.mode == 'play' and not status.waiting_to_play, observed_at,
             **self._details(status),
@@ -150,10 +175,10 @@ class LmsTrackPositionSource:
                         if status.mode not in ('play', 'pause', 'stop'):
                             self._snapshot = None
                             continue
-                        self._snapshot = TrackPosition(
+                        self._set_snapshot(TrackPosition(
                             status.title, status.artist, status.time, status.duration,
                             status.mode == 'play' and not status.waiting_to_play, time.monotonic(),
-                            **self._details(status))
+                            **self._details(status)))
             except (OSError, ValueError, TimeoutError):
                 pass  # metadata unavailability must not interrupt audio delivery
             finally:

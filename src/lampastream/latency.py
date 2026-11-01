@@ -13,6 +13,7 @@ import asyncio
 import logging
 import math
 import statistics
+import threading
 import time
 from collections import deque
 from dataclasses import dataclass
@@ -71,7 +72,7 @@ def latency_status(config, *, state="idle", strategy=None, delay=None, reason=No
         "strategy": strategy or config.strategy,
         "applied_delay_ms": delay if delay is not None else (
             config.fixed_delay_ms if config.strategy == "fixed" else
-            max(0, (config.measured_delay_ms or 0) + config.trim_ms)
+            (config.measured_delay_ms or 0) + config.trim_ms
             if config.strategy == "auto" else 0),
         "median_residual_ms": None, "player_delay_ms": None,
         "trim_ms": config.trim_ms, "sample_count": 0, "precision_ms": None,
@@ -86,8 +87,8 @@ MAX_AUTO_DELAY_MS = 5000
 class AutoLatencyProbe:
     """Bounded, asynchronous LMS position sampling; the output getter never waits.
 
-    All socket work is owned through cancellation. No status/URL/mode queries are
-    made here, and the only possible seek is delegated to the own-player follower.
+    All socket work is owned through cancellation. No status/URL/mode queries or
+    seeks are made here; startup alignment belongs to the own-player follower.
     """
 
     def __init__(self, config, follower, persist, preference_cache=None, *, clock=time.monotonic):
@@ -102,16 +103,18 @@ class AutoLatencyProbe:
         self.sample_times = deque(maxlen=7)
         measured = config.measured_delay_ms or 0
         # Discard persisted estimates poisoned by the old same-URL reuse path.
-        if not 0 <= measured < MAX_AUTO_DELAY_MS:
+        if not abs(measured) < MAX_AUTO_DELAY_MS:
             measured = 0
-        self.delay = max(0, measured + config.trim_ms)
+        self.delay = float(measured + config.trim_ms)
+        self.target_delay = self.delay
+        self.applied_at = clock()
+        self._mapping_lock = threading.Lock()
         self.player_delay = None
         self.last_sample = None
         self.next_sample = 0.0
         self.burst_end = 0.0
         self.context = None
         self.first = True
-        self.realign_track = None
         self.order = False
         self.task = None
         self.stopping = False
@@ -132,11 +135,24 @@ class AutoLatencyProbe:
             self.task = None
         self.state = "idle"
 
+    smooth_corrections = True
+    MAX_CORRECTION_MS_PER_SECOND = 5.
+
+    def _advance(self, now):
+        # Advance the old target before installing a new one. Repeated getters
+        # or samples cannot buy extra correction, and idle time is not credit.
+        elapsed = max(0., now - self.applied_at)
+        bound = elapsed * self.MAX_CORRECTION_MS_PER_SECOND
+        self.delay += max(-bound, min(bound, self.target_delay - self.delay))
+        self.applied_at = max(self.applied_at, now)
+
     def current_delay_ms(self):
-        return self.delay
+        with self._mapping_lock:
+            self._advance(self.clock())
+            return self.delay
 
     def status(self):
-        status = latency_status(self.config, state=self.state, delay=self.delay)
+        status = latency_status(self.config, state=self.state, delay=self.current_delay_ms())
         status.update(
             median_residual_ms=(round(statistics.median(self.samples) * 1000)
                                 if self.samples else None),
@@ -228,10 +244,14 @@ class AutoLatencyProbe:
         estimate = statistics.median(value + rate * (now - sampled_at)
                                      for value, _, sampled_at in inliers)
         measured = round(estimate * 1000) + (self.player_delay or 0)
-        if not 0 <= measured < MAX_AUTO_DELAY_MS:
+        if not abs(measured) < MAX_AUTO_DELAY_MS:
             return False
-        target = max(0, measured + self.config.trim_ms)
-        self.delay = target if self.first else self.delay + max(-50, min(50, target - self.delay))
+        with self._mapping_lock:
+            self._advance(now)
+            self.target_delay = measured + self.config.trim_ms
+        logging.getLogger(__name__).info(
+            "latency mapping: track=%s applied_ms=%.3f target_ms=%.3f limit_ms_per_s=5",
+            self.context.track if self.context else None, self.delay, self.target_delay)
         self.first = False
         self.state = "stable"
         self.persist(measured, self.last_sample)
@@ -305,20 +325,6 @@ class AutoLatencyProbe:
         if self.stopping or context != self.follower.latency_context():
             return
         self.accept(residual, now)
-        misaligned = math.isfinite(residual) and abs(residual * 1000) >= MAX_AUTO_DELAY_MS
-        behind = (now >= self.burst_end and len(self.samples) >= 4
-                  and statistics.median(self.samples) < -.3)
-        if (misaligned or behind) and self.realign_track != context.track:
-            self.realign_track = context.track
-            await self._owned_call(self.follower.realign_own_player, context.track)
-            self.samples.clear()
-            self.sample_times.clear()
-            self.raw_samples.clear()
-            self.rejected_samples = 0
-            self.first = True
-            self.state = "measuring"
-            self.next_sample = self.clock() + 5
-            self.burst_end = self.next_sample + 30
 
     async def _run(self):
         while not self.stopping:
