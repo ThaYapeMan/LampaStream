@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Log preview data; absent track time falls back to the room clock, never wall time."""
+"""Log track seconds; absent track anchors stay empty, with raw beat clocks separate."""
 
 import argparse
 import asyncio
@@ -23,18 +23,23 @@ TEMPO_FIELDS = [
     "agc_gain",
     "trigger_ratio",
 ]
-BEAT_FIELDS = ["audible_t", "wall_t", "strength", "source"]
+BEAT_FIELDS = [
+    "audible_t",
+    "detected_audible_t",
+    "detected_audible_monotonic",
+    "wall_t",
+    "strength",
+    "source",
+]
 
 
 def beat_row(event, wall):
     if event.get("detected_audible_monotonic") is None:
         raise RuntimeError("Preview event lacks detection time; deploy the updated server")
     return dict(
-        audible_t=(
-            event.get("detected_audible_t")
-            if event.get("detected_audible_t") is not None
-            else event["detected_audible_monotonic"]
-        ),
+        audible_t=event.get("detected_audible_t"),
+        detected_audible_t=event.get("detected_audible_t"),
+        detected_audible_monotonic=event["detected_audible_monotonic"],
         wall_t=wall,
         strength=event.get("strength"),
         source=(
@@ -82,11 +87,7 @@ async def log(label, duration, out, url, ready=None):
                                 TEMPO_FIELDS,
                                 [
                                     wall,
-                                    (
-                                        message.get("audible_t")
-                                        if message.get("audible_t") is not None
-                                        else message.get("audible_monotonic")
-                                    ),
+                                    message.get("audible_t"),
                                     message.get("tempo_bpm"),
                                     message.get("tempo_alt_bpm"),
                                     message.get("tempo_confidence"),

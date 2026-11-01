@@ -212,3 +212,20 @@ def test_manager_activation_swap_and_teardown_reuse_tee(tmp_path, monkeypatch, i
         assert not tee.running
 
     asyncio.run(exercise())
+
+
+def test_ingress_peak_expires_and_invalidations_clear_it(monkeypatch):
+    now = [10.]
+    monkeypatch.setattr('lampastream.pcm_source.time.monotonic', lambda: now[0])
+    data = DataResult(DecodedSourceFrame(
+        samples=np.array([[.5, -.25]], dtype=np.float32), sample_rate=48000,
+        channels=2, source_id='level', source_sample_pos=0, over_range=False, wall_ns=None))
+    tee = TeePcmSource(Source([data, data, StreamInvalidated(InvalidationCause.SEEK)]))
+    assert tee.read() is data
+    assert tee.recent_peak_s16 == 16384
+    now[0] += 1.01
+    assert tee.recent_peak_s16 == 0
+    assert tee.read() is data
+    assert tee.recent_peak_s16 == 16384
+    tee.read()
+    assert tee.recent_peak_s16 == 0

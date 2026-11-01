@@ -81,6 +81,7 @@ class TeePcmSource(Generic[_OpenArgs]):
         self._source = source
         self._capacity = capacity
         self._secondary: deque[SourceReadResult] | None = None
+        self._peaks = deque(maxlen=256)
 
     def open(self, *args: _OpenArgs.args, **kwargs: _OpenArgs.kwargs) -> None:
         return self._source.open(*args, **kwargs)
@@ -94,10 +95,21 @@ class TeePcmSource(Generic[_OpenArgs]):
 
     def read(self) -> SourceReadResult:
         result = self._source.read()
+        if isinstance(result, DataResult) and result.frame.samples.size:
+            self._peaks.append((time.monotonic(), float(np.max(np.abs(result.frame.samples)))))
+        elif isinstance(result, (StreamInvalidated, EndOfStream)):
+            self._peaks.clear()
         queue = self._secondary
         if queue is not None:
             queue.append(result)
         return result
+
+    @property
+    def recent_peak_s16(self):
+        """One-second ingress level for owner diagnostics, before analysis gain."""
+        since = time.monotonic() - 1.
+        return round(32768 * max((peak for stamp, peak in tuple(self._peaks)
+                                 if stamp >= since), default=0.))
 
     def attach_secondary(self) -> None:
         if self._secondary is None:

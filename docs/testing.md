@@ -1241,3 +1241,66 @@ The italic “measured” label before the track BPM is identical in both editor
 Field acceptance still requires Apple Music → AirPlay and pause/play/next from
 the page on the owner's iPhone; fake-sender tests prove the protocol, not that
 specific device's remote-control permission.
+
+## LAT-03 room clock and capture acceptance
+
+[Player mapping evidence and limits](research/lat03-player-mapping.md) quantifies
+the 112 → 13 ms first-estimate jump and the independent LMS position drift.
+Automatic LMS offsets now preserve signed native-clock calibration, remember the
+per-room estimate at activation, and slew subsequent targets at at most 5 ms/s.
+A probe never seeks a running track. The follower aligns each newly mirrored track
+once; explicit user seeks remain supported. Small LMS metadata-anchor corrections
+also slew instead of stepping. Unknown or stale saved calibration still needs
+convergence: first-bin field accuracy is not implied by software tests.
+
+The smoke pulse is −6 dBFS (generated peak 16419/32768), with sender volume 100.
+The deployed socket check requires **ingress peak >3000 and a real detected beat
+event**. `pcm_peak_s16` is a recent one-second peak from the existing sole source
+reader, before analysis gain. No second FIFO reader attaches to the service.
+Standalone `--pcm-pipe` checks peak >3000; it has no service socket, so socket beat
+acceptance requires a separate deployed smoke run. Exit codes remain 2 for sender/
+discovery failure, 3 for missing signal/detection and 4 for a live busy receiver.
+
+Shairport 4.3.7 compiled with AirPlay 2 can leave statusFlags bit 11 set after a
+classic connection closes: its generic cleanup calls `teardown_phase_two`, which
+clears the flag only for a PTP stream while releasing `principal_conn` for both.
+Explicit classic TEARDOWN does clear the flag, so the symptom depends on how the
+sender exits. The bit is therefore not sufficient proof of a live sender.
+When a Shairport receiver reports it, A/B tools also inspect established RTSP
+connections on the local receiver's address/port **before** opening the disposable
+GET /info connection. No live connection permits the stale flag; a live connection
+returns exit 4. Remote Shairport ownership cannot be inspected this way and returns
+an explicit verification error (exit 2) rather than silently taking over a sender.
+RTSP 453 still catches a raced classic play-lock failure. Keep the receiver's
+`sessioncontrol.allow_session_interruption = "no"`; a preflight cannot eliminate
+connection races. To clear a truly stuck receiver, stop its sender, then run
+`sudo systemctl restart shairport-sync` on the receiver host (this ends playback).
+
+Captures now include `analysis.md`. Reference lookup uses `AB_REFERENCE_BEATS`
+when set; otherwise `beats.csv` beside `AB_TRACK_PATH`, or `own/<slug>/beats.csv`
+under the current directory, `AB_REFERENCE_ROOT` (default `/tmp/ab`), the track's
+parent, `tests/fixtures`, or `artifacts/acceptance`. The slug is the LMS title,
+lowercased with non-alphanumeric runs replaced by `-`. The exact reference is
+copied into the archive as `reference-beats.csv`. For this field track, explicit
+selection avoids any naming ambiguity:
+
+```bash
+sudo env AB_REFERENCE_BEATS=/path/to/analysis-kit/beats.csv \
+  AB_LMS_PLAYER='<room>' AB_LMS_COUPLING='<LMS id>' AB_AIRPLAY_COUPLING='<AirPlay id>' \
+  AB_TRACK_PATH=/tmp/ab/track.flac scripts/ab-capture.sh \
+  'Just A Little Bit More' 'bc:24:11:f0:46:75' --protocol-version 1
+```
+
+The table reports each 30-second bin's nearest-reference offset median, MAD and
+count, with the analysis kit's median-centered phase unwrap. No reference gives
+NOT EVALUATED, never a fabricated verdict. Missing bins/full-track coverage fail
+acceptance; breaks and nearest-beat ambiguity still need inspection. LMS acceptance
+is ±40 ms from the first bin and <20 ms changes between adjacent bins; compare
+AirPlay with its previous capture too.
+
+Both logger CSVs use track seconds only in `audible_t`; missing anchors are empty,
+never raw monotonic seconds. Beats additionally expose `detected_audible_t` and
+`detected_audible_monotonic` explicitly. The supplied archive does not reproduce
+the claimed all-run tempo-coordinate failure: LMS has seven zero rows at startup/
+stop and valid track seconds during playback; AirPlay row 30 is 27.974 s. The new
+empty-unknown rule prevents coordinate mixing when metadata is actually absent.

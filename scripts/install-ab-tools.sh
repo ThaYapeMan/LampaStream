@@ -33,7 +33,7 @@ install_tools() {
     [[ $EUID == 0 ]] || { echo 'Run with sudo' >&2; return 1; }
     [[ -x /opt/lampastream/.venv/bin/python ]] || { echo 'Install LampaStream first' >&2; return 1; }
     apt-get update
-    apt-get install -y --no-install-recommends ffmpeg tcpdump
+    apt-get install -y --no-install-recommends ffmpeg tcpdump iproute2
     local script_dir
     script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
     /opt/lampastream/.venv/bin/python -m pip install --force-reinstall -r "$script_dir/requirements-ab-tools.txt"

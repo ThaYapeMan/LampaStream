@@ -51,7 +51,7 @@ def test_logger_keeps_exact_clock_and_unknown_track_time():
         predicted=False,
     )
     assert logger.beat_row(event, 1234)["audible_t"] == 3.125
-    assert logger.beat_row(dict(event, detected_audible_t=None), 1234)["audible_t"] == 999.0
+    assert logger.beat_row(dict(event, detected_audible_t=None), 1234)["audible_t"] is None
     assert logger.beat_row(dict(event, predicted=True), 1234)["source"] == "tempo_clock"
 
 
@@ -175,7 +175,7 @@ def test_smoke_distinguishes_handshake_and_no_beats(
     monkeypatch.setattr(tool, "check_receiver_idle", lambda _: None)
     monkeypatch.setattr(tool, "assert_route", lambda _: None)
     monkeypatch.setattr(tool, "CREDS", tmp_path / "creds")
-    monkeypatch.setattr(tool, "observe", lambda *_: asyncio.sleep(0, result=beats))
+    monkeypatch.setattr(tool, "observe", lambda *_, **kw: asyncio.sleep(0, result=beats))
     diagnostics = Mock()
     monkeypatch.setattr(tool, "smoke_diagnostics", diagnostics)
 
@@ -250,3 +250,112 @@ def test_busy_status_and_play_lock_failures_use_exit_four(tmp_path):
     with pytest.raises(tool.SmokeFailure) as caught:
         tool.reject_busy_log(log)
     assert caught.value.exit_code == 4
+
+
+def test_shairport_stale_flag_needs_live_connection():
+    tool = load('ab-tools')
+    tool.reject_busy(1 << 11, 'Shairport Sync', False)
+    with pytest.raises(tool.SmokeFailure) as error:
+        tool.reject_busy(1 << 11, 'Shairport Sync', True)
+    assert error.value.exit_code == 4
+    with pytest.raises(tool.SmokeFailure) as error:
+        tool.reject_busy(1 << 11, 'Shairport Sync', None)
+    assert error.value.exit_code == 2
+
+
+def test_capture_analysis_uses_reference_and_marks_missing_bins(tmp_path, monkeypatch):
+    import csv
+
+    tool = load('ab-tools')
+    reference = tmp_path/'own'/'test-song'/'beats.csv'
+    reference.parent.mkdir(parents=True)
+    reference.write_text('beat,time_s\n' + ''.join(f'{i},{.5+i*.46875}\n' for i in range(260)))
+    monkeypatch.setenv('AB_REFERENCE_ROOT', str(tmp_path))
+    out = tmp_path/'out'
+    out.mkdir()
+    for label, offset in (('lms', .2), ('airplay', .006)):
+        with (out/f'{label}-beats.csv').open('w') as stream:
+            writer = csv.writer(stream)
+            writer.writerow(['audible_t'])
+            writer.writerows([[.5+i*.46875+offset] for i in range(260)])
+    tool.write_analysis(out, tmp_path/'track.flac', 'Test Song')
+    result = (out/'analysis.md').read_text()
+    assert '+200.0 / 0.0' in result and '+6.0 / 0.0' in result
+    assert 'lms: FAIL' in result and 'airplay: PASS' in result
+    assert (out/'reference-beats.csv').read_bytes() == reference.read_bytes()
+    monkeypatch.setenv('AB_REFERENCE_BEATS', str(tmp_path/'missing.csv'))
+    tool.write_analysis(out, tmp_path/'track.flac')
+    assert 'NOT EVALUATED' in (out/'analysis.md').read_text()
+
+
+def test_smoke_generated_pulse_is_minus_six_dbfs(tmp_path):
+    import array
+    import math
+    import shutil
+    import subprocess
+    import wave
+
+    if not shutil.which('ffmpeg'):
+        pytest.skip('ffmpeg unavailable')
+    # Use the actual command assembled by smoke, without a live sender.
+    tool = load('ab-tools')
+    import ast
+    import inspect
+    tree = ast.parse(inspect.getsource(tool.smoke))
+    call = next(n for n in ast.walk(tree) if isinstance(n, ast.Call)
+                and isinstance(n.func, ast.Name) and n.func.id == 'run')
+    args = [ast.literal_eval(n) for n in call.args[:-1]]
+    pulse = tmp_path/'pulse.wav'
+    subprocess.run([*args, str(pulse)], check=True)
+    with wave.open(str(pulse)) as stream:
+        samples = array.array('h', stream.readframes(stream.getnframes()))
+    peak = max(abs(v) for v in samples)
+    dbfs = 20*math.log10(peak/32768)
+    assert dbfs == pytest.approx(-6, abs=.02)
+    assert peak > 3000
+    print(f'Generated smoke pulse: peak={peak}/32768, {dbfs:.4f} dBFS')
+
+
+def test_busy_connection_probe_distinguishes_live_and_finished_session():
+    import socket
+
+    tool = load('ab-tools')
+    with socket.socket() as server:
+        server.bind(('127.0.0.1', 0))
+        server.listen()
+        port = server.getsockname()[1]
+        assert tool.receiver_connection('127.0.0.1', port) is False
+        with socket.create_connection(('127.0.0.1', port)) as client:
+            connection, _ = server.accept()
+            try:
+                assert client.fileno() >= 0
+                assert tool.receiver_connection('127.0.0.1', port) is True
+            finally:
+                connection.close()
+        assert tool.receiver_connection('127.0.0.1', port) is False
+
+
+@pytest.mark.parametrize('peak,detected,passed', [(3000, True, False), (3001, False, False),
+                                                (3001, True, True)])
+def test_smoke_socket_requires_real_level_and_detection(monkeypatch, peak, detected, passed):
+    import websockets
+
+    tool = load('ab-tools')
+
+    async def exercise():
+        async def send(ws):
+            await ws.send(json.dumps(dict(type='frame', pcm_peak_s16=peak,
+                                          beat_events_per_second=2)))
+            if detected:
+                await ws.send(json.dumps(dict(type='event', events=[
+                    dict(kind='beat', predicted=False)])))
+            await asyncio.sleep(.2)
+        async with websockets.serve(send, '127.0.0.1', 0) as server:
+            monkeypatch.setattr(tool, 'URL', f'ws://127.0.0.1:{server.sockets[0].getsockname()[1]}')
+            if passed:
+                assert await tool.observe(.05, require_level=True)
+            else:
+                with pytest.raises(tool.SmokeFailure) as error:
+                    await tool.observe(.05, require_level=True)
+                assert error.value.exit_code == 3
+    asyncio.run(exercise())

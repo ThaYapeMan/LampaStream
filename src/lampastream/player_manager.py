@@ -589,6 +589,8 @@ class PlayerManager:
         mapper = getattr(self, 'track_time_at', None)
         snapshot['audible_t'] = (mapper(snapshot['audible_monotonic'])
                                  if callable(mapper) else None)
+        source = self._active.shm_source
+        snapshot['pcm_peak_s16'] = source.recent_peak_s16 if source else None
         colours = snapshot.pop("colours", ())
         snapshot["onset_events"] = [dict(asdict(e), bands=sorted(e.bands))
                                     for e in snapshot.get("onset_events", ())]
@@ -1563,8 +1565,8 @@ class PlayerManager:
                     and isinstance(session.probe, AutoLatencyProbe)
                     and session.latency_mac == master
                     and session.probe.follower is session.follower):
-                # Trim/name edits preserve cadence, estimates and the first-step
-                # allowance. The next sample applies trim through the normal limit.
+                # Trim/name edits preserve cadence and the applied mapping.
+                # The next sample applies trim through the normal limit.
                 session.probe.config = pl
                 self.latency_warning = None
                 return

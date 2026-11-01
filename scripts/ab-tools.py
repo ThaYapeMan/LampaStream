@@ -4,6 +4,8 @@
 import argparse
 import array
 import asyncio
+import bisect
+import csv
 import json
 import math
 import os
@@ -12,6 +14,7 @@ import shutil
 import signal
 import socket
 import stat
+import statistics
 import subprocess
 import sys
 import tarfile
@@ -138,8 +141,8 @@ def report_protocol_version(log_path):
     return actual
 
 
-async def observe(seconds, require_beats=None):
-    seen, frames = 0, 0
+async def observe(seconds, require_beats=None, require_level=False):
+    seen, frames, peak, detected = 0, 0, 0, 0
     async with websockets.connect(URL, open_timeout=5) as ws:
         deadline = time.monotonic() + seconds
         while time.monotonic() < deadline:
@@ -151,7 +154,11 @@ async def observe(seconds, require_beats=None):
                 if time.monotonic() >= deadline:
                     break
                 raise RuntimeError("Preview socket stopped sending data") from None
+            if message.get("type") == "event":
+                detected += sum(event.get("kind") == "beat" and not event.get("predicted", False)
+                                for event in message.get("events", []))
             if message.get("type") == "frame":
+                peak = max(peak, message.get("pcm_peak_s16") or 0)
                 frames += 1
                 seen += int(message.get("beat_events_per_second", 0) > 0)
     if not frames:
@@ -160,6 +167,10 @@ async def observe(seconds, require_beats=None):
         raise RuntimeError("No beats detected during the AirPlay pulse")
     if require_beats is False and seen:
         raise RuntimeError("Beats still present after settling; aborting comparison")
+    if require_level:
+        print(f"Receiver ingress peak={peak} / 32768; detected beats={detected}", flush=True)
+        if peak <= 3000 or not detected:
+            raise SmokeFailure("Pulse needs peak >3000 and beats on the socket", 3)
     return seen
 
 
@@ -188,9 +199,37 @@ class SmokeFailure(RuntimeError):
 BUSY_MESSAGE = "receiver busy with another sender (stop AirPlay on the other device first)"
 
 
-def reject_busy(flags):
+def reject_busy(flags, model="", live_connection=None):
+    # Shairport 4.3.7 can release principal_conn without clearing bit 11
+    # (release_play_lock / classic cleanup). ANNOUNCE's play lock is authoritative;
+    # it rejects a live owner with RTSP 453 without interrupting that sender.
+    if not int(flags) & (1 << 11):
+        return
+    if "shairport" in model.lower():
+        if live_connection is None:
+            raise SmokeFailure(
+                "Shairport busy flag cannot be verified remotely; run on the receiver host", 2)
+        if not live_connection:
+            return
     if int(flags) & (1 << 11):
         raise SmokeFailure(BUSY_MESSAGE, 4)
+
+
+def receiver_connection(address, port):
+    """Inspect local RTSP ownership before opening our disposable info connection.
+
+    A bind without listen checks local address ownership, without contacting a
+    receiver. For remote receivers no principal-connection claim can be made.
+    """
+    family = socket.AF_INET6 if ":" in address else socket.AF_INET
+    try:
+        with socket.socket(family, socket.SOCK_STREAM) as local:
+            local.bind((address, 0))
+    except OSError:
+        return None
+    result = run("ss", "-Htn", "state", "established",
+                 "(", "src", address, "and", "sport", "=", f":{port}", ")", capture=True)
+    return bool(result.stdout.strip())
 
 
 def check_receiver_idle(receiver):
@@ -198,31 +237,41 @@ def check_receiver_idle(receiver):
         from pyatv import scan
         from pyatv.const import Protocol
         from pyatv.support.http import decode_bplist_from_body, http_connect
+
         hosts = os.environ.get("AB_SCAN_HOSTS")
-        devices = await scan(asyncio.get_running_loop(), identifier=receiver,
-                             hosts=hosts.split(",") if hosts else None, timeout=2)
+        devices = await scan(
+            asyncio.get_running_loop(),
+            identifier=receiver,
+            hosts=hosts.split(",") if hosts else None,
+            timeout=2,
+        )
         if not devices:
             raise SmokeFailure("AirPlay receiver not found during busy check", 2)
         device = devices[0]
         service = device.get_service(Protocol.RAOP) or device.get_service(Protocol.AirPlay)
+        live = await asyncio.to_thread(receiver_connection, str(device.address), service.port)
         connection = await http_connect(str(device.address), service.port)
         try:
             # A separate, short-lived control connection: never the classic stream.
             response = await connection.send_and_receive(
-                "GET", "/info", protocol="RTSP/1.0", headers={"CSeq": "1"})
+                "GET", "/info", protocol="RTSP/1.0", headers={"CSeq": "1"}
+            )
             info = decode_bplist_from_body(response) if response.code == 200 else {}
-            reject_busy(info.get("statusFlags", 0))
+            reject_busy(info.get("statusFlags", 0), info.get("model", ""), live)
         finally:
             connection.close()
+
     async def bounded():
         async with asyncio.timeout(5):
             await probe()
+
     asyncio.run(bounded())
 
 
 def reject_busy_log(path):
-    if re.search(r"(?:RTSP/1\.0 453|code[=: ]+453|failed.*play.lock)",
-                 path.read_text(errors="replace"), re.I):
+    if re.search(
+        r"(?:RTSP/1\.0 453|code[=: ]+453|failed.*play.lock)", path.read_text(errors="replace"), re.I
+    ):
         raise SmokeFailure(BUSY_MESSAGE, 4)
 
 
@@ -240,15 +289,15 @@ async def observe_pcm(path, seconds):
                 data = os.read(fd, 65536)
             except BlockingIOError:
                 data = b""
-            samples = array.array("h", data[:len(data) // 2 * 2])
+            samples = array.array("h", data[: len(data) // 2 * 2])
             count += len(samples)
             nonzero += sum(abs(value) > 8 for value in samples)  # exclude pipe dithering noise
             peak = max(peak, max((abs(value) for value in samples), default=0))
-            await asyncio.sleep(.005)
+            await asyncio.sleep(0.005)
     finally:
         os.close(fd)
     print(f"Local receiver PCM: samples={count}, nonzero={nonzero}, peak={peak}", flush=True)
-    return nonzero
+    return peak > 3000
 
 
 def smoke_diagnostics(log_path):
@@ -334,16 +383,17 @@ def smoke(receiver, protocol_version="auto", pcm_pipe=None, debug_log=None):
                     "-i",
                     "sine=frequency=60:sample_rate=44100:duration=10",
                     "-af",
-                    "volume=if(lt(mod(t\\,0.5)\\,0.1)\\,1\\,0):eval=frame",
+                    "volume=if(lt(mod(t\\,0.5)\\,0.1)\\,4.0094979\\,0):eval=frame",
                     str(pulse),
                 )
 
                 async def test():
                     monitor = asyncio.create_task(
-                        observe_pcm(pcm_pipe, 15) if pcm_pipe else observe(10))
+                        observe_pcm(pcm_pipe, 15) if pcm_pipe else observe(15, require_level=True)
+                    )
                     await asyncio.sleep(0.2)
                     process = subprocess.Popen(
-                        sender(receiver, "--debug", f"stream_file={pulse}"),
+                        sender(receiver, "--debug", "set_volume=100", f"stream_file={pulse}"),
                         stdout=debug,
                         stderr=debug,
                     )
@@ -375,8 +425,11 @@ def smoke(receiver, protocol_version="auto", pcm_pipe=None, debug_log=None):
                 debug.flush()
                 if debug_log:
                     shutil.copyfile(log_path, debug_log)
-    print("Non-silent PCM detected" if pcm_pipe else
-          "Beats detected: yes — owner must verify lights react")
+    print(
+        "Non-silent PCM detected"
+        if pcm_pipe
+        else "Beats detected: yes — owner must verify lights react"
+    )
 
 
 def logger(label, duration, out):
@@ -485,13 +538,15 @@ def capture(search, receiver, requested_duration, protocol_version="auto"):
         coupling_ids=couplings,
         original_coupling_id=original,
         clock_coordinates=(
-            "track seconds when available; otherwise raw AudibleClock monotonic seconds"
+            "track seconds; missing anchors are empty; raw beat clocks are separate"
         ),
     )
     active = []
     armed = False
     try:
         for label in ("lms", "airplay"):
+            if label == "airplay":
+                check_receiver_idle(receiver)
             activate(couplings[label])
             assert_route("LMS" if label == "lms" else "AirPlay")
             manifest["runs"][label] = {"start": utc()}
@@ -604,6 +659,7 @@ def capture(search, receiver, requested_duration, protocol_version="auto"):
             print("Cleanup failed: " + "; ".join(cleanup_errors), file=sys.stderr)
             if sys.exc_info()[0] is None:
                 raise RuntimeError("Capture cleanup/restore failed; see " + str(out))
+    write_analysis(out, track_path, song["title"])
     archive = base / ("ab-" + datetime.now().strftime("%Y%m%d-%H%M") + ".tar.gz")
     if archive.exists():
         archive = base / (archive.name.removesuffix(".tar.gz") + "-" + out.name + ".tar.gz")
@@ -612,6 +668,104 @@ def capture(search, receiver, requested_duration, protocol_version="auto"):
             if not path.name.startswith("."):
                 tar.add(path, arcname=path.name)
     print(archive, flush=True)
+
+
+def write_analysis(out, track_path, title=None):
+    """Nearest reference beats, 30-second median/MAD; never infer a beat grid."""
+    slug = re.sub(r"[^a-z0-9]+", "-", (title or track_path.stem).lower()).strip("-")
+    explicit = os.environ.get("AB_REFERENCE_BEATS")
+    candidates = (
+        [Path(explicit)]
+        if explicit
+        else [
+            track_path.parent / "beats.csv",
+            Path.cwd() / "own" / slug / "beats.csv",
+            Path(os.environ.get("AB_REFERENCE_ROOT", "/tmp/ab")) / "own" / slug / "beats.csv",
+            track_path.parent / "own" / slug / "beats.csv",
+            HERE.parent / "tests" / "fixtures" / "own" / slug / "beats.csv",
+            HERE.parent / "artifacts" / "acceptance" / "own" / slug / "beats.csv",
+        ]
+    )
+    reference = next((p for p in candidates if p.is_file()), None)
+    lines = [
+        "# A/B offsets",
+        "",
+        "Detection track seconds versus nearest reference beat. "
+        "Offsets are not latency measurements.",
+        "",
+    ]
+    if reference is None:
+        lines += [
+            "NOT EVALUATED: no reference beats.csv. Set AB_REFERENCE_BEATS "
+            "or place it beside the track or in own/<slug>/."
+        ]
+    else:
+        with reference.open() as stream:
+            rows = list(csv.DictReader(stream))
+        ref = sorted(float(r["time_s"]) for r in rows if math.isfinite(float(r["time_s"])))
+        if not ref:
+            raise RuntimeError("Reference beats.csv has no finite time_s values")
+        lines += [
+            f"Reference: {reference}",
+            "",
+            "| Bin (s) | LMS median / MAD (ms), n | AirPlay median / MAD (ms), n |",
+            "|---|---|---|",
+        ]
+        shutil.copyfile(reference, out / "reference-beats.csv")
+        intervals = [b-a for a, b in zip(ref, ref[1:], strict=False) if b > a]
+        period_ms = statistics.median(intervals) * 1000 if intervals else None
+        bins = {}
+        verdicts = {}
+        for label in ("lms", "airplay"):
+            with (out / f"{label}-beats.csv").open() as stream:
+                times = [float(r["audible_t"]) for r in csv.DictReader(stream) if r["audible_t"]]
+            offsets = {}
+            for t in times:
+                if not math.isfinite(t) or t < ref[0] - 0.25 or t > ref[-1] + 0.25:
+                    continue
+                i = bisect.bisect_left(ref, t)
+                near = min(ref[max(0, i - 1) : min(len(ref), i + 1)], key=lambda x: abs(x - t))
+                offsets.setdefault(int(t // 30) * 30, []).append((t - near) * 1000)
+            # Match analyse_ab.py's phase unwrap around the route median.
+            all_offsets = [v for values in offsets.values() for v in values]
+            center = statistics.median(all_offsets) if all_offsets else 0.
+            medians = {}
+            for start, values in offsets.items():
+                if period_ms:
+                    values = [(v-center+period_ms/2) % period_ms-period_ms/2+center
+                              for v in values]
+                median = statistics.median(values)
+                mad = statistics.median(abs(v - median) for v in values)
+                bins.setdefault(start, {})[label] = f"{median:+.1f} / {mad:.1f}, {len(values)}"
+                medians[start] = median
+            ordered = sorted(medians)
+            verdicts[label] = (
+                bool(ordered)
+                and ordered[0] == 0
+                and ordered[-1] >= int(ref[-1] // 30) * 30
+                and all(abs(medians[k]) <= 40 for k in ordered)
+                and all(
+                    b - a == 30 and abs(medians[b] - medians[a]) < 20
+                    for a, b in zip(ordered, ordered[1:], strict=False)
+                )
+            )
+        for start, values in sorted(bins.items()):
+            lines.append(
+                f"| {start}–{start + 30} | {values.get('lms', '—')} "
+                f"| {values.get('airplay', '—')} |"
+            )
+        lines += [
+            "",
+            *[
+                f"{label}: {'PASS' if passed else 'FAIL / INCOMPLETE'} "
+                "(±40 ms; adjacent bins <20 ms)."
+                for label, passed in verdicts.items()
+            ],
+            "",
+            "Sparse beats, breaks, missing bins and nearest-beat phase ambiguity "
+            "require inspection.",
+        ]
+    (out / "analysis.md").write_text("\n".join(lines) + "\n")
 
 
 def main():
