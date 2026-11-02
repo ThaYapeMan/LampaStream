@@ -1250,8 +1250,9 @@ Automatic LMS offsets now preserve signed native-clock calibration, remember the
 per-room estimate at activation, and slew subsequent targets at at most 5 ms/s.
 A probe never seeks a running track. The follower aligns each newly mirrored track
 once; explicit user seeks remain supported. Small LMS metadata-anchor corrections
-also slew instead of stepping. Unknown or stale saved calibration still needs
-convergence: first-bin field accuracy is not implied by software tests.
+also slew instead of stepping. See the send-back update below for the fresh
+startup consensus and seek-independent saved estimate; field acceptance remains
+an owner check.
 
 The smoke pulse is −6 dBFS (generated peak 16419/32768), with sender volume 100.
 The deployed socket check requires **ingress peak >3000 and a real detected beat
@@ -1304,3 +1305,35 @@ never raw monotonic seconds. Beats additionally expose `detected_audible_t` and
 the claimed all-run tempo-coordinate failure: LMS has seven zero rows at startup/
 stop and valid track seconds during playback; AirPlay row 30 is 27.974 s. The new
 empty-unknown rule prevents coordinate mixing when metadata is actually absent.
+
+## LAT-03 send-back 1 acceptance
+
+[Content-clock evidence and derivation](research/lat03-sendback-1.md) supersede
+the earlier session-relative persistence. Deploy using the standard installer:
+it applies `yeney-core-0001-content-position.patch` in the isolated native build,
+then records and verifies the patch and binary hashes. The pinned submodule and
+SHM v1 prefix remain unchanged. Directly building the pristine submodule alone
+does not supply the optional absolute FLAC content-position capability.
+
+Run `tests/test_lat03_sendback.py` for native FLAC frame-origin and two-session
+acceptance; `tests/test_airplay_mapping_pin.py` compares real socket/CSV detections
+with the numeric `82181c5` pin within 2 ms and checks independence from receipt/
+native-clock shifts. No analyser or tempo-clock code changed. The observed lock
+fraction/octave blips remain field observations; no tempo algorithm adjustment
+was made in this send-back.
+
+The capture's final reference candidate now includes the committed timestamps-only
+`tests/fixtures/ab-references/mau-p-jalbm/beats.csv`, for the known Mau P title
+aliases. Existing lookup precedence is preserved; `AB_REFERENCE_BEATS` remains
+explicit and authoritative for other tracks. A deployed source checkout therefore
+needs no host-private file for this track. The summary alongside it distinguishes
+librosa beat timestamps from the first kick. `*-status.jsonl` in each tarball now
+records the actual metadata anchor, source/latency status and trim.
+
+Field acceptance requires two consecutive captures: LMS ±40 ms from bin zero,
+<20 ms between adjacent median bins, and saved room calibration equal within
+10 ms. Check that `measurement_basis` is `lms-content-v1` and that a fresh startup
+consensus occurs within 15 seconds. AirPlay must return to the previous timing
+range. The exact historical cause of its 60 ms native/metadata relationship shift
+is not recoverable from the supplied archives; the new RTP origin removes that
+independent-clock dependency without adding a compensating constant.

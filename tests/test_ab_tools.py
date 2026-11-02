@@ -62,6 +62,8 @@ def test_logger_csv_real_socket(tmp_path):
 
     async def exercise():
         async def send(ws):
+            await ws.send(json.dumps(dict(type="status", track={"observed_at": 100.},
+                                          light_timing={"trim_ms": 60})))
             await ws.send(
                 json.dumps(
                     dict(
@@ -99,6 +101,9 @@ def test_logger_csv_real_socket(tmp_path):
     asyncio.run(exercise())
     assert "4.6875" in (tmp_path / "test-beats.csv").read_text()
     assert "128" in (tmp_path / "test-tempo.csv").read_text()
+    status = json.loads((tmp_path / "test-status.jsonl").read_text().splitlines()[0])
+    assert status['track']['observed_at'] == 100.
+    assert status['light_timing']['trim_ms'] == 60
 
 
 def test_capture_stops_owned_processes_and_player_on_sender_failure(tmp_path, monkeypatch):
@@ -359,3 +364,22 @@ def test_smoke_socket_requires_real_level_and_detection(monkeypatch, peak, detec
                     await tool.observe(.05, require_level=True)
                 assert error.value.exit_code == 3
     asyncio.run(exercise())
+
+
+def test_deployed_mau_p_reference_is_last_lookup_candidate(tmp_path, monkeypatch):
+    tool = load('ab-tools')
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv('AB_REFERENCE_BEATS', raising=False)
+    monkeypatch.setenv('AB_REFERENCE_ROOT', str(tmp_path/'empty'))
+    for label in ('lms', 'airplay'):
+        (tmp_path/f'{label}-beats.csv').write_text('audible_t\n0.476\n0.952\n')
+    tool.write_analysis(tmp_path, tmp_path/'track.flac', 'Just A Little Bit More (Extended)')
+    result = (tmp_path/'analysis.md').read_text()
+    assert 'mau-p-jalbm' in result and 'NOT EVALUATED' not in result
+    assert (tmp_path/'reference-beats.csv').is_file()
+    # An explicit path remains authoritative over the bundled last candidate.
+    custom = tmp_path/'custom.csv'
+    custom.write_text('time_s\n0.5\n0.96875\n')
+    monkeypatch.setenv('AB_REFERENCE_BEATS', str(custom))
+    tool.write_analysis(tmp_path, tmp_path/'track.flac', 'Just A Little Bit More (Extended)')
+    assert 'custom.csv' in (tmp_path/'analysis.md').read_text()

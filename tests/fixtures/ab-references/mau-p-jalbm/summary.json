@@ -1,0 +1,53 @@
+{
+  "file": "in/track.flac",
+  "duration_s": 381.222,
+  "sample_rate": 44100,
+  "librosa_global_bpm": 129.199,
+  "tempogram_top_candidates_bpm": [
+    129.2,
+    63.8,
+    126.05,
+    172.27,
+    84.72
+  ],
+  "librosa_beats": 814,
+  "librosa_steady_ibi_median_bpm": 129.1992,
+  "librosa_longest_clean_run": {
+    "beats": 792,
+    "from_s": 0.476,
+    "to_s": 371.264,
+    "bpm_linear_fit": 127.9984,
+    "residual_std_ms": 6.64,
+    "residual_max_ms": 46.41
+  },
+  "kick_detector": {
+    "kicks": 805,
+    "steady_iki_median_bpm": 127.6042,
+    "iki_std_ms_steady": 9.89
+  },
+  "per_second": {
+    "librosa_local_std": 0.214,
+    "kick_local_std": 15.372,
+    "grid_fit_std": 0.651
+  },
+  "kick_gaps_over_1p5s": [
+    [
+      210.19,
+      212.38
+    ],
+    [
+      240.17,
+      241.67
+    ],
+    [
+      260.82,
+      262.49
+    ],
+    [
+      270.3,
+      272.02
+    ]
+  ],
+  "first_kick_s": 0.499,
+  "first_beat_s": 0.476
+}

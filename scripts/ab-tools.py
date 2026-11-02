@@ -684,6 +684,10 @@ def write_analysis(out, track_path, title=None):
             track_path.parent / "own" / slug / "beats.csv",
             HERE.parent / "tests" / "fixtures" / "own" / slug / "beats.csv",
             HERE.parent / "artifacts" / "acceptance" / "own" / slug / "beats.csv",
+            *([HERE.parent / "tests" / "fixtures" / "ab-references" /
+               "mau-p-jalbm" / "beats.csv"] if slug in {
+                   "just-a-little-bit-more", "just-a-little-bit-more-extended",
+                   "mau-p-just-a-little-bit-more-extended", "mau-p-jalbm"} else []),
         ]
     )
     reference = next((p for p in candidates if p.is_file()), None)

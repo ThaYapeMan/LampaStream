@@ -58,6 +58,7 @@ async def log(label, duration, out, url, ready=None):
         with (
             (out / f"{label}-tempo.csv").open("w") as tempo,
             (out / f"{label}-beats.csv").open("w") as beats,
+            (out / f"{label}-status.jsonl").open("w") as status,
         ):
             tw, bw = csv.DictWriter(tempo, TEMPO_FIELDS), csv.DictWriter(beats, BEAT_FIELDS)
             tw.writeheader()
@@ -75,6 +76,13 @@ async def log(label, duration, out, url, ready=None):
                         break
                     raise RuntimeError("Preview socket stopped sending data") from None
                 message, wall = json.loads(raw), time.time()
+                if message.get("type") == "status":
+                    # Preserve the actual anchor/trim/source used during capture.
+                    status.write(json.dumps(dict(t_wall=wall, **{
+                        key: message.get(key) for key in (
+                            "track", "light_timing", "lms_timing", "active_player_type")
+                    })) + "\n")
+                    status.flush()
                 if message.get("type") == "event":
                     for event in message.get("events", []):
                         if event.get("kind") == "beat":
