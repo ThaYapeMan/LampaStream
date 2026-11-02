@@ -445,49 +445,50 @@ status polling. Existing event-driven follower URL lookups and the track display
 status subscription retain their separate roles; repeated full status polling of
 the followed player remains forbidden.
 
-A five-second guard follows newsong, seek, pause, resume and reconnect events on
-either player. A thirty-second burst starts after the guard, sampling every three
-seconds; subsequent samples are fifteen seconds apart. Paused, stopped, disconnected
-or mismatched tracks produce no measurement requests. The estimator keeps the last
-nine raw residuals, including rejected values. Inliers lie within 60 ms of their
-window median; four values spanning at most 60 ms establish consensus before any
-delay is applied or saved. Three consecutive rejections clear the window and
-restart the three-second burst while retaining the last good delay. The display
-retains up to seven inliers and reports precision as 1.4826 times their median
-absolute deviation. Every sample logs its decision, median and inlier count.
-To follow slow drift without the lag of a fifteen-second sample window, a robust
-median of pairwise slopes (pairs at least fifteen seconds apart, limited to
-±1 ms/s) projects the consensus values to the current sample time before taking
-their median. Precision describes position consistency, not a
-measurement of acoustic latency.
+The native FLAC content-clock path waits one second after transport changes,
+then samples once per second for a thirty-second burst; steady samples are
+fifteen seconds apart. Paused, stopped, disconnected or mismatched tracks make
+no measurement requests. Nine raw residuals support a 60 ms median filter and
+four-sample consensus. A robust drift projection is bounded to ±1 ms/s. Precision
+is position consistency, not an acoustic measurement.
 
-The followed player's `playerpref playDelay ?` preference is read once when the
-activation first becomes eligible. An absent preference contributes zero. LMS's
-Player → Synchronisation **Player Delay** is expressed in milliseconds: positive
-values compensate for a player's delayed output. The applied delay is:
+The virtual player's CLI time uses the requested seek label; FLAC can start at
+an earlier frame boundary. The standard installer therefore builds the pinned
+producer with `yeney-core-0001-content-position.patch`. Its optional YNPT content
+position comes from the actual FLAC frame header. Other codecs without an
+absolute content position cannot establish this calibration; use Fixed when the
+status reports `not measurable`.
+
+The followed player's `playerpref playDelay ?` is still read once per activation.
+The probe separates a saved room/native-clock calibration from the live session's
+relative position and FLAC landing error:
 
 ```
-max(0, median residual ms + Player Delay ms + trim ms)
+applied ms = saved room calibration + current session offset + trim
 ```
 
-Manual trim ranges from −1000 to +1000 ms. The first estimate after a newsong or
-re-alignment steps directly once four samples agree within 60 ms; subsequent
-updates change by at most 50 ms. Editing trim preserves the estimator and applies
-the new target through that same limit. A median below −300 ms after the burst triggers
-one own-player position re-alignment per followed track and a fresh burst. This
-once-per-track guard survives latency-entry edits; explicit followed-player seeks
-still mirror to the own player independently. The
-followed player is never sought by this mechanism; non-seekable streams may remain
-uncompensated when the own player runs behind.
+[The derivation and field evidence](research/lat03-sendback-1.md) define the terms.
+`measured_delay_ms` excludes the session offset and trim, and includes Player Delay.
+`measurement_basis=lms-content-v1` identifies this meaning. Earlier untagged numbers
+are not reused as seek-independent calibration. None and Fixed retain their
+existing configuration. No device-specific probes or new full-status polling
+are added.
 
-Stable `measured_delay_ms` and `measured_at` (Unix seconds) are saved per MAC. The
-saved measurement includes Player Delay but excludes trim; it supplies the starting
-value on the next activation. Configuration writes do not accept these read-only
-fields. `GET /api/player-latencies` includes a read-only `status` with effective
-strategy, applied delay, median residual, Player Delay, trim, sample count,
-precision, last accepted sample time and state. Auto status refreshes every two
-seconds in the UI. States are `idle`, `measuring`, `stable` and
-`not measurable (sync group)`; the latter includes the fallback reason.
+A fresh consensus may step directly **once in the first 15 seconds** of startup
+or a new track. The initial deadline starts at probe creation; ordinary events,
+trim edits and rejected-sample windows do not extend it. Later corrections slew
+at at most **5 ms/s**, including trim changes. The follower aligns the virtual
+player once at track start; the probe never issues a late seek. Explicit user
+seeks still relay to the virtual player.
+
+The read-only status includes applied delay, room calibration, session offset,
+precision, sample count, measurement basis and startup-step state. `stable`
+(“In sync”) requires applied and target to be within 15 ms; otherwise the state
+remains `measuring`. Missing content provenance remains measuring/not measurable,
+rather than declaring a false stable result. AirPlay metadata track time uses
+the native RTP playback anchor when available; pipe fallback keeps metadata
+interpolation. Capture `*-status.jsonl` retains the actual track anchor, trim and
+source state for diagnosis.
 
 Sync-group members share LMS's reported position, so Auto falls back to
 `fixed_delay_ms` without position or preference measurement queries. Manual trim

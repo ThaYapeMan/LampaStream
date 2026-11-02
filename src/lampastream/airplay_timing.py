@@ -164,6 +164,18 @@ class TimingDiagnostics:
         self.tap_source = "pipe fallback"
         self.tap_leads = deque(maxlen=1024)
         self.tap_drops = 0
+        self.rtp_clock = None
+
+    def track_origin(self, start):
+        """Use the tapped RTP playback clock, never metadata receipt time."""
+        with self.lock:
+            anchor = self.rtp_clock
+            if (self.tap_source != 'early tap' or self.tap_paused or anchor is None
+                    or anchor[2] != self.tap_generation):
+                return None
+            rtp, played_at, _ = anchor
+            elapsed = ((rtp-start+2**31) % 2**32)-2**31
+            return played_at-elapsed/44100
 
     def _record(self, kind, now, **values):
         self.sequence += 1
@@ -194,6 +206,7 @@ class TimingDiagnostics:
 
     def tap_reset(self):
         with self.lock:
+            self.rtp_clock = None
             self.tap_generation += 1
             self.tap_leads.clear()
             self.cadence.reset()

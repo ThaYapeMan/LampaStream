@@ -274,6 +274,7 @@ CORE="$REPO_DIR/third_party/yeney-core"
 mkdir -p "$WORK/third_party/yeney-core/third_party/alac"
 git -c safe.directory="$CORE" -C "$CORE" archive HEAD | tar -x -C "$WORK/third_party/yeney-core"
 git -c safe.directory="$CORE/third_party/alac" -C "$CORE/third_party/alac" archive HEAD | tar -x -C "$WORK/third_party/yeney-core/third_party/alac"
+patch -d "$WORK/third_party/yeney-core" -p1 < "$REPO_DIR/scripts/patches/yeney-core-0001-content-position.patch"
 make -C "$WORK/third_party/yeney-core" -j"$(nproc)" yeney-player
 "$WORK/third_party/yeney-core/yeney-player" --help
 # Stop owned services before replacing binaries.

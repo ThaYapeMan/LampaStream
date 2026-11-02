@@ -356,6 +356,7 @@ class ActiveSession:
         self.head_start_task: asyncio.Task | None = None
         self.unsync_task: asyncio.Task | None = None
         self.track_source: TrackPositionSource | None = None
+        self.position_clock = None
         self.airplay_receiver: AirPlayReceiver | None = None
         self.safety_task: asyncio.Task | None = None
 
@@ -1080,6 +1081,8 @@ class PlayerManager:
                   if session.coupling else None)
         source = YeneyCoreShmStereoSource()
         source.use_player_clock = True
+        raw_source = source
+        session.position_clock = lambda: raw_source.position_clock
         session.lms_timed_source = None
         session.head_start = None
         if (player and player.follow_mode == "sync_group"
@@ -1586,9 +1589,12 @@ class PlayerManager:
                     if current is not None and current.strategy == "auto":
                         current.measured_delay_ms = measured
                         current.measured_at = timestamp
+                        current.measurement_basis = (
+                            'lms-content-v1' if session.position_clock is not None else None)
                         self.storage.save_player_latency(current)
                 new_probe = AutoLatencyProbe(
-                    pl, session.follower, persist, session.latency_preferences)
+                    pl, session.follower, persist, session.latency_preferences,
+                    position_clock=session.position_clock)
                 self.latency_warning = None
             elif pl.strategy == "fixed":
                 new_probe = FixedLatencyProbe(pl.fixed_delay_ms)

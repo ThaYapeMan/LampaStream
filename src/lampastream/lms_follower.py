@@ -123,6 +123,7 @@ class LmsFollower:
         self._mirrored_url: str | None = None
         self._own_url: str | None = None
         self._auto_aligned_track: int | None = None
+        self.position_alignment = None
         self._track_generation = 0
         self._transition_generation = 0
         self._changed_at = time.monotonic()
@@ -504,6 +505,7 @@ class LmsFollower:
                               f"{self._lampastream_mac} time {target:.3f}\n")
                 self._own_mode = "play"
                 self._own_url = seeded_url
+                self.position_alignment = (track, target)
                 self._auto_aligned_track = track
                 self._position_transition()
                 log.info("LMS follower own-player alignment: seek=%.3fs", target)

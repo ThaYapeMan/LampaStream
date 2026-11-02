@@ -20,6 +20,9 @@ from lampastream.migration import migrate_file
 
 def verify_player(manifest: dict, binary: Path = Path('/usr/local/bin/yeney-player')) -> None:
     assert manifest['yeney_core_revision'] == '45779a4383929840a46a931fc1519b4778b64a72'
+    patch = Path(__file__).resolve().parent/'patches/yeney-core-0001-content-position.patch'
+    assert manifest.get('yeney_content_clock_patch_sha256') == hashlib.sha256(
+        patch.read_bytes()).hexdigest(), 'Content-clock provenance mismatch'
     assert hashlib.sha256(binary.read_bytes()).hexdigest() == manifest['yeney_player_sha256']
 
 

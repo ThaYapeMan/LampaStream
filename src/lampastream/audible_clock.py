@@ -25,7 +25,9 @@ class AudibleClock:
 
     @property
     def generation(self):
-        return getattr(self.timing, 'tap_generation', 0), self._revision
+        startup = getattr(self.probe, 'mapping_generation', 0)
+        startup = startup if isinstance(startup, int) else 0
+        return getattr(self.timing, 'tap_generation', 0), self._revision + startup
 
     @property
     def lookahead_s(self):

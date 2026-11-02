@@ -290,6 +290,8 @@ class EarlyAirPlaySource:
             # Receipt includes any FIFO residence: slow consumers cannot overclaim lead.
             self.last_record = now
             transition = self._mode("early tap", "timestamped PCM available")
+            with self.timing.lock:
+                self.timing.rtp_clock = (record.rtp, play, self.timing.tap_generation)
             self.expected = (record.rtp + record.frames) % 2**32
             self.timing.arrival(record.frames, now)
             self.timing.tap_arrival(play - now, record.drops)

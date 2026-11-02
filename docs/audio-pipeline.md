@@ -128,7 +128,9 @@ reader before releasing it, including failed activation and retried teardown.
   start/current/end RTP timestamps; differences use wrapping 32-bit coordinates
   with a signed pre-roll anchor when current precedes start
   and 44,100 frames/second. Configured ten-second `phbt` updates correct position;
-  pause/resume/end events control interpolation. See the upstream
+  pause/resume/end events control interpolation. When early-tap RTP timing is
+  available, track zero is derived from that same native playback clock; metadata
+  receipt time is used only in pipe fallback. See the upstream
   [metadata protocol](https://github.com/mikebrady/shairport-sync-metadata-reader).
 
 Snapshots retain a monotonic position anchor. WebSocket delivery rebases the

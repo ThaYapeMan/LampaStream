@@ -196,7 +196,7 @@ def test_midtrack_receiver_survives_airplay_lms_airplay(tmp_path, monkeypatch, i
                 for i in range(7):
                     assert not session.probe.accept(278.345, 5 + i * 3)
                 for i in range(4):
-                    assert session.probe.accept(.350, 26 + i * 3)
+                    assert session.probe.accept(.350, 26 + i * 3, 0)
                 assert session.probe.target_delay == 350
                 assert abs(session.probe.current_delay_ms() - initial_delay) < 15
                 assert isinstance(session.sync_engine.audible_clock, LmsAudibleClock)

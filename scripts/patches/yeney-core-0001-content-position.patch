@@ -1,0 +1,146 @@
+--- a/core/decoder.h
++++ b/core/decoder.h
+@@ -21,6 +21,7 @@
+ public:
+     static constexpr size_t inputCapacity = 65536, outputCapacity = 8192;
+     virtual ~Decoder() = default;
++    virtual bool sourceStart(uint64_t &) const { return false; }
+     virtual size_t feed(const uint8_t *, size_t) = 0;
+     virtual void finish() = 0;
+     virtual size_t take(Frame *, size_t) = 0;
+--- a/core/decoder.cpp
++++ b/core/decoder.cpp
+@@ -34,6 +34,8 @@
+     std::thread thread_;
+     bool eof_ = false, cancel_ = false, done_ = false, haveFormat_ = false;
+     Format format_;
++    uint64_t sourceStart_ = 0;
++    bool sourceKnown_ = false;
+     std::string error_;
+ 
+ protected:
+@@ -88,6 +90,11 @@
+         }
+         return true;
+     }
++    void setSourceStart(uint64_t value) {
++        std::lock_guard<std::mutex> lock(mutex_);
++        sourceStart_ = value;
++        sourceKnown_ = true;
++    }
+     void setFormat(Format f) {
+         if (!f.rate || f.rate > cfg.maxRate || f.channels < 1 || f.channels > 2)
+             throw std::runtime_error("unsupported rate or more than 2 channels");
+@@ -127,6 +134,11 @@
+         cv_.notify_all();
+         return count;
+     }
++    bool sourceStart(uint64_t &value) const override {
++        std::lock_guard<std::mutex> lock(mutex_);
++        value = sourceStart_;
++        return sourceKnown_;
++    }
+     bool format(Format &f) const override {
+         std::lock_guard<std::mutex> lock(mutex_);
+         f = format_;
+@@ -355,6 +367,10 @@
+             Format format{f->header.sample_rate, f->header.bits_per_sample, f->header.channels, false};
+             if (format.bits != 16 && format.bits != 24)
+                 throw std::runtime_error("FLAC requires 16 or 24 bits");
++            // libFLAC normalises fixed-block frame numbers to sample numbers.
++            // Preserve the actual seek landing, not LMS's requested timestamp.
++            if (!w.hadFrame && f->header.number_type == FLAC__FRAME_NUMBER_TYPE_SAMPLE_NUMBER)
++                w.setSourceStart(f->header.number.sample_number);
+             w.setFormat(format);
+             w.hadFrame = true;
+             for (unsigned i = 0; i < f->header.blocksize; ++i)
+--- a/core/sink.h
++++ b/core/sink.h
+@@ -28,6 +28,7 @@
+     virtual void trackBoundary(uint64_t frame, const Format &, bool gaplessCandidate) = 0;
+     virtual size_t write(const Frame *, size_t frames) = 0;
+     // Optional paced-play schedule; firstFrame is the cumulative sink coordinate.
++    virtual void contentPosition(uint64_t, bool) {}
+     virtual void playTiming(uint64_t, uint64_t, uint32_t) {}
+     virtual void syncPause(uint64_t) { pause(); }
+     virtual void syncSkip(uint64_t) {}
+--- a/core/player.cpp
++++ b/core/player.cpp
+@@ -114,6 +114,8 @@
+         int autostart = 1;
+         bool known = false, headerPcm = false, wave = false, ready = false, eof = false, decoded = false,
+              boundary = false, gapless = false;
++        uint64_t contentStart = 0;
++        bool contentKnown = false;
+         uint64_t first = 0, end = 0, skipped = 0, played = 0, produced = 0;
+         uint32_t replayGain = 0;
+         unsigned transition = 0, period = 0;
+@@ -685,6 +687,7 @@
+                 t.window = std::min<uint64_t>(frames, cfg.transitionMaxFrames);
+                 reservedWindow = std::max(reservedWindow, size_t(t.window));
+             }
++            t.contentKnown = t.decoder->sourceStart(t.contentStart);
+             Frame frames[1024];
+             size_t count = t.decoder->take(frames, std::min(size_t(1024), outputCapacity() - queued));
+             t.produced += count;
+@@ -852,6 +855,7 @@
+                 const uint64_t ns = uint64_t(stamp.tv_sec) * 1000000000 + stamp.tv_nsec;
+                 sink.playTiming(submitted, scheduledPlayNs(now, ns, credit), t->format.rate * 1000);
+             }
++            sink.contentPosition(t->contentStart + t->played, t->contentKnown && !overlap.old);
+             size_t accepted = sink.write(frames, count);
+             if (accepted > count)
+                 throw std::runtime_error("sink accepted more frames than offered");
+--- a/sinks/shm_v1/layout.h
++++ b/sinks/shm_v1/layout.h
+@@ -48,7 +48,7 @@
+ struct TimingBlock {
+     uint8_t magic[4], version[2], reserved0[2];
+     uint8_t anchor_abs_frame[8], anchor_play_mono_ns[8], rate_milli_hz[4];
+-    uint8_t event_seq[4], event_flags[4], event_abs_frame[8], event_value[8], reserved[12];
++    uint8_t event_seq[4], event_flags[4], event_abs_frame[8], event_value[8], content_frame[8], content_flags[4];
+ };
+ struct TimedLayout {
+     Layout legacy;
+@@ -66,7 +66,7 @@
+ static_assert(offsetof(TimingBlock, event_flags) == 32);
+ static_assert(offsetof(TimingBlock, event_abs_frame) == 36);
+ static_assert(offsetof(TimingBlock, event_value) == 44);
+-static_assert(offsetof(TimingBlock, reserved) == 52);
++static_assert(offsetof(TimingBlock, content_frame) == 52);
+ constexpr uint32_t timingMagic = 0x54504e59; // YNPT
+ constexpr uint32_t FLUSH = 1, PAUSE = 2, RESUME = 4, DISCONTINUITY = 8, SYNC_PAUSE = 64, SYNC_SKIP = 128;
+ constexpr uint32_t magic = 0x48555345;
+--- a/sinks/shm_v1/sink.h
++++ b/sinks/shm_v1/sink.h
+@@ -18,6 +18,8 @@
+     bool clockEvent_ = true;
+     uint32_t timingRate_ = 0, eventSeq_ = 0, eventFlags_ = 0;
+     int64_t eventValue_ = 0;
++    uint64_t contentFrame_ = 0;
++    bool contentKnown_ = false;
+     void event(uint32_t flags, int64_t value = 0);
+     void publish(const Frame *, size_t);
+ 
+@@ -29,6 +31,10 @@
+     uint32_t maxSampleRate() const override { return maximum_; }
+     void trackBoundary(uint64_t, const Format &, bool) override;
+     size_t write(const Frame *, size_t) override;
++    void contentPosition(uint64_t frame, bool known) override {
++        contentFrame_ = frame;
++        contentKnown_ = known;
++    }
+     void playTiming(uint64_t, uint64_t, uint32_t) override;
+     void syncPause(uint64_t) override;
+     void syncSkip(uint64_t) override;
+--- a/sinks/shm_v1/sink.cpp
++++ b/sinks/shm_v1/sink.cpp
+@@ -167,6 +167,8 @@
+         put64(t.anchor_abs_frame, first);
+         put64(t.anchor_play_mono_ns, playNs_);
+         put(t.rate_milli_hz, timingRate_);
++        put64(t.content_frame, contentFrame_);
++        put(t.content_flags, uint32_t(contentKnown_ ? 1 : 0));
+     }
+     put(t.event_seq, eventSeq_);
+     put(t.event_flags, eventFlags_);

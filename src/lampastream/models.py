@@ -144,6 +144,7 @@ class PlayerLatency:
     trim_ms: int = 0
     measured_delay_ms: int | None = None  # untrimmed LMS or AirPlay timing estimate
     measured_at: float | None = None  # Unix seconds
+    measurement_basis: str | None = None  # lms-content-v1 excludes session position offset
 
     def __post_init__(self) -> None:
         if self.strategy not in {"none", "fixed", "auto"}:
@@ -154,7 +155,7 @@ class PlayerLatency:
     def to_dict(self) -> dict:
         return {key: getattr(self, key) for key in (
             "player_mac", "name", "strategy", "fixed_delay_ms", "trim_ms",
-            "measured_delay_ms", "measured_at")}
+            "measured_delay_ms", "measured_at", "measurement_basis")}
 
     @classmethod
     def from_dict(cls, d: dict) -> PlayerLatency:

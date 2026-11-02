@@ -96,7 +96,7 @@ class TeePcmSource(Generic[_OpenArgs]):
     def read(self) -> SourceReadResult:
         result = self._source.read()
         if isinstance(result, DataResult) and result.frame.samples.size:
-            self._peaks.append((time.monotonic(), float(np.max(np.abs(result.frame.samples)))))
+            self._peaks.append((time.monotonic(), result.frame.samples))
         elif isinstance(result, (StreamInvalidated, EndOfStream)):
             self._peaks.clear()
         queue = self._secondary
@@ -108,8 +108,9 @@ class TeePcmSource(Generic[_OpenArgs]):
     def recent_peak_s16(self):
         """One-second ingress level for owner diagnostics, before analysis gain."""
         since = time.monotonic() - 1.
-        return round(32768 * max((peak for stamp, peak in tuple(self._peaks)
-                                 if stamp >= since), default=0.))
+        peaks = (float(np.max(np.abs(samples))) for stamp, samples in tuple(self._peaks)
+                 if stamp >= since)
+        return round(32768 * max(peaks, default=0.))
 
     def attach_secondary(self) -> None:
         if self._secondary is None:
@@ -416,6 +417,9 @@ class YeneyCoreShmStereoSource:
         self.retry_count = 0
         self.overwrite_invalidations = 0
         # VirtualPlayer enables native timing; legacy readers may explicitly opt out.
+        self.position_clock = None
+        self.content_origin = None
+        self._content_boundary = None
         self.use_player_clock = False
         self._clock_event_seq: int | None = None
         self._clock_segments: list[tuple[int, PlayerClock | None]] = []
@@ -464,6 +468,7 @@ class YeneyCoreShmStereoSource:
         self._path = path
         self._clock_event_seq = None
         self._clock_segments.clear()
+        self.position_clock = None
         self._require_v1 = require_v1
         fd = path.open("rb")
         try:
@@ -659,6 +664,7 @@ class YeneyCoreShmStereoSource:
         self._prev_generation = 0
         self._clock_event_seq = None
         self._clock_segments.clear()
+        self.position_clock = None
         self._abs_write_pos_frames = 0
         self._prev_gap_seq = 0
         self._prev_index = 0
@@ -811,6 +817,7 @@ class YeneyCoreShmStereoSource:
                 # A new producer's event counter is unrelated to the old one's.
                 self._clock_event_seq = timing.event_seq
                 self._clock_segments.clear()
+                self.position_clock = None
             new_event = self._clock_event_seq != timing.event_seq
             if new_event:
                 old_seq = self._clock_event_seq
@@ -831,6 +838,10 @@ class YeneyCoreShmStereoSource:
                     _log.info('LMS stream invalidated: %s frame=%d', cause,
                               timing.event_abs_frame)
                     self._clock_segments.clear()
+                    self.position_clock = None
+                    self.content_origin = None
+                    self._content_boundary = (timing.event_abs_frame
+                                              if timing.event_flags & DISCONTINUITY else None)
                     self._abs_write_pos_frames = min(timing.event_abs_frame, ext.abs_write_pos)
                     self._prev_generation = ext.generation
                     self._prev_gap_seq = ext.gap_seq
@@ -876,6 +887,7 @@ class YeneyCoreShmStereoSource:
         if self._prev_generation != 0 and ext.generation != self._prev_generation:
             _log.info("LMS stream invalidated: generation change")
             self._clock_segments.clear()
+            self.position_clock = None
             self._clock_event_seq = ext.timing.event_seq if ext.timing else None
             self._prev_generation = ext.generation
             self._abs_write_pos_frames = ext.abs_write_pos
@@ -889,6 +901,7 @@ class YeneyCoreShmStereoSource:
         if delta_frames < 0:
             _log.info("LMS stream invalidated: frame position regression")
             self._clock_segments.clear()
+            self.position_clock = None
             self._abs_write_pos_frames = ext.abs_write_pos
             self._prev_gap_seq = ext.gap_seq
             self._prev_index = buf_index_before
@@ -898,6 +911,7 @@ class YeneyCoreShmStereoSource:
         if ext.gap_seq != self._prev_gap_seq:
             _log.info("LMS stream invalidated: skipped PCM export")
             self._clock_segments.clear()
+            self.position_clock = None
             self._prev_gap_seq = ext.gap_seq
             self._abs_write_pos_frames = ext.abs_write_pos
             self._prev_index = buf_index_before
@@ -911,6 +925,7 @@ class YeneyCoreShmStereoSource:
             self.overwrite_invalidations += 1
             _log.info("LMS stream invalidated: PCM ring overrun")
             self._clock_segments.clear()
+            self.position_clock = None
             # A full lap (or more) has been overwritten between polls.
             self._abs_write_pos_frames = ext.abs_write_pos
             self._prev_index = buf_index_before
@@ -959,6 +974,7 @@ class YeneyCoreShmStereoSource:
         if cause is not None:
             _log.info("LMS stream invalidated: %s", cause)
             self._clock_segments.clear()
+            self.position_clock = None
             if ext_after is not None:
                 self._prev_generation = ext_after.generation
                 self._prev_gap_seq = ext_after.gap_seq
@@ -981,6 +997,7 @@ class YeneyCoreShmStereoSource:
                 self.overwrite_invalidations += 1
                 _log.info("LMS stream invalidated: PCM window overwritten during copy")
                 self._clock_segments.clear()
+                self.position_clock = None
                 self._abs_write_pos_frames = confirmed.abs_write_pos
                 self._prev_index = (confirmed.legacy_header or self._read_header())[1]
                 return StreamInvalidated(InvalidationCause.UNKNOWN, None)
@@ -1017,6 +1034,16 @@ class YeneyCoreShmStereoSource:
             over_range=over_range,
             wall_ns=wall_ns,
         )
+        if stamp_clock is not None and stamp_clock.content_flags & 1:
+            position = (stamp_clock.content_frame + start_abs_pos
+                        - stamp_clock.anchor_abs_frame) / rate
+            if self._content_boundary is not None:
+                self.content_origin = position - (start_abs_pos - self._content_boundary) / rate
+                self._content_boundary = None
+            if self.content_origin is not None:
+                self.position_clock = (position, frame.play_monotonic, self.content_origin)
+        else:
+            self.position_clock = None
         return DataResult(frame=frame)
 
     def _read_v0(self) -> SourceReadResult:

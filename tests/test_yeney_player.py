@@ -40,6 +40,8 @@ def test_manifest_and_verifier(tmp_path, revision):
     manifest = json.loads((tmp_path / 'installation.json').read_text())
     assert manifest == {
         'commit': 'abcdef12', 'short_commit': 'abcdef1', 'yeney_core_revision': REVISION,
+        'yeney_content_clock_patch_sha256': hashlib.sha256(
+            (ROOT/'scripts/patches/yeney-core-0001-content-position.patch').read_bytes()).hexdigest(),
         'shairport_revision': '0b1c4391ffd398e7b145eb4b98416261380adeea',
         'airplay_delivery_margin_ms': 0,
         'airplay_timing_policy': 'receiver-defaults',
@@ -77,6 +79,8 @@ def test_real_yeney_player_shm_v1(tmp_path, monkeypatch):
     # Build outside the submodule; never alter its sources or build state.
     shutil.copytree(CORE, build, ignore=shutil.ignore_patterns('.git', 'tests', '*.o', '*.d',
                                                             'libyeneycore.a'))
+    with (ROOT/'scripts/patches/yeney-core-0001-content-position.patch').open() as patch:
+        subprocess.run(['patch', '-d', str(build), '-p1'], stdin=patch, check=True)
     result = subprocess.run(['make', '-C', str(build), '-j2', 'yeney-player'],
                             capture_output=True, text=True, timeout=120)
     assert result.returncode == 0, result.stdout + result.stderr

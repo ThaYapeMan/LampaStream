@@ -226,7 +226,14 @@ class AirPlayTrackPositionSource:
         return self._task is not None and not self._task.done()
 
     def read(self) -> TrackPosition | None:
-        return self._snapshot
+        snapshot = self._snapshot
+        if snapshot is not None and snapshot.playing and self._start is not None:
+            mapper = getattr(self._timing, 'track_origin', None)
+            origin = mapper(self._start) if callable(mapper) else None
+            if origin is not None:
+                # A zero-position origin also represents pre-roll correctly.
+                return replace(snapshot, position_s=0., observed_at=origin)
+        return snapshot
 
     def _clear(self) -> None:
         self.transport.reset()
@@ -374,7 +381,7 @@ class AirPlayTrackPositionSource:
             self._accept_record(record)
 
     def _update(self, **changes) -> None:
-        old = self._snapshot or TrackPosition()
+        old = self.read() or TrackPosition()
         self._snapshot = replace(old, position_s=old.position_now(),
                                  observed_at=max(time.monotonic(), old.observed_at))
         self._snapshot = replace(self._snapshot, **changes)

@@ -91,17 +91,26 @@ class AutoLatencyProbe:
     seeks are made here; startup alignment belongs to the own-player follower.
     """
 
-    def __init__(self, config, follower, persist, preference_cache=None, *, clock=time.monotonic):
+    def __init__(self, config, follower, persist, preference_cache=None, *,
+                 clock=time.monotonic, position_clock=None):
         self.config = config
         self.follower = follower
         self.persist = persist
         self.clock = clock
+        self.position_clock = position_clock
+        self.room_samples = deque(maxlen=9)
+        self.startup_at = clock()
+        self.startup_step_used = False
+        self.mapping_generation = 0
+        self.session_offset_ms = 0.
         self.cache = preference_cache if preference_cache is not None else {}
         self.raw_samples = deque(maxlen=9)
         self.rejected_samples = 0
         self.samples = deque(maxlen=7)
         self.sample_times = deque(maxlen=7)
         measured = config.measured_delay_ms or 0
+        if position_clock is not None and config.measurement_basis != 'lms-content-v1':
+            measured = 0  # old saved values include the previous seek landing
         # Discard persisted estimates poisoned by the old same-URL reuse path.
         if not abs(measured) < MAX_AUTO_DELAY_MS:
             measured = 0
@@ -119,6 +128,7 @@ class AutoLatencyProbe:
         self.task = None
         self.stopping = False
         self.state = "idle"
+        self.reason = None
 
     async def start(self):
         self.stopping = False
@@ -152,7 +162,12 @@ class AutoLatencyProbe:
             return self.delay
 
     def status(self):
-        status = latency_status(self.config, state=self.state, delay=self.current_delay_ms())
+        applied = self.current_delay_ms()
+        if (self.position_clock is not None and self.state == 'measuring'
+                and not self.first and len(self.room_samples) >= 4
+                and abs(self.target_delay - applied) < 15):
+            self.state = 'stable'
+        status = latency_status(self.config, state=self.state, delay=applied, reason=self.reason)
         status.update(
             median_residual_ms=(round(statistics.median(self.samples) * 1000)
                                 if self.samples else None),
@@ -161,6 +176,12 @@ class AutoLatencyProbe:
             samples=[{"residual_ms": round(value * 1000), "timestamp": stamp}
                      for value, stamp in zip(self.samples, self.sample_times, strict=True)],
         )
+        if self.position_clock is not None:
+            status.update(measurement_basis='lms-content-v1',
+                          room_delay_ms=(round(statistics.median(self.room_samples))
+                                         if self.room_samples else None),
+                          session_offset_ms=round(self.session_offset_ms, 3),
+                          startup_step_used=self.startup_step_used)
         return status
 
     def precision_ms(self):
@@ -171,25 +192,30 @@ class AutoLatencyProbe:
 
     def eligible(self, context, now):
         if self.context is None or context.transition != self.context.transition:
-            new_track = self.context is None or context.track != self.context.track
+            initial = self.context is None
+            new_track = initial or context.track != self.context.track
             self.context = context
             self.samples.clear()
             self.sample_times.clear()
             self.raw_samples.clear()
+            self.room_samples.clear()
             self.rejected_samples = 0
             if new_track:
                 self.first = True
-            self.next_sample = context.changed_at + 5
+                if not initial:
+                    self.startup_at = context.changed_at
+                self.startup_step_used = False
+            self.next_sample = context.changed_at + (1 if self.position_clock else 5)
             self.burst_end = self.next_sample + 30
         ready = (context.connected and context.playing and context.same_track
-                 and now >= context.changed_at + 5)
+                 and now >= context.changed_at + (1 if self.position_clock else 5))
         if not ready:
             self.state = "idle"
         elif self.first or len(self.samples) < 4:
             self.state = "measuring"
         return ready and now >= self.next_sample
 
-    def accept(self, residual, now):
+    def accept(self, residual, now, room_delay_ms=None):
         finite = math.isfinite(residual)
         plausible = finite and abs(residual * 1000) < MAX_AUTO_DELAY_MS
         stamp = time.time()
@@ -214,6 +240,7 @@ class AutoLatencyProbe:
             self.rejected_samples += 1
             if self.rejected_samples == 3:
                 self.raw_samples.clear()
+                self.room_samples.clear()
                 self.samples.clear()
                 self.sample_times.clear()
                 self.rejected_samples = 0
@@ -221,6 +248,13 @@ class AutoLatencyProbe:
                 self.next_sample = now + 3
                 self.burst_end = now + 30
             return False
+        if self.position_clock is not None:
+            if room_delay_ms is None or not math.isfinite(room_delay_ms):
+                self.state = "not measurable"
+                return False
+            if abs(room_delay_ms) >= MAX_AUTO_DELAY_MS:
+                return False
+            self.room_samples.append(room_delay_ms)
         self.rejected_samples = 0
         self.samples.clear()
         self.sample_times.clear()
@@ -234,6 +268,13 @@ class AutoLatencyProbe:
                      for i in range(len(ordered) - 3))
         if not agreed:
             return True
+        if self.position_clock is not None:
+            center = statistics.median(self.room_samples)
+            room_inliers = [v for v in self.room_samples if abs(v-center) <= 20]
+            if len(room_inliers) < 4:
+                return True
+        else:
+            room_inliers = []
         # The median of a 9-sample, 15-second window otherwise trails a
         # 0.7 ms/s drift by 42 ms. Project the consensus to this sample's time
         # with a robust, bounded drift rate; never extrapolate a lone sample.
@@ -243,17 +284,35 @@ class AutoLatencyProbe:
         rate = max(-.001, min(.001, statistics.median(slopes))) if slopes else 0
         estimate = statistics.median(value + rate * (now - sampled_at)
                                      for value, _, sampled_at in inliers)
-        measured = round(estimate * 1000) + (self.player_delay or 0)
+        relative = estimate * 1000
+        measured = round(statistics.median(room_inliers) if self.position_clock else relative)
+        measured += self.player_delay or 0
+        self.session_offset_ms = relative if self.position_clock else 0.
         if not abs(measured) < MAX_AUTO_DELAY_MS:
             return False
         with self._mapping_lock:
             self._advance(now)
-            self.target_delay = measured + self.config.trim_ms
+            self.target_delay = measured + self.session_offset_ms + self.config.trim_ms
+            # One fresh, track-guarded consensus may establish the startup map.
+            # Never reopen this allowance on a late remeasurement/window reset.
+            startup = self.startup_at if self.startup_at is not None else self.applied_at
+            if (self.position_clock is not None and not self.startup_step_used
+                    and 0 <= now - startup <= 15):
+                if abs(self.delay - self.target_delay) > 1e-9:
+                    self.mapping_generation += 1
+                self.delay = self.target_delay
+                self.startup_step_used = True
         logging.getLogger(__name__).info(
-            "latency mapping: track=%s applied_ms=%.3f target_ms=%.3f limit_ms_per_s=5",
-            self.context.track if self.context else None, self.delay, self.target_delay)
+            "latency mapping: track=%s applied_ms=%.3f target_ms=%.3f room_ms=%s "
+            "session_ms=%.3f startup_step=%s limit_ms_per_s=5",
+            self.context.track if self.context else None, self.delay, self.target_delay,
+            measured, self.session_offset_ms, self.startup_step_used)
         self.first = False
-        self.state = "stable"
+        self.reason = None
+        self.state = ("stable" if self.position_clock is None
+                      or abs(self.target_delay - self.delay) < 15 else "measuring")
+        self.config.measurement_basis = ('lms-content-v1'
+                                         if self.position_clock is not None else None)
         self.persist(measured, self.last_sample)
         return True
 
@@ -288,7 +347,29 @@ class AutoLatencyProbe:
         b, tb = values[followed]
         if a < 0 or b < 0:
             raise ValueError("Negative LMS position")
-        return a - b - (ta - tb)
+        residual = a - b - (ta - tb)
+        if self.position_clock is None:
+            return residual
+        anchor = self.position_clock()
+        if anchor is None or abs(self.clock() - anchor[1]) > .5:
+            raise ValueError("No fresh absolute PCM content clock")
+        position, played_at, content_start = anchor
+        alignment = self.follower.position_alignment
+        if alignment is None or alignment[0] != context.track:
+            raise ValueError("No matching track-start alignment")
+        # LMS labels the requested seek; FLAC actually starts at a frame boundary.
+        # Keep that landing error in the session term, never in saved calibration.
+        landing = alignment[1] - content_start
+        if abs(landing) > .5:
+            raise ValueError("Seek landing >500 ms: ambiguous absolute content origin")
+        native_bias = (ta - played_at) + position - a
+        room_delay = (native_bias + landing) * 1000
+        logging.getLogger(__name__).info(
+            "latency basis: track=%s own_follow_ms=%.3f requested_s=%.6f "
+            "content_start_s=%.6f landing_ms=%.3f native_bias_ms=%.3f room_ms=%.3f",
+            context.track, residual*1000, alignment[1], content_start,
+            landing*1000, native_bias*1000, room_delay)
+        return residual - landing, room_delay
 
     async def _owned_call(self, function, *args):
         worker = asyncio.create_task(asyncio.to_thread(function, *args))
@@ -321,15 +402,21 @@ class AutoLatencyProbe:
             residual = await self._owned_call(self._pair)
         finally:
             self.order = not self.order
-            self.next_sample = self.clock() + (3 if now < self.burst_end else 15)
+            interval = (1 if self.position_clock else 3) if now < self.burst_end else 15
+            self.next_sample = self.clock() + interval
         if self.stopping or context != self.follower.latency_context():
             return
-        self.accept(residual, now)
+        if self.position_clock is None:
+            self.accept(residual, now)
+        else:
+            self.accept(residual[0], now, residual[1])
 
     async def _run(self):
         while not self.stopping:
             try:
                 await self.tick()
-            except (OSError, ValueError):
-                self.state = "measuring"
+            except (OSError, ValueError) as error:
+                self.state = ("measuring" if self.clock() - self.startup_at <= 15
+                              else "not measurable")
+                self.reason = str(error)
             await asyncio.sleep(.25)

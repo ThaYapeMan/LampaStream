@@ -1,5 +1,8 @@
 # LAT-03: continuous LMS room mapping
 
+Historical LAT-03 evidence and implementation. Startup and persistence are superseded
+by [LAT-03 send-back 1](lat03-sendback-1.md).
+
 Evidence: owner archive `ab-20261101-1520.tar.gz`, its reference analysis kit,
 `lat-journal.txt`, and baseline `82181c5`. The archive reports that same deployed
 commit. Journal display times are CET, one hour ahead of the manifest's UTC.
