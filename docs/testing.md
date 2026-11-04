@@ -1336,3 +1336,26 @@ consensus occurs within 15 seconds. AirPlay must return to the previous timing
 range. The exact historical cause of its 60 ms native/metadata relationship shift
 is not recoverable from the supplied archives; the new RTP origin removes that
 independent-clock dependency without adding a compensating constant.
+
+## Clock-rate probe on the target
+
+During normal LMS playback on LXC 112, run from the installed source checkout
+with its Python environment (or use the checkout's `.venv/bin/python`):
+
+```bash
+python3 scripts/clock-rate-probe.py --mac 02:ca:48:d3:b8:56 --followed-mac 48:a6:b8:20:39:64 --lms --config /etc/lampastream/config.json --seconds 360 --csv /tmp/clock-rate-360.csv
+python3 scripts/clock-rate-probe.py --analyse /tmp/clock-rate-360.csv
+```
+
+The probe polls at 100 Hz using an independent read-only strict-v1 SHM reader;
+it never consumes the service's PCM or writes shared state. `--lms` adds only
+standard `time ?` CLI queries, using the matching virtual player's configured
+LMS host and the service's CLI port 9090. Omit it for SHM-only capture.
+The native pipeline mapping calls `PlayerClock.at` and `LmsAudibleClock.at`;
+constant room offsets are omitted. Adaptive calibration/readiness state in the
+running service is not externally published and is not measured by this column.
+Reports split on generation, gap, event sequence, rate, running and content flag
+changes, discard the first 15 seconds of each segment, and show OLS slope errors
+(iid residual assumption; periodic producer batching can correlate residuals).
+Insufficient segments are identified explicitly. LMS fits use changed whole-second
+values at each query's midpoint; the difference is the difference of these fits.
