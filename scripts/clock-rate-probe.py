@@ -16,6 +16,7 @@ import json
 import math
 import os
 import sys
+import threading
 import time
 from pathlib import Path
 from types import SimpleNamespace
@@ -29,9 +30,10 @@ from lampastream.pcm_source import YeneyCoreShmStereoSource  # noqa: E402
 FIELDS = ('t_mono t_wall abs_write_pos ynpt_anchor_frame ynpt_play_mono_ns ynpt_rate '
           'ynpt_flags ynpt_event_sequence content_frame content_flags generation gap_seq '
           'write_seq running lampastream_audible_t lms_own lms_followed lms_own_mono '
-          'lms_followed_mono').split()
+          'lms_followed_mono service_t_mono service_position_s applied_delay_ms '
+          'session_offset_ms median_residual_ms service_observed_at').split()
 NAMES = ('Producer pacer rate', 'Arrival rate', 'Content rate',
-         'Stamp clock vs reader clock', 'Pipeline mapping')
+         'Stamp clock vs reader clock', 'Pipeline mapping', 'Service position')
 
 
 def fit(points):
@@ -47,6 +49,66 @@ def fit(points):
     slope = sum((x-mx)*(y-my) for x, y in zip(xs, ys, strict=True))/xx
     residual = sum((y-my-slope*(x-mx))**2 for x, y in zip(xs, ys, strict=True))
     return slope, math.sqrt(residual/(len(xs)-2)/xx), len(xs)
+
+
+def service_sample(message, mono):
+    """Keep the A/B websocket's reported anchor verbatim, at receipt time."""
+    track = message.get('track') or {}
+    status = (message.get('light_timing') or {}).get('status') or {}
+    return dict(service_t_mono=mono, service_position_s=track.get('position_s'),
+                service_observed_at=track.get('observed_at'),
+                applied_delay_ms=message.get('applied_delay_ms'),
+                session_offset_ms=status.get('session_offset_ms'),
+                median_residual_ms=status.get('median_residual_ms'))
+
+
+class ServiceStatus:
+    """Drain the same websocket as ab-logger without blocking SHM polling.
+
+    Sample at most once per second. A disconnected service leaves empty CSV
+    cells, never repeated stale values or fabricated zeroes.
+    """
+
+    def __init__(self, url):
+        self.url = url
+        self.stop = threading.Event()
+        self.lock = threading.Lock()
+        self.pending = {}
+        self.thread = threading.Thread(target=self.run, daemon=True)
+
+    def take(self):
+        with self.lock:
+            result, self.pending = self.pending, {}
+        return result
+
+    def run(self):
+        from websockets.exceptions import WebSocketException
+        from websockets.sync.client import connect
+        while not self.stop.is_set():
+            try:
+                with connect(self.url, open_timeout=2, close_timeout=1) as socket:
+                    next_sample = 0.
+                    while not self.stop.is_set():
+                        try:
+                            message = json.loads(socket.recv(timeout=.5))
+                        except TimeoutError:
+                            continue
+                        mono = time.monotonic()
+                        if message.get('type') == 'status' and mono >= next_sample:
+                            with self.lock:
+                                self.pending = service_sample(message, mono)
+                            next_sample = mono + 1
+            except (OSError, ValueError, WebSocketException) as exc:
+                print(f'Service position: {exc}', file=sys.stderr)
+                self.stop.wait(1)
+
+    def __enter__(self):
+        self.thread.start()
+        return self
+
+    def __exit__(self, *args):
+        self.stop.set()
+        self.thread.join(timeout=5)
 
 
 def analyse(path):
@@ -93,6 +155,27 @@ def analyse(path):
                 bad.add(number)
             output.append(f'{number}. {NAMES[number-1]}: {ppm:+.3f} ppm '
                           f'(SE {se:.3f} ppm; n={n}; slope={slope:.9g})')
+        service = fit([(float(r['service_t_mono']), float(r['service_position_s']))
+                       for r in selected if r.get('service_t_mono')
+                       and r.get('service_position_s')])
+        if service:
+            slope, error, n = service
+            ppm = (slope-1)*1e6
+            available.add(6)
+            if abs(ppm) > 30:
+                bad.add(6)
+            output.append(f'6. Service position: {ppm:+.3f} ppm '
+                          f'(SE {error*1e6:.3f} ppm; n={n}; slope={slope:.9g})')
+        else:
+            output.append('6. Service position: insufficient points')
+        for field in ('applied_delay_ms', 'median_residual_ms'):
+            result = fit([(float(r['service_t_mono']), float(r[field]))
+                          for r in selected if r.get('service_t_mono') and r.get(field)])
+            if result:
+                slope, error, n = result
+                output.append(f'{field}: {slope:+.6f} ms/s (SE {error:.6f}; n={n})')
+            else:
+                output.append(f'{field}: insufficient points')
         edges = {}
         for field in ('lms_own', 'lms_followed'):
             points = []
@@ -119,8 +202,8 @@ def analyse(path):
                           f'n={own[2]}/{followed[2]})')
     output.append('Deviates beyond ±30 ppm: ' +
                   (', '.join(f'{i}. {NAMES[i-1]}' for i in sorted(bad)) or 'none') +
-                  ('; insufficient data for ' + ', '.join(map(str, set(range(1, 6))-available))
-                   if len(available) < 5 else ''))
+                  ('; insufficient data for ' + ', '.join(map(str, set(range(1, 7))-available))
+                   if len(available) < 6 else ''))
     return '\n'.join(output)
 
 
@@ -139,7 +222,8 @@ def capture(args):
     next_poll = time.monotonic()
     next_lms = next_poll
     try:
-        with Path(args.csv).open('w', newline='') as stream:
+        with (ServiceStatus(args.service_url) as service,
+              Path(args.csv).open('w', newline='') as stream):
             writer = csv.DictWriter(stream, fieldnames=FIELDS)
             writer.writeheader()
             while time.monotonic() < deadline:
@@ -172,6 +256,7 @@ def capture(args):
                             except (OSError, ValueError) as exc:
                                 print(f'{field}: {exc}', file=sys.stderr)
                         next_lms = time.monotonic()+1
+                    row.update(service.take())
                     writer.writerow(row)
                     stream.flush()
                 next_poll += 1/args.hz
@@ -191,6 +276,8 @@ def main():
     parser.add_argument('--seconds', type=float, default=360)
     parser.add_argument('--hz', type=float, default=100)
     parser.add_argument('--lms', action='store_true')
+    parser.add_argument('--service-url', default='ws://127.0.0.1:8420/ws/preview',
+                        help='same status websocket as ab-logger.py')
     parser.add_argument('--followed-mac')
     parser.add_argument('--config', default=os.environ.get('LAMPASTREAM_CONFIG',
                                                          '/etc/lampastream/config.json'))

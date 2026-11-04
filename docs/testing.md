@@ -1359,3 +1359,35 @@ changes, discard the first 15 seconds of each segment, and show OLS slope errors
 (iid residual assumption; periodic producer batching can correlate residuals).
 Insufficient segments are identified explicitly. LMS fits use changed whole-second
 values at each query's midpoint; the difference is the difference of these fits.
+
+
+### CLOCK-01a service position comparison
+
+`clock-rate-probe.py` also subscribes to the A/B logger's `/ws/preview` endpoint
+(default `ws://127.0.0.1:8420/ws/preview`; override with `--service-url`). A separate
+reader drains events and records at most one fresh status per second without
+blocking SHM polling. CSV adds `service_t_mono`, `service_position_s`,
+`service_observed_at`, `applied_delay_ms`, `session_offset_ms` and
+`median_residual_ms`. Positions are exactly the delivered track position, including
+the service's delivery rebase; unavailable/disconnected samples remain empty.
+A quiet websocket does not provide a new observation every second: stale anchors
+are never repeated. Line 6 fits service position against its own monotonic receipt
+time and joins the ±30 ppm deviation summary. Applied delay and median residual
+slopes are reported in ms/s. Lines 1–5 retain their original calculations.
+
+The CLOCK-01a code audit found no applied-correction feedback into the estimator:
+the residual uses standard LMS position pairs minus seek landing, with raw SHM
+content/play coordinates supplying the separate room estimate. Reported track
+coordinates instead come from the followed metadata subscription with independent
+5 ms/s anchor smoothing. Compare all six lines during continuous playback before
+changing either clock. The diagnostic's independent latest-stamp reader does not
+exercise the service's consumed-block cursor, content-origin reset or analysis
+thread/epoch lifecycle. This diagnostic change leaves runtime mappings untouched.
+
+Read the virtual player MAC from `ls /dev/shm` at run time: it changes per session.
+Use that MAC in place of `VIRTUAL_MAC` below, during normal LMS playback on LXC 112:
+
+```bash
+python3 scripts/clock-rate-probe.py --mac VIRTUAL_MAC --followed-mac 48:a6:b8:20:39:64 --lms --config /etc/lampastream/config.json --seconds 360 --csv /tmp/clock-01a-360.csv --service-url ws://127.0.0.1:8420/ws/preview
+python3 scripts/clock-rate-probe.py --analyse /tmp/clock-01a-360.csv
+```
