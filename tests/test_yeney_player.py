@@ -16,7 +16,7 @@ from lampastream.pcm_source import DataResult, SqueezeliteShmStereoSource
 
 ROOT = Path(__file__).resolve().parents[1]
 CORE = ROOT / 'third_party/yeney-core'
-REVISION = '45779a4383929840a46a931fc1519b4778b64a72'
+REVISION = 'dc8cf3a373a9d9b38e98fc7d1929ac268c585c77'
 
 
 def load_script(name):
@@ -40,8 +40,6 @@ def test_manifest_and_verifier(tmp_path, revision):
     manifest = json.loads((tmp_path / 'installation.json').read_text())
     assert manifest == {
         'commit': 'abcdef12', 'short_commit': 'abcdef1', 'yeney_core_revision': REVISION,
-        'yeney_content_clock_patch_sha256': hashlib.sha256(
-            (ROOT/'scripts/patches/yeney-core-0001-content-position.patch').read_bytes()).hexdigest(),
         'shairport_revision': '0b1c4391ffd398e7b145eb4b98416261380adeea',
         'airplay_delivery_margin_ms': 0,
         'airplay_timing_policy': 'receiver-defaults',
@@ -52,8 +50,11 @@ def test_manifest_and_verifier(tmp_path, revision):
         'yeney_player_sha256': hashlib.sha256(binary.read_bytes()).hexdigest(),
     }
     verifier.verify_player(manifest, binary)
-    with pytest.raises(AssertionError):
+    with pytest.raises(AssertionError, match='Producer upgrade required: yeney-core dc8cf3a'):
         verifier.verify_player(dict(manifest, yeney_core_revision='foreign'), binary)
+    with pytest.raises(AssertionError, match='Producer upgrade required: yeney-core dc8cf3a'):
+        verifier.verify_player(dict(manifest, yeney_core_revision=
+                                    '45779a4383929840a46a931fc1519b4778b64a72'), binary)
     binary.write_bytes(b'replaced binary')
     with pytest.raises(AssertionError):
         verifier.verify_player(manifest, binary)
@@ -79,10 +80,9 @@ def test_real_yeney_player_shm_v1(tmp_path, monkeypatch):
     # Build outside the submodule; never alter its sources or build state.
     shutil.copytree(CORE, build, ignore=shutil.ignore_patterns('.git', 'tests', '*.o', '*.d',
                                                             'libyeneycore.a'))
-    with (ROOT/'scripts/patches/yeney-core-0001-content-position.patch').open() as patch:
-        subprocess.run(['patch', '-d', str(build), '-p1'], stdin=patch, check=True)
     result = subprocess.run(['make', '-C', str(build), '-j2', 'yeney-player'],
                             capture_output=True, text=True, timeout=120)
+    print(result.stdout + result.stderr, flush=True)
     assert result.returncode == 0, result.stdout + result.stderr
     oracle_spec = importlib.util.spec_from_file_location(
         'yeney_fake_lms', CORE / 'tests/fake_lms.py')

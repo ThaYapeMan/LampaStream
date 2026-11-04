@@ -454,7 +454,7 @@ is position consistency, not an acoustic measurement.
 
 The virtual player's CLI time uses the requested seek label; FLAC can start at
 an earlier frame boundary. The standard installer therefore builds the pinned
-producer with `yeney-core-0001-content-position.patch`. Its optional YNPT content
+upstream producer at `dc8cf3a`. Its optional YNPT content
 position comes from the actual FLAC frame header. Other codecs without an
 absolute content position cannot establish this calibration; use Fixed when the
 status reports `not measurable`.

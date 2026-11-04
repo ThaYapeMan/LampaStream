@@ -156,7 +156,7 @@ allows only measurement position/preference commands. Migration tests verify exa
 backups, reserved-field retirement and idempotency; API tests reject writable
 measurement fields and invalid trims. `web/src/__tests__/Latency.test.tsx` and
 `web/tests/e2e/latency.spec.ts` exercise Auto status, trim, fallback and the removed
-ALSA editor field. The real SHM integration builds yeney-player at `45779a4` and
+ALSA editor field. The real SHM integration builds yeney-player at `dc8cf3a` and
 reads it through the unchanged strict-v1 PCM consumer.
 
 Another repository may run tests concurrently on the development machine. If the
@@ -1310,10 +1310,9 @@ empty-unknown rule prevents coordinate mixing when metadata is actually absent.
 
 [Content-clock evidence and derivation](research/lat03-sendback-1.md) supersede
 the earlier session-relative persistence. Deploy using the standard installer:
-it applies `yeney-core-0001-content-position.patch` in the isolated native build,
-then records and verifies the patch and binary hashes. The pinned submodule and
-SHM v1 prefix remain unchanged. Directly building the pristine submodule alone
-does not supply the optional absolute FLAC content-position capability.
+it builds upstream yeney-core at `dc8cf3a` without a local producer patch,
+then records and verifies the revision and binary hash. The SHM v1 prefix
+remains unchanged; the optional YNPT tail exports absolute FLAC content positions.
 
 Run `tests/test_lat03_sendback.py` for native FLAC frame-origin and two-session
 acceptance; `tests/test_airplay_mapping_pin.py` compares real socket/CSV detections

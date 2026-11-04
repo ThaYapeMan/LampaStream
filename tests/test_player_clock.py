@@ -404,3 +404,43 @@ def test_ring_index_paired_with_position_without_player_clock(ingress, monkeypat
     assert len(result.frame.samples) == 240
     assert result.frame.samples[:, 0].tolist() == [frame / 32768 for frame in range(240)]
     assert source.retry_count == 0
+
+
+@pytest.mark.parametrize('tail,content_flags', [(True, 1), (True, 0), (True, 2), (False, 0)])
+def test_content_tail_controls_absolute_position_and_latency_basis(tmp_path, tail, content_flags):
+    from lampastream.latency import AutoLatencyProbe, FollowPositionContext
+    from lampastream.models import PlayerLatency
+
+    writer = Writer(tmp_path / 'content', timing=tail)
+    source = SqueezeliteShmStereoSource()
+    source.use_player_clock = True
+    source.open('aa', _path=writer.path, require_v1=True)
+    context = FollowPositionContext(True, True, True, 1, 1, 100.0)
+    follower = SimpleNamespace(_lampastream_mac='own', target_mac='room',
+                               position_alignment=(1, 10.0), latency_context=lambda: context)
+    probe = AutoLatencyProbe(PlayerLatency('room', strategy='auto'), follower, lambda *a: None,
+                             clock=lambda: 100.0, position_clock=lambda: source.position_clock)
+    # These CLI positions alone must never substitute for an unknown content position.
+    probe._value = lambda mac, command: (10.0, 100.0)
+    try:
+        if tail:
+            writer.event(DISCONTINUITY)
+            assert isinstance(source.read(), StreamInvalidated)
+        writer.write()
+        if tail:
+            struct.pack_into('<QI', writer.mm, TIMING_OFFSET + 52, 480000, content_flags)
+        result = source.read()
+        assert isinstance(result, DataResult)
+        assert result.frame.sample_rate == 48000
+        if tail and content_flags & 1:
+            assert source.position_clock == pytest.approx((10.0, 100.0, 10.0))
+            assert probe._pair() == pytest.approx((0.0, 0.0))
+        else:
+            assert source.position_clock is None
+            with pytest.raises(ValueError, match='No fresh absolute PCM content clock'):
+                probe._pair()
+        assert probe.status()['measurement_basis'] == 'lms-content-v1'
+        assert result.frame.play_monotonic == (100.0 if tail else None)
+    finally:
+        source.close()
+        writer.close()

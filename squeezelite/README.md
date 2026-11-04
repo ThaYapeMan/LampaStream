@@ -1,7 +1,7 @@
 # SHM v1 ABI
 
 This ABI is now implemented by yeney-core's yeney-player, pinned at
-`45779a4383929840a46a931fc1519b4778b64a72` in `third_party/yeney-core`.
+`dc8cf3a373a9d9b38e98fc7d1929ac268c585c77` in `third_party/yeney-core`.
 The `/dev/shm/squeezelite-<mac>` name and legacy lock region remain ABI contracts.
 Canonical PCM and external CAVA use the same internally paced producer; no ALSA
 output device is required. The local C sources and patch are historical provenance

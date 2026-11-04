@@ -41,7 +41,11 @@ def test_room_roundtrip_activation_rename_and_legacy_migration(tmp_path, monkeyp
     assert rooms.call_count == 3
 
 
-def test_saved_room_selects_manual_follow_without_changing_sync_group_default(tmp_path):
+def test_saved_room_selects_manual_follow_without_changing_sync_group_default(
+    tmp_path, monkeypatch,
+):
+    # This checks saved selection, independently of any concurrent local CLI server.
+    monkeypatch.setattr("lampastream.player_manager.list_lms_players", lambda host: [])
     player = VirtualPlayer(follow_mode='sync_group')
     coupling = Coupling(follow_player_mac='aa:bb:cc:dd:ee:ff')
     manager = PlayerManager(Storage(tmp_path/'config.json'))

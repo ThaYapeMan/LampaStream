@@ -40,8 +40,9 @@ not an invented missing journal segment.
 
 ## New estimation basis
 
-The pinned yeney-core sources remain pristine. The standard installer applies
-`scripts/patches/yeney-core-0001-content-position.patch` to its isolated build.
+At LAT-03 acceptance, the pinned yeney-core sources remained pristine and the
+installer applied a local content-position patch to its isolated build.
+Upstream `dc8cf3a` now supersedes that patch; the installer builds it directly.
 libFLAC already converts frame numbers to absolute sample numbers. The patch
 retains that first sample number, carries current content position through the
 player sink, and uses the existing YNPT tail's last 12 reserved bytes:

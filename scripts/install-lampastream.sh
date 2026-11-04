@@ -263,7 +263,7 @@ chmod 0755 "$RELEASE"
 python3 -m venv "$RELEASE/venv"
 "$RELEASE/venv/bin/pip" install "$WORK"/wheels/*.whl
 log '3/7 Build pinned SHM v1 yeney-player and AirPlay 2'
-YENEY_CORE_REVISION=45779a4383929840a46a931fc1519b4778b64a72
+YENEY_CORE_REVISION=dc8cf3a373a9d9b38e98fc7d1929ac268c585c77
 # Git archives omit submodule contents. Submodules were updated before repo_check.
 # Verify both immutable pins,
 # then archive their committed sources separately into the isolated build tree.
@@ -274,7 +274,6 @@ CORE="$REPO_DIR/third_party/yeney-core"
 mkdir -p "$WORK/third_party/yeney-core/third_party/alac"
 git -c safe.directory="$CORE" -C "$CORE" archive HEAD | tar -x -C "$WORK/third_party/yeney-core"
 git -c safe.directory="$CORE/third_party/alac" -C "$CORE/third_party/alac" archive HEAD | tar -x -C "$WORK/third_party/yeney-core/third_party/alac"
-patch -d "$WORK/third_party/yeney-core" -p1 < "$REPO_DIR/scripts/patches/yeney-core-0001-content-position.patch"
 make -C "$WORK/third_party/yeney-core" -j"$(nproc)" yeney-player
 "$WORK/third_party/yeney-core/yeney-player" --help
 # Stop owned services before replacing binaries.

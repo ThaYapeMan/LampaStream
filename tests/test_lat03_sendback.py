@@ -109,7 +109,7 @@ def test_no_late_startup_step_and_missing_content_is_not_in_sync():
     assert probe.current_delay_ms() == pytest.approx(0.5)
 
 
-def test_patched_real_flac_decoder_exports_absolute_seek_content(tmp_path):
+def test_upstream_real_flac_decoder_exports_absolute_seek_content(tmp_path):
     if not shutil.which("ffmpeg") or not shutil.which("ffprobe"):
         pytest.skip("ffmpeg/ffprobe unavailable")
     build = tmp_path / "core"
@@ -118,8 +118,6 @@ def test_patched_real_flac_decoder_exports_absolute_seek_content(tmp_path):
         build,
         ignore=shutil.ignore_patterns(".git", "*.o", "*.d", "*.a"),
     )
-    with (ROOT / "scripts/patches/yeney-core-0001-content-position.patch").open() as patch:
-        subprocess.run(["patch", "-d", str(build), "-p1"], stdin=patch, check=True)
     result = subprocess.run(
         ["make", "-C", str(build), "-j2", "yeney-player"],
         capture_output=True,

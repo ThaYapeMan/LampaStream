@@ -15,9 +15,11 @@ in `scripts/native-build-packages.txt:1`, plus **libflac-dev** for yeney-player.
 Use the development environment from [development.md](development.md), including
 the Python dev extra and locked frontend dependencies (`cd web && npm ci`).
 
-Both `YENEY_CORE_REVISION` (`scripts/install-lampastream.sh:309`) and the
-`third_party/yeney-core` gitlink are
-**45779a4383929840a46a931fc1519b4778b64a72**. Check both when reproducing:
+At this historical baseline, `YENEY_CORE_REVISION` and the
+`third_party/yeney-core` gitlink were
+**45779a4383929840a46a931fc1519b4778b64a72**. The current pin is
+**dc8cf3a373a9d9b38e98fc7d1929ac268c585c77** (ALAC remains `5d8c5db`).
+Check both when reproducing:
 
 ```sh
 git rev-parse HEAD

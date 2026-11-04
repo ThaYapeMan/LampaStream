@@ -238,7 +238,7 @@ Canonical: VirtualPlayer / ingress → canonical PCM → SpectrumProcessor
 
 | Route | Selection | Analysis |
 |---|---|---|
-| LMS canonical PCM | `spectrum_backend=v2` or `cavacore` | Shared canonical pipeline: Spectrum + Beat; requires patched SHM v1 producer |
+| LMS canonical PCM | `spectrum_backend=v2` or `cavacore` | Shared canonical pipeline: Spectrum + Beat; requires pinned upstream SHM v1 producer |
 | AirPlay canonical PCM | `spectrum_backend=v2` or `cavacore` | Same shared canonical pipeline: Spectrum + Beat |
 
 V2 uses the shared STFT. Embedded CAVA Core keeps upstream native DSP and its own
@@ -315,7 +315,7 @@ Create/pair a Controller through the API, then open `http://<host>:8420` to conf
 the Zone, player, Analyser, Effects/EnergyProfile and Coupling. LMS pacing is internal to yeney-player; host audio-device passthrough is not required.
 See [installation](docs/installation.md) and [LXC deployment](docs/deployment-lxc.md).
 LMS virtual players use `yeney-player` from the recursive `third_party/yeney-core`
-submodule at `45779a4`. Initialize it with `git submodule update --init --recursive`.
+submodule at `dc8cf3a`. Initialize it with `git submodule update --init --recursive`.
 It paces PCM internally and preserves full-scale analysis PCM regardless of LMS volume.
 No snd-dummy or `/dev/snd` passthrough is required. Existing host mappings can remain
 harmlessly; optional removal steps are in [LXC deployment](docs/deployment-lxc.md).

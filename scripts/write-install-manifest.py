@@ -7,13 +7,10 @@ from pathlib import Path
 
 def write_manifest(commit: str, short: str, release: Path, revision: str,
                    binary: Path = Path('/usr/local/bin/yeney-player')) -> None:
-    assert revision == '45779a4383929840a46a931fc1519b4778b64a72'
+    assert revision == 'dc8cf3a373a9d9b38e98fc7d1929ac268c585c77'
     manifest = {
         'commit': commit, 'short_commit': short,
         'yeney_core_revision': revision,
-        'yeney_content_clock_patch_sha256': hashlib.sha256(
-            (Path(__file__).resolve().parent / 'patches/yeney-core-0001-content-position.patch')
-            .read_bytes()).hexdigest(),
         'shairport_revision': '0b1c4391ffd398e7b145eb4b98416261380adeea',
         'airplay_delivery_margin_ms': 0,
         'airplay_timing_policy': 'receiver-defaults',

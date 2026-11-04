@@ -19,10 +19,9 @@ from lampastream.migration import migrate_file
 
 
 def verify_player(manifest: dict, binary: Path = Path('/usr/local/bin/yeney-player')) -> None:
-    assert manifest['yeney_core_revision'] == '45779a4383929840a46a931fc1519b4778b64a72'
-    patch = Path(__file__).resolve().parent/'patches/yeney-core-0001-content-position.patch'
-    assert manifest.get('yeney_content_clock_patch_sha256') == hashlib.sha256(
-        patch.read_bytes()).hexdigest(), 'Content-clock provenance mismatch'
+    assert manifest.get('yeney_core_revision') == 'dc8cf3a373a9d9b38e98fc7d1929ac268c585c77', (
+        'Producer upgrade required: yeney-core dc8cf3a373a9d9b38e98fc7d1929ac268c585c77 expected; '
+        f"installed {manifest.get('yeney_core_revision', 'unknown')}")
     assert hashlib.sha256(binary.read_bytes()).hexdigest() == manifest['yeney_player_sha256']
 
 
@@ -47,6 +46,7 @@ def main() -> None:
     assert manifest['commit'] == commit
     assert manifest['short_commit'] == short
     verify_player(manifest)
+    print(f"yeney-core revision: {manifest['yeney_core_revision']}: PASS")
     assert not migrate_file(Path(config), check=True), 'Migration required'
     receiver_config = Path('/usr/local/etc/shairport-sync.conf').read_text()
     for setting in ('output_backend = "pipe"', '/run/lampastream/airplay.pcm',
