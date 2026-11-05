@@ -39,7 +39,7 @@ export function lightTimingState(current: PlayerLatency | null | undefined, stat
   return { state, applied } as const
 }
 
-export function LightTiming({ status, onOpenLatency, expertMode = false, playersView = false, controls, footer }: { expertMode?: boolean; status: SocketStatus | null; onOpenLatency?: () => void; playersView?: boolean; controls?: React.ReactNode; footer?: React.ReactNode }) {
+export function LightTiming({ status, onOpenLatency, expertMode = false, playersView = false, controls, footer, accentControls }: { accentControls?: React.ReactNode; expertMode?: boolean; status: SocketStatus | null; onOpenLatency?: () => void; playersView?: boolean; controls?: React.ReactNode; footer?: React.ReactNode }) {
   const metadata = usePlayerMetadata(!playersView)
   const id = useId()
   const accents: AccentFeatures = status ?? {}
@@ -51,7 +51,7 @@ export function LightTiming({ status, onOpenLatency, expertMode = false, players
       return <label key={band} className="flex items-center gap-2">{band}<meter aria-label={`Onset envelope ${band}`} min={0} max={1} value={value} /><output>{value.toFixed(2)}</output></label>
     })}
     <p><span title="beats/s = detected beat events per second">{(accents.beat_events_per_second ?? 0).toFixed(1)} beats/s</span> · <span title="texture/s = non-beat events per second">{(accents.texture_events_per_second ?? 0).toFixed(1)} texture/s</span></p>
-    <p className="flex flex-wrap gap-x-2"><span title="AGC = bass gain applied by the trigger's automatic gain control">AGC {(accents.agc_gain ?? 1).toFixed(2)}×</span> · <span className="inline-flex gap-1 whitespace-nowrap" title="Trigger ratio = current bass level relative to the trigger threshold (≥1 fires)">Trigger ratio <output data-testid="trigger-ratio">{accents.trigger_ratio != null && Number.isFinite(accents.trigger_ratio) ? accents.trigger_ratio.toFixed(2) : '—'}</output></span></p>
+    <p className="flex flex-wrap gap-x-2"><span title="AGC = bass gain applied by the trigger's automatic gain control">AGC {(accents.agc_gain ?? 1).toFixed(1)}×{accents.agc_max_gain != null && (accents.agc_gain ?? 1) >= accents.agc_max_gain ? ' (capped)' : ''}</span> · <span className="inline-flex gap-1 whitespace-nowrap" title="Trigger ratio = current bass level relative to the trigger threshold (≥1 fires)">Trigger ratio <output data-testid="trigger-ratio">{accents.trigger_ratio != null && Number.isFinite(accents.trigger_ratio) ? accents.trigger_ratio.toFixed(2) : '—'}</output></span></p>
     <svg viewBox="0 0 200 20" className="h-5 w-full" role="img" aria-label="Beat grid">
       {(accents.beat_grid ?? []).slice(-16).map((beat, index) => <line key={`${beat.time}-${index}`} x1={index*12+8} x2={index*12+8} y1={beat.predicted ? 7 : 2} y2="18" stroke="currentColor" strokeDasharray={beat.predicted ? '2 2' : undefined} />)}
     </svg>
@@ -145,7 +145,8 @@ export function LightTiming({ status, onOpenLatency, expertMode = false, players
         <Badge variant="secondary" className={`gap-1 border-0 ${colour}`}><Icon aria-hidden="true" className="h-3 w-3" />{lms?.state === 'scheduled' ? 'Scheduled · LMS head start' : label}</Badge>
       </CardHeader>
       <CardContent className="space-y-4">
-        {accentDisplay}
+        {accentControls}
+      {accentDisplay}
       {lmsLine}
         <div className="grid items-center gap-4 sm:grid-cols-[minmax(0,1fr)_auto]">
           <div><div className={`text-4xl font-semibold tabular-nums ${state === 'idle' ? 'text-muted-foreground' : ''}`}>{seconds(applied)}<small className="ml-1 text-xl text-muted-foreground">s</small></div><p className="mt-2 text-sm text-muted-foreground">{explanation}</p>{tapDetails}</div>
@@ -178,6 +179,7 @@ export function LightTiming({ status, onOpenLatency, expertMode = false, players
       <a href={`/players?player=${encodeURIComponent(mac ?? '')}`} className="ml-auto text-sm text-primary hover:underline" onClick={e => { if (onOpenLatency) { e.preventDefault(); onOpenLatency() } }}>Player settings</a>
     </CardHeader>
     <CardContent id={`${id}-body`} hidden={!open} className="space-y-4">
+      {accentControls}
       {accentDisplay}
       {lmsLine}
       <div className={state === 'stable' ? 'grid gap-5 sm:grid-cols-2 items-center' : 'space-y-3'}>

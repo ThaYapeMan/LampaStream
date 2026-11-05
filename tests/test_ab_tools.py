@@ -63,7 +63,7 @@ def test_logger_csv_real_socket(tmp_path):
     async def exercise():
         async def send(ws):
             await ws.send(json.dumps(dict(type="status", track={"observed_at": 100.},
-                                          light_timing={"trim_ms": 60})))
+                                          light_timing={"trim_ms": 60}, beat_accent_mode="onset")))
             await ws.send(
                 json.dumps(
                     dict(
@@ -156,7 +156,11 @@ def test_capture_stops_owned_processes_and_player_on_sender_failure(tmp_path, mo
         return process
 
     monkeypatch.setattr(tool.subprocess, "Popen", popen)
-    monkeypatch.setattr(tool, "logger", lambda *args: popen(["logger"]))
+    def logger(label, *_):
+        (tmp_path / f"{label}-manifest.json").write_text(json.dumps(
+            dict(beat_accent_mode="onset", beat_accent_modes=["onset"])))
+        return popen(["logger"])
+    monkeypatch.setattr(tool, "logger", logger)
     with pytest.raises(RuntimeError, match="AirPlay sender failed"):
         tool.capture("Track", "receiver", 0.001)
     assert calls[-1] == ("aa:bb", "stop")

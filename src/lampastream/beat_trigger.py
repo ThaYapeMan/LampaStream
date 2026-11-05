@@ -38,6 +38,8 @@ class EnergyTrigger:
         self.previous_energy = 0.
         self.last_time = None
         self.last_fire = -math.inf
+        self.max_gain = 64.
+        self.gain_floor = .3
         self.gain = 1.
         self.ratio = 0.
 
@@ -50,7 +52,7 @@ class EnergyTrigger:
         abrupt = energy >= 8*max(self.fast, 1e-9)
         self.fast += -math.expm1(-dt/(.05 if energy > self.fast else .1)) * (energy-self.fast)
         self.slow += -math.expm1(-dt/5.) * (self.fast-self.slow)
-        self.gain = 1/max(self.slow, 1e-4)
+        self.gain = min(self.max_gain, 1/max(self.slow, 1e-4))
         value = math.log10(1 + self.fast*self.gain)
         self.ratio = value/max(self.mean, 1e-6)
         raw_value = math.log10(1+energy*self.gain)
@@ -59,7 +61,9 @@ class EnergyTrigger:
             self.ratio = raw_ratio
             value = raw_value
         refractory = self.dead_time if dead_time is None else dead_time
-        fire = (gate and energy >= 1e-6 and value >= self.floor
+        from .beat_accents import gain_progress
+        floor = self.floor + self.gain_floor*gain_progress(self.gain, self.max_gain)
+        fire = (gate and energy >= 1e-6 and value >= floor
                 and self.ratio >= self.threshold and value > self.previous
                 and energy > self.previous_energy
                 and t-self.last_fire >= refractory-1e-9)

@@ -618,6 +618,8 @@ def capture(search, receiver, requested_duration, protocol_version="auto"):
                     raise RuntimeError("Logger failed")
                 stop(packet)
             manifest["runs"][label]["end"] = utc()
+            manifest["runs"][label].update(
+                json.loads((out / f"{label}-manifest.json").read_text()))
             if label == "lms":
                 print("Settling for 15 seconds", flush=True)
                 time.sleep(15)

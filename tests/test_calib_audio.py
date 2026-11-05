@@ -90,13 +90,15 @@ def test_reconstruct_se_first_nonsilent_frame_is_not_none():
 
 
 def test_reconstruct_se_constant_loud_settles_above_half():
-    """Loud constant signal eventually pushes SE above 0.5 (short > long EMA)."""
+    """A constant loud section after a quiet baseline pushes SE above 0.5."""
     sr = 44100
     tick_s = 1.0 / 30.0
     # Short τ=300ms → short EMA reaches amplitude quickly.
     # Long τ=30s → long EMA lags far behind.
     # After a few seconds, short_ema >> long_ema → SE > 0.5.
-    pcm = _constant_pcm(0.3, 10.0, sr)
+    # Both EMAs seed to the first non-silent level; an actual level change is required.
+    pcm = np.concatenate([_constant_pcm(0.02, 3.0, sr),
+                          _constant_pcm(0.3, 10.0, sr)])
     _, se = reconstruct_se(pcm, sr, tick_s)
     final = [v for v in se[-30:] if v is not None]
     assert final, "expected non-None SE values in last 1 s"
@@ -289,7 +291,7 @@ def test_se_differs_between_cadences():
     # PCM with a clear dynamic transition: quiet → loud → quiet
     pcm = np.concatenate([
         _constant_pcm(0.02, 3.0, sr),   # quiet baseline (not silence — avoids None)
-        _constant_pcm(0.50, 6.0, sr),   # loud section (SE should rise)
+        _constant_pcm(0.03, 6.0, sr),   # unsaturated rise (a 25x rise clips both to 1)
         _constant_pcm(0.02, 3.0, sr),   # quiet again (SE should fall)
     ])
 
@@ -301,13 +303,18 @@ def test_se_differs_between_cadences():
     assert len(valid_30) >= 20
     assert len(valid_20) >= 20
 
-    # Different EMA alphas → different SE values at the same elapsed time.
-    # The loud section onset (frame ~90 at 30Hz, ~60 at 20Hz) drives short EMA
-    # up at different rates.  After 6 s of loud signal the two trajectories
-    # should differ measurably.
-    mid_30 = valid_30[len(valid_30) // 2]
-    mid_20 = valid_20[len(valid_20) // 2]
+    # Compare the attack, where cadence-dependent window endpoints are observable.
+    # The old midpoint sampled a saturated plateau and could not test this property.
+    mid_30 = valid_30[round(3.1 * 30)]
+    mid_20 = valid_20[round(3.1 * 20)]
     assert abs(mid_30 - mid_20) > 1e-3, (
         f"Expected SE to differ between 30Hz and 20Hz cadences; "
         f"got mid_30={mid_30:.5f} vs mid_20={mid_20:.5f}"
     )
+
+
+@pytest.mark.parametrize("cadence", [20, 30])
+def test_reconstruct_se_constant_level_seeds_to_neutral(cadence):
+    pcm = _constant_pcm(0.3, 10.)
+    _, se = reconstruct_se(pcm, 44100, 1/cadence)
+    assert se and all(value == pytest.approx(.5) for value in se)

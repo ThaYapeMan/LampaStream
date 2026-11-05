@@ -42,6 +42,7 @@
     "couplings": [
       {
         "analyser_id": "analyser",
+        "beat_accent_mode": "onset",
         "enabled": true,
         "energy_profile_id": "energy",
         "follow_player_mac": null,
@@ -105,6 +106,7 @@
     "energy_profiles": [
       {
         "adaptation_tau_s": 60.0,
+        "agc_max_gain": 64.0,
         "blend_end": 0.7,
         "blend_response": 0.1,
         "blend_start": 0.3,
@@ -115,6 +117,7 @@
         "lufs_ceiling": -8.0,
         "lufs_floor": -30.0,
         "name": "Default EnergyProfile",
+        "onset_gain_floor": 0.3,
         "peak_attack_s": 0.05,
         "peak_envelope_auto": true,
         "peak_release_s": 2.0,
@@ -347,7 +350,7 @@
       }
     ],
     "player_latencies": [],
-    "schema_version": 2,
+    "schema_version": 3,
     "virtual_players": [
       {
         "alsa_device": "",
@@ -380,5 +383,5 @@
   "format": "lampastream-config-backup",
   "lampastream_commit": "562e82e684ac86dc7cd5e706197dc8fec70b63d9",
   "lampastream_version": "0.2.0",
-  "schema_version": 2
+  "schema_version": 3
 }

@@ -15,7 +15,7 @@ FIXTURES = Path(__file__).parent/'fixtures'
 @pytest.mark.parametrize('mode,divisor,flashes', [('Phase', 1, 23), ('Alternate', 1, 12),
                                                ('Phase', 4, 6)])
 def test_output_flashes_have_floor_gaps_and_divisor(tmp_path, room, mode, divisor, flashes):
-    config = json.loads((FIXTURES/'replay/default-config.json').read_text())
+    config = json.loads((FIXTURES/'tracker-baseline-config.json').read_text())
     for effect in config['configuration']['effects']:
         effect.update(beat_mode=mode, beat_divisor=divisor)
     path = tmp_path/'config.json'
@@ -42,7 +42,7 @@ def test_output_flashes_have_floor_gaps_and_divisor(tmp_path, room, mode, diviso
 
 
 def test_timestamped_pulse_has_symmetric_attack_and_fall(tmp_path):
-    config = json.loads((FIXTURES/'replay/default-config.json').read_text())
+    config = json.loads((FIXTURES/'tracker-baseline-config.json').read_text())
     for effect in config['configuration']['effects']:
         effect.update(beat_mode='Pulse', effect_type='solid')
     path = tmp_path/'config.json'
@@ -75,7 +75,8 @@ def test_timestamped_pulse_has_symmetric_attack_and_fall(tmp_path):
 def test_every_kick_has_an_attributed_lifted_send_within_latency_budget(tmp_path, name, latency):
     from measure_beats import measure
 
-    result = measure(FIXTURES/f'replay/beats/{name}.wav', tmp_path/name)
+    result = measure(FIXTURES/f'replay/beats/{name}.wav', tmp_path/name,
+                     config=FIXTURES/'tracker-baseline-config.json')
     assert result['kick_hits'] == result['kicks'] == result['attributed_kicks']
     assert result['latency_median_ms'] == pytest.approx(latency, abs=1e-6)
     assert result['latency_median_ms'] <= 30+1e-7
@@ -85,7 +86,7 @@ def test_every_kick_has_an_attributed_lifted_send_within_latency_budget(tmp_path
 @pytest.mark.parametrize('room', ['two-channel.json', 'two-channel-fast.json'])
 def test_actual_sent_colours_reach_floor_between_kicks(tmp_path, route, room):
     args = parser().parse_args(['--input', str(FIXTURES/'replay/beats/house.wav'),
-        '--config', str(FIXTURES/'replay/default-config.json'), '--route', route,
+        '--config', str(FIXTURES/'tracker-baseline-config.json'), '--route', route,
         '--room', str(FIXTURES/'rooms'/room), '--render-hz',
         '60' if 'fast' in room else '30', '--out', str(tmp_path/'trace')])
     replay = Replay(args)

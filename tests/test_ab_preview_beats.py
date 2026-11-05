@@ -33,7 +33,7 @@ def test_128_bpm_pulse_events_on_socket(tmp_path, monkeypatch, route):
             "--input",
             str(path),
             "--config",
-            str(Path(__file__).parent / "fixtures/replay/default-config.json"),
+            str(Path(__file__).parent / "fixtures/tracker-baseline-config.json"),
             "--route",
             route,
             "--out",

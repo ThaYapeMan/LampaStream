@@ -77,6 +77,9 @@ class AccentLayer:
         self.palette = None
 
     def render(self, scene, features, profile, positions=()):
+        if profile.beat_accent_mode == "off":
+            self.last_value = 0.
+            return scene
         if profile.diagnostic_onsets:
             from .diagnostic_accent import AccentLayer as DiagnosticAccent
             if not hasattr(self, "diagnostic"):

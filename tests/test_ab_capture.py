@@ -87,6 +87,8 @@ def capture_tool(tmp_path, monkeypatch):
     monkeypatch.setattr(tool.subprocess, "Popen", process)
 
     def logger(label, *_):
+        (out / f"{label}-manifest.json").write_text(json.dumps(
+            dict(beat_accent_mode="onset", beat_accent_modes=["onset"])))
         state["events"].append(("logger", label))
         return process(["logger"])
 

@@ -40,7 +40,9 @@ def test_status_and_socket_report_measured_trigger_ratio(kind):
 
     class Socket:
         app = SimpleNamespace(
-            state=SimpleNamespace(storage=SimpleNamespace(), player_manager=manager)
+            state=SimpleNamespace(storage=SimpleNamespace(get_coupling=lambda _: None,
+                                                    get_energy_profile=lambda _: None),
+                                  player_manager=manager)
         )
 
         async def send_json(self, message):

@@ -7,6 +7,8 @@ from lampastream.beat_trigger import BassBeatTrigger, EnergyTrigger
 
 def test_sustained_band_and_silence_do_not_retrigger():
     trigger = EnergyTrigger()
+    # Retain the original physical-signal assertions with explicit legacy gain settings.
+    trigger.max_gain, trigger.gain_floor = 10000., 0.
     hits = [trigger.process(.01, n*.01, 'bass') for n in range(1200)]
     assert sum(hit is not None for hit in hits) == 1
     assert all(trigger.process(0, 12+n*.01, 'bass', gate=False) is None
@@ -16,6 +18,8 @@ def test_sustained_band_and_silence_do_not_retrigger():
 
 def test_refractory_and_strength_mapping():
     trigger = EnergyTrigger()
+    # Retain the original physical-signal assertions with explicit legacy gain settings.
+    trigger.max_gain, trigger.gain_floor = 10000., 0.
     first = trigger.process(.01, 0, 'bass')
     assert first.strength == 1
     trigger.process(0, .01, 'bass')
@@ -28,6 +32,8 @@ def test_refractory_and_strength_mapping():
 
 def test_high_frequency_is_texture_not_bass():
     trigger = BassBeatTrigger()
+    for band in (trigger.primary, trigger.energy, trigger.texture, trigger.treble):
+        band.max_gain, band.gain_floor = 10000., 0.
     mag = np.zeros(1025)
     mag[100] = 100
     beat, texture = trigger.process(mag, 0)

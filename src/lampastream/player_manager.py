@@ -73,7 +73,7 @@ def _make_canonical_pipeline(
         upper_hz=float(profile.higher_cutoff_freq),
         bar_falloff_s=profile.bar_falloff_s,
     )
-    return CanonicalAnalysisPipeline(
+    pipeline = CanonicalAnalysisPipeline(
         source=source,
         engine=engine,
         diagnostic_only=profile.diagnostic_onsets,
@@ -95,6 +95,8 @@ def _make_canonical_pipeline(
         exertion_clip=profile.exertion_clip,
         use_hpss_separation=profile.use_hpss_separation,
     )
+    pipeline._beat_fusion.gain_settings = profile.agc_max_gain, profile.onset_gain_floor
+    return pipeline
 
 
 def _controller_to_bridge(controller: Controller) -> BridgeConfig:
@@ -162,6 +164,9 @@ def _build_engine_profile(coupling: Coupling, storage: Storage) -> Profile | Non
         blend_start=cf.blend_start,
         blend_end=cf.blend_end,
         blend_response=cf.blend_response,
+        beat_accent_mode=coupling.beat_accent_mode,
+        agc_max_gain=cf.agc_max_gain,
+        onset_gain_floor=cf.onset_gain_floor,
         energy_source=cf.energy_source,
         lufs_floor=cf.lufs_floor,
         lufs_ceiling=cf.lufs_ceiling,
@@ -264,6 +269,9 @@ def _build_mellow_profile(coupling: Coupling, storage: Storage) -> Profile | Non
         blend_start=cf.blend_start,
         blend_end=cf.blend_end,
         blend_response=cf.blend_response,
+        beat_accent_mode=coupling.beat_accent_mode,
+        agc_max_gain=cf.agc_max_gain,
+        onset_gain_floor=cf.onset_gain_floor,
         energy_source=cf.energy_source,
         lufs_floor=cf.lufs_floor,
         lufs_ceiling=cf.lufs_ceiling,
@@ -902,6 +910,9 @@ class PlayerManager:
             blend_start=cf.blend_start,
             blend_end=cf.blend_end,
             blend_response=cf.blend_response,
+            beat_accent_mode=coupling.beat_accent_mode,
+            agc_max_gain=cf.agc_max_gain,
+            onset_gain_floor=cf.onset_gain_floor,
             energy_source=cf.energy_source,
             lufs_floor=cf.lufs_floor,
             lufs_ceiling=cf.lufs_ceiling,

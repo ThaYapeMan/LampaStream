@@ -66,7 +66,7 @@ def test_real_128_bpm_detection_times_agree_across_room_clocks(tmp_path):
 
     args = parser().parse_args([
         '--input', str(Path(__file__).parent/'fixtures/replay/clicks-128.wav'),
-        '--config', str(Path(__file__).parent/'fixtures/replay/default-config.json'),
+        '--config', str(Path(__file__).parent/'fixtures/tracker-baseline-config.json'),
         '--route', 'normal', '--out', str(tmp_path/'trace')])
     replay = Replay(args)
     rate = 48000

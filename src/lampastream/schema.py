@@ -23,7 +23,7 @@ from .models import (
 )
 from .palettes import Palette
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 COLLECTIONS = {
     "palettes": Palette,
     "genre_rules": GenreRule,
@@ -84,6 +84,11 @@ def validate_current(data: dict, *, references: bool = False) -> None:
             if not isinstance(identity, str) or not identity or identity in seen:
                 raise ValueError(f"{key}: missing/duplicate ID {identity!r}")
             seen.add(identity)
+            required = ({"beat_accent_mode"} if key == "couplings" else
+                        {"agc_max_gain", "onset_gain_floor"} if key == "energy_profiles" else set())
+            if not required <= row.keys():
+                raise ValueError(
+                    f"{key}/{identity}: missing accent settings; run installer migration")
             # Constructors validate domain bounds, including Analyser.bar_falloff_s.
             entity = model.from_dict(row)
             if key == "effects":

@@ -271,6 +271,8 @@ export interface AccentFeatures {
   beat_phase?: number
   beat_events_per_second?: number
   texture_events_per_second?: number
+  beat_accent_mode?: 'off' | 'onset' | 'tracker' | null
+  agc_max_gain?: number | null
   agc_gain?: number | null
   trigger_ratio?: number | null
   beat_grid?: { time: number; predicted: boolean }[]
@@ -365,6 +367,8 @@ export interface EnergyProfile {
   peak_release_s?: number
   peak_reshape_enabled?: boolean
   peak_reshape_power?: number
+  agc_max_gain?: number
+  onset_gain_floor?: number
 }
 
 export interface Coupling {
@@ -381,6 +385,7 @@ export interface Coupling {
   zone_id: string
   energy_profile_id: string
   enabled: boolean
+  beat_accent_mode?: 'off' | 'onset' | 'tracker'
 }
 
 // Controllers

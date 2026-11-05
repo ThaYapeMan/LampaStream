@@ -191,7 +191,10 @@ async def _preview_frames(websocket, player_manager):
                 light_timing = (dict(entry.to_dict(), status=player_manager.latency_status(entry))
                                 if entry else None)
             track = player_manager.track_position
+            coupling = app.state.storage.get_coupling(player_manager.active_coupling_id)
+            energy = app.state.storage.get_energy_profile(player_manager.active_energy_profile_id)
             status_dict = {
+                "agc_max_gain": energy.agc_max_gain if energy else None,
                 "type": "status",
                 "light_timing": light_timing,
                 "lms_timing": (player_manager.lms_timing
@@ -201,6 +204,7 @@ async def _preview_frames(websocket, player_manager):
                 "music": (player_manager.music_status
                           if isinstance(player_manager.music_status, dict) else None),
                 "version": f"{__version__}+{__git_hash__}",
+                "beat_accent_mode": coupling.beat_accent_mode if coupling else None,
                 "active_coupling_id": player_manager.active_coupling_id,
                 "active_coupling_name": player_manager.active_coupling_name,
                 "active_zone_id": player_manager.active_zone_id,

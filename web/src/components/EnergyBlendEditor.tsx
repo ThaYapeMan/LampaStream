@@ -1,3 +1,4 @@
+import { SegmentedControl } from './SegmentedControl'
 import { useState, useId, type ReactNode } from 'react'
 import { Slider } from '@/components/ui/slider'
 import { Input } from '@/components/ui/input'
@@ -262,7 +263,9 @@ export function EnergySourceControls({ source, floor, ceiling, tau, peakAuto = t
     <Label className={compact ? 'text-sm text-muted-foreground' : undefined}>Energy source</Label>
     <div className={compact ? 'w-full' : undefined}>
     {compact && header}
-    <div role={compact ? 'radiogroup' : undefined} aria-label={compact ? 'Energy source' : undefined}
+    {compact ? <SegmentedControl label="Energy source" value={source}
+      options={options.map(opt => ({ value: opt.value, label: labels[opt.value] }))}
+      disabled={disabled} pending={pending} onChange={value => onChange('energy_source', value)} /> : <div role={compact ? 'radiogroup' : undefined} aria-label={compact ? 'Energy source' : undefined}
       className={compact ? 'grid w-full grid-cols-2 sm:grid-cols-4 rounded-lg border border-border bg-background/40 p-0.5' : 'grid grid-cols-1 gap-1.5'}>
       {options.map((opt, index) => <button key={opt.value} type="button"
         role={compact ? 'radio' : undefined} aria-checked={compact ? source === opt.value : undefined}
@@ -284,7 +287,7 @@ export function EnergySourceControls({ source, floor, ceiling, tau, peakAuto = t
         <div className={compact ? undefined : "font-medium"}>{compact ? labels[opt.value] : opt.label}</div>
         {!compact && <div className="mt-0.5 text-xs text-muted-foreground">{opt.description}</div>}
       </button>)}
-    </div>
+    </div>}
     </div>
     {source === 'peak_envelope' && <div className={compact ? 'flex flex-wrap items-center gap-x-3 gap-y-2' : 'flex flex-wrap items-center gap-2'}>
       <div role="group" aria-label="Peak envelope mode" className="inline-flex rounded border border-input p-0.5">

@@ -80,9 +80,20 @@ async def log(label, duration, out, url, ready=None):
                     # Preserve the actual anchor/trim/source used during capture.
                     status.write(json.dumps(dict(t_wall=wall, **{
                         key: message.get(key) for key in (
-                            "track", "light_timing", "lms_timing", "active_player_type")
+                            "track", "light_timing", "lms_timing", "active_player_type",
+                            "beat_accent_mode")
                     })) + "\n")
                     status.flush()
+                    mode = message.get("beat_accent_mode")
+                    if mode not in {"off", "onset", "tracker"}:
+                        raise RuntimeError("Status lacks beat_accent_mode; deploy updated server")
+                    manifest_path = out / f"{label}-manifest.json"
+                    manifest = (json.loads(manifest_path.read_text())
+                                if manifest_path.exists() else {"beat_accent_modes": []})
+                    if mode not in manifest["beat_accent_modes"]:
+                        manifest["beat_accent_modes"].append(mode)
+                    manifest["beat_accent_mode"] = mode
+                    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
                 if message.get("type") == "event":
                     for event in message.get("events", []):
                         if event.get("kind") == "beat":

@@ -341,6 +341,8 @@ class EnergyProfileCreateBody(BaseModel):
     peak_release_s: float = 2.0
     peak_reshape_enabled: bool = False
     peak_reshape_power: float = 0.4
+    agc_max_gain: float = Field(default=64., ge=8, allow_inf_nan=False)
+    onset_gain_floor: float = Field(default=.3, ge=0, le=1, allow_inf_nan=False)
     blend_response: float = 0.1
 
 
@@ -362,10 +364,13 @@ class EnergyProfilePatchBody(BaseModel):
     peak_release_s: float | None = None
     peak_reshape_enabled: bool | None = None
     peak_reshape_power: float | None = None
+    agc_max_gain: float | None = Field(default=None, ge=8, allow_inf_nan=False)
+    onset_gain_floor: float | None = Field(default=None, ge=0, le=1, allow_inf_nan=False)
     blend_response: float | None = None
 
 
 class CouplingReleaseBody(BaseModel):
+    beat_accent_mode: Literal["off", "onset", "tracker"] = "onset"
     release_after_idle_s: int = 30
     on_release: Literal["restore", "off", "leave"] = "restore"
 
@@ -390,6 +395,7 @@ class CouplingCreateBody(CouplingReleaseBody):
 
 
 class CouplingPatchBody(CouplingReleaseBody):
+    beat_accent_mode: Literal["off", "onset", "tracker"] | None = None
     release_after_idle_s: int | None = None
     on_release: Literal["restore", "off", "leave"] = None
     model_config = ConfigDict(extra="forbid")
@@ -485,7 +491,8 @@ _C_PCM_FIELDS: frozenset[str] = frozenset({
     "use_hpss_separation", "bass_hz", "mid_hz",
 })
 _C_RENDER_FIELDS: frozenset[str] = frozenset({
-    "entertainment_area_name", "light_count",
+    "entertainment_area_name", "light_count", "beat_accent_mode",
+    "agc_max_gain", "onset_gain_floor",
     # EnergyProfile patch fields that propagate render changes:
     "high_energy_effect_id", "low_energy_effect_id",
     "blend_start", "blend_end", "blend_response",
@@ -516,7 +523,7 @@ _C_FK_FIELDS: frozenset[str] = frozenset({
 # Fields that live directly on Coupling (not on a sub-entity) and are set
 # via setattr(coupling, field, value) in the patch handler.
 _C_COUPLING_DIRECT_FIELDS: frozenset[str] = frozenset({
-    "name", "enabled", "release_after_idle_s", "on_release",
+    "name", "enabled", "release_after_idle_s", "on_release", "beat_accent_mode",
     "follow_player_mac", "follow_player_name",
 })
 
@@ -727,9 +734,13 @@ async def get_status(request: Request):
     }
     from .audible_preview import diagnostic_status
     trigger_status = diagnostic_status(getattr(manager, 'preview_frame', {}))
+    coupling = _storage(request).get_coupling(manager.active_coupling_id)
+    energy = _storage(request).get_energy_profile(manager.active_energy_profile_id)
     return {
         **trigger_status,
+        "agc_max_gain": energy.agc_max_gain if energy else None,
         "version": _VERSION_STRING,
+        "beat_accent_mode": coupling.beat_accent_mode if coupling else None,
         "active_coupling_id": manager.active_coupling_id,
         "active_coupling_name": manager.active_coupling_name,
         "active_player_type": manager.active_player_type,
@@ -1398,6 +1409,7 @@ async def create_coupling(request: Request, body: CouplingCreateBody):
         body.name, [(c.id, c.name) for c in storage.list_couplings()], "Coupling"
     )
     coupling = Coupling(
+        beat_accent_mode=body.beat_accent_mode,
         release_after_idle_s=body.release_after_idle_s,
         on_release=body.on_release,
         name=body.name,

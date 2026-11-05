@@ -240,6 +240,7 @@ def test_invalid_idle_falls_back_with_warning(value, caplog):
 
 def test_additive_config_migration_is_idempotent():
     original = empty_config()
+    original['schema_version'] = 2
     original['couplings'] = [{'id': 'c', 'name': 'Room'}]
     result = convert(original)
     assert result['couplings'][0]['release_after_idle_s'] == 30

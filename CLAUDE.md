@@ -48,7 +48,7 @@ Native runtime/performance claims require target evidence, not green stub tests.
 
 The repository installer (`scripts/install-lampastream.sh`) owns standard deployment,
 dependencies, builds and explicit persisted-schema migration. Current runtime accepts
-schema version 1 only; historical conversions belong exclusively to migration code.
+schema version 3 only; historical conversions belong exclusively to migration code.
 See [cutover inventory](docs/compatibility-cutover.md). Never add runtime fallbacks
 for historical entity names or regenerate tracked commit constants.
 

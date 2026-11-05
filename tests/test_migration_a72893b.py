@@ -51,6 +51,11 @@ def expected_current_rows(data, key):
         for row in rows:
             row.setdefault("release_after_idle_s", 30)
             row.setdefault("on_release", "restore")
+            row.setdefault("beat_accent_mode", "onset")
+    if key == "crossfaders":
+        for row in rows:
+            row.setdefault("agc_max_gain", 64.)
+            row.setdefault("onset_gain_floor", .3)
     if key == "player_latencies":
         for row in rows:
             row.pop("speaker_ip", None)
@@ -75,7 +80,7 @@ def test_exact_a72893b_upgrade_preserves_every_current_field():
                 'couplings', 'player_latencies', 'active_coupling_id'):
         assert current[key] == expected_current_rows(old, key)
     assert_without_palette(current['effects'], old['scenes'])
-    assert current['energy_profiles'] == old['crossfaders']
+    assert current['energy_profiles'] == expected_current_rows(old, 'crossfaders')
     validate_current(current, references=True)
     assert convert(current) == current
 
@@ -286,7 +291,7 @@ def test_retained_profile_does_not_override_current_coupling_metadata(tmp_path, 
                 'couplings', 'player_latencies', 'active_coupling_id'):
         assert result[key] == expected_current_rows(data, key)
     assert_without_palette(result['effects'], data['scenes'])
-    assert result['energy_profiles'] == data['crossfaders']
+    assert result['energy_profiles'] == expected_current_rows(data, 'crossfaders')
     assert set(result) == set(empty_config())
     validate_current(result, references=True)
     assert next(tmp_path.glob('*.bak')).read_bytes() == original
@@ -340,7 +345,7 @@ def test_independently_mutated_entity_wins_over_snapshot(collection, field, valu
                 'couplings', 'player_latencies', 'active_coupling_id'):
         assert result[key] == expected_current_rows(expected, key)
     assert_without_palette(result['effects'], expected['scenes'])
-    assert result['energy_profiles'] == expected['crossfaders']
+    assert result['energy_profiles'] == expected_current_rows(expected, 'crossfaders')
     validate_current(result, references=True)
     assert convert(result) == result
 

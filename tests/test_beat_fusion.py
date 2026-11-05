@@ -18,6 +18,8 @@ def analyse(name, chunk=480):
     with wave.open(str(FIXTURES/f'{name}.wav')) as stream:
         pcm = np.frombuffer(stream.readframes(stream.getnframes()), '<i2').astype(float)/32768
     fusion, stft = BeatFusion(), StereoMagStft(48000)
+    # Preserve the pre-LIGHTS estimator regression contract explicitly.
+    fusion.gain_settings = (10000., 0.)
     count, events, history = 0, [], []
     for start in range(0, len(pcm), chunk):
         stereo = np.repeat(pcm[start:start+chunk, None], 2, axis=1)
@@ -89,7 +91,8 @@ def test_pink_noise_and_sweep_exact_false_trigger_counts():
 
     for name, count in [('pink-noise', 2), ('sweep', 6)]:
         args = parser().parse_args(['--input', str(FIXTURES.parent/f'{name}.wav'),
-            '--config', str(FIXTURES.parent/'default-config.json'), '--out', '/tmp/unused-beat'])
+            '--config', str(FIXTURES.parent.parent/'tracker-baseline-config.json'),
+            '--out', '/tmp/unused-beat'])
         replay = Replay(args)
         try:
             pcm, rate, _ = decode(args.input)

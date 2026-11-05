@@ -592,7 +592,7 @@ class Replay:
                    for s in truth.get("event_samples", [])]
         frontiers = {e.id: available / RATE for record, available in
                      zip(self.records, self.availability, strict=True)
-                     for e in record.features.onset_events}
+                     for e in (*record.features.onset_events, *record.features.diagnostic_events)}
         rows = []
         for identity, data in self.engine.event_records.items():
             event = data["event"]

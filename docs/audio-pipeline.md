@@ -154,3 +154,31 @@ Its optional 64-byte YNPT tail exports `content_frame` at offset 52 and
 `content_flags` at offset 60 (bit 0: known). No local producer patch is applied.
 The segment is `/dev/shm/yeney-<lowercase-mac>`; the SHM v1 layout, ABI version,
 YNPT tail and `measurement_basis=lms-content-v1` contract are unchanged.
+
+## Live beat accents and gain limits (schema 3)
+
+`Coupling.beat_accent_mode` selects lighting events before the scheduler: `off`
+feeds no events, `onset` feeds the existing BeatDetector events, and `tracker`
+feeds BeatFusion's detected/predicted beat and texture stream. New couplings and
+installer-migrated couplings use `onset`. Tracker analysis runs in every mode;
+measured tempo remains visible. All Effects receive the same selected feature
+stream and return Scenes as before. No source/output-specific timing rule is added.
+A live mode change invalidates scheduled events, unsent scenes, and envelope history.
+
+Energy Profiles persist `agc_max_gain` (default 64, minimum 8) and
+`onset_gain_floor` (default 0.3, range 0–1). Both update live. For gain `g` and
+ceiling `c`, let `p = 0` for `g <= 8`, otherwise
+`p = min(1, (g - 8) / max(c - 8, 1e-9))`. Thus at ceiling 8 the floor remains
+unchanged, and at any larger ceiling it rises monotonically to its configured
+maximum. BeatFusion's four energy triggers clamp `g = min(c, 1/max(slow, 1e-4))`
+and require logarithmic onset value at least `base_floor + onset_gain_floor*p`.
+The detector stream in Onset mode requires raw detector candidate strength at least
+`onset_gain_floor*min(g,c)*p`; its existing picker thresholds and silence gate still apply.
+This is an additional accent gate, not a change to the detector or tempo estimator.
+It leaves the floor unchanged through 8× and prevents gain alone from making
+near-silent energy pulses pass the energy trigger at full gain.
+
+The installer explicitly upgrades persisted schema 2 to 3, preserving exact
+original bytes in a `pre-v3` backup. Runtime rejects old versions and schema-3
+couplings/profiles missing these settings. The display marks AGC as capped when
+its current gain reaches the active Energy Profile ceiling.

@@ -95,7 +95,7 @@ def test_airplay_actual_socket_detection_track_time_matches_82181c5(tmp_path, mo
                 "--input",
                 str(ROOT / "tests/fixtures/replay/clicks-128.wav"),
                 "--config",
-                str(ROOT / "tests/fixtures/replay/default-config.json"),
+                str(ROOT / "tests/fixtures/tracker-baseline-config.json"),
                 "--route",
                 "timestamped",
                 "--out",

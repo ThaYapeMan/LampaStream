@@ -1981,3 +1981,38 @@ def test_airplay_transport_endpoint_routes_to_the_active_player(client, transpor
     assert response.json()['target_mac'] == 'AABB'
     control.assert_awaited_once_with('toggle')
     exchange.assert_not_called()
+
+
+@pytest.mark.parametrize("mode", ["off", "onset", "tracker"])
+def test_beat_accent_mode_persists_and_updates_both_live_profiles(client, mode):
+    coupling = _make_full_coupling(client._storage)
+    client._storage.set_active_coupling_id(coupling.id)
+    endpoint = f"/api/couplings/{coupling.id}"
+    assert client.patch(endpoint, json={"beat_accent_mode": mode}).status_code == 200
+    assert client._storage.get_coupling(coupling.id).beat_accent_mode == mode
+    for profile in client._manager.update_render.call_args.args:
+        if profile is not None:
+            assert profile.beat_accent_mode == mode
+    client._manager.deactivate.assert_not_awaited()
+    client._manager.update_onset_pipeline.assert_not_called()
+
+
+def test_accent_gain_limits_validate_and_propagate_live(client):
+    coupling = _make_full_coupling(client._storage)
+    client._storage.set_active_coupling_id(coupling.id)
+    endpoint = f"/api/energy-profiles/{coupling.energy_profile_id}"
+    for body in ({"agc_max_gain": 128.}, {"onset_gain_floor": .7}):
+        assert client.patch(endpoint, json=body).status_code == 200
+        for profile in client._manager.update_render.call_args.args:
+            if profile is not None:
+                for field, value in body.items():
+                    assert getattr(profile, field) == value
+    original = client.get(endpoint).json()
+    for body in ({"agc_max_gain": 7.}, {"onset_gain_floor": -1},
+                 {"onset_gain_floor": 1.1}):
+        assert client.patch(endpoint, json=body).status_code == 422
+        assert client.get(endpoint).json() == original
+    assert client.patch(f"/api/couplings/{coupling.id}",
+                        json={"beat_accent_mode": "invalid"}).status_code == 422
+    client._manager.deactivate.assert_not_awaited()
+    client._manager.update_onset_pipeline.assert_not_called()

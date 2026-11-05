@@ -14,7 +14,7 @@ def event(sample=480):
 
 
 def test_queue_survives_latest_and_drains_once():
-    pipeline = _make_canonical_pipeline(None, Profile())
+    pipeline = _make_canonical_pipeline(None, Profile(beat_accent_mode="tracker"))
     try:
         features = AudioFeatures([], 0, 0, 0, 0, onset=True, onset_events=(event(),))
         for i in range(3):
@@ -59,14 +59,14 @@ def engine_view(events, *, sample_end=48000, source_time=None):
 
     from lampastream.sync_engine import SyncEngine
     from lampastream.types import Colour, UniformScene
-    pipeline = _make_canonical_pipeline(None, Profile())
+    pipeline = _make_canonical_pipeline(None, Profile(beat_accent_mode="tracker"))
     if source_time is not None:
         pipeline._arrival_spans.append(("epoch", 0, sample_end, source_time))
     features = AudioFeatures([], 0, 0, 0, 0, onset_events=tuple(events))
     pipeline._publish(epoch_id="epoch", sample_start=sample_end-480, sample_end=sample_end,
                       features=features, effective_spectrum_backend="v2",
                       effective_processor_ids=())
-    engine = SyncEngine(None, Profile(), analyser=pipeline)
+    engine = SyncEngine(None, Profile(beat_accent_mode="tracker"), analyser=pipeline)
     views = []
     engine._effect = SimpleNamespace(mix=0, render=lambda f, t:
         (views.append(f), UniformScene(Colour.BLACK))[1])

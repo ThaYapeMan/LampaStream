@@ -1391,3 +1391,34 @@ Use that MAC in place of `VIRTUAL_MAC` below, during normal LMS playback on LXC 
 python3 scripts/clock-rate-probe.py --mac VIRTUAL_MAC --followed-mac 48:a6:b8:20:39:64 --lms --config /etc/lampastream/config.json --seconds 360 --csv /tmp/clock-01a-360.csv --service-url ws://127.0.0.1:8420/ws/preview
 python3 scripts/clock-rate-probe.py --analyse /tmp/clock-01a-360.csv
 ```
+
+## LIGHTS-01 beat-accent limits
+
+`tests/fixtures/replay/default-config.json` follows current defaults (Onset,
+64× ceiling, gain-floor coefficient 0.3). The explicit
+`tests/fixtures/tracker-baseline-config.json` retains Tracker with the former
+10000× ceiling and zero extra floor for the existing BEAT-01 and clock regression
+assertions. Those tests keep their original counts, latency and colour assertions;
+they do not establish current-default performance. LIGHTS-01's mode/gain tests
+separately verify the new defaults, initial and live parameter forwarding, scheduler
+stream isolation, schema migration, and suppression of actual quiet-noise events.
+
+The offline bench decodes local files through the existing replay/FFmpeg path and
+uses `ab-tools.write_analysis` for available beat-reference CSVs. It never starts a
+player or contacts the live service. Optional librosa is needed only with
+`--estimate-tempo`; install it in the development environment (this evidence used
+librosa 1.0.0), not in the service environment:
+
+```sh
+uv pip install --python .venv/bin/python librosa==1.0.0
+NUMBA_CACHE_DIR=/tmp/lights-01-numba .venv/bin/python scripts/bench-beat-accents.py \
+  --input /path/to/recording.m4a --out /tmp/lights-01-bench --estimate-tempo
+```
+
+`--ceiling` and `--floor` select only the two Energy Profile gain settings. Output
+includes source codec/rate and hash, gain samples with time-weighted median/p90
+and time at ceiling, raw and accepted strength distributions, per-mode selected
+accent rates, and reference scoring. The rates count selected events before
+render coalescing, not distinct visible lamp peaks. Librosa's default 120 BPM
+prior and the owner's 72 BPM prior are both reported; neither changes live DSP.
+Never infer missing-track break counts or hit rates from a different recording.

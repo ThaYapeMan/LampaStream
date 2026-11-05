@@ -3037,6 +3037,7 @@ class SyncEngine:
     def update_profile(self, profile: Profile, mellow_profile: Profile | None = None) -> None:
         """Rebuild the effect with a new profile. Call after saving band/cutoff changes."""
         self.profile = profile
+        self._configure_accent_gain()
         effective_mellow = mellow_profile if mellow_profile is not None else profile
         self._effect = SmoothLayerMixer(profile, effective_mellow, self._effect,
                                          lambda: (self._shown_scene, self._shown_t))
@@ -3078,6 +3079,7 @@ class SyncEngine:
         Safe to call while run() is active.
         """
         self.profile = profile
+        self._configure_accent_gain()
         effective_mellow = mellow_profile if mellow_profile is not None else profile
         self._effect = SmoothLayerMixer(profile, effective_mellow, self._effect,
                                          lambda: (self._shown_scene, self._shown_t))
@@ -3510,16 +3512,23 @@ class SyncEngine:
             level=self._analyser.latest_level(), loudness_momentary_lufs=momentary,
             loudness_short_term_lufs=short_term)
 
+    def _configure_accent_gain(self):
+        fusion = getattr(self._analyser, "_beat_fusion", None)
+        if fusion is not None:
+            fusion.gain_settings = (
+                self.profile.agc_max_gain, self.profile.onset_gain_floor)
+
     def _render_generation(self, output):
         publication = (getattr(self._analyser, "_latest_pub", None)
                        if isinstance(self._analyser, CanonicalAnalysisPipeline) else None)
         return (getattr(output, "output_generation", 0), self.audible_clock.generation,
-                getattr(publication, "epoch", None))
+                getattr(publication, "epoch", None), self.profile.beat_accent_mode)
 
     async def run(self, output: Output, *, clock=None, sleep=None) -> None:
         """Consume generic features through one renderer, scheduler and preview."""
         from .accent import AccentLayer
         from .audible_preview import AudiblePreview
+        from .beat_accents import select_events
         from .render_pipeline import RenderPipeline
         from .scheduler import RenderRequest, Scheduler
 
@@ -3564,6 +3573,7 @@ class SyncEngine:
         latest_sequence = None
         unmapped_events = []
         generation = None
+        self._configure_accent_gain()
         seen_epoch = False
         while True:
             now = clock()
@@ -3584,6 +3594,11 @@ class SyncEngine:
             if isinstance(self._analyser, CanonicalAnalysisPipeline):
                 records = self._analyser.drain_publications()
                 events = self._analyser.drain_events()
+            self._configure_accent_gain()
+            mode = self.profile.beat_accent_mode
+            events = select_events("tracker" if self.profile.diagnostic_onsets
+                                   and mode == "onset" else mode, events, records,
+                                   self.profile.agc_max_gain, self.profile.onset_gain_floor)
             current_generation = self._render_generation(output)
             if current_generation != generation:
                 schedule.reset(current_generation)
@@ -3596,6 +3611,8 @@ class SyncEngine:
                             for band in event.bands | {"all"}:
                                 self.event_counters[band]["expired"] += 1
                     self._pending_onset_events.clear()
+                    self._newest_onset = None, 0.
+                    self._beat_count = 0
                     unmapped_events.clear()
                     for envelope in (*self._onset_envelopes.values(),
                                      *self._beat_envelopes.values()):
@@ -3726,7 +3743,8 @@ class SyncEngine:
             if schedule.pending is not None:
                 pending_features = schedule.pending.features
                 history = self._beat_envelopes["beat"]._triggers
-                if (not self.profile.diagnostic_onsets and pending_features.tempo_locked
+                if (self.profile.beat_accent_mode == "tracker"
+                        and not self.profile.diagnostic_onsets and pending_features.tempo_locked
                         and pending_features.tempo_bpm and history):
                     period = 60/pending_features.tempo_bpm
                     phase_time = (clock()-history[-1][0]) % period

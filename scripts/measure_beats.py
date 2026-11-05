@@ -12,9 +12,9 @@ from pathlib import Path
 from replay_chain import ROOT, Replay, decode, parser
 
 
-def measure(path, out, *, route='normal', room='two-channel.json'):
+def measure(path, out, *, route='normal', room='two-channel.json', config=None):
     args = parser().parse_args(['--input', str(path), '--config',
-        str(ROOT/'tests/fixtures/replay/default-config.json'), '--route', route,
+        str(config or ROOT/'tests/fixtures/replay/default-config.json'), '--route', route,
         '--room', str(ROOT/'tests/fixtures/rooms'/room), '--out', str(out)])
     replay = Replay(args)
     try:

@@ -136,6 +136,7 @@ def _migrate_flat_residue(data: dict) -> None:
             if collection != "effects":
                 coupling[reference] = identity
         candidate["couplings"] = [coupling]
+        _migrate_accents(candidate)
         validate_current(candidate, references=True)
 
         existing = next((c for c in data["couplings"] if c["id"] == profile["id"]), None)
@@ -262,6 +263,16 @@ def _migrate_release(data):
         row["on_release"] = normal.on_release
 
 
+def _migrate_accents(data):
+    if not all(isinstance(data.get(key), list) for key in ("couplings", "energy_profiles")):
+        raise ValueError("Malformed accent settings collections")
+    for row in data["couplings"]:
+        row.setdefault("beat_accent_mode", "onset")
+    for row in data["energy_profiles"]:
+        row.setdefault("agc_max_gain", 64.0)
+        row.setdefault("onset_gain_floor", 0.3)
+
+
 def convert(original: dict) -> dict:
     if not isinstance(original, dict):
         raise ValueError("Configuration must be a JSON object")
@@ -273,6 +284,16 @@ def convert(original: dict) -> dict:
         _migrate_player_latency(data)
         _migrate_release(data)
         _migrate_bar_falloff(data)
+        validate_current(data, references=True)
+        return data
+    if original.get("schema_version") == 2:
+        data = copy.deepcopy(original)
+        data["schema_version"] = SCHEMA_VERSION
+        _migrate_bars_source(data)
+        _migrate_player_latency(data)
+        _migrate_release(data)
+        _migrate_bar_falloff(data)
+        _migrate_accents(data)
         validate_current(data, references=True)
         return data
     if original.get("schema_version") == 1:
@@ -288,6 +309,7 @@ def convert(original: dict) -> dict:
             row.setdefault("on_release", "restore")
         _migrate_release(data)
         _migrate_bar_falloff(data)
+        _migrate_accents(data)
         validate_current(data, references=True)
         return data
     if original.get("schema_version", 0) != 0:
@@ -369,10 +391,12 @@ def convert(original: dict) -> dict:
     data["schema_version"] = SCHEMA_VERSION
     _migrate_bars_source(data)
     _migrate_player_latency(data)
+    _migrate_accents(data)
     _migrate_flat_residue(data)
     _migrate_palettes(data)
     _migrate_release(data)
     _migrate_bar_falloff(data)
+    _migrate_accents(data)
     validate_current(data, references=True)
     return data
 

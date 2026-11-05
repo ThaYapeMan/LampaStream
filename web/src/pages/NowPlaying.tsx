@@ -1,3 +1,4 @@
+import { LiveBeatAccents } from '@/components/LiveBeatAccents'
 import { LightsRow } from '@/components/LightsRow'
 import { MusicChoices } from '@/components/MusicChoices'
 import { LightTiming } from '@/components/LightTiming'
@@ -458,7 +459,9 @@ export function NowPlaying({ expertMode = false, colour, channel_colours, onset,
       {status?.active_coupling_id && <LightsRow key={status.active_coupling_id}
         couplingId={status.active_coupling_id} output={status.output_status} />}
 
-      <LightTiming status={status} onOpenLatency={onOpenLatency} expertMode={expertMode} />
+      <LightTiming accentControls={<LiveBeatAccents coupling={activeCoupling} profile={activeEnergyProfile}
+        onCoupling={updated => setCouplings(items => items.map(item => item.id === updated.id ? updated : item))}
+        onProfile={updated => setEnergyProfiles(items => items.map(item => item.id === updated.id ? updated : item))} />} status={status} onOpenLatency={onOpenLatency} expertMode={expertMode} />
 
       <Card data-testid="live-preview-card">
         <CardHeader className="pb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">

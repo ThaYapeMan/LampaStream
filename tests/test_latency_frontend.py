@@ -63,7 +63,7 @@ def test_slow_render_cannot_send_two_extras_in_one_drain(monkeypatch):
     )
 
     clock = [0.0]
-    pipeline = _make_canonical_pipeline(None, Profile())
+    pipeline = _make_canonical_pipeline(None, Profile(beat_accent_mode="tracker"))
     pipeline._publish(epoch_id='epoch', sample_start=0, sample_end=480,
                       features=AudioFeatures([.3]*30, .3, .3, .3, .3),
                       effective_spectrum_backend='v2', effective_processor_ids=('v2',))
@@ -75,7 +75,7 @@ def test_slow_render_cannot_send_two_extras_in_one_drain(monkeypatch):
             self.add(RenderRequest(pipeline.latest(), 0, .025), 0)
 
     monkeypatch.setattr(scheduling, 'Scheduler', Schedule)
-    engine = SyncEngine(None, Profile(), analyser=pipeline)
+    engine = SyncEngine(None, Profile(beat_accent_mode="tracker"), analyser=pipeline)
 
     def render(features, t):
         clock[0] += .02  # deliberately exceeds the declared minimum send spacing

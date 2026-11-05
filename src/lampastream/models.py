@@ -26,6 +26,12 @@ ENERGY_SOURCES: frozenset[str] = frozenset({
 })
 
 
+def _validate_accent_gain(ceiling, floor):
+    if (type(ceiling) not in (int, float) or not math.isfinite(ceiling) or ceiling < 8
+            or type(floor) not in (int, float) or not math.isfinite(floor) or not 0 <= floor <= 1):
+        raise ValueError("AGC ceiling must be at least 8; onset gain floor must be 0..1")
+
+
 def _validate_energy_source(
     source: str, floor: float, ceiling: float, tau: float,
     peak_envelope_auto: bool = True, peak_attack_s: float = 0.05, peak_release_s: float = 2.0,
@@ -259,6 +265,8 @@ class Profile:
     entertainment_area_name: str = ""
     light_count: int = 0
 
+    beat_accent_mode: str = "onset"
+
     # Colour mapping / effect selection
     effect_type: str = "spectrum_rgb"
     palette_id: str = ""
@@ -275,6 +283,8 @@ class Profile:
     effect_decay: float = 0.3
     blend_start: float = 0.3
     blend_end: float = 0.7
+    agc_max_gain: float = 64.0
+    onset_gain_floor: float = 0.3
     energy_source: str = "sustained"
     lufs_floor: float = -30.0
     lufs_ceiling: float = -8.0
@@ -374,6 +384,7 @@ class Profile:
         _validate_onset_effect(self)
         _validate_band_colours(self.band_colours, self.band_playback,
                                self.band_advance, self.band_advance_interval_s)
+        _validate_accent_gain(self.agc_max_gain, self.onset_gain_floor)
         _validate_energy_source(
             self.energy_source, self.lufs_floor, self.lufs_ceiling, self.adaptation_tau_s,
             self.peak_envelope_auto, self.peak_attack_s, self.peak_release_s,
@@ -748,6 +759,8 @@ class EnergyProfile:
     low_energy_effect_id: str = ""    # Effect used in quiet passages (empty = same as high)
     blend_start: float = 0.3  # energy below this → pure low-energy (mix=0)
     blend_end: float = 0.7    # energy above this → pure high-energy (mix=1)
+    agc_max_gain: float = 64.0
+    onset_gain_floor: float = 0.3
     energy_source: str = "sustained"
     lufs_floor: float = -30.0
     lufs_ceiling: float = -8.0
@@ -760,6 +773,7 @@ class EnergyProfile:
     blend_response: float = 0.1  # EMA alpha for mix smoothing
 
     def __post_init__(self) -> None:
+        _validate_accent_gain(self.agc_max_gain, self.onset_gain_floor)
         _validate_energy_source(
             self.energy_source, self.lufs_floor, self.lufs_ceiling, self.adaptation_tau_s,
             self.peak_envelope_auto, self.peak_attack_s, self.peak_release_s,
@@ -774,6 +788,8 @@ class EnergyProfile:
             "blend_start": self.blend_start,
             "blend_end": self.blend_end,
             "blend_response": self.blend_response,
+            "agc_max_gain": self.agc_max_gain,
+            "onset_gain_floor": self.onset_gain_floor,
             "energy_source": self.energy_source,
             "lufs_floor": self.lufs_floor,
             "lufs_ceiling": self.lufs_ceiling,
@@ -827,8 +843,11 @@ class Coupling:
     release_after_idle_s: int = 30
     on_release: str = "restore"
     enabled: bool = True
+    beat_accent_mode: str = "onset"
 
     def __post_init__(self):
+        if self.beat_accent_mode not in {"off", "onset", "tracker"}:
+            raise ValueError("Invalid beat_accent_mode")
         self.release_after_idle_s = validate_idle_release(self.release_after_idle_s)
         if self.on_release not in ("restore", "off", "leave"):
             raise ValueError("Choose restore, off or leave for released lights")
@@ -846,6 +865,7 @@ class Coupling:
             "manual_palette_id": self.manual_palette_id,
             "manual_energy_profile_id": self.manual_energy_profile_id,
             "enabled": self.enabled,
+            "beat_accent_mode": self.beat_accent_mode,
             "release_after_idle_s": self.release_after_idle_s,
             "on_release": self.on_release,
         }
