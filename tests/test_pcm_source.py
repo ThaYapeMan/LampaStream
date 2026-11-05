@@ -26,6 +26,7 @@ from lampastream.pcm_source import (
     _V2_EXT_OFFSET,
     _V2_EXT_SIZE,
     SHM_ABI_V1_MAGIC,
+    SHM_SEGMENT_PREFIX,
     VIS_BUF_SIZE,
     WINDOW_SIZE,
     DataResult,
@@ -58,7 +59,7 @@ def _make_vis_t(
 
 
 def _write_vis_t(tmp_path: Path, **kwargs: object) -> Path:
-    p = tmp_path / "squeezelite-test"
+    p = tmp_path / f"{SHM_SEGMENT_PREFIX}test"
     p.write_bytes(_make_vis_t(**kwargs))  # type: ignore[arg-type]
     return p
 
@@ -368,7 +369,7 @@ def test_shm_stereo_running_false_to_true(tmp_path: Path) -> None:
     """running transition False→True emits StreamInvalidated (restart detected)."""
     p = _write_vis_t(tmp_path, buf_index=100, running=False, rate=44100)
     src, mm = _open_stereo_src(p)
-    # Simulate squeezelite restart: running goes True.
+    # Simulate producer restart: running goes True.
     _set_running(mm, True)
     _set_buf_index(mm, 0)
     result = src.read()
@@ -453,7 +454,7 @@ def _write_stereo_shm_v1(
     abs_write_pos: int = 0,
     gap_seq: int = 0,
     pcm_at_80: bytes | None = None,
-    name: str = "shm-v1",
+    name: str = SHM_SEGMENT_PREFIX + "test-v1",
 ) -> Path:
     """Materialise a fully-formed v1 SHM segment on disk.
 
@@ -861,3 +862,44 @@ def test_stereo_shm_replacement_remaps_and_delivers_new_pcm(tmp_path: Path) -> N
     assert not np.any(np.isclose(np.abs(non_zero), old_pattern_value, atol=1e-4)), (
         "no samples from old segment pattern 0x1111 should remain"
     )
+
+
+@pytest.mark.parametrize('missing', [False, True])
+def test_segment_name_has_no_historical_fallback(tmp_path, monkeypatch, missing):
+    """All filesystem requests stay on the current name, including failure."""
+    import glob
+
+    mac = '02:3a:37:0c:b8:01'
+    expected = Path('/dev/shm') / f'{SHM_SEGMENT_PREFIX}{mac}'
+    fixture = _write_stereo_shm_v1(tmp_path, name=f'{SHM_SEGMENT_PREFIX}{mac}')
+    real_open = Path.open
+    requests = []
+
+    def open_segment(path, *args, **kwargs):
+        requests.append(path)
+        assert path == expected
+        if missing:
+            raise FileNotFoundError(2, 'No such file or directory', str(path))
+        return real_open(fixture, *args, **kwargs)
+
+    def unexpected(*args, **kwargs):
+        pytest.fail(f'Unexpected filesystem fallback: {args!r}')
+
+    source = SqueezeliteShmStereoSource()
+    with monkeypatch.context() as patch:
+        patch.setattr(Path, 'open', open_segment)
+        patch.setattr(os, 'open', unexpected)
+        patch.setattr(Path, 'stat', unexpected)
+        patch.setattr(Path, 'glob', unexpected)
+        patch.setattr(Path, 'iterdir', unexpected)
+        patch.setattr(glob, 'glob', unexpected)
+        patch.setattr(os, 'listdir', unexpected)
+        if missing:
+            with pytest.raises(FileNotFoundError) as error:
+                source.open(mac)
+            assert error.value.filename == str(expected)
+            assert mac in str(error.value)
+        else:
+            source.open(mac)
+        source.close()
+    assert requests == [expected]

@@ -242,10 +242,10 @@ existing context and colour decisions.
    remain a separate session channel; they do not enter PCM, processors or
    AudioFeatures ([audio-pipeline.md](audio-pipeline.md#independent-track-metadata-channel)).
 7. **Producer ABI:** canonical LMS requires SHM **v1** from yeney-player, pinned
-   to **dc8cf3a373a9d9b38e98fc7d1929ac268c585c77** in installer and gitlink.
+   to **9fba26f0bcc9a10def8063c5d269b2bbe62b687a** in installer and gitlink.
    Preserve the v1 prefix and coherent generation/gap/absolute-position contract;
    optional YNPT timing is a 64-byte tail, not a replacement PCM ABI
-   (`pcm_source.py:143`, `player_clock.py:13`; [SHM ABI](../squeezelite/README.md)).
+   (`pcm_source.py:143`, `player_clock.py:13`; [SHM ABI](../third_party/yeney-core/docs/shm-v1.md)).
 
 ## EVENT-01 phase 2 additions
 

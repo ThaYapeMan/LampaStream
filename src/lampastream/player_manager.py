@@ -37,6 +37,7 @@ from .lms_follower import LmsFollower, LmsSyncGroupObserver, TransportAction
 from .lms_status import list_lms_players, query_lms_status, query_lms_sync_peers, unsync_player
 from .models import BridgeConfig, Controller, Coupling, Profile, VirtualPlayerType
 from .pcm_source import (
+    SHM_SEGMENT_PREFIX,
     AirPlayPipeStereoSource,
     TeePcmSource,
     YeneyCoreShmStereoSource,
@@ -1126,9 +1127,10 @@ class PlayerManager:
         session.poller_task = asyncio.create_task(self._poll_sync_master(session))
         session.poller_task.add_done_callback(_log_task_failure)
         log.info(
-            "LMS pcm_pipeline coupling %s active — backend=%r SHM: /dev/shm/squeezelite-%s",
+            "LMS pcm_pipeline coupling %s active — backend=%r SHM: /dev/shm/%s%s",
             session.coupling and session.coupling.name,
             profile.spectrum_backend,
+            SHM_SEGMENT_PREFIX,
             profile.player_mac,
         )
 
@@ -1292,11 +1294,11 @@ class PlayerManager:
                     proc.kill()
                     proc.wait(timeout=3)
 
-        # yeney-player creates /dev/shm/squeezelite-<mac> and never removes it.
+        # yeney-player creates /dev/shm/<prefix><mac> and never removes it.
         # Without this, every activate/deactivate cycle leaves an orphaned
         # segment behind — confirmed: 9 segments after a handful of test runs.
         if session.profile.player_mac:
-            Path(f"/dev/shm/squeezelite-{session.profile.player_mac}").unlink(
+            Path(f"/dev/shm/{SHM_SEGMENT_PREFIX}{session.profile.player_mac}").unlink(
                 missing_ok=True
             )
 
@@ -1311,7 +1313,7 @@ class PlayerManager:
         shm_dir = Path("/dev/shm")
         if not shm_dir.is_dir():
             return
-        for seg in shm_dir.glob("squeezelite-*"):
+        for seg in shm_dir.glob(f"{SHM_SEGMENT_PREFIX}*"):
             try:
                 seg.unlink()
                 log.info("Removed orphaned yeney-player shm segment %s", seg.name)
@@ -1936,10 +1938,10 @@ class PlayerManager:
     def _wait_for_shm(self, mac: str, timeout: float = 10.0, interval: float = 0.1) -> None:
         """Wait until yeney-player's shared-memory segment appears in /dev/shm.
 
-        yeney-player creates /dev/shm/squeezelite-<mac> a moment after it
+        yeney-player creates /dev/shm/<prefix><mac> a moment after it
         starts. Wait before opening the canonical PCM reader.
         """
-        path = Path(f"/dev/shm/squeezelite-{mac}")
+        path = Path(f"/dev/shm/{SHM_SEGMENT_PREFIX}{mac}")
         deadline = time.monotonic() + timeout
         while not path.exists():
             if time.monotonic() >= deadline:

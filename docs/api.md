@@ -81,7 +81,7 @@ unbound references can also be empty strings.
 | `sync_master_name` | string or null | Detected sync-master display name |
 | `applied_delay_ms` | integer | Current latency-probe delay in milliseconds; 0 without a session |
 | `latency_warning` | string or null | Latency warning text, when present |
-| `processes` | object | `squeezelite` indicates external player process liveness; false for AirPlay or no session |
+| `processes` | object | `lms_player` indicates external player process liveness; false for AirPlay or no session |
 | `bridge_connected` | boolean | Whether the session has a Hue output driver; not an independent network-health probe |
 | `effect_type` | string or null | Selected runtime visual algorithm ID |
 | `follower_warning` | string or null | LMS follower warning, when present |

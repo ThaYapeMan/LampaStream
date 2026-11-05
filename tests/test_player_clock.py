@@ -9,7 +9,7 @@ import pytest
 from lampastream.canonicalizer import DataResult, StreamInvalidated, TemporarilyNoData
 from lampastream.lms_timing import LmsTimedSource
 from lampastream.models import VirtualPlayer
-from lampastream.pcm_source import SqueezeliteShmStereoSource
+from lampastream.pcm_source import SHM_SEGMENT_PREFIX, SqueezeliteShmStereoSource
 from lampastream.player_clock import (
     DISCONTINUITY,
     FLUSH,
@@ -73,7 +73,7 @@ class Writer:
 
 @pytest.fixture
 def ingress(tmp_path):
-    writer = Writer(tmp_path / 'shm')
+    writer = Writer(tmp_path / (SHM_SEGMENT_PREFIX + 'shm'))
     source = SqueezeliteShmStereoSource()
     source.open('aa', _path=writer.path)
     now = [100.0]
@@ -155,7 +155,7 @@ def test_real_boundary_invalidates_once(ingress, event, caplog):
 
 
 def test_old_player_fallback(tmp_path):
-    writer = Writer(tmp_path / 'old', timing=False)
+    writer = Writer(tmp_path / (SHM_SEGMENT_PREFIX + 'old'), timing=False)
     source = SqueezeliteShmStereoSource()
     source.open('aa', _path=writer.path)
     now = [100.0]
@@ -411,7 +411,7 @@ def test_content_tail_controls_absolute_position_and_latency_basis(tmp_path, tai
     from lampastream.latency import AutoLatencyProbe, FollowPositionContext
     from lampastream.models import PlayerLatency
 
-    writer = Writer(tmp_path / 'content', timing=tail)
+    writer = Writer(tmp_path / (SHM_SEGMENT_PREFIX + 'content'), timing=tail)
     source = SqueezeliteShmStereoSource()
     source.use_player_clock = True
     source.open('aa', _path=writer.path, require_v1=True)

@@ -156,7 +156,7 @@ allows only measurement position/preference commands. Migration tests verify exa
 backups, reserved-field retirement and idempotency; API tests reject writable
 measurement fields and invalid trims. `web/src/__tests__/Latency.test.tsx` and
 `web/tests/e2e/latency.spec.ts` exercise Auto status, trim, fallback and the removed
-ALSA editor field. The real SHM integration builds yeney-player at `dc8cf3a` and
+ALSA editor field. The real SHM integration builds yeney-player at `9fba26f` and
 reads it through the unchanged strict-v1 PCM consumer.
 
 Another repository may run tests concurrently on the development machine. If the
@@ -1310,7 +1310,7 @@ empty-unknown rule prevents coordinate mixing when metadata is actually absent.
 
 [Content-clock evidence and derivation](research/lat03-sendback-1.md) supersede
 the earlier session-relative persistence. Deploy using the standard installer:
-it builds upstream yeney-core at `dc8cf3a` without a local producer patch,
+it builds upstream yeney-core at `9fba26f` without a local producer patch,
 then records and verifies the revision and binary hash. The SHM v1 prefix
 remains unchanged; the optional YNPT tail exports absolute FLAC content positions.
 

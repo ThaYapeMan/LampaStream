@@ -18,7 +18,7 @@ the Python dev extra and locked frontend dependencies (`cd web && npm ci`).
 At this historical baseline, `YENEY_CORE_REVISION` and the
 `third_party/yeney-core` gitlink were
 **45779a4383929840a46a931fc1519b4778b64a72**. The current pin is
-**dc8cf3a373a9d9b38e98fc7d1929ac268c585c77** (ALAC remains `5d8c5db`).
+**9fba26f0bcc9a10def8063c5d269b2bbe62b687a** (ALAC remains `5d8c5db`).
 Check both when reproducing:
 
 ```sh

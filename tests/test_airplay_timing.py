@@ -338,7 +338,7 @@ def test_manifest_records_margin_and_pin(tmp_path):
     binary = tmp_path / "player"
     binary.write_bytes(b"player")
     load_script("write-install-manifest.py").write_manifest(
-        "commit", "short", tmp_path, "dc8cf3a373a9d9b38e98fc7d1929ac268c585c77", binary
+        "commit", "short", tmp_path, "9fba26f0bcc9a10def8063c5d269b2bbe62b687a", binary
     )
     import json
 

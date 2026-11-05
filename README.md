@@ -244,7 +244,7 @@ Canonical: VirtualPlayer / ingress → canonical PCM → SpectrumProcessor
 V2 uses the shared STFT. Embedded CAVA Core keeps upstream native DSP and its own
 FFTs; LampaStream schedules 480-frame executions at 48 kHz (100 Hz).
 LampaStream analysis no longer launches an external CAVA process. The external
-CAVA binary remains available for independent stock consumers of squeezelite SHM;
+CAVA binary remains available for independent consumers of yeney-player SHM;
 its packaging and the producer ABI are unchanged.
 
 An explicit embedded-engine request either activates that engine or fails; it never
@@ -315,7 +315,7 @@ Create/pair a Controller through the API, then open `http://<host>:8420` to conf
 the Zone, player, Analyser, Effects/EnergyProfile and Coupling. LMS pacing is internal to yeney-player; host audio-device passthrough is not required.
 See [installation](docs/installation.md) and [LXC deployment](docs/deployment-lxc.md).
 LMS virtual players use `yeney-player` from the recursive `third_party/yeney-core`
-submodule at `dc8cf3a`. Initialize it with `git submodule update --init --recursive`.
+submodule at `9fba26f`. Initialize it with `git submodule update --init --recursive`.
 It paces PCM internally and preserves full-scale analysis PCM regardless of LMS volume.
 No snd-dummy or `/dev/snd` passthrough is required. Existing host mappings can remain
 harmlessly; optional removal steps are in [LXC deployment](docs/deployment-lxc.md).
@@ -345,7 +345,7 @@ for their stated commits only.
 - [Installation](docs/installation.md) · [LXC deployment](docs/deployment-lxc.md)
 - [Development](docs/development.md) · [Testing and acceptance](docs/testing.md)
 - [Effects catalog](docs/effects.md) · [Effects and output boundaries](docs/EFFECT_ENGINE.md)
-- [SHM v1 ABI](squeezelite/README.md)
+- [SHM v1 ABI](third_party/yeney-core/docs/shm-v1.md)
 
 Historical prompts/specifications are labelled as historical or stored under
 `docs/archive/`. They do not override these references. `docs/future/` contains

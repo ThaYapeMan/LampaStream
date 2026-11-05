@@ -26,6 +26,7 @@ from lampastream.models import (
     VirtualPlayerType,
     Zone,
 )
+from lampastream.pcm_source import SHM_SEGMENT_PREFIX
 from lampastream.player_manager import ActiveSession, PlayerManager, _build_engine_profile
 from lampastream.storage import Storage
 
@@ -40,9 +41,9 @@ def _make_manager(tmp_path: Path) -> PlayerManager:
 
 
 def test_teardown_removes_shm_segment(tmp_path: Path) -> None:
-    """_teardown_session() must unlink /dev/shm/squeezelite-<mac>."""
+    """_teardown_session() must unlink /dev/shm/<prefix><mac>."""
     mac = "02:ff:00:de:ad:01"
-    shm_path = Path(f"/dev/shm/squeezelite-{mac}")
+    shm_path = Path(f"/dev/shm/{SHM_SEGMENT_PREFIX}{mac}")
     shm_path.write_bytes(b"")  # create a fake segment
 
     manager = _make_manager(tmp_path)
@@ -59,7 +60,7 @@ def test_teardown_removes_shm_segment(tmp_path: Path) -> None:
 def test_teardown_tolerates_missing_shm(tmp_path: Path) -> None:
     """_teardown_session() must not raise if the shm file is already gone."""
     mac = "02:ff:00:de:ad:02"
-    shm_path = Path(f"/dev/shm/squeezelite-{mac}")
+    shm_path = Path(f"/dev/shm/{SHM_SEGMENT_PREFIX}{mac}")
     assert not shm_path.exists(), "precondition: file must not exist"
 
     manager = _make_manager(tmp_path)
@@ -85,9 +86,9 @@ def test_teardown_skips_shm_when_mac_is_empty(tmp_path: Path) -> None:
 
 
 def test_cleanup_orphaned_shm_removes_known_mac(tmp_path: Path) -> None:
-    """cleanup_orphaned_shm() removes squeezelite shm segments at startup."""
+    """cleanup_orphaned_shm() removes yeney-player shm segments at startup."""
     mac = "02:ff:00:de:ad:03"
-    shm_path = Path(f"/dev/shm/squeezelite-{mac}")
+    shm_path = Path(f"/dev/shm/{SHM_SEGMENT_PREFIX}{mac}")
     shm_path.write_bytes(b"")
 
     manager = _make_manager(tmp_path)
@@ -97,10 +98,10 @@ def test_cleanup_orphaned_shm_removes_known_mac(tmp_path: Path) -> None:
 
 
 def test_cleanup_orphaned_shm_removes_unknown_mac(tmp_path: Path) -> None:
-    """cleanup_orphaned_shm() removes ALL squeezelite-* segments, even those
+    """cleanup_orphaned_shm() removes ALL producer SHM segments, even those
     whose MAC is not in any profile (pre-fix runs with random MACs)."""
     unknown_mac = "02:ff:00:de:ad:04"
-    shm_path = Path(f"/dev/shm/squeezelite-{unknown_mac}")
+    shm_path = Path(f"/dev/shm/{SHM_SEGMENT_PREFIX}{unknown_mac}")
     shm_path.write_bytes(b"")
 
     # Storage has NO profile with this MAC — simulates pre-fix orphan.
@@ -108,7 +109,7 @@ def test_cleanup_orphaned_shm_removes_unknown_mac(tmp_path: Path) -> None:
     manager.cleanup_orphaned_shm()
 
     assert not shm_path.exists(), (
-        "cleanup_orphaned_shm() should remove ALL squeezelite-* segments at startup, "
+        "cleanup_orphaned_shm() should remove ALL producer SHM segments at startup, "
         "not just those matching a known profile MAC"
     )
 
@@ -119,12 +120,12 @@ def test_cleanup_orphaned_shm_removes_unknown_mac(tmp_path: Path) -> None:
 
 
 def test_yeney_player_server_arg_omits_lms_port(tmp_path: Path) -> None:
-    """_start_lms_player must NOT pass lms_port to squeezelite's -s flag.
+    """_start_lms_player must NOT pass lms_port to yeney-player's -s flag.
 
     profile.lms_port stores the LMS web/JSON-RPC port (typically 9000, as
     returned by the Discover button and UDP discovery's json_port field).
-    squeezelite's -s expects the slimproto host; without an explicit port it
-    connects to 3483 by default.  Passing ":9000" routes squeezelite to the
+    yeney-player's -s expects the slimproto host; without an explicit port it
+    connects to 3483 by default.  Passing ":9000" routes yeney-player to the
     web interface, where it can never register as a Slimproto player.
 
     This is a pre-existing design bug that surfaces whenever a user fills in
@@ -151,16 +152,16 @@ def test_yeney_player_server_arg_omits_lms_port(tmp_path: Path) -> None:
     server_arg = cmd[s_idx + 1]
 
     assert ":9000" not in server_arg, (
-        f"squeezelite -s must not contain the web port 9000; got {server_arg!r}. "
-        "Pass only the host so squeezelite uses the slimproto port 3483."
+        f"yeney-player -s must not contain the web port 9000; got {server_arg!r}. "
+        "Pass only the host so yeney-player uses the slimproto port 3483."
     )
     assert server_arg == "192.168.178.23", (
-        f"squeezelite -s should be just the host address; got {server_arg!r}"
+        f"yeney-player -s should be just the host address; got {server_arg!r}"
     )
 
 
 def test_yeney_player_omits_server_flag_when_host_empty(tmp_path: Path) -> None:
-    """When lms_host is empty, -s is omitted so squeezelite uses UDP discovery."""
+    """When lms_host is empty, -s is omitted so yeney-player uses UDP discovery."""
     manager = _make_manager(tmp_path)
     profile = Profile(player_mac="02:ff:00:de:ad:09", lms_host="")
     session = ActiveSession(profile)
@@ -172,15 +173,15 @@ def test_yeney_player_omits_server_flag_when_host_empty(tmp_path: Path) -> None:
 
     cmd: list[str] = mock_popen.call_args[0][0]
     assert "-s" not in cmd, (
-        "When lms_host is empty, -s should be absent so squeezelite discovers "
+        "When lms_host is empty, -s should be absent so yeney-player discovers "
         f"LMS via UDP broadcast. Got cmd: {cmd}"
     )
 
 
 def test_cleanup_orphaned_shm_removes_multiple(tmp_path: Path) -> None:
-    """cleanup_orphaned_shm() removes every squeezelite-* file it finds."""
+    """cleanup_orphaned_shm() removes every producer SHM file it finds."""
     macs = ["02:ff:00:de:ad:05", "02:ff:00:de:ad:06", "02:ff:00:de:ad:07"]
-    paths = [Path(f"/dev/shm/squeezelite-{m}") for m in macs]
+    paths = [Path(f"/dev/shm/{SHM_SEGMENT_PREFIX}{m}") for m in macs]
     for p in paths:
         p.write_bytes(b"")
 
@@ -617,7 +618,7 @@ def _make_airplay_storage(tmp_path: Path) -> tuple[Storage, Coupling]:
 
 
 def test_airplay_activation_skips_lms_player(tmp_path: Path) -> None:
-    """_activate_airplay must not spawn squeezelite; session.lms_player stays None."""
+    """_activate_airplay must not spawn yeney-player; session.lms_player stays None."""
     from unittest.mock import AsyncMock, MagicMock, patch
 
     storage, coupling = _make_airplay_storage(tmp_path)
@@ -655,7 +656,7 @@ def test_airplay_activation_skips_lms_player(tmp_path: Path) -> None:
 
     assert manager._active is not None
     assert manager._active.lms_player is None, (
-        "_activate_airplay must not spawn squeezelite"
+        "_activate_airplay must not spawn yeney-player"
     )
     from lampastream.pcm_source import TeePcmSource
 

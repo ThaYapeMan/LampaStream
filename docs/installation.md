@@ -116,7 +116,7 @@ remain **REQUIRES LXC VALIDATION**. See [deployment checklist](deployment-lxc.md
 ### One producer for both consumers
 
 Canonical LMS and external CAVA both use `/usr/local/bin/yeney-player`, built from
-`ThaYapeMan/yeney-core` at `dc8cf3a373a9d9b38e98fc7d1929ac268c585c77`.
+`ThaYapeMan/yeney-core` at `9fba26f0bcc9a10def8063c5d269b2bbe62b687a`.
 Initialize the recursive submodule before installation. The installer archives the
 verified core and ALAC pins separately because Git archives omit submodules.
 PCM remains at byte 80; the v1 extension follows the ring at byte 32848, including

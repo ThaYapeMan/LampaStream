@@ -102,7 +102,7 @@ from native availability checks. See [api.md](api.md).
 
 AirPlay and LMS PCM use the common canonical factory. LMS SHM continuity is a
 producer/source contract, not an analysis scheduler responsibility. Exact v1 is
-required for production stereo PCM. See [Squeezelite ABI](../squeezelite/README.md).
+required for production stereo PCM. See [SHM v1 ABI](../third_party/yeney-core/docs/shm-v1.md).
 
 External CAVA/FIFO supplies derived bars and remains outside the processor/engine
 registry. Its normalization and legacy PCM tap must not be copied into CAVA Core.

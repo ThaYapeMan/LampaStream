@@ -12,11 +12,11 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from lampastream.pcm_source import DataResult, SqueezeliteShmStereoSource
+from lampastream.pcm_source import SHM_SEGMENT_PREFIX, DataResult, SqueezeliteShmStereoSource
 
 ROOT = Path(__file__).resolve().parents[1]
 CORE = ROOT / 'third_party/yeney-core'
-REVISION = 'dc8cf3a373a9d9b38e98fc7d1929ac268c585c77'
+REVISION = '9fba26f0bcc9a10def8063c5d269b2bbe62b687a'
 
 
 def load_script(name):
@@ -50,11 +50,11 @@ def test_manifest_and_verifier(tmp_path, revision):
         'yeney_player_sha256': hashlib.sha256(binary.read_bytes()).hexdigest(),
     }
     verifier.verify_player(manifest, binary)
-    with pytest.raises(AssertionError, match='Producer upgrade required: yeney-core dc8cf3a'):
+    with pytest.raises(AssertionError, match='Producer upgrade required: yeney-core 9fba26f'):
         verifier.verify_player(dict(manifest, yeney_core_revision='foreign'), binary)
-    with pytest.raises(AssertionError, match='Producer upgrade required: yeney-core dc8cf3a'):
+    with pytest.raises(AssertionError, match='Producer upgrade required: yeney-core 9fba26f'):
         verifier.verify_player(dict(manifest, yeney_core_revision=
-                                    '45779a4383929840a46a931fc1519b4778b64a72'), binary)
+                                    'dc8cf3a373a9d9b38e98fc7d1929ac268c585c77'), binary)
     binary.write_bytes(b'replaced binary')
     with pytest.raises(AssertionError):
         verifier.verify_player(manifest, binary)
@@ -90,7 +90,7 @@ def test_real_yeney_player_shm_v1(tmp_path, monkeypatch):
     oracle_spec.loader.exec_module(oracle)
     monkeypatch.setattr(oracle, 'ROOT', build)
     mac = '02:7e:' + ':'.join(f'{b:02x}' for b in os.getpid().to_bytes(4, 'big'))
-    path = Path('/dev/shm/squeezelite-' + mac)
+    path = Path('/dev/shm/' + SHM_SEGMENT_PREFIX + mac)
     source = SqueezeliteShmStereoSource()
     try:
         with oracle.Session(app=True, sink='shm', app_args=['-v'], mac=mac) as session:

@@ -147,6 +147,8 @@ ONSET_WINDOW_SIZE = 512  # independent right-aligned onset front end
 #   offset 80  buffer[16384]  32768 B  (interleaved stereo s16)
 #                             ------
 #                             32848 B total
+SHM_SEGMENT_PREFIX = "yeney-"
+
 _HDR_OFFSET = 56
 _HDR_FMT = "<IIBxxxIq"  # buf_size, buf_index, running, rate, updated
 _HDR_SIZE = struct.calcsize(_HDR_FMT)  # 24
@@ -398,7 +400,7 @@ class YeneyCoreShmStereoSource:
 
     SHM v1 supplies absolute frame positions, epochs and continuity under a
     seqlock. The optional yeney-core player clock supplies play-time provenance.
-    The legacy squeezelite pathname is retained for producer ABI compatibility.
+    The segment name uses SHM_SEGMENT_PREFIX; historical names are never tried.
     """
 
     def __init__(self) -> None:
@@ -451,7 +453,7 @@ class YeneyCoreShmStereoSource:
         _path: Path | None = None,
         require_v1: bool = True,
     ) -> None:
-        """Map /dev/shm/squeezelite-{mac}.  ``_path`` overrides for tests.
+        """Map /dev/shm/<prefix>{mac}.  ``_path`` overrides for tests.
 
         When ``require_v1`` is True (the default for the production canonical
         LMS PCM path), the SHM segment MUST expose the LampaStream v1 extension
@@ -464,7 +466,7 @@ class YeneyCoreShmStereoSource:
         yeney-player from yeney-core.  Tests that need to exercise the v0 fall-through code
         path may pass ``require_v1=False`` explicitly.
         """
-        path = _path if _path is not None else Path(f"/dev/shm/squeezelite-{mac}")
+        path = _path if _path is not None else Path(f"/dev/shm/{SHM_SEGMENT_PREFIX}{mac}")
         self._path = path
         self._clock_event_seq = None
         self._clock_segments.clear()

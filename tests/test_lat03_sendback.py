@@ -16,7 +16,7 @@ import pytest
 from lampastream.canonicalizer import DataResult
 from lampastream.latency import AutoLatencyProbe, FollowPositionContext
 from lampastream.models import PlayerLatency
-from lampastream.pcm_source import YeneyCoreShmStereoSource
+from lampastream.pcm_source import SHM_SEGMENT_PREFIX, YeneyCoreShmStereoSource
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -168,7 +168,7 @@ def test_upstream_real_flac_decoder_exports_absolute_seek_content(tmp_path):
         mac = "02:7d:" + ":".join(f"{b:02x}" for b in (os.getpid() + index).to_bytes(4, "big"))
         source = YeneyCoreShmStereoSource()
         source.use_player_clock = True
-        shm = Path("/dev/shm/squeezelite-" + mac)
+        shm = Path("/dev/shm/" + SHM_SEGMENT_PREFIX + mac)
         try:
             with oracle.Session(app=True, sink="shm", app_args=["-v"], mac=mac) as session:
                 source.open(mac, require_v1=True)

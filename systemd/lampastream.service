@@ -18,7 +18,7 @@ ExecStart=/opt/lampastream/.venv/bin/lampastream
 Restart=on-failure
 RestartSec=5
 
-# squeezelite/cava write to /dev/shm and spawn subprocesses - keep
+# yeney-player/cava write to /dev/shm and spawn subprocesses - keep
 # sandboxing light rather than fighting it for a first version.
 NoNewPrivileges=true
 

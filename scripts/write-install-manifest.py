@@ -7,7 +7,7 @@ from pathlib import Path
 
 def write_manifest(commit: str, short: str, release: Path, revision: str,
                    binary: Path = Path('/usr/local/bin/yeney-player')) -> None:
-    assert revision == 'dc8cf3a373a9d9b38e98fc7d1929ac268c585c77'
+    assert revision == '9fba26f0bcc9a10def8063c5d269b2bbe62b687a'
     manifest = {
         'commit': commit, 'short_commit': short,
         'yeney_core_revision': revision,

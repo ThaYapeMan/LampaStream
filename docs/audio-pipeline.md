@@ -149,7 +149,8 @@ pause/seek/end, bounded parsing, teardown, and generic UI rendering. Live LMS,
 iOS sender behavior, and the rebuilt target Shairport service still require LXC
 validation.
 
-The pinned upstream yeney-core producer is `dc8cf3a` (ALAC `5d8c5db`).
+The pinned upstream yeney-core producer is `9fba26f` (ALAC `5d8c5db`).
 Its optional 64-byte YNPT tail exports `content_frame` at offset 52 and
 `content_flags` at offset 60 (bit 0: known). No local producer patch is applied.
-The SHM v1 prefix and `measurement_basis=lms-content-v1` contract are unchanged.
+The segment is `/dev/shm/yeney-<lowercase-mac>`; the SHM v1 layout, ABI version,
+YNPT tail and `measurement_basis=lms-content-v1` contract are unchanged.

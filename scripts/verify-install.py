@@ -19,8 +19,8 @@ from lampastream.migration import migrate_file
 
 
 def verify_player(manifest: dict, binary: Path = Path('/usr/local/bin/yeney-player')) -> None:
-    assert manifest.get('yeney_core_revision') == 'dc8cf3a373a9d9b38e98fc7d1929ac268c585c77', (
-        'Producer upgrade required: yeney-core dc8cf3a373a9d9b38e98fc7d1929ac268c585c77 expected; '
+    assert manifest.get('yeney_core_revision') == '9fba26f0bcc9a10def8063c5d269b2bbe62b687a', (
+        'Producer upgrade required: yeney-core 9fba26f0bcc9a10def8063c5d269b2bbe62b687a expected; '
         f"installed {manifest.get('yeney_core_revision', 'unknown')}")
     assert hashlib.sha256(binary.read_bytes()).hexdigest() == manifest['yeney_player_sha256']
 
