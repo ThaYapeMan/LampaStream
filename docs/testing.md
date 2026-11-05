@@ -1422,3 +1422,12 @@ accent rates, and reference scoring. The rates count selected events before
 render coalescing, not distinct visible lamp peaks. Librosa's default 120 BPM
 prior and the owner's 72 BPM prior are both reported; neither changes live DSP.
 Never infer missing-track break counts or hit rates from a different recording.
+
+The sendback-2 two-track sweep also records time above 8× and scores non-break
+reference-beat recall. Non-break sections are the complement of the four specified
+half-open break windows. A reference beat is a hit if a non-break selected event
+lies within ±50 ms; repeated events cannot increase that beat's hit count. The
+same tolerance and reference set apply to every coefficient and the f=0 baseline;
+±10 ms counts are also exported. These are file/event scores, not lamp observations.
+No coefficient from the requested grid satisfies both tracks; the owner-directed
+fallback keeps 0.3. See the itemised LIGHTS-01 report for the complete trade-off table.

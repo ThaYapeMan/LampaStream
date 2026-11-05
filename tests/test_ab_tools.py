@@ -387,3 +387,17 @@ def test_deployed_mau_p_reference_is_last_lookup_candidate(tmp_path, monkeypatch
     monkeypatch.setenv('AB_REFERENCE_BEATS', str(custom))
     tool.write_analysis(tmp_path, tmp_path/'track.flac', 'Just A Little Bit More (Extended)')
     assert 'custom.csv' in (tmp_path/'analysis.md').read_text()
+
+
+def test_accent_bench_reference_hits_exclude_breaks_and_count_beats_once():
+    bench = load('bench-beat-accents')
+    times = [1.01, 1.02, 2.051, 210.01, 212., 272.]
+    events = [SimpleNamespace(candidate_sample=round(t*48000)) for t in times]
+    references = [0., 1., 2., 209.99, 210., 211., 212., 240.1, 272., 400.]
+    result = bench.reference_hits(events, references, 381., .05)
+    assert result['reference_beats'] == 6
+    assert result['hits'] == 3  # 1, 212 and 272; break event cannot credit 209.99
+    assert result['hit_rate'] == .5
+    assert result['tolerance_s'] == .05
+    empty = bench.reference_hits([], [], 381., .05)
+    assert empty['hits'] == 0 and empty['hit_rate'] is None

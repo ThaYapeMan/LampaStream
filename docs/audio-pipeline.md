@@ -182,3 +182,14 @@ The installer explicitly upgrades persisted schema 2 to 3, preserving exact
 original bytes in a `pre-v3` backup. Runtime rejects old versions and schema-3
 couplings/profiles missing these settings. The display marks AGC as capped when
 its current gain reaches the active Energy Profile ceiling.
+
+The LIGHTS-01 sendback-2 file bench tested floor coefficients 0.08, 0.10, 0.11,
+0.12, 0.15 and 0.3 at 64× on both reference recordings. No tested coefficient
+met the combined ballad-rate, zero-break-events and unchanged non-break recall
+criteria. The persisted default remains **0.3 by the owner's explicit fallback**,
+pending the owner's default decision; it is not a validated two-track setting.
+In particular, 0.11 gives Lou Rawls 1.061 events/s but leaves 43 Mau P break events
+and 751/797 reference hits versus 793/797 at zero added floor (±50 ms matching).
+Mau P's gain median/p90 are 64× and time above 8× is 99.990% of the file, so the
+floor must not be described as inactive on loud material. No detector, tracker
+or floor-mapping redesign was made in response to this trade-off.

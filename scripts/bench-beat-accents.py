@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import bisect
 import csv
 import hashlib
 import importlib.util
@@ -103,7 +104,10 @@ def bench(path, out, reference=None, *, ceiling=64., floor=.3, estimate_tempo=Fa
         p90=float(gains[order[np.searchsorted(cumulative, .9)]]),
         time_at_ceiling_s=sum(r['duration_s'] for r in gain_samples
                               if r['gain'] >= profile.agc_max_gain-1e-9),
+        time_above_8_s=sum(r['duration_s'] for r in gain_samples if r['gain'] > 8.),
         samples=len(gain_samples))
+    summary['gain_over_time']['time_above_8_percent'] = (
+        100*summary['gain_over_time']['time_above_8_s']/duration)
     summary['gain_over_time']['time_at_ceiling_percent'] = (
         100*summary['gain_over_time']['time_at_ceiling_s']/duration)
     summary['strengths'] = {}
@@ -130,6 +134,10 @@ def bench(path, out, reference=None, *, ceiling=64., floor=.3, estimate_tempo=Fa
                                          beats_per_s=bpm/60, detected_beats=len(beats))
         summary['librosa'] = dict(version=librosa.__version__, estimates=estimates,
             reference='72.0', note='72 BPM prior supplied by owner; default prior also reported')
+    reference_times = None
+    if reference:
+        with reference.open() as stream:
+            reference_times = [float(row['time_s']) for row in csv.DictReader(stream)]
     for mode, events in selected.items():
         destination = out/mode
         destination.mkdir(parents=True, exist_ok=True)
@@ -147,6 +155,10 @@ def bench(path, out, reference=None, *, ceiling=64., floor=.3, estimate_tempo=Fa
             predicted=sum(e.predicted for e in events),
             break_accents=([sum(a <= e.candidate_sample/48000 < b for e in events)
                             for a, b in BREAKS] if duration >= 272 else None))
+        if reference_times is not None:
+            summary['modes'][mode]['non_break_hits'] = {
+                str(tolerance): reference_hits(events, reference_times, duration, tolerance)
+                for tolerance in (.01, .05)}
         spec = importlib.util.spec_from_file_location('ab_tools', Path(__file__).with_name(
             'ab-tools.py'))
         ab = importlib.util.module_from_spec(spec)
@@ -156,6 +168,27 @@ def bench(path, out, reference=None, *, ceiling=64., floor=.3, estimate_tempo=Fa
         ab.write_analysis(destination, path)
     (out/'summary.json').write_text(json.dumps(summary, indent=2)+'\n')
     print(json.dumps(summary, indent=2))
+
+
+def reference_hits(events, references, duration, tolerance):
+    """Reference-beat recall outside the four specified half-open break windows.
+
+    A reference beat is hit once if any non-break accent is within the fixed
+    tolerance. Repeated accents cannot increase recall beyond one hit per beat.
+    """
+    def outside_breaks(t):
+        return not any(start <= t < end for start, end in BREAKS)
+
+    times = sorted(event.candidate_sample/48000 for event in events
+                   if outside_breaks(event.candidate_sample/48000))
+    references = [t for t in references if 0 <= t < duration and outside_breaks(t)]
+    hits = 0
+    for stamp in references:
+        index = bisect.bisect_left(times, stamp-tolerance)
+        hits += index < len(times) and times[index] <= stamp+tolerance+1e-9
+    return dict(hits=hits, reference_beats=len(references), tolerance_s=tolerance,
+                hit_rate=hits/len(references) if references else None,
+                sections='complement of the four specified break windows')
 
 
 def distribution(values):
