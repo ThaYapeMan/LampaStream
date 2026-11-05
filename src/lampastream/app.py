@@ -191,8 +191,12 @@ async def _preview_frames(websocket, player_manager):
                 light_timing = (dict(entry.to_dict(), status=player_manager.latency_status(entry))
                                 if entry else None)
             track = player_manager.track_position
-            coupling = app.state.storage.get_coupling(player_manager.active_coupling_id)
-            energy = app.state.storage.get_energy_profile(player_manager.active_energy_profile_id)
+            coupling_id = player_manager.active_coupling_id
+            energy_id = player_manager.active_energy_profile_id
+            coupling = (websocket.app.state.storage.get_coupling(coupling_id)
+                        if coupling_id else None)
+            energy = (websocket.app.state.storage.get_energy_profile(energy_id)
+                      if energy_id else None)
             status_dict = {
                 "agc_max_gain": energy.agc_max_gain if energy else None,
                 "type": "status",
