@@ -129,7 +129,7 @@ class LmsGridAdapter:
                             'nice', '-n', '10', sys.executable, '-m',
                             'lampastream.grid.analyser', str(path),
                             stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
-                            env={**os.environ, 'NUMBA_CACHE_DIR': str(Path(tmp) / 'numba'),
+                            env={**os.environ, 'NUMBA_CACHE_DIR': str(self.cache.root / 'numba'),
                                  'OPENBLAS_NUM_THREADS': '1', 'OMP_NUM_THREADS': '1'})
                         try:
                             output, error = await asyncio.wait_for(self.process.communicate(), 180)

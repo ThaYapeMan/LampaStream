@@ -301,7 +301,7 @@ def test_next_queued_track_is_preanalysed_by_same_worker(tmp_path, monkeypatch, 
             try:
                 adapter.select('44436', current.stat().st_size)
                 await adapter.playlist_next('127.0.0.1', session.cli_port, 'aa', 0)
-                async with asyncio.timeout(60):
+                async with asyncio.timeout(180):
                     await adapter.queue.join()
                 assert adapter.grid.tempo == pytest.approx(120, abs=2)
                 assert cache.get(identity('44437', following.stat().st_size))

@@ -24,7 +24,9 @@ Downloads never use `/stream`. The existing virtual player's `lms_host` and
 `GridCache` stores `/var/lib/lampastream/grids/<sha256>.json` with bounded LRU
 aliases for `lms:<id>:<filesize>` (default 2000 grids and aliases). After download,
 existing content hashes reuse analysis even across library IDs. Writes replace
-JSON atomically. Acquisition failures log and retain live analysis.
+JSON atomically. The worker reuses a persistent Numba code cache below the grid
+cache directory instead of recompiling for every track. Acquisition failures log
+and retain live analysis.
 
 The strict lossless source publishes an optional generic `content_position_s`
 coordinate. Canonicalization resamples that coordinate independently of room
