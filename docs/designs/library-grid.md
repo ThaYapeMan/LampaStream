@@ -1,7 +1,7 @@
 # Whole-file library grid
 
 The source-independent `grid.analyser.analyse(bytes)` decodes mono at native
-rate, runs librosa 1.0.0 (`start_bpm=120`, `tightness=100`), refines tempo,
+rate, runs librosa 0.11.0 (`start_bpm=120`, `tightness=100`), refines tempo,
 scores half/double candidates within 60–180 BPM against low-band attack energy
 and its autocorrelation, and shifts phase by the median attack offset.
 A 512-sample beat hop with `trim=False` retains positions through quiet sections
