@@ -368,7 +368,6 @@ export interface EnergyProfile {
   peak_reshape_enabled?: boolean
   peak_reshape_power?: number
   agc_max_gain?: number
-  tracker_gain_floor?: number
   onset_relative_k?: number
   onset_reference_window_s?: number
   onset_refractory_ms?: number

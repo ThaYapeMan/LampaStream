@@ -2001,7 +2001,7 @@ def test_accent_gain_limits_validate_and_propagate_live(client):
     coupling = _make_full_coupling(client._storage)
     client._storage.set_active_coupling_id(coupling.id)
     endpoint = f"/api/energy-profiles/{coupling.energy_profile_id}"
-    for body in ({"agc_max_gain": 128.}, {"tracker_gain_floor": .7}):
+    for body in ({"agc_max_gain": 128.},):
         assert client.patch(endpoint, json=body).status_code == 200
         for profile in client._manager.update_render.call_args.args:
             if profile is not None:
@@ -2009,7 +2009,8 @@ def test_accent_gain_limits_validate_and_propagate_live(client):
                     assert getattr(profile, field) == value
     original = client.get(endpoint).json()
     for body in ({"agc_max_gain": 7.}, {"tracker_gain_floor": -1},
-                 {"tracker_gain_floor": 1.1}):
+                 {"tracker_gain_floor": 1.1}, {"tracker_gain_floor": .3},
+                 {"onset_gain_floor": .3}):
         assert client.patch(endpoint, json=body).status_code == 422
         assert client.get(endpoint).json() == original
     assert client.patch(f"/api/couplings/{coupling.id}",

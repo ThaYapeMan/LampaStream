@@ -10,7 +10,7 @@ export function LiveBeatAccents({ coupling, profile, onCoupling, onProfile }: {
   const [busy, setBusy] = useState(false)
   const pending = useRef(false)
   const [error, setError] = useState('')
-  const values = () => ({ agc_max_gain:String(profile?.agc_max_gain ?? 64), tracker_gain_floor:String(profile?.tracker_gain_floor ?? .3), onset_relative_k:String(profile?.onset_relative_k ?? 2), onset_reference_window_s:String(profile?.onset_reference_window_s ?? 3), onset_refractory_ms:String(profile?.onset_refractory_ms ?? 120), onset_full_k:String(profile?.onset_full_k ?? 3) })
+  const values = () => ({ agc_max_gain:String(profile?.agc_max_gain ?? 64), onset_relative_k:String(profile?.onset_relative_k ?? 8), onset_reference_window_s:String(profile?.onset_reference_window_s ?? 3), onset_refractory_ms:String(profile?.onset_refractory_ms ?? 160), onset_full_k:String(profile?.onset_full_k ?? 9) })
   const [draft, setDraft] = useState(values)
   const timer = useRef<ReturnType<typeof setTimeout>>()
   useEffect(() => { clearTimeout(timer.current); setDraft(values()) }, [profile])
@@ -25,7 +25,7 @@ export function LiveBeatAccents({ coupling, profile, onCoupling, onProfile }: {
     clearTimeout(timer.current)
     const number = Number(value)
     const valid = value.trim() && Number.isFinite(number) && (
-      field === 'agc_max_gain' ? number >= 8 : field === 'tracker_gain_floor' ? number >= 0 && number <= 1
+      field === 'agc_max_gain' ? number >= 8
       : field === 'onset_refractory_ms' ? number >= 60 && number <= 200
       : field === 'onset_reference_window_s' ? number > 0 : number > 1)
     if (!valid || (field === 'onset_full_k' && number < Number(draft.onset_relative_k))) {
@@ -33,7 +33,7 @@ export function LiveBeatAccents({ coupling, profile, onCoupling, onProfile }: {
     }
     if (profile && number !== Number(values()[field])) {
       const body: Partial<EnergyProfile> = { [field]: number }
-      if (field === 'onset_relative_k' && number > (profile.onset_full_k ?? 3)) body.onset_full_k = number+1
+      if (field === 'onset_relative_k' && number > (profile.onset_full_k ?? 9)) body.onset_full_k = number+1
       void save(async () => onProfile(await updateEnergyProfile(profile.id, body)))
     }
   }
@@ -43,13 +43,12 @@ export function LiveBeatAccents({ coupling, profile, onCoupling, onProfile }: {
     ['onset_reference_window_s','Window','s',.5],
     ['onset_refractory_ms','Refractory','ms',10],
     ['onset_full_k','Full k','MAD',.1],
-    ['tracker_gain_floor','Tracker floor','',.05],
   ] as const
 
   return <section aria-label="Live accents" className="space-y-2">
     <div className="flex min-h-11 flex-wrap items-center gap-3">
       <span className="text-sm text-muted-foreground">Beat accent</span>
-      <SegmentedControl fit label="Beat accent" value={coupling?.beat_accent_mode ?? 'onset'}
+      <SegmentedControl fit label="Beat accent" value={coupling?.beat_accent_mode ?? 'tracker'}
         options={[{value:'off', label:'Off'}, {value:'onset', label:'Onset'}, {value:'tracker', label:'Tracker'}]}
         disabled={!coupling} pending={busy}
         onChange={value => void save(async () => onCoupling(await updateCoupling(coupling!.id, { beat_accent_mode: value as Coupling['beat_accent_mode'] })))} />

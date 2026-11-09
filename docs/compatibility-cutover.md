@@ -39,7 +39,7 @@ pin. No DSP, SHM v1, processor lifecycle or publication policy was redesigned.
 
 ## Migration safety
 
-Schema version 4 is required by current runtime. Migration validates all known fields,
+Schema version 5 is required by current runtime. Migration validates all known fields,
 IDs and nonempty references before rewrite, backs up exact original bytes, and uses
 atomic replacement. Equal aliases can be normalized; unequal aliases fail. Unknown
 collections/fields and unsupported pre-entity data are not silently dropped. Runtime

@@ -39,7 +39,6 @@ class EnergyTrigger:
         self.last_time = None
         self.last_fire = -math.inf
         self.max_gain = 64.
-        self.gain_floor = .3
         self.gain = 1.
         self.ratio = 0.
 
@@ -61,9 +60,7 @@ class EnergyTrigger:
             self.ratio = raw_ratio
             value = raw_value
         refractory = self.dead_time if dead_time is None else dead_time
-        from .beat_accents import gain_progress
-        floor = self.floor + self.gain_floor*gain_progress(self.gain, self.max_gain)
-        fire = (gate and energy >= 1e-6 and value >= floor
+        fire = (gate and energy >= 1e-6 and value >= self.floor
                 and self.ratio >= self.threshold and value > self.previous
                 and energy > self.previous_energy
                 and t-self.last_fire >= refractory-1e-9)

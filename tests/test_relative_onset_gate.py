@@ -90,7 +90,7 @@ def test_schema_three_migration_materializes_four_parameters(tmp_path):
     data=empty_config()
     data['schema_version']=3
     row=EnergyProfile(id='energy').to_dict()
-    row['onset_gain_floor']=row.pop('tracker_gain_floor')
+    row['onset_gain_floor']=.3
     fields=('onset_relative_k','onset_reference_window_s','onset_refractory_ms','onset_full_k')
     for field in fields:
         row.pop(field)
@@ -103,9 +103,9 @@ def test_schema_three_migration_materializes_four_parameters(tmp_path):
     assert migrate_file(path,check=True) and path.read_bytes()==original
     assert migrate_file(path)
     migrated=json.loads(path.read_bytes())
-    assert migrated['schema_version']==4
-    assert [migrated['energy_profiles'][0][f] for f in fields]==[2.,3.,120.,3.]
-    assert migrated['energy_profiles'][0]['tracker_gain_floor']==.3  # Tracker unchanged
+    assert migrated['schema_version']==5
+    assert [migrated['energy_profiles'][0][f] for f in fields]==[8.,3.,160.,9.]
+    assert 'tracker_gain_floor' not in migrated['energy_profiles'][0]
     assert list(tmp_path.glob('*.bak'))[0].read_bytes()==original
     assert not migrate_file(path)
     broken=json.loads(path.read_text())

@@ -55,11 +55,10 @@ def expected_current_rows(data, key):
     if key == "crossfaders":
         for row in rows:
             row.setdefault("agc_max_gain", 64.)
-            row.setdefault("tracker_gain_floor", .3)
-            row.setdefault("onset_relative_k", 2.)
+            row.setdefault("onset_relative_k", 8.)
             row.setdefault("onset_reference_window_s", 3.)
-            row.setdefault("onset_refractory_ms", 120.)
-            row.setdefault("onset_full_k", 3.)
+            row.setdefault("onset_refractory_ms", 160.)
+            row.setdefault("onset_full_k", 9.)
     if key == "player_latencies":
         for row in rows:
             row.pop("speaker_ip", None)

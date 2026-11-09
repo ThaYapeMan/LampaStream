@@ -271,11 +271,11 @@ def _migrate_accents(data):
     for row in data["energy_profiles"]:
         row.setdefault("agc_max_gain", 64.0)
         rename(row, "onset_gain_floor", "tracker_gain_floor")
-        row.setdefault("tracker_gain_floor", 0.3)
-        row.setdefault("onset_relative_k", 2.0)
+        row.pop("tracker_gain_floor", None)  # Retired: Tracker always uses f=0.
+        row.setdefault("onset_relative_k", 8.0)
         row.setdefault("onset_reference_window_s", 3.0)
-        row.setdefault("onset_refractory_ms", 120.0)
-        row.setdefault("onset_full_k", 3.0)
+        row.setdefault("onset_refractory_ms", 160.0)
+        row.setdefault("onset_full_k", 9.0)
 
 
 
@@ -290,6 +290,13 @@ def convert(original: dict) -> dict:
         _migrate_player_latency(data)
         _migrate_release(data)
         _migrate_bar_falloff(data)
+        validate_current(data, references=True)
+        return data
+    if original.get("schema_version") == 4:
+        data = copy.deepcopy(original)
+        data["schema_version"] = SCHEMA_VERSION
+        for row in data["energy_profiles"]:
+            row.pop("tracker_gain_floor", None)
         validate_current(data, references=True)
         return data
     if original.get("schema_version") == 3:

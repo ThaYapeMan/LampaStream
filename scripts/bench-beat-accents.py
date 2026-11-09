@@ -35,15 +35,15 @@ from lampastream.types import OnsetEnvelopeFrame  # noqa: E402
 BREAKS = [(210, 212), (240, 242), (261, 262), (270, 272)]
 
 
-def bench(path, out, reference=None, *, ceiling=64., floor=.3, estimate_tempo=False,
-          k=2., window_s=3., refractory_ms=120., full_k=None):
+def bench(path, out, reference=None, *, ceiling=64., estimate_tempo=False,
+          k=8., window_s=3., refractory_ms=160., full_k=None):
     pcm, rate, fmt = decode(path)
     full_k = k+1 if full_k is None else full_k
-    profile = Profile(agc_max_gain=ceiling, tracker_gain_floor=floor, onset_relative_k=k,
+    profile = Profile(agc_max_gain=ceiling, onset_relative_k=k,
         onset_reference_window_s=window_s, onset_refractory_ms=refractory_ms, onset_full_k=full_k)
     onset_gate = RelativeOnsetGate(k, window_s, refractory_ms, full_k, profile.onset_delta_abs)
     pipeline = _make_canonical_pipeline(None, profile)
-    pipeline._beat_fusion.gain_settings = profile.agc_max_gain, profile.tracker_gain_floor
+    pipeline._beat_fusion.agc_max_gain = profile.agc_max_gain
     canonicalizer = AudioCanonicalizer()
     selected = {mode: [] for mode in ('onset', 'tracker')}
     maximum_gain = 0.
@@ -107,7 +107,7 @@ def bench(path, out, reference=None, *, ceiling=64., floor=.3, estimate_tempo=Fa
         input_sha256=hashlib.sha256(
         path.read_bytes()).hexdigest(), source_probe=probe, format=fmt, duration_s=duration,
                    agc_max_gain=profile.agc_max_gain, maximum_observed_gain=maximum_gain,
-                   tracker_gain_floor=profile.tracker_gain_floor, modes={})
+                   tracker_gain_rule="base sensitivity floor only; retired gain term f=0", modes={})
     gains = np.array([r['gain'] for r in gain_samples])
     weights = np.array([r['duration_s'] for r in gain_samples])
     order = np.argsort(gains)
@@ -314,11 +314,10 @@ def main():
     parser.add_argument('--out', type=Path, required=True)
     parser.add_argument('--reference', type=Path)
     parser.add_argument('--ceiling', type=float, default=64.)
-    parser.add_argument('--floor', type=float, default=.3)
     parser.add_argument('--estimate-tempo', action='store_true')
-    parser.add_argument('--relative-k', type=float, default=2.)
+    parser.add_argument('--relative-k', type=float, default=8.)
     parser.add_argument('--window-s', type=float, default=3.)
-    parser.add_argument('--refractory-ms', type=float, default=120.)
+    parser.add_argument('--refractory-ms', type=float, default=160.)
     parser.add_argument('--full-k', type=float)
     parser.add_argument('--candidate-cache', type=Path)
     args = parser.parse_args()
@@ -327,7 +326,7 @@ def main():
             k=args.relative_k, refractory_ms=args.refractory_ms, window_s=args.window_s,
             full_k=args.full_k), indent=2))
     else:
-        bench(args.input, args.out, args.reference, ceiling=args.ceiling, floor=args.floor,
+        bench(args.input, args.out, args.reference, ceiling=args.ceiling,
               estimate_tempo=args.estimate_tempo, k=args.relative_k, window_s=args.window_s,
               refractory_ms=args.refractory_ms, full_k=args.full_k)
 

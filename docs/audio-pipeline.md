@@ -155,7 +155,7 @@ Its optional 64-byte YNPT tail exports `content_frame` at offset 52 and
 The segment is `/dev/shm/yeney-<lowercase-mac>`; the SHM v1 layout, ABI version,
 YNPT tail and `measurement_basis=lms-content-v1` contract are unchanged.
 
-## Live beat accents and the relative onset gate (schema 4)
+## Live beat accents and the relative onset gate (schema 5)
 
 Coupling `beat_accent_mode` is live: Off supplies no accent events; Onset admits
 confirmed detector candidates through RelativeOnsetGate; Tracker consumes the
@@ -194,7 +194,7 @@ separate bass ODF; its full-band branch is used. No band is inferred from bars.
 
 Both branches require strength ≥ the active detector's `onset_delta_abs`
 minimum (default 0.02, in its existing raw units). `onset_refractory_ms` defaults
-to 120 ms and is editable from 60 to 200 ms. Only fired accents start refractory;
+to 160 ms and is editable from 60 to 200 ms. Only fired accents start refractory;
 all analysis frames continue training the background regardless of admission.
 Reference and refractory use sample time / 48000, never wall time. The gate
 retains one second of delivery slack for delayed candidates, but each reference
@@ -205,20 +205,41 @@ W, r and full k edits retain the existing analyser and envelope history.
 
 The four settings are Energy Profile parameters in the existing Now Playing
 row; k and full k are labelled in MAD units, not multiplicative envelope ratios.
-The implementation baseline remains k=2, W=3 s, r=120 ms, full k=3. These are not
-selected defaults: the corrected sendback-4 sweep has no overall or Mau-qualified
-point. Default selection and publication await the owner's explicit decision.
+The owner accepted k=8, W=3 s, r=160 ms, full k=9 as the published defaults
+following the corrected sendback-4 sweep. Musical acceptance still fails:
+Mau P has 587/797 ±50 ms hits (73.65%), 3.502 events/s and breaks [3,3,2,2];
+Lou has 1.114 events/s and 54.50% coincidence. This is an explicitly accepted
+failing setting, not a claim that a qualifying main/fallback point exists.
 
-The 64× gain ceiling stays. `onset_gain_floor` is removed from schema-4 runtime
-models and renamed to `tracker_gain_floor` by installer migration, preserving its
-exact value. This legacy floor still controls Tracker's existing gain mapping
-and is labelled Tracker floor in the UI. It has no role in Onset admission.
-Tracker's gain rule and all DSP are unchanged: for g≤8 the additional floor is
-zero, otherwise p=min(1,(g−8)/max(c−8,1e-9)), and its logarithmic threshold is
-base_floor + tracker_gain_floor × p. Do not interpret gain as audio quietness.
+The 64× gain ceiling stays. The chosen Onset point does **not** meet the sprint-1
+targets. It ships as a non-predicting fallback: **reacts to confirmed onsets;
+does not separate kicks from hats**. It is not validated beat lighting. The
+sweep found no gate setting on the current candidate stream meeting the targets;
+that is a bench finding for sprint 3, not a reason for further tuning here.
 
-Installer migration upgrades schema 3 to 4, renames the old field and explicitly
-persists the four relative parameters. It retains exact-byte pre-v4 backups and
-atomic replacement. Runtime rejects schema 3 and schema-4 rows missing the new
-fields; there is no silent runtime migration. Older installer conversions also
-materialize the new settings before validation.
+New couplings default to **Tracker**, matching the owner's 2026-11-05 preference
+for its more dynamic Mau P response. Schema 5 persists the mode explicitly.
+Migration leaves every existing coupling's stored Off/Onset/Tracker value
+unchanged; historical schemas before mode persistence retain their historical
+Onset value when the migration materializes that previously absent setting.
+There is no runtime mode fallback or silent migration.
+
+The gain-tied floor is retired for Tracker too. Neither `onset_gain_floor` nor
+`tracker_gain_floor` exists in schema-5 runtime models, API or controls. Migration
+alone knows these retired names and removes the stored field (including the
+unpublished schema-4 intermediate name). Tracker runs exactly as the old f=0
+path: EnergyTrigger uses its original sensitivity base floor
+`.08 * 2 ** ((50-sensitivity)/25)`, AGC capped at the Energy Profile ceiling,
+log energy, adaptive ratio/mean, rise tests and refractory. No term depends on
+gain to raise the floor. BeatFusion/TempoClock prediction remains Tracker-only;
+the detector's candidate generation, timing and the tempo algorithm are unchanged.
+
+The ticket's cited Tracker 760/797 result is the archived f=0.11 run; the actual
+f=0 artifact is 756/797. The final report retains both provenance and miss bins
+rather than relabeling 760 as f=0. No timing or Tracker estimator fix is included.
+
+Installer migration upgrades schema 3/4 to 5, retires the gain floor, adds any
+previously absent relative parameters with the accepted k=8/W=3/r=160/full k=9
+values, and preserves every existing stored mode. It retains exact-byte pre-v5
+backups and atomic replacement. Runtime rejects historical schemas and current
+rows missing required settings; no runtime migration is installed.

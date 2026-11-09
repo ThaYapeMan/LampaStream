@@ -19,7 +19,7 @@ def analyse(name, chunk=480):
         pcm = np.frombuffer(stream.readframes(stream.getnframes()), '<i2').astype(float)/32768
     fusion, stft = BeatFusion(), StereoMagStft(48000)
     # Preserve the pre-LIGHTS estimator regression contract explicitly.
-    fusion.gain_settings = (10000., 0.)
+    fusion.agc_max_gain = 10000.
     count, events, history = 0, [], []
     for start in range(0, len(pcm), chunk):
         stereo = np.repeat(pcm[start:start+chunk, None], 2, axis=1)

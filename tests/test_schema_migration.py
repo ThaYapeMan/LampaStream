@@ -46,9 +46,9 @@ def test_migration_backup_references_and_idempotency(tmp_path):
                                          analyser_id='analysis', energy_profile_id='energy')
     assert current['energy_profiles'][0] == dict(id='energy', high_energy_effect_id='bright',
                                                low_energy_effect_id='quiet', blend_start=.2,
-                                               agc_max_gain=64., tracker_gain_floor=.3,
-                                               onset_relative_k=2., onset_reference_window_s=3.,
-                                               onset_refractory_ms=120., onset_full_k=3.)
+                                               agc_max_gain=64.,
+                                               onset_relative_k=8., onset_reference_window_s=3.,
+                                               onset_refractory_ms=160., onset_full_k=9.)
     assert {x['id'] for x in current['effects']} == {'bright', 'quiet'}
     before = path.stat().st_mtime_ns
     assert not migrate_file(path)

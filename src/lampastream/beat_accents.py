@@ -4,15 +4,8 @@ from dataclasses import replace
 from statistics import median
 
 
-def gain_progress(gain, ceiling):
-    """Tracker's existing gain-floor mapping, unchanged by the relative gate."""
-    if gain <= 8:
-        return 0.
-    return min(1., (gain-8)/max(ceiling-8, 1e-9))
-
-
 class RelativeOnsetGate:
-    def __init__(self, k=2., window_s=3., refractory_ms=120., full_k=3., absolute_min=.02):
+    def __init__(self, k=8., window_s=3., refractory_ms=160., full_k=9., absolute_min=.02):
         self.configure(k, window_s, refractory_ms, full_k, absolute_min)
         self.reset()
 
@@ -101,8 +94,10 @@ def select_events(mode, tracker_events, records, *, gate=None):
     gate = gate if gate is not None else RelativeOnsetGate()
     events, actions, epochs = [], [], {}
     for record in records:
-        epoch_index = epochs.setdefault(record.epoch, len(epochs))
         features = record.features
+        if not features.onset_raw_frames and not features.diagnostic_events:
+            continue
+        epoch_index = epochs.setdefault(record.epoch, len(epochs))
         actions.extend((epoch_index, frame.sample_pos, 0, record, frame)
                        for frame in features.onset_raw_frames)
         actions.extend((epoch_index, event.candidate_sample, 1, record, event)

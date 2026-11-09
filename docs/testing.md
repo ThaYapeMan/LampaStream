@@ -1436,7 +1436,7 @@ No coefficient from the requested grid satisfies both tracks; the owner-directed
 fallback keeps 0.3. See the itemised LIGHTS-01 report for the complete trade-off table.
 
 
-## LIGHTS-01 sendback 4 background-envelope gate bench
+## LIGHTS-01 sendback 5 sprint-1 closure bench
 
 The relative sweep keeps detector candidates immutable and replays them through
 the production RelativeOnsetGate for k={2,3,4,6,8}, r={80,120,160} ms,
@@ -1463,3 +1463,13 @@ The prior tracker f=0 artifact is 756/797, not 760/797. The 760/797 artifact use
 f=0.11. Sendback 3 reports both miss-bin tables with this provenance distinction;
 a fresh f=0 production-DSP run reproduces the original tracker metrics exactly.
 No tracker fix or re-timing is made.
+
+Sendback 5 ships the owner-accepted k=8/W=3/r=160/full k=9 Onset setting as a
+non-predicting fallback, not validated beat lighting: it reacts to confirmed
+onsets and does not separate kicks from hats. No further tuning is attempted.
+New coupling defaults are Tracker; schema-5 migrations preserve every existing
+stored mode. Tracker's extra gain-tied floor is removed, so its current path is
+the archived f=0 rule with the original sensitivity base floor. Tests cover all
+three stored modes through schema 3/4 migration, backup/idempotence, rejected
+retired fields and the new model/API creation default. Final full-track outputs
+are compared with the fixed sweep and archived f=0 Tracker result.

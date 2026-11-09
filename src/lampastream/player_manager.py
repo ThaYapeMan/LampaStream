@@ -95,7 +95,7 @@ def _make_canonical_pipeline(
         exertion_clip=profile.exertion_clip,
         use_hpss_separation=profile.use_hpss_separation,
     )
-    pipeline._beat_fusion.gain_settings = profile.agc_max_gain, profile.tracker_gain_floor
+    pipeline._beat_fusion.agc_max_gain = profile.agc_max_gain
     return pipeline
 
 
@@ -166,7 +166,6 @@ def _build_engine_profile(coupling: Coupling, storage: Storage) -> Profile | Non
         blend_response=cf.blend_response,
         beat_accent_mode=coupling.beat_accent_mode,
         agc_max_gain=cf.agc_max_gain,
-        tracker_gain_floor=cf.tracker_gain_floor,
         onset_relative_k=cf.onset_relative_k,
         onset_reference_window_s=cf.onset_reference_window_s,
         onset_refractory_ms=cf.onset_refractory_ms,
@@ -275,7 +274,6 @@ def _build_mellow_profile(coupling: Coupling, storage: Storage) -> Profile | Non
         blend_response=cf.blend_response,
         beat_accent_mode=coupling.beat_accent_mode,
         agc_max_gain=cf.agc_max_gain,
-        tracker_gain_floor=cf.tracker_gain_floor,
         onset_relative_k=cf.onset_relative_k,
         onset_reference_window_s=cf.onset_reference_window_s,
         onset_refractory_ms=cf.onset_refractory_ms,
@@ -920,7 +918,6 @@ class PlayerManager:
             blend_response=cf.blend_response,
             beat_accent_mode=coupling.beat_accent_mode,
             agc_max_gain=cf.agc_max_gain,
-            tracker_gain_floor=cf.tracker_gain_floor,
             onset_relative_k=cf.onset_relative_k,
             onset_reference_window_s=cf.onset_reference_window_s,
             onset_refractory_ms=cf.onset_refractory_ms,

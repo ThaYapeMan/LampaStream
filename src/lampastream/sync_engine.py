@@ -3572,8 +3572,7 @@ class SyncEngine:
                            self.profile.onset_delta_abs)
         fusion = getattr(self._analyser, "_beat_fusion", None)
         if fusion is not None:
-            fusion.gain_settings = (
-                self.profile.agc_max_gain, self.profile.tracker_gain_floor)
+            fusion.agc_max_gain = self.profile.agc_max_gain
 
     def _render_generation(self, output):
         publication = (getattr(self._analyser, "_latest_pub", None)

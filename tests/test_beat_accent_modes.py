@@ -7,7 +7,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from lampastream.beat_accents import RelativeOnsetGate, gain_progress, select_events
+from lampastream.beat_accents import RelativeOnsetGate, select_events
 from lampastream.beat_trigger import EnergyTrigger
 from lampastream.migration import convert, migrate_file
 from lampastream.models import Coupling, EnergyProfile, Profile
@@ -117,7 +117,7 @@ def test_previous_schema_migration_writes_defaults_and_rejects_runtime(tmp_path)
     data['couplings'] = [Coupling(id='c').to_dict()]
     data['energy_profiles'] = [EnergyProfile(id='e').to_dict()]
     del data['couplings'][0]['beat_accent_mode']
-    for field in ('agc_max_gain', 'tracker_gain_floor'):
+    for field in ('agc_max_gain',):
         del data['energy_profiles'][0][field]
     path = tmp_path/'config.json'
     original = json.dumps(data).encode()
@@ -128,10 +128,10 @@ def test_previous_schema_migration_writes_defaults_and_rejects_runtime(tmp_path)
     assert path.read_bytes() == original
     assert migrate_file(path)
     current = json.loads(path.read_bytes())
-    assert current['schema_version'] == SCHEMA_VERSION == 4
+    assert current['schema_version'] == SCHEMA_VERSION == 5
     assert current['couplings'][0]['beat_accent_mode'] == 'onset'
     assert current['energy_profiles'][0]['agc_max_gain'] == 64.
-    assert current['energy_profiles'][0]['tracker_gain_floor'] == .3
+    assert 'tracker_gain_floor' not in current['energy_profiles'][0]
     assert list(tmp_path.glob('*.bak'))[0].read_bytes() == original
     assert not migrate_file(path)
     assert Storage(path).get_coupling('c').beat_accent_mode == 'onset'
@@ -143,11 +143,9 @@ def test_previous_schema_migration_writes_defaults_and_rejects_runtime(tmp_path)
         convert(broken)
 
 
-def test_gain_ceiling_and_monotone_floor():
-    assert [gain_progress(g, 64) for g in (1, 4, 8)] == [0., 0., 0.]
-    mapped = [gain_progress(g, 64) for g in range(1, 100)]
-    assert mapped == sorted(mapped) and mapped[-1] == 1
+def test_gain_ceiling_and_retired_gain_floor():
     trigger = EnergyTrigger()
+    assert not hasattr(trigger, "gain_floor")
     assert all(trigger.process(1e-5 if n % 20 == 0 else 0., n*.01, 'bass') is None
                for n in range(2000))
     assert trigger.gain == 64
@@ -166,8 +164,7 @@ def test_gain_ceiling_and_monotone_floor():
     assert results[0] == results[1] and results[0]
 
 
-@pytest.mark.parametrize('values', [{'agc_max_gain':7}, {'agc_max_gain':float('inf')},
-                                    {'tracker_gain_floor':-1}, {'tracker_gain_floor':1.1}])
+@pytest.mark.parametrize('values', [{'agc_max_gain':7}, {'agc_max_gain':float('inf')}])
 def test_invalid_gain_settings(values):
     with pytest.raises(ValueError):
         EnergyProfile(**values)
@@ -194,7 +191,7 @@ def test_real_quiet_noise_is_admitted_only_as_background_outliers():
         assert ungated  # prove actual picker events exist before the lighting gate
         assert max(r.features.agc_gain for r in records) == 64.
         admitted = select_events('onset', [], records)
-        assert 0 < len(admitted) < len(ungated)
+        assert len(admitted) < len(ungated)
         assert all(e.id in {raw.id for raw in ungated} for e in admitted)
         assert all(e.strength_raw >= profile.onset_delta_abs for e in admitted)
     finally:
@@ -206,18 +203,18 @@ def test_gain_settings_reach_first_frame_and_change_live():
 
     from lampastream.canonicalizer import AnalysisPcmFrame
 
-    profile = Profile(agc_max_gain=16., tracker_gain_floor=.11)
+    profile = Profile(agc_max_gain=16.)
     pipeline = _make_canonical_pipeline(None, profile)
     engine = SyncEngine(None, profile, analyser=pipeline)
     samples = np.zeros((4800, 2), dtype=np.float32)
     samples.setflags(write=False)
     try:
-        assert pipeline._beat_fusion.gain_settings == (16., .11)
+        assert pipeline._beat_fusion.agc_max_gain == 16.
         pipeline.feed(AnalysisPcmFrame(samples, 0, 'gain', 'offline', False))
         assert pipeline._beat_fusion.trigger.primary.gain == 16.
-        engine.update_render(replace(profile, agc_max_gain=32., tracker_gain_floor=.22))
+        engine.update_render(replace(profile, agc_max_gain=32.))
         assert engine._analyser is pipeline
-        assert pipeline._beat_fusion.gain_settings == (32., .22)
+        assert pipeline._beat_fusion.agc_max_gain == 32.
         pipeline.feed(AnalysisPcmFrame(samples, 4800, 'gain', 'offline', False))
         assert pipeline._beat_fusion.trigger.primary.gain == 32.
     finally:

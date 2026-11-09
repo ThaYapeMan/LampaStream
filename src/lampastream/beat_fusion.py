@@ -14,7 +14,7 @@ class BeatFusion:
 
     def __init__(self, sensitivity=50., band='bass', latency_ms=0., gate_dbfs=-60.):
         self.options = sensitivity, band, latency_ms, gate_dbfs
-        self.gain_settings = (64., .3)
+        self.agc_max_gain = 64.
         self.trigger = BassBeatTrigger(sensitivity, band)
         self.clock = TempoClock(latency_ms)
         self.gate = 10**(gate_dbfs/20)
@@ -23,9 +23,9 @@ class BeatFusion:
         self.last_update = -math.inf
 
     def reset(self):
-        settings = self.gain_settings
+        ceiling = self.agc_max_gain
         self.__init__(*self.options)
-        self.gain_settings = settings
+        self.agc_max_gain = ceiling
 
     def close(self):
         pass
@@ -56,10 +56,9 @@ class BeatFusion:
 
     def feed(self, frame):
         result = []
-        ceiling, floor = self.gain_settings
         for trigger in (self.trigger.primary, self.trigger.energy,
                         self.trigger.texture, self.trigger.treble):
-            trigger.max_gain, trigger.gain_floor = ceiling, floor
+            trigger.max_gain = self.agc_max_gain
         for start, mag in zip(frame.hop_sample_starts, frame.mag_frames, strict=True):
             # The long STFT labels its leading edge. Its energy rise labels the
             # containing attack hop; availability remains the full window end.
