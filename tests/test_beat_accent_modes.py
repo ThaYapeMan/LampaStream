@@ -17,7 +17,13 @@ from lampastream.schema import SCHEMA_VERSION, empty_config, validate_current
 from lampastream.storage import Storage
 from lampastream.sync_engine import SyncEngine
 from lampastream.trace_output import TraceChannel, TraceOutput
-from lampastream.types import AudioFeatures, OnsetEvent, OutputCapabilities, Position
+from lampastream.types import (
+    AudioFeatures,
+    OnsetEnvelopeFrame,
+    OnsetEvent,
+    OutputCapabilities,
+    Position,
+)
 
 
 def event(sample=4800, *, predicted=False):
@@ -33,11 +39,10 @@ def features(**kwargs):
 @pytest.mark.parametrize('mode', ['off', 'onset', 'tracker'])
 def test_source_and_clock_anchors(mode):
     raw, grid = event(), event(9600, predicted=True)
-    record = SimpleNamespace(sample_pos=4800, features=features(
+    record = SimpleNamespace(epoch='test', sample_pos=4800, features=features(
         diagnostic_events=(raw,), received_monotonic=1., play_monotonic=3.))
     gate = RelativeOnsetGate()
-    gate.accepts(replace(raw, id=("test", "bass", 0), candidate_sample=0,
-                         strength_raw=.1), .1)
+    gate.observe('test', OnsetEnvelopeFrame(0, full=.1, bass=.1))
     result = select_events(mode, [grid], [record], gate=gate)
     assert [e.id for e in result] == ([] if mode == 'off' else
                                     [raw.id] if mode == 'onset' else [grid.id])
@@ -73,6 +78,8 @@ def test_scheduler_intake_and_live_switch(monkeypatch, mode):
             features=features(diagnostic_events=(replace(raw,
                     id=("test", "warm", raw.candidate_sample-480),
                     candidate_sample=raw.candidate_sample-480, strength_raw=.01), raw),
+                              onset_raw_frames=(OnsetEnvelopeFrame(
+                                  raw.candidate_sample-480, full=.01, bass=.01),),
                               onset_events=(grid,),
                               received_monotonic=now[0], play_monotonic=now[0]+.2),
             effective_spectrum_backend='v2', effective_processor_ids=('v2',))
@@ -152,9 +159,8 @@ def test_gain_ceiling_and_monotone_floor():
     results = []
     for gain in (8.,64.):
         gate = RelativeOnsetGate()
-        gate.accepts(replace(raw, id=("test", "warm", 0), candidate_sample=0,
-                             strength_raw=.01), .01)
-        record = SimpleNamespace(sample_pos=0, features=features(
+        gate.observe('test', OnsetEnvelopeFrame(0, full=.01, bass=.01))
+        record = SimpleNamespace(epoch='test', sample_pos=0, features=features(
             diagnostic_events=(raw,), agc_gain=gain))
         results.append(select_events('onset', [], [record], gate=gate))
     assert results[0] == results[1] and results[0]
@@ -167,7 +173,7 @@ def test_invalid_gain_settings(values):
         EnergyProfile(**values)
 
 
-def test_real_quiet_noise_cannot_bypass_gain_floor():
+def test_real_quiet_noise_is_admitted_only_as_background_outliers():
     import numpy as np
 
     from lampastream.canonicalizer import AnalysisPcmFrame
@@ -185,9 +191,12 @@ def test_real_quiet_noise_cannot_bypass_gain_floor():
                                                           False, start/48000)))
         records.extend(pipeline.end_of_stream())
         ungated = [e for r in records for e in r.features.diagnostic_events]
-        assert ungated  # prove actual picker events existed before the extra floor
+        assert ungated  # prove actual picker events exist before the lighting gate
         assert max(r.features.agc_gain for r in records) == 64.
-        assert select_events('onset', [], records) == []
+        admitted = select_events('onset', [], records)
+        assert 0 < len(admitted) < len(ungated)
+        assert all(e.id in {raw.id for raw in ungated} for e in admitted)
+        assert all(e.strength_raw >= profile.onset_delta_abs for e in admitted)
     finally:
         pipeline.stop()
 

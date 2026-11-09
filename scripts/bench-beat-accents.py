@@ -30,6 +30,7 @@ from lampastream.canonicalizer import (  # noqa: E402
 )
 from lampastream.models import Profile  # noqa: E402
 from lampastream.player_manager import _make_canonical_pipeline  # noqa: E402
+from lampastream.types import OnsetEnvelopeFrame  # noqa: E402
 
 BREAKS = [(210, 212), (240, 242), (261, 262), (270, 272)]
 
@@ -46,7 +47,7 @@ def bench(path, out, reference=None, *, ceiling=64., floor=.3, estimate_tempo=Fa
     canonicalizer = AudioCanonicalizer()
     selected = {mode: [] for mode in ('onset', 'tracker')}
     maximum_gain = 0.
-    gain_samples, raw_events, accepted_events = [], [], []
+    gain_samples, raw_events, accepted_events, raw_frames = [], [], [], []
 
     def consume(records):
         nonlocal maximum_gain
@@ -58,6 +59,9 @@ def bench(path, out, reference=None, *, ceiling=64., floor=.3, estimate_tempo=Fa
                 bass_strength=record.features.onset_bass_strength, bands=','.join(sorted(e.bands)),
                 event_id=json.dumps(e.id), epoch=e.epoch)
                 for e in record.features.diagnostic_events)
+        raw_frames.extend(dict(epoch=record.epoch, sample_pos=frame.sample_pos,
+            full=frame.full, bass=frame.bass, mid=frame.mid, treble=frame.treble)
+            for record in records for frame in record.features.onset_raw_frames)
         for mode in selected:
             events = select_events(mode, [e for r in records for e in r.features.onset_events],
                                    records, gate=onset_gate)
@@ -127,7 +131,7 @@ def bench(path, out, reference=None, *, ceiling=64., floor=.3, estimate_tempo=Fa
                                       for field in ('strength', 'strength_raw')}
     out.mkdir(parents=True, exist_ok=True)
     for name, rows in [('gain-over-time', gain_samples), ('raw-onsets', raw_events),
-                       ('accepted-onsets', accepted_events)]:
+                       ('accepted-onsets', accepted_events), ('raw-envelope', raw_frames)]:
         with (out/f'{name}.csv').open('w') as stream:
             writer = csv.DictWriter(stream, list(rows[0]) if rows else ['time_s'])
             writer.writeheader()
@@ -177,6 +181,7 @@ def bench(path, out, reference=None, *, ceiling=64., floor=.3, estimate_tempo=Fa
         if reference:
             os.environ['AB_REFERENCE_BEATS'] = str(reference)
         ab.write_analysis(destination, path)
+    summary['background_spread'] = reference_trace(raw_frames, out, window_s)
     add_coincidence(summary, selected)
     (out/'summary.json').write_text(json.dumps(summary, indent=2)+'\n')
     print(json.dumps(summary, indent=2))
@@ -207,15 +212,25 @@ def cached_gate(source, out, reference, *, k, refractory_ms, window_s=3., full_k
     summary['relative_gate'] = dict(k=k, window_s=window_s, refractory_ms=refractory_ms,
                                     full_k=full_k, absolute_min=minimum)
     gate = RelativeOnsetGate(k, window_s, refractory_ms, full_k, minimum)
-    events = []
+    events, actions = [], []
+    with (source/'raw-envelope.csv').open() as stream:
+        for row in csv.DictReader(stream):
+            frame = OnsetEnvelopeFrame(int(row['sample_pos']), **{
+                band: float(row[band]) if row[band] else None
+                for band in ('full','bass','mid','treble')})
+            actions.append((frame.sample_pos, 0, row['epoch'], frame))
     with (source/'raw-onsets.csv').open() as stream:
         for row in csv.DictReader(stream):
             event = SimpleNamespace(id=tuple(json.loads(row['event_id'])), epoch=row['epoch'],
                 candidate_sample=round(float(row['time_s'])*48000), predicted=False,
                 bands=frozenset(row['bands'].split(',')), strength_raw=float(row['strength_raw']),
                 strength=float(row['strength']))
-            if gate.accepts(event, float(row['bass_strength'])):
-                events.append(event)
+            actions.append((event.candidate_sample, 1, float(row['bass_strength']), event))
+    for _, kind, data, item in sorted(actions, key=lambda row: row[:2]):
+        if kind == 0:
+            gate.observe(data, item)
+        elif gate.accepts(item, data):
+            events.append(item)
     mode = dict(accents=len(events), accents_per_s=len(events)/summary['duration_s'],
                 accents_per_minute=60*len(events)/summary['duration_s'],
                 predicted=0, break_accents=([sum(a <= e.candidate_sample/48000 < b for e in events)
@@ -238,6 +253,30 @@ def cached_gate(source, out, reference, *, k, refractory_ms, window_s=3., full_k
                          for e in events)
     (out/'summary.json').write_text(json.dumps(summary,indent=2)+'\n')
     return summary
+
+
+def reference_trace(rows, out, window_s):
+    """Every-frame median/MAD traces in the same raw units as candidate strength."""
+    gate = RelativeOnsetGate(window_s=window_s)
+    traces = []
+    for row in sorted(rows, key=lambda row: row['sample_pos']):
+        frame = OnsetEnvelopeFrame(row['sample_pos'], **{
+            band: row[band] for band in ('full','bass','mid','treble')})
+        gate.observe(row['epoch'], frame)
+        trace = dict(time_s=frame.sample_pos/48000)
+        for band in ('full','bass','mid','treble'):
+            ref = gate.reference(trace['time_s'],band)
+            if ref is not None:
+                trace[band+'_background'], trace[band+'_spread'] = ref
+        traces.append(trace)
+    fields = ['time_s']+[band+suffix for band in ('full','bass','mid','treble')
+                          for suffix in ('_background','_spread')]
+    with (out/'background-spread.csv').open('w') as stream:
+        writer = csv.DictWriter(stream,fields)
+        writer.writeheader()
+        writer.writerows(traces)
+    return {field: distribution([row[field] for row in traces if field in row])
+            for field in fields[1:]}
 
 
 def reference_hits(events, references, duration, tolerance):

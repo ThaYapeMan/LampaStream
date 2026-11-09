@@ -163,35 +163,51 @@ existing fused stream. Selection happens before scheduler intake. Detector
 candidate generation, peak picking, canonical sample timing, audible clocks,
 tempo estimation and the Effects → Scenes boundary are unchanged.
 
-The Onset gate uses raw candidate strengths, not saturated normalized confidence
-and not gain as a proxy for quietness. `onset_reference_window_s` W defaults to
-3 s. Before each decision, compute the median of all previous distinct candidates
-in [t−W,t], including candidates rejected by the ratio, absolute floor or
-refractory check. The current candidate is added after the decision. An empty
-reference seeds to the current value, so a constant level cannot cause a startup
-accent. Window and refractory time use candidate sample positions / 48000, not
-wall time. Duplicated event IDs cannot retrain or fire twice. Epoch/mode changes
-reset admission state; live changes to the four gate parameters retain history.
-An analyser-method/minimum change resets the reference to avoid mixing units.
+The Onset gate uses the detector's raw onset-strength envelope at **every
+analysis frame**, including zero and non-candidate frames. Over [t−W,t], where
+W=`onset_reference_window_s` (3 s), background is the median and spread is the
+unscaled median absolute deviation (MAD). An accent requires raw candidate
+strength ≥ background + k × spread, plus the existing detector absolute minimum.
+A candidate equal to a perfectly flat background (MAD=0) is rejected: it is not a
+new peak. A candidate above a flat background needs no invented spread floor.
+Without observed envelope frames the gate stays closed.
 
-When a candidate has bass support, use its published `onset_bass_strength` and
-the median of recent supported bass strengths, with `onset_relative_k` k. A
-bass-only event can use its own raw strength. Without bass support, require raw
-full-band strength ≥ `onset_full_k` × full-band median. Full-band history contains
-all candidates, including bass-supported candidates. Require k>1 and full k≥k.
-The default Combined analyser publishes full-band candidates without separate
-bass raw strengths; it therefore uses this stricter full-band branch. The gate
-does not infer bass from normalized bars or manufacture new band analysis.
+`BeatDetector.envelope_frames` is a read-only tuple of frozen
+`OnsetEnvelopeFrame` values read immediately after the existing detector calls.
+Combined/Superflux use the picker's existing raw ODF; Multiband uses each band's
+raw ODF (including the existing uncompressed mid/treble raw-strength history).
+No flux is recomputed and no candidate or picker state is modified by the tap.
+CAP carries the tuple as `AudioFeatures.onset_raw_frames` in the next existing
+publication, with each frame's own canonical sample position. It does not create
+new publications or change contributor identities, candidate timing, or clocks.
+Frames buffered before the first publication are retained and reset at epoch/DSP
+reset. Combined and short mid/treble frames retain their 480-sample positions;
+long bass frames use the same existing three-hop attack compensation as their
+candidates. Multiband full reference uses the maximum available band raw value
+at each tap position. Missing bands are absent, not manufactured zero values.
 
-Both branches also require strength ≥ the active analyser's existing
-`onset_delta_abs` minimum (default 0.02 in the detector's existing raw units).
-`onset_refractory_ms` r defaults to 120 ms, editable from 60 to 200 ms; any
-candidate inside the interval after a fired accent is rejected but still trains
-its reference. k, W, r and full k are Energy Profile settings, editable live in
-the existing Now Playing parameter row without source/session/analyser restart.
-Provisional defaults are k=2, W=3 s, r=120 ms, full k=3 pending the owner decision
-recorded in the sendback-3 report: none of the requested sweep points meets Mau P's
-recall target, so the specified fallback has no eligible point.
+When a candidate has bass support, use its raw `onset_bass_strength` (or its own
+strength for a bass-only candidate) against bass background + k × bass MAD.
+Without bass support, use raw full strength against full background + full k ×
+full MAD, where `onset_full_k` ≥ `onset_relative_k`. The Combined analyser has no
+separate bass ODF; its full-band branch is used. No band is inferred from bars.
+
+Both branches require strength ≥ the active detector's `onset_delta_abs`
+minimum (default 0.02, in its existing raw units). `onset_refractory_ms` defaults
+to 120 ms and is editable from 60 to 200 ms. Only fired accents start refractory;
+all analysis frames continue training the background regardless of admission.
+Reference and refractory use sample time / 48000, never wall time. The gate
+retains one second of delivery slack for delayed candidates, but each reference
+includes exactly [candidate−W,candidate], excluding future frames. Batched frames
+and candidates are interleaved in sample order; duplicate event IDs cannot fire
+twice. Epoch/mode/analyser-method/minimum changes reset admission state. Live k,
+W, r and full k edits retain the existing analyser and envelope history.
+
+The four settings are Energy Profile parameters in the existing Now Playing
+row; k and full k are labelled in MAD units, not multiplicative envelope ratios.
+The implementation baseline remains k=2, W=3 s, r=120 ms, full k=3. These are not
+selected defaults: the corrected sendback-4 sweep has no overall or Mau-qualified
+point. Default selection and publication await the owner's explicit decision.
 
 The 64× gain ceiling stays. `onset_gain_floor` is removed from schema-4 runtime
 models and renamed to `tracker_gain_floor` by installer migration, preserving its

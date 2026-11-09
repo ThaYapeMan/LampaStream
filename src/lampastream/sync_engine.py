@@ -52,6 +52,7 @@ from .types import (
     AudioPipeline,
     Colour,
     LatencyProbe,
+    OnsetEnvelopeFrame,
     OnsetEvent,
     Output,
     Position,
@@ -880,10 +881,36 @@ class BeatDetector:
         # attribute read is atomic under the GIL and the coherent snapshot
         # contract is preserved.
         self._rebuild_lock = threading.Lock()
+        self._envelope_frames = ()
 
     @property
     def processor_id(self) -> str:
         return "beat_detector"
+
+    @property
+    def envelope_frames(self) -> tuple[OnsetEnvelopeFrame, ...]:
+        """Raw ODF values from the last feed; no picker state is modified."""
+        return self._envelope_frames
+
+    @staticmethod
+    def _tap_frames(state, pipeline, starts, magnitudes, levels, attack_hops):
+        results, envelopes = [], []
+        for start, magnitude, level in zip(starts, magnitudes, levels, strict=True):
+            # Preserve the exact existing detector call/order, then read its ODF.
+            result = pipeline.push_events([magnitude], [level])[0]
+            results.append(result)
+            if state.onset_method == "multiband":
+                d = pipeline._detector
+                values = {band: getattr(d, f"_{band}_det")._last_flux
+                          for band in ("bass", "mid", "treble")}
+                envelopes.append(OnsetEnvelopeFrame(start+attack_hops*pipeline.hop,
+                    full=max(values.values()), **values))
+            else:
+                picker = (pipeline._onset if hasattr(pipeline, "_onset")
+                          else pipeline._detector._picker)
+                envelopes.append(OnsetEnvelopeFrame(start+attack_hops*pipeline.hop,
+                                                    full=picker._last_flux))
+        return results, envelopes
 
     @classmethod
     def _make_state(
@@ -974,17 +1001,19 @@ class BeatDetector:
         pipeline = state.onset_pipeline
         hop = pipeline.hop
         entries = []
+        envelopes = []
         if frame.mag_frames_short is None:
             levels = [20 * math.log10(max(float(np.linalg.norm(m)) / WINDOW_SIZE, 1e-12))
                       for m in frame.mag_frames]
-            results = pipeline.push_events(frame.mag_frames, levels)
+            results, envelopes = self._tap_frames(state, pipeline, frame.hop_sample_starts,
+                                                   frame.mag_frames, levels, 3)
             entries = [(start, result, 3) for start, result in
                        zip(frame.hop_sample_starts, results, strict=True)]
         elif state.onset_method != "multiband":
             levels = [20 * math.log10(max(float(np.linalg.norm(m)) / ONSET_WINDOW_SIZE, 1e-12))
                       for m in frame.mag_frames_short]
-            results = pipeline.push_events([log_onset_bands(m) for m in frame.mag_frames_short],
-                                           levels)
+            results, envelopes = self._tap_frames(state, pipeline, frame.hop_sample_starts_short,
+                [log_onset_bands(m) for m in frame.mag_frames_short], levels, 0)
             entries = [(start, result, 0) for start, result in
                        zip(frame.hop_sample_starts_short, results, strict=True)]
         else:
@@ -993,6 +1022,7 @@ class BeatDetector:
                 level = 20 * math.log10(max(float(np.linalg.norm(mag))/WINDOW_SIZE, 1e-12))
                 bass = d._bass_det.process_event(mag[:d._bass_hi].tolist(), level)
                 entries.append((start, (bass, None, None), 3))
+                envelopes.append(OnsetEnvelopeFrame(start+3*hop, bass=d._bass_det._last_flux))
             bass_hi = max(1, round(state.bass_hz * ONSET_WINDOW_SIZE / self._SAMPLE_RATE))
             mid_hi = max(bass_hi+1, round(state.mid_hz * ONSET_WINDOW_SIZE / self._SAMPLE_RATE))
             for start, mag in zip(frame.hop_sample_starts_short, frame.mag_frames_short,
@@ -1001,6 +1031,10 @@ class BeatDetector:
                 mid = pipeline.short_band_event(d._mid_det, "mid", mag[bass_hi:mid_hi], level)
                 treble = pipeline.short_band_event(d._treble_det, "treble", mag[mid_hi:], level)
                 entries.append((start, (None, mid, treble), 0))
+                envelopes.append(OnsetEnvelopeFrame(start,
+                    mid=pipeline._raw_short["mid"][1][-1],
+                    treble=pipeline._raw_short["treble"][1][-1]))
+        self._envelope_frames = tuple(envelopes)
         updates = []
         for start, result, attack_hops in entries:
             candidates = (dict(zip(("bass", "mid", "treble"), result, strict=True))
@@ -1229,6 +1263,7 @@ class CanonicalAnalysisPipeline:
         self._onset_stft = StereoMagStft(_CAP_SAMPLE_RATE, ONSET_WINDOW_SIZE,
                                          right_aligned=True)
         self._short_frame_count = 0
+        self._pending_onset_frames = []
         self._canonicalizer = AudioCanonicalizer()
         self._sustained_tracker = SustainedEnergyTracker()
         self._sustained_energy = None
@@ -1433,6 +1468,7 @@ class CanonicalAnalysisPipeline:
         self._bar_stft.reset()
         self._onset_stft.reset()
         self._short_frame_count = 0
+        self._pending_onset_frames.clear()
         self._current_epoch_id = None
         self._source_sample_end = 0
         self._stft_frame_count = 0
@@ -1693,6 +1729,9 @@ class CanonicalAnalysisPipeline:
                 else:
                     other_updates.append(pu)
 
+        if self._beat_detector in self._processors:
+            self._pending_onset_frames.extend(self._beat_detector.envelope_frames)
+
         # BLOCKER 2 audit (round 3): do NOT eagerly write ``_last_bars`` at
         # the top of this call.  ``_publish_by_interval`` updates it
         # per-interval AFTER emitting each publication so that a beat
@@ -1818,6 +1857,9 @@ class CanonicalAnalysisPipeline:
                 with self._pub_lock:
                     self._preview_spectrum = (epoch_id, list(bars), list(features.bars)
                                               if features.bars is not bars else None)
+            if self._pending_onset_frames:
+                features = replace(features, onset_raw_frames=tuple(self._pending_onset_frames))
+                self._pending_onset_frames.clear()
             record = self._publish(
                 epoch_id=epoch_id,
                 sample_start=start,

@@ -138,6 +138,17 @@ class OnsetEvent:
     predicted: bool = False
 
 
+@dataclass(frozen=True)
+class OnsetEnvelopeFrame:
+    """Read-only raw detector ODF at an analysis sample, including non-peaks."""
+
+    sample_pos: int
+    full: float | None = None
+    bass: float | None = None
+    mid: float | None = None
+    treble: float | None = None
+
+
 @dataclass
 class AudioFeatures:
     """Processed audio data for one analysis frame.
@@ -172,6 +183,7 @@ class AudioFeatures:
     # Onset detection.  onset=True on frames where a note or drum hit starts.
     # onset_strength is the raw spectral flux value (unnormalised).
     diagnostic_events: tuple[OnsetEvent, ...] = ()
+    onset_raw_frames: tuple[OnsetEnvelopeFrame, ...] = ()
     tempo_bpm: float | None = None
     tempo_alt_bpm: float | None = None
     tempo_confidence: float = 0.

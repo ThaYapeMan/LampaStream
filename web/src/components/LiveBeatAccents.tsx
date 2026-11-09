@@ -29,7 +29,7 @@ export function LiveBeatAccents({ coupling, profile, onCoupling, onProfile }: {
       : field === 'onset_refractory_ms' ? number >= 60 && number <= 200
       : field === 'onset_reference_window_s' ? number > 0 : number > 1)
     if (!valid || (field === 'onset_full_k' && number < Number(draft.onset_relative_k))) {
-      setError('Require gain ≥8, k >1, window >0, refractory 60–200 ms and full ratio ≥ onset ratio'); return
+      setError('Require gain ≥8, k >1, window >0, refractory 60–200 ms and full k ≥ onset k'); return
     }
     if (profile && number !== Number(values()[field])) {
       const body: Partial<EnergyProfile> = { [field]: number }
@@ -39,10 +39,10 @@ export function LiveBeatAccents({ coupling, profile, onCoupling, onProfile }: {
   }
   const fields = [
     ['agc_max_gain','AGC ceiling','×',8],
-    ['onset_relative_k','Onset ratio','×',.1],
+    ['onset_relative_k','Onset k','MAD',.1],
     ['onset_reference_window_s','Window','s',.5],
     ['onset_refractory_ms','Refractory','ms',10],
-    ['onset_full_k','Full ratio','×',.1],
+    ['onset_full_k','Full k','MAD',.1],
     ['tracker_gain_floor','Tracker floor','',.05],
   ] as const
 

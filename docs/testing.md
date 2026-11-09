@@ -1401,7 +1401,10 @@ python3 scripts/clock-rate-probe.py --analyse /tmp/clock-01a-360.csv
 assertions. Those tests keep their original counts, latency and colour assertions;
 they do not establish current-default performance. LIGHTS-01's mode/gain tests
 separately verify the new defaults, initial and live parameter forwarding, scheduler
-stream isolation, schema migration, and suppression of actual quiet-noise events.
+stream isolation, schema migration, and admission of only raw-background outliers on actual quiet noise.
+The background/MAD gate can admit occasional noise outliers; it does not promise
+zero accents on arbitrary noise. Digital silence is still rejected by the
+existing absolute minimum.
 
 The offline bench decodes local files through the existing replay/FFmpeg path and
 uses `ab-tools.write_analysis` for available beat-reference CSVs. It never starts a
@@ -1433,12 +1436,18 @@ No coefficient from the requested grid satisfies both tracks; the owner-directed
 fallback keeps 0.3. See the itemised LIGHTS-01 report for the complete trade-off table.
 
 
-## LIGHTS-01 sendback 3 relative-gate bench
+## LIGHTS-01 sendback 4 background-envelope gate bench
 
 The relative sweep keeps detector candidates immutable and replays them through
-the production RelativeOnsetGate for k={1.5,2,2.5,3,4}, r={80,120,160} ms,
+the production RelativeOnsetGate for k={2,3,4,6,8}, r={80,120,160} ms,
 W=3 s and full k=k+1. A full DSP run on each file captures candidate IDs, raw
-strengths and available raw bass support; cached replay at matching settings is
+strengths, available raw bass support and **every** analysis-frame raw ODF,
+including non-candidates and zero frames. Cached replay interleaves frames and
+candidates in sample order. The gate uses median + k × unscaled MAD, not a median
+of peaks. `raw-envelope.csv` and `background-spread.csv` retain the exact raw
+observations and every-frame median/MAD traces. Median-over-run background/MAD
+values are reported side by side for the two actual files. Replay at matching
+settings is
 checked against the full run's results. This avoids changing candidate generation
 between points. `--candidate-cache`, `--relative-k`, `--refractory-ms`, `--window-s`
 and `--full-k` expose the same path in scripts/bench-beat-accents.py.
