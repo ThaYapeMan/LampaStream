@@ -495,7 +495,6 @@ class VirtualPlayer:
     type: VirtualPlayerType = VirtualPlayerType.LMS
     lms_host: str = "127.0.0.1"
     lms_port: int = 3483
-    lms_web_port: int = 9000
     player_name: str = "LampaStream"
     # Name advertised to external protocols (LMS player list, AirPlay menu).
     # Falls back to player_name when empty (see player_manager).
@@ -513,8 +512,7 @@ class VirtualPlayer:
     speaker_output_delay_ms: int = 0
 
     def __post_init__(self) -> None:
-        for name, low, high in (("lms_web_port", 1, 65535),
-                                ("head_start_ms", 0, 2000),
+        for name, low, high in (("head_start_ms", 0, 2000),
                                 ("speaker_output_delay_ms", -200, 500)):
             value = getattr(self, name)
             if type(value) is not int or not low <= value <= high:
@@ -528,7 +526,6 @@ class VirtualPlayer:
             "type": self.type.value,
             "lms_host": self.lms_host,
             "lms_port": self.lms_port,
-            "lms_web_port": self.lms_web_port,
             "player_name": self.player_name,
             "display_name": self.display_name,
             "player_mac": self.player_mac,

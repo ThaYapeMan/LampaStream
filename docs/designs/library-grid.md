@@ -19,7 +19,7 @@ playlist entry with `status <index+1> 1 tags:uf`. It does not poll additional
 status/time queries. One asynchronous worker fetches current then next track,
 verifies filesize, and launches a low-priority, time-bounded analysis subprocess.
 Downloads never use `/stream`. The existing virtual player's `lms_host` and
-optional `lms_web_port` (9000) define the HTTP base. No library mount is required.
+`lms_port` (HTTP port, normally 9000) define the HTTP base. No library mount is required.
 
 `GridCache` stores `/var/lib/lampastream/grids/<sha256>.json` with bounded LRU
 aliases for `lms:<id>:<filesize>` (default 2000 grids and aliases). After download,

@@ -1025,7 +1025,7 @@ class PlayerManager:
         # Adapter selection is ingress/session responsibility. Downstream sees only
         # TrackPositionSource. Resolve the follower's actual selected MAC dynamically.
         from .lms_grid import LmsGridAdapter
-        grid_adapter = LmsGridAdapter(player.lms_host, player.lms_web_port)
+        grid_adapter = LmsGridAdapter(player.lms_host, player.lms_port)
         session.track_source = LmsTrackPositionSource(
             player.lms_host,
             lambda: (session.follower.target_mac if session.follower else
