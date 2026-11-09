@@ -261,4 +261,4 @@ def test_session_kind_discovery_uses_modelname_from_same_owned_connection(monkey
     status = lms_status.query_lms_status('offline.invalid', 'aa', include_model=True)
     assert status.player_model == 'YeneY/squeezelite'
     assert [call.args[0] for call in connection.sendall.call_args_list] == [
-        b'aa status - 1 tags:adglcK\n', b'players 0 100 tags:\n']
+        b'aa status - 1 tags:adglcKuf\n', b'players 0 100 tags:\n']

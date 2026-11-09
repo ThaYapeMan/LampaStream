@@ -264,6 +264,13 @@ export interface OutputCapabilities {
   supports_per_channel_timing: boolean
 }
 export interface AccentFeatures {
+  beat_source?: "grid" | "tracker" | "onset" | "off"
+  grid_confidence?: number | null
+  grid_tempo?: number | null
+  grid_cache?: string | null
+  grid_fetch_state?: string | null
+  grid_dropped_reason?: string | null
+  time_to_next_drop_s?: number | null
   tempo_bpm?: number | null
   tempo_alt_bpm?: number | null
   tempo_confidence?: number

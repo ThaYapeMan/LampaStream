@@ -1437,6 +1437,8 @@ class CanonicalAnalysisPipeline:
         fusion = BeatFusion(profile.beat_sensitivity, profile.beat_band,
                             profile.beat_latency_ms, profile.onset_silence_gate_dbfs)
         previous = self._beat_fusion
+        fusion.grid_provider, fusion.prior = previous.grid_provider, previous.prior
+        fusion.accent_mode = profile.beat_accent_mode
         self._processors = tuple(fusion if p is previous else p for p in self._processors)
         self._beat_fusion = fusion
         for proc in self._processors:
@@ -1620,12 +1622,19 @@ class CanonicalAnalysisPipeline:
                                if pu.processor_id == ("beat_detector" if self.diagnostic_only
                                                       else "beat_fusion")
                                for e in pu.onset_events),
-            beat_phase=self._beat_fusion.clock.phase(
-                self._beat_fusion.trigger.primary.last_time or 0.),
-            tempo_bpm=self._beat_fusion.clock.tempo_bpm,
-            tempo_alt_bpm=self._beat_fusion.clock.tempo_alt_bpm,
-            tempo_confidence=self._beat_fusion.clock.confidence,
-            tempo_locked=self._beat_fusion.clock.locked,
+            beat_phase=(self._beat_fusion.prior.phase(self._beat_fusion.current_time)
+                        if self._beat_fusion.prior.grid else self._beat_fusion.clock.phase(
+                            self._beat_fusion.trigger.primary.last_time or 0.)),
+            **(self._beat_fusion.grid_state or {}),
+            tempo_bpm=(self._beat_fusion.prior.grid.tempo if self._beat_fusion.prior.grid
+                       else self._beat_fusion.clock.tempo_bpm),
+            tempo_alt_bpm=(None if self._beat_fusion.prior.grid
+                           else self._beat_fusion.clock.tempo_alt_bpm),
+            tempo_confidence=(self._beat_fusion.prior.grid.confidence
+                              if self._beat_fusion.prior.grid
+                              else self._beat_fusion.clock.confidence),
+            tempo_locked=(self._beat_fusion.prior.grid is not None
+                          or self._beat_fusion.clock.locked),
             agc_gain=self._beat_fusion.trigger.primary.gain,
             trigger_ratio=(self._beat_fusion.trigger.primary.ratio
                            / self._beat_fusion.trigger.primary.threshold),
@@ -1720,10 +1729,19 @@ class CanonicalAnalysisPipeline:
             hop_sample_starts_short=short_starts,
         )
 
+        fusion = self._beat_fusion
+        if fusion.grid_provider is not None:
+            value = (fusion.grid_provider(frame) if fusion.accent_mode == "tracker" else None)
+            fusion.prior.set(value, frame.sample_pos / 48000)
+            fusion.grid_state = {**(fusion.grid_state or {}),
+                                 **fusion.prior.status(frame.sample_pos / 48000)}
         spectrum_updates: list[ProcessorUpdate] = []
         other_updates: list[ProcessorUpdate] = []
         for proc in self._processors:
-            for pu in proc.feed(shared_frame):
+            updates = proc.feed(shared_frame)
+            if proc is self._beat_detector and fusion.grid_provider is not None:
+                fusion.prior.observe(e for pu in updates for e in pu.onset_events)
+            for pu in updates:
                 if pu.bars is not None:
                     spectrum_updates.append(pu)
                 else:
@@ -3573,12 +3591,17 @@ class SyncEngine:
         fusion = getattr(self._analyser, "_beat_fusion", None)
         if fusion is not None:
             fusion.agc_max_gain = self.profile.agc_max_gain
+            fusion.accent_mode = self.profile.beat_accent_mode
 
     def _render_generation(self, output):
         publication = (getattr(self._analyser, "_latest_pub", None)
                        if isinstance(self._analyser, CanonicalAnalysisPipeline) else None)
-        return (getattr(output, "output_generation", 0), self.audible_clock.generation,
-                getattr(publication, "epoch", None), self.profile.beat_accent_mode)
+        generation = (getattr(output, "output_generation", 0), self.audible_clock.generation,
+                      getattr(publication, "epoch", None), self.profile.beat_accent_mode)
+        fusion = getattr(self._analyser, "_beat_fusion", None)
+        if fusion is not None and fusion.grid_provider is not None:
+            generation += (publication.features.beat_source if publication else None,)
+        return generation
 
     async def run(self, output: Output, *, clock=None, sleep=None) -> None:
         """Consume generic features through one renderer, scheduler and preview."""
@@ -3727,7 +3750,9 @@ class SyncEngine:
                         self.event_counters[band]["received"] += 1
                 elif self.event_records[event.id]["disposition"] != "received":
                     continue
-                if invalidated or (published_epoch is not None and event.epoch != published_epoch):
+                if (invalidated or (published_epoch is not None and event.epoch != published_epoch)
+                        or (event.id[1] == "grid" and latest is not None
+                            and latest.beat_source != "grid")):
                     self.event_records[event.id]["disposition"] = "expired"
                     for band in event.bands | {"all"}:
                         self.event_counters[band]["expired"] += 1

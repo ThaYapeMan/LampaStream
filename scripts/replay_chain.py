@@ -220,6 +220,10 @@ class Replay:
         self.output = TraceOutput(load_room(args.room), args.route, load_capabilities(args.room))
         self.high.diagnostic_onsets = self.low.diagnostic_onsets = args.diagnostic_onsets
         self.pipeline = _make_canonical_pipeline(acceptance._OfflineSource(), self.high)
+        if getattr(args, "grid", None):
+            from lampastream.grid import TrackGrid
+            grid = TrackGrid.from_dict(json.loads(args.grid.read_text()))
+            self.pipeline._beat_fusion.grid_provider = lambda frame: ("offline", grid, args.start)
         self.features, self.records, self.availability = [], [], []
         self.energy, self.renders = [], []
         self.reads = Counter()
@@ -706,6 +710,7 @@ def parser():
     result = argparse.ArgumentParser(description=__doc__)
     result.add_argument("--diagnostic-onsets", action="store_true",
                         help="Replay archived flux/onset contracts instead of visible beats")
+    result.add_argument("--grid", type=Path, help="Verified content grid for offline replay")
     result.add_argument("--input", type=Path, required=True)
     result.add_argument("--config", type=Path, required=True)
     result.add_argument("--coupling-id")

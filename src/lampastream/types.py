@@ -184,6 +184,13 @@ class AudioFeatures:
     # onset_strength is the raw spectral flux value (unnormalised).
     diagnostic_events: tuple[OnsetEvent, ...] = ()
     onset_raw_frames: tuple[OnsetEnvelopeFrame, ...] = ()
+    beat_source: str = "tracker"
+    grid_confidence: float | None = None
+    grid_tempo: float | None = None
+    grid_cache: str | None = None
+    grid_fetch_state: str | None = None
+    grid_dropped_reason: str | None = None
+    time_to_next_drop_s: float | None = None
     tempo_bpm: float | None = None
     tempo_alt_bpm: float | None = None
     tempo_confidence: float = 0.

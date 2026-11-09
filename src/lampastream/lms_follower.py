@@ -516,9 +516,9 @@ class LmsFollower:
     def _get_current_url(self, mac: str | None = None) -> str | None:
         """Return the current URL for *mac* (defaults to the followed player)."""
         mac = mac or self._follow_mac
-        command = f"{mac} status - 1 tags:u\n"
+        command = f"{mac} status - 1 tags:uf\n"
         log.info(
-            "DIAG FOLLOW -> %s  cmd='%s status - 1 tags:u'  "
+            "DIAG FOLLOW -> %s  cmd='%s status - 1 tags:uf'  "
             "(play_count=%d)",
             mac,
             mac,

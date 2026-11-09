@@ -29,3 +29,9 @@ TempoAnalyzer. Attribution: FastLED contributors, MIT-licensed project,
 https://github.com/FastLED/FastLED. No FastLED source file, GPL/LGPL detector,
 neural model or additional runtime package is included by this feature. Lighting
 trigger and shaping evidence is recorded in the two BEAT-01 research documents.
+
+Whole-file library grids use librosa 1.0.0 (ISC) and SoundFile 0.14.0 (BSD-3-Clause),
+installed as separate runtime dependencies with their distribution licence texts.
+FFmpeg handles containers/codecs unsupported by libsndfile; the Debian FFmpeg and
+libsndfile packages retain their own notices and licences. No library audio is
+bundled in the application or tests.

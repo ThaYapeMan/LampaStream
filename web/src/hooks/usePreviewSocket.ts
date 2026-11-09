@@ -197,6 +197,13 @@ export function usePreviewSocket(): PreviewState {
           const energy = (msg.energy as number) ?? 0
 
           const rhythm: AccentFeatures = {
+            beat_source: msg.beat_source as AccentFeatures["beat_source"],
+            grid_confidence: msg.grid_confidence as number | null,
+            grid_tempo: msg.grid_tempo as number | null,
+            grid_cache: msg.grid_cache as string | null,
+            grid_fetch_state: msg.grid_fetch_state as string | null,
+            grid_dropped_reason: msg.grid_dropped_reason as string | null,
+            time_to_next_drop_s: msg.time_to_next_drop_s as number | null,
             tempo_bpm: msg.tempo_bpm as number | null,
             tempo_alt_bpm: msg.tempo_alt_bpm as number | null,
             tempo_locked: msg.tempo_locked as boolean,

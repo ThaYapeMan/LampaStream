@@ -155,7 +155,8 @@ async def observe(seconds, require_beats=None, require_level=False):
                     break
                 raise RuntimeError("Preview socket stopped sending data") from None
             if message.get("type") == "event":
-                detected += sum(event.get("kind") == "beat" and not event.get("predicted", False)
+                detected += sum(event.get("kind") == "beat" and (
+                    not event.get("predicted", False) or event.get("beat_source") == "grid")
                                 for event in message.get("events", []))
             if message.get("type") == "frame":
                 peak = max(peak, message.get("pcm_peak_s16") or 0)

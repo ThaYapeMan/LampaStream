@@ -18,7 +18,7 @@ BUILD_PACKAGES=(git ca-certificates "${NATIVE_BUILD_PACKAGES[@]}" g++ make pkg-c
     libconfig-dev systemd-dev libsystemd-dev libavahi-client-dev libavahi-common-dev
     libsoxr-dev libsodium-dev libgcrypt20-dev libplist-dev libplist-utils uuid-dev
     libavutil-dev libavcodec-dev libavformat-dev libswresample-dev)
-RUNTIME_PACKAGES=(python3 systemd util-linux libcap2-bin polkitd avahi-daemon alsa-utils cava xxd)
+RUNTIME_PACKAGES=(python3 systemd util-linux libcap2-bin polkitd avahi-daemon alsa-utils cava xxd ffmpeg libsndfile1)
 log() { printf '\n==> %s\n' "$*"; }
 fail() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 platform() {

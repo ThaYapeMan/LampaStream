@@ -61,6 +61,7 @@ class DecodedSourceFrame:
     received_monotonic: float | None = None  # read capture, independent of wall time
     play_monotonic: float | None = None
     timing_generation: int | None = None
+    content_position_s: float | None = None
 
     def __post_init__(self) -> None:
         arr = np.asarray(self.samples)
@@ -158,6 +159,7 @@ class AnalysisPcmFrame:
     received_monotonic: float | None = None
     play_monotonic: float | None = None
     timing_generation: int | None = None
+    content_position_s: float | None = None
 
     SAMPLE_RATE: ClassVar[int] = 48000
     CHANNELS: ClassVar[int] = 2
@@ -396,6 +398,8 @@ class AudioCanonicalizer:
         # Accumulated source over_range from DataResults since the last output.
         self._over_range_acc: bool = False
         self._arrival_spans = deque(maxlen=4096)
+        self._content_spans = deque(maxlen=4096)
+        self._content_source_frames = 0
         self._timing_source_frames = 0
 
     # ------------------------------------------------------------------
@@ -440,6 +444,8 @@ class AudioCanonicalizer:
         self._sample_pos = 0
         self._over_range_acc = False
         self._arrival_spans.clear()
+        self._content_spans.clear()
+        self._content_source_frames = 0
         self._timing_source_frames = 0
 
     def _start_epoch(self, source_rate: int, source_id: str) -> None:
@@ -479,6 +485,10 @@ class AudioCanonicalizer:
         # Expand mono → stereo (L=R); stereo preserved unchanged.
         stereo = _to_stereo(frame.samples)
 
+        content_start = self._content_source_frames*self.TARGET_RATE/frame.sample_rate
+        self._content_source_frames += len(stereo)
+        content_end = self._content_source_frames*self.TARGET_RATE/frame.sample_rate
+        self._content_spans.append((content_start, content_end, frame.content_position_s))
         if frame.received_monotonic is not None:
             start = self._timing_source_frames * self.TARGET_RATE / frame.sample_rate
             self._timing_source_frames += len(stereo)
@@ -520,10 +530,20 @@ class AudioCanonicalizer:
             received_monotonic=self._received_at(self._sample_pos),
             play_monotonic=self._play_at(self._sample_pos)[0],
             timing_generation=self._play_at(self._sample_pos)[1],
+            content_position_s=self._content_at(self._sample_pos),
         )
         self._sample_pos += len(canonical)
         results.append(CanonicalData(frame=af))
         return results
+
+    def _content_at(self, sample_pos):
+        while len(self._content_spans) > 1 and self._content_spans[0][1] <= sample_pos:
+            self._content_spans.popleft()
+        if self._content_spans:
+            start, _, content = self._content_spans[0]
+            if content is not None:
+                return content+(sample_pos-start)/self.TARGET_RATE
+        return None
 
     def _received_at(self, sample_pos):
         while len(self._arrival_spans) > 1 and self._arrival_spans[0][1] <= sample_pos:
@@ -570,6 +590,7 @@ class AudioCanonicalizer:
                     received_monotonic=self._received_at(self._sample_pos),
                     play_monotonic=self._play_at(self._sample_pos)[0],
                     timing_generation=self._play_at(self._sample_pos)[1],
+                    content_position_s=self._content_at(self._sample_pos),
                 )
                 self._sample_pos += len(tail)
                 results.append(CanonicalData(frame=drain_f))

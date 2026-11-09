@@ -25,6 +25,10 @@ log = logging.getLogger(__name__)
 class LmsPlayerStatus:
     """Parsed subset of the LMS CLI status response for one player."""
 
+    track_id: str | None = None
+    filesize: int | None = None
+    url: str | None = None
+    playlist_index: int = 0
     title: str | None = None
     artist: str | None = None
     duration: float | None = None
@@ -71,7 +75,7 @@ def query_lms_status(host: str, mac: str, port: int = DEFAULT_PORT, *,
             "LMS host is not configured in this profile. "
             "Open the profile editor and enter the LMS server IP or hostname."
         )
-    command = f"{mac} status - 1 tags:adglcK\n"
+    command = f"{mac} status - 1 tags:adglcKuf\n"
     log.debug("LMS query: %s:%d player=%s", host, port, mac)
     with socket.create_connection((host, port), timeout=_SOCKET_TIMEOUT_S) as sock:
         sock.sendall(command.encode("utf-8"))
@@ -141,7 +145,15 @@ def _parse_status(text: str) -> LmsPlayerStatus:
             continue
         key = unquote(key_raw)
         value = unquote(value_raw)
-        if key == "time":
+        if key in ("id", "url"):
+            setattr(result, "track_id" if key == "id" else key, value or None)
+        elif key in ("filesize", "playlist_cur_index"):
+            try:
+                name = "playlist_index" if key == "playlist_cur_index" else key
+                setattr(result, name, int(value))
+            except ValueError:
+                pass
+        elif key == "time":
             try:
                 number = float(value)
                 result.time = number if math.isfinite(number) and number >= 0 else None

@@ -740,11 +740,19 @@ async def get_status(request: Request):
         "n": len(bars),
     }
     from .audible_preview import diagnostic_status
-    trigger_status = diagnostic_status(getattr(manager, 'preview_frame', {}))
+    preview = getattr(manager, 'preview_frame', {})
+    preview = preview if isinstance(preview, dict) else {}
+    trigger_status = diagnostic_status(preview)
     coupling = _storage(request).get_coupling(manager.active_coupling_id)
     energy = _storage(request).get_energy_profile(manager.active_energy_profile_id)
     return {
         **trigger_status,
+        **{key: preview.get(key) for key in (
+            "grid_confidence", "grid_tempo", "grid_cache", "grid_fetch_state",
+            "grid_dropped_reason", "time_to_next_drop_s")},
+        "beat_source": (coupling.beat_accent_mode if coupling
+                        and coupling.beat_accent_mode != "tracker" else
+                        preview.get("beat_source", "tracker")),
         "agc_max_gain": energy.agc_max_gain if energy else None,
         "version": _VERSION_STRING,
         "beat_accent_mode": coupling.beat_accent_mode if coupling else None,

@@ -364,6 +364,7 @@
         "id": "player",
         "lms_host": "127.0.0.1",
         "lms_port": 3483,
+        "lms_web_port": 9000,
         "player_mac": "",
         "player_name": "Replay",
         "speaker_output_delay_ms": 0,

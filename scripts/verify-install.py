@@ -37,6 +37,12 @@ def verify_airplay(manifest: dict, receiver_config: str) -> None:
 
 
 def main() -> None:
+    import librosa
+    import soundfile
+
+    assert librosa.__version__ == "1.0.0"
+    assert soundfile.__version__ == "0.14.0"
+    print("Library grid analyser (librosa 1.0.0, soundfile 0.14.0): PASS")
     commit, short, config = sys.argv[1:]
     root = Path(sys.prefix).resolve()
     package = Path(lampastream.__file__).resolve().parent

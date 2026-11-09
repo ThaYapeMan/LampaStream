@@ -15,6 +15,8 @@ dependencies = [
     "Pillow>=10.4",
     "httpx>=0.27",
     "soxr>=1.0",
+    "librosa==1.0.0",
+    "soundfile==0.14.0",
     "zeroconf>=0.148,<1",
 ]
 

@@ -72,8 +72,12 @@ class LmsTrackPositionSource:
     pushes player changes and ten-second corrections (Lyrion compound queries).
     Target selection stays with the session's existing follower, including auto.
     """
-    def __init__(self, host: str, target: Callable[[], str | None], port: int = 9090):
+    def __init__(self, host: str, target: Callable[[], str | None], port: int = 9090, *,
+                 grid_adapter=None):
         self._host, self._target, self._port = host, target, port
+        self.grid_adapter = grid_adapter
+        self._next_task = None
+        self._grid_identity = None
         self._task: asyncio.Task | None = None
         self._snapshot: TrackPosition | None = None
         self._selected: str | None = None
@@ -121,11 +125,27 @@ class LmsTrackPositionSource:
         if self._selected != target:
             self._snapshot = None
         self._selected = target
+        self._select_grid(status)
         self._set_snapshot(TrackPosition(
             status.title, status.artist, status.time, status.duration,
             status.mode == 'play' and not status.waiting_to_play, observed_at,
             **self._details(status),
         ) if status.mode in ('play', 'pause', 'stop') else None)
+
+    def _select_grid(self, status):
+        key = (self._selected, status.playlist_index, status.track_id, status.filesize)
+        old = self._snapshot
+        repeated = (old is not None and old.position_s is not None
+                    and old.duration_s is not None and old.position_s >= old.duration_s-3
+                    and status.time is not None and status.time < 2)
+        changed = key != self._grid_identity or repeated
+        self._grid_identity = key
+        if self.grid_adapter and self.grid_adapter.select(
+                status.track_id, status.filesize, new_instance=changed):
+            if self._next_task:
+                self._next_task.cancel()
+            self._next_task = asyncio.create_task(self.grid_adapter.playlist_next(
+                self._host, self._port, self._selected, status.playlist_index))
 
     def _details(self, status):
         host = f"[{self._host}]" if ":" in self._host else self._host
@@ -134,6 +154,11 @@ class LmsTrackPositionSource:
         return dict(genre=status.genre, album=status.album, artwork_url=url)
 
     async def close(self) -> None:
+        if self._next_task:
+            self._next_task.cancel()
+            await asyncio.gather(self._next_task, return_exceptions=True)
+        if self.grid_adapter:
+            await self.grid_adapter.close()
         if self._task is not None:
             self._task.cancel()
             try:
@@ -155,7 +180,7 @@ class LmsTrackPositionSource:
                 if target:
                     reader, writer = await asyncio.wait_for(
                         asyncio.open_connection(self._host, self._port, limit=65536), 3)
-                    writer.write(f'{target} status - 1 tags:adglcK subscribe:10\n'.encode())
+                    writer.write(f'{target} status - 1 tags:adglcKuf subscribe:10\n'.encode())
                     await writer.drain()
                     last_received = time.monotonic()
                     while target == self._target():
@@ -175,6 +200,7 @@ class LmsTrackPositionSource:
                         if status.mode not in ('play', 'pause', 'stop'):
                             self._snapshot = None
                             continue
+                        self._select_grid(status)
                         self._set_snapshot(TrackPosition(
                             status.title, status.artist, status.time, status.duration,
                             status.mode == 'play' and not status.waiting_to_play, time.monotonic(),

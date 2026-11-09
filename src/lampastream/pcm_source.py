@@ -1033,6 +1033,9 @@ class YeneyCoreShmStereoSource:
             source_id=self._source_id,
             source_sample_pos=start_abs_pos,
             play_monotonic=stamp_clock.at(start_abs_pos) if stamp_clock else None,
+            content_position_s=((stamp_clock.content_frame + start_abs_pos
+                                 - stamp_clock.anchor_abs_frame)/rate
+                                if stamp_clock and stamp_clock.content_flags & 1 else None),
             over_range=over_range,
             wall_ns=wall_ns,
         )

@@ -96,6 +96,7 @@ def _make_canonical_pipeline(
         use_hpss_separation=profile.use_hpss_separation,
     )
     pipeline._beat_fusion.agc_max_gain = profile.agc_max_gain
+    pipeline._beat_fusion.accent_mode = profile.beat_accent_mode
     return pipeline
 
 
@@ -1023,10 +1024,13 @@ class PlayerManager:
 
         # Adapter selection is ingress/session responsibility. Downstream sees only
         # TrackPositionSource. Resolve the follower's actual selected MAC dynamically.
+        from .lms_grid import LmsGridAdapter
+        grid_adapter = LmsGridAdapter(player.lms_host, player.lms_web_port)
         session.track_source = LmsTrackPositionSource(
             player.lms_host,
             lambda: (session.follower.target_mac if session.follower else
                      (None if player.follow_mode == "sync_group" else profile.player_mac)),
+            grid_adapter=grid_adapter,
         )
         session.track_source.open()
 
@@ -1122,6 +1126,16 @@ class PlayerManager:
         session.shm_source = shm_source
 
         pcm_analyser = _make_canonical_pipeline(shm_source, profile)
+
+        def grid_prior(frame):
+            tracks = session.track_source
+            adapter = getattr(tracks, "grid_adapter", None)
+            if adapter is None or tracks.read() is None:
+                return None
+            return adapter.prior(frame.content_position_s, frame.sample_pos)
+
+        pcm_analyser._beat_fusion.grid_provider = grid_prior
+        pcm_analyser._beat_fusion.accent_mode = profile.beat_accent_mode
 
         engine = SyncEngine(
             None, profile, probe=session.probe,
@@ -1392,13 +1406,21 @@ class PlayerManager:
         # Step 1: build candidate first.  If this raises we have not yet
         # stopped the old pipeline, so no rollback is required.
         candidate = _make_canonical_pipeline(source, profile)
+        previous_fusion = self._active.sync_engine._analyser._beat_fusion
+        candidate._beat_fusion.grid_provider = previous_fusion.grid_provider
+        candidate._beat_fusion.prior.blocked = previous_fusion.prior.blocked
+        candidate._beat_fusion.prior.identity = previous_fusion.prior.identity
 
         # Rebuild closure — used by SyncEngine.replace_analyser if the
         # candidate fails to start.  It re-uses the exact same source and
         # the pre-swap profile so the analyser matches what storage still
         # (or will) contain after the caller rolls back.
         def _rebuild_old() -> CanonicalAnalysisPipeline:
-            return _make_canonical_pipeline(source, old_profile)
+            rebuilt = _make_canonical_pipeline(source, old_profile)
+            rebuilt._beat_fusion.grid_provider = previous_fusion.grid_provider
+            rebuilt._beat_fusion.prior.blocked = previous_fusion.prior.blocked
+            rebuilt._beat_fusion.prior.identity = previous_fusion.prior.identity
+            return rebuilt
 
         try:
             self._active.sync_engine.replace_analyser(

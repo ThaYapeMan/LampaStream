@@ -43,7 +43,9 @@ def beat_row(event, wall):
         wall_t=wall,
         strength=event.get("strength"),
         source=(
-            "tempo_clock"
+            "grid"
+            if event.get("beat_source") == "grid"
+            else "tempo_clock"
             if event.get("predicted")
             else "fused"
             if event.get("on_beat")
@@ -94,6 +96,18 @@ async def log(label, duration, out, url, ready=None):
                         manifest["beat_accent_modes"].append(mode)
                     manifest["beat_accent_mode"] = mode
                     manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
+                if message.get("type") == "frame" and message.get("beat_source"):
+                    manifest_path = out / f"{label}-manifest.json"
+                    manifest = (json.loads(manifest_path.read_text())
+                                if manifest_path.exists() else {"beat_accent_modes": []})
+                    fields = ("beat_source", "grid_confidence", "grid_tempo", "grid_cache",
+                              "grid_fetch_state", "grid_dropped_reason")
+                    states = manifest.setdefault("grid_states", [])
+                    state = {key: message.get(key) for key in fields}
+                    if not states or states[-1] != state:
+                        states.append(state)
+                        manifest.update(state)
+                        manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
                 if message.get("type") == "event":
                     for event in message.get("events", []):
                         if event.get("kind") == "beat":

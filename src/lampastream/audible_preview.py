@@ -100,7 +100,8 @@ class AudiblePreview:
             for event, audible in group:
                 peaks = {band: min(1., max(0., event.strength))
                          if band in event.bands | {'all'} else 0. for band in BANDS}
-                events.append(dict(id=event.id, audible_monotonic=audible,
+                events.append(dict(**({"beat_source": "grid"} if event.id[1] == "grid" else {}),
+                                   id=event.id, audible_monotonic=audible,
                                    detected_audible_monotonic=self.detection_times[event.id],
                                    peaks=peaks, bands=sorted(event.bands),
                                    kind=event.kind, predicted=event.predicted,
@@ -228,8 +229,14 @@ class AudiblePreview:
         recent = [(event, stamp) for identity, (event, stamp) in self.events.items()
                   if identity in self.confirmed and now-1 < stamp <= now]
         rhythm = {key: getattr(features, key, default) for key, default in (
-            ('tempo_bpm', None), ('tempo_alt_bpm', None), ('tempo_confidence', 0.),
+            ('beat_source', 'tracker'), ('grid_confidence', None), ('grid_tempo', None),
+            ('grid_cache', None), ('grid_fetch_state', None), ('grid_dropped_reason', None),
+            ('time_to_next_drop_s', None), ('tempo_bpm', None), ('tempo_alt_bpm', None),
+            ('tempo_confidence', 0.),
             ('tempo_locked', False), ('beat_phase', 0.), ('agc_gain', 1.), ('trigger_ratio', 0.))}
+        mode = self.metadata.profile.beat_accent_mode if self.metadata else "tracker"
+        if mode != "tracker":
+            rhythm["beat_source"] = mode
         rhythm.update(beat_events_per_second=sum(e.kind == 'beat' for e, _ in recent),
                       texture_events_per_second=sum(e.kind == 'onset' for e, _ in recent),
                       beat_grid=[dict(time=stamp, predicted=e.predicted)

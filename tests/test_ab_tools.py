@@ -53,9 +53,12 @@ def test_logger_keeps_exact_clock_and_unknown_track_time():
     assert logger.beat_row(event, 1234)["audible_t"] == 3.125
     assert logger.beat_row(dict(event, detected_audible_t=None), 1234)["audible_t"] is None
     assert logger.beat_row(dict(event, predicted=True), 1234)["source"] == "tempo_clock"
+    grid_row = logger.beat_row(dict(event, predicted=True, beat_source="grid"), 1234)
+    assert grid_row["source"] == "grid"
 
 
-def test_logger_csv_real_socket(tmp_path):
+@pytest.mark.parametrize("mode,source", [("onset", "onset"), ("tracker", "grid")])
+def test_logger_csv_real_socket(tmp_path, mode, source):
     import websockets
 
     logger = load("ab-logger")
@@ -63,7 +66,7 @@ def test_logger_csv_real_socket(tmp_path):
     async def exercise():
         async def send(ws):
             await ws.send(json.dumps(dict(type="status", track={"observed_at": 100.},
-                                          light_timing={"trim_ms": 60}, beat_accent_mode="onset")))
+                                          light_timing={"trim_ms": 60}, beat_accent_mode=mode)))
             await ws.send(
                 json.dumps(
                     dict(
@@ -89,6 +92,8 @@ def test_logger_csv_real_socket(tmp_path):
                             tempo_bpm=128,
                             tempo_confidence=0.9,
                             tempo_locked=True,
+                            beat_source=source, grid_confidence=.95, grid_tempo=128,
+                            grid_cache="hit", grid_fetch_state="ready",
                         )
                     )
                 )
@@ -104,6 +109,13 @@ def test_logger_csv_real_socket(tmp_path):
     status = json.loads((tmp_path / "test-status.jsonl").read_text().splitlines()[0])
     assert status['track']['observed_at'] == 100.
     assert status['light_timing']['trim_ms'] == 60
+    manifest = json.loads((tmp_path / 'test-manifest.json').read_text())
+    assert manifest['beat_source'] == source
+    assert manifest['grid_confidence'] == .95
+    assert manifest['grid_tempo'] == 128
+    assert manifest['grid_cache'] == 'hit'
+    assert manifest['grid_fetch_state'] == 'ready'
+    assert len(manifest['grid_states']) == 1
 
 
 def test_capture_stops_owned_processes_and_player_on_sender_failure(tmp_path, monkeypatch):
@@ -346,7 +358,9 @@ def test_busy_connection_probe_distinguishes_live_and_finished_session():
 
 @pytest.mark.parametrize('peak,detected,passed', [(3000, True, False), (3001, False, False),
                                                 (3001, True, True)])
-def test_smoke_socket_requires_real_level_and_detection(monkeypatch, peak, detected, passed):
+@pytest.mark.parametrize("grid_source", [False, True])
+def test_smoke_socket_requires_real_level_and_detection(
+        monkeypatch, peak, detected, passed, grid_source):
     import websockets
 
     tool = load('ab-tools')
@@ -357,7 +371,8 @@ def test_smoke_socket_requires_real_level_and_detection(monkeypatch, peak, detec
                                           beat_events_per_second=2)))
             if detected:
                 await ws.send(json.dumps(dict(type='event', events=[
-                    dict(kind='beat', predicted=False)])))
+                    dict(kind='beat', predicted=grid_source,
+                         beat_source='grid' if grid_source else 'tracker')])))
             await asyncio.sleep(.2)
         async with websockets.serve(send, '127.0.0.1', 0) as server:
             monkeypatch.setattr(tool, 'URL', f'ws://127.0.0.1:{server.sockets[0].getsockname()[1]}')

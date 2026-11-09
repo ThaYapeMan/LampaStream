@@ -13,19 +13,30 @@ class BeatFusion:
     processor_id = 'beat_fusion'
 
     def __init__(self, sensitivity=50., band='bass', latency_ms=0., gate_dbfs=-60.):
+        from .grid.prior import GridPrior
+        self.prior = GridPrior()
+        self.grid_provider = None
+        self.grid_state = None
+        self.accent_mode = "tracker"
         self.options = sensitivity, band, latency_ms, gate_dbfs
         self.agc_max_gain = 64.
         self.trigger = BassBeatTrigger(sensitivity, band)
         self.clock = TempoClock(latency_ms)
         self.gate = 10**(gate_dbfs/20)
         self.last_grid = None
+        self.last_live_beat = -math.inf
         self.next_grid = None
         self.last_update = -math.inf
+        self.current_time = 0.
 
     def reset(self):
         ceiling = self.agc_max_gain
+        provider, prior, mode = self.grid_provider, self.prior, self.accent_mode
         self.__init__(*self.options)
         self.agc_max_gain = ceiling
+        self.grid_provider, self.prior, self.accent_mode = provider, prior, mode
+        self.prior.next_index = None
+        self.prior.grid = None
 
     def close(self):
         pass
@@ -64,6 +75,7 @@ class BeatFusion:
             # containing attack hop; availability remains the full window end.
             t = (start+960)/48000
             availability = start+2048
+            self.current_time = t
             gate = float(sum(mag**2))**.5/2048 >= self.gate
             beat, texture = self.trigger.process(mag, t, locked=self.clock.locked,
                                                 period=self.clock.period, gate=gate)
@@ -72,6 +84,7 @@ class BeatFusion:
                 self.last_update = t
             events = []
             if beat:
+                self.last_live_beat = t
                 self.clock.trigger(t, beat.strength)
                 # Do not duplicate a predicted grid point already emitted.
                 if self.last_grid is None or abs(t-self.last_grid) > .04:
@@ -87,8 +100,23 @@ class BeatFusion:
                                           predicted=True))
                 self.last_grid = self.next_grid
                 self.next_grid += self.clock.period
+            if self.grid_provider is not None and self.accent_mode == 'tracker':
+                active = self.prior.grid is not None
+                ticks = self.prior.ticks(t, gate, horizon=.1)
+                if self.prior.grid is not None:
+                    events = [self.prior.event(self._event(frame.epoch_id, stamp, availability),
+                                              stamp, strength, index)
+                              for stamp, strength, index in ticks
+                              if abs(stamp-self.last_live_beat) > .07]
+                elif active:
+                    # The live estimator has kept running throughout grid use.
+                    self.last_grid = None
+                self.grid_state = {**(self.grid_state or {}), **self.prior.status(t)}
             for event in events:
-                result.append(ProcessorUpdate(self.processor_id, event.candidate_sample,
-                    event.candidate_sample+480, availability_sample=availability,
+                # A prior can predict future events. Its contribution describes
+                # this observed hop; the event retains its future sample coordinate.
+                sample = start+960 if event.id[1] == 'grid' else event.candidate_sample
+                result.append(ProcessorUpdate(self.processor_id, sample,
+                    sample+480, availability_sample=availability,
                     onset_events=(event,), onset=True, onset_strength=event.strength))
         return result
