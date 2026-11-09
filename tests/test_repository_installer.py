@@ -812,3 +812,23 @@ def test_ab_tools_pinned_set_resolves(tmp_path):
     result = subprocess.run(command, capture_output=True, text=True)
     print('Pinned sender resolution:\n'+result.stdout+result.stderr)
     assert result.returncode == 0, result.stdout+result.stderr
+
+
+def test_grid_cache_check_requires_existing_service_owned_writable_directory(tmp_path):
+    spec = importlib.util.spec_from_file_location(
+        'grid_install_check', ROOT/'scripts/verify-install.py')
+    verification = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(verification)
+    cache = tmp_path/'grids'
+    with pytest.raises(AssertionError, match='missing'):
+        verification.verify_grid_cache(cache, os.getuid())
+    cache.mkdir()
+    verification.verify_grid_cache(cache, os.getuid())
+    with pytest.raises(AssertionError, match='owned and writable'):
+        verification.verify_grid_cache(cache, os.getuid()+1)
+    cache.chmod(0o500)
+    try:
+        with pytest.raises(AssertionError, match='owned and writable'):
+            verification.verify_grid_cache(cache, os.getuid())
+    finally:
+        cache.chmod(0o700)

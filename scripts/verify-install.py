@@ -7,6 +7,7 @@ mode. Native execution is an isolated smoke test.
 import hashlib
 import json
 import os
+import pwd
 import sys
 from pathlib import Path
 
@@ -36,6 +37,13 @@ def verify_airplay(manifest: dict, receiver_config: str) -> None:
         'Unsafe legacy AirPlay timing setting remains')
 
 
+def verify_grid_cache(path: Path, uid: int) -> None:
+    assert path.is_dir(), 'Library grid cache directory missing'
+    metadata = path.stat()
+    assert metadata.st_uid == uid and metadata.st_mode & 0o200, (
+        'Library grid cache must be owned and writable by lampastream')
+
+
 def main() -> None:
     import librosa
     import soundfile
@@ -43,6 +51,8 @@ def main() -> None:
     assert librosa.__version__ == "1.0.0"
     assert soundfile.__version__ == "0.14.0"
     print("Library grid analyser (librosa 1.0.0, soundfile 0.14.0): PASS")
+    verify_grid_cache(Path('/var/lib/lampastream/grids'), pwd.getpwnam('lampastream').pw_uid)
+    print("Library grid cache directory: PASS")
     commit, short, config = sys.argv[1:]
     root = Path(sys.prefix).resolve()
     package = Path(lampastream.__file__).resolve().parent

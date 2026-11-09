@@ -237,6 +237,7 @@ id lampastream >/dev/null 2>&1 || useradd --system --gid lampastream --home-dir 
 usermod -a -G audio lampastream
 install -d -m 0755 "$PREFIX/releases"
 install -d -m 0750 -o lampastream -g lampastream /etc/lampastream
+install -d -m 0750 -o lampastream -g lampastream /var/lib/lampastream/grids
 # An earlier checkout-local venv is archived only after the new candidate verifies.
 [[ ! -e "$PREFIX/.venv" || -L "$PREFIX/.venv" || -f "$PREFIX/.venv/pyvenv.cfg" ]] ||
     fail '/opt/lampastream/.venv exists but is not a recognizable virtual environment'
