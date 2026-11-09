@@ -270,7 +270,13 @@ def _migrate_accents(data):
         row.setdefault("beat_accent_mode", "onset")
     for row in data["energy_profiles"]:
         row.setdefault("agc_max_gain", 64.0)
-        row.setdefault("onset_gain_floor", 0.3)
+        rename(row, "onset_gain_floor", "tracker_gain_floor")
+        row.setdefault("tracker_gain_floor", 0.3)
+        row.setdefault("onset_relative_k", 2.0)
+        row.setdefault("onset_reference_window_s", 3.0)
+        row.setdefault("onset_refractory_ms", 120.0)
+        row.setdefault("onset_full_k", 3.0)
+
 
 
 def convert(original: dict) -> dict:
@@ -284,6 +290,12 @@ def convert(original: dict) -> dict:
         _migrate_player_latency(data)
         _migrate_release(data)
         _migrate_bar_falloff(data)
+        validate_current(data, references=True)
+        return data
+    if original.get("schema_version") == 3:
+        data = copy.deepcopy(original)
+        data["schema_version"] = SCHEMA_VERSION
+        _migrate_accents(data)
         validate_current(data, references=True)
         return data
     if original.get("schema_version") == 2:

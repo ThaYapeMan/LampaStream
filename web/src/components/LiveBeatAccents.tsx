@@ -10,9 +10,10 @@ export function LiveBeatAccents({ coupling, profile, onCoupling, onProfile }: {
   const [busy, setBusy] = useState(false)
   const pending = useRef(false)
   const [error, setError] = useState('')
-  const [draft, setDraft] = useState({ agc_max_gain: String(profile?.agc_max_gain ?? 64), onset_gain_floor: String(profile?.onset_gain_floor ?? .3) })
+  const values = () => ({ agc_max_gain:String(profile?.agc_max_gain ?? 64), tracker_gain_floor:String(profile?.tracker_gain_floor ?? .3), onset_relative_k:String(profile?.onset_relative_k ?? 2), onset_reference_window_s:String(profile?.onset_reference_window_s ?? 3), onset_refractory_ms:String(profile?.onset_refractory_ms ?? 120), onset_full_k:String(profile?.onset_full_k ?? 3) })
+  const [draft, setDraft] = useState(values)
   const timer = useRef<ReturnType<typeof setTimeout>>()
-  useEffect(() => { clearTimeout(timer.current); setDraft({ agc_max_gain: String(profile?.agc_max_gain ?? 64), onset_gain_floor: String(profile?.onset_gain_floor ?? .3) }) }, [profile])
+  useEffect(() => { clearTimeout(timer.current); setDraft(values()) }, [profile])
   useEffect(() => () => clearTimeout(timer.current), [])
   async function save(action: () => Promise<void>) {
     if (pending.current || !coupling) return
@@ -23,12 +24,28 @@ export function LiveBeatAccents({ coupling, profile, onCoupling, onProfile }: {
   function commit(field: keyof typeof draft, value: string) {
     clearTimeout(timer.current)
     const number = Number(value)
-    if (!value.trim() || !Number.isFinite(number) || (field === 'agc_max_gain' ? number < 8 : number < 0 || number > 1)) {
-      setError('AGC ceiling must be at least 8; trigger floor must be 0–1'); return
+    const valid = value.trim() && Number.isFinite(number) && (
+      field === 'agc_max_gain' ? number >= 8 : field === 'tracker_gain_floor' ? number >= 0 && number <= 1
+      : field === 'onset_refractory_ms' ? number >= 60 && number <= 200
+      : field === 'onset_reference_window_s' ? number > 0 : number > 1)
+    if (!valid || (field === 'onset_full_k' && number < Number(draft.onset_relative_k))) {
+      setError('Require gain ≥8, k >1, window >0, refractory 60–200 ms and full ratio ≥ onset ratio'); return
     }
-    if (profile && number !== (profile[field] ?? (field === 'agc_max_gain' ? 64 : .3)))
-      void save(async () => onProfile(await updateEnergyProfile(profile.id, { [field]: number })))
+    if (profile && number !== Number(values()[field])) {
+      const body: Partial<EnergyProfile> = { [field]: number }
+      if (field === 'onset_relative_k' && number > (profile.onset_full_k ?? 3)) body.onset_full_k = number+1
+      void save(async () => onProfile(await updateEnergyProfile(profile.id, body)))
+    }
   }
+  const fields = [
+    ['agc_max_gain','AGC ceiling','×',8],
+    ['onset_relative_k','Onset ratio','×',.1],
+    ['onset_reference_window_s','Window','s',.5],
+    ['onset_refractory_ms','Refractory','ms',10],
+    ['onset_full_k','Full ratio','×',.1],
+    ['tracker_gain_floor','Tracker floor','',.05],
+  ] as const
+
   return <section aria-label="Live accents" className="space-y-2">
     <div className="flex min-h-11 flex-wrap items-center gap-3">
       <span className="text-sm text-muted-foreground">Beat accent</span>
@@ -38,10 +55,10 @@ export function LiveBeatAccents({ coupling, profile, onCoupling, onProfile }: {
         onChange={value => void save(async () => onCoupling(await updateCoupling(coupling!.id, { beat_accent_mode: value as Coupling['beat_accent_mode'] })))} />
       <span className="text-xs text-muted-foreground">{coupling?.name ?? 'No active coupling'}</span>
     </div>
-    <div className="flex min-h-6 flex-wrap items-center gap-5">
-      {(['agc_max_gain', 'onset_gain_floor'] as const).map(field => <CompactEnergyNumber key={field}
-        label={field === 'agc_max_gain' ? 'AGC ceiling' : 'Trigger floor at ceiling'} unit={field === 'agc_max_gain' ? '×' : ''}
-        value={draft[field]} step={field === 'agc_max_gain' ? 8 : .05} disabled={!coupling || !profile || busy} invalid={!!error}
+    <div className="flex min-h-12 flex-wrap items-center gap-3">
+      {fields.map(([field,label,unit,step]) => <CompactEnergyNumber key={field}
+        label={label} unit={unit} value={draft[field]} step={step}
+        disabled={!coupling || !profile || busy} invalid={!!error}
         onChange={value => { clearTimeout(timer.current); setDraft(d => ({...d, [field]:value})) }}
         onCommit={() => commit(field, draft[field])}
         onStep={value => { clearTimeout(timer.current); setDraft(d => ({...d, [field]:value})); timer.current = setTimeout(() => commit(field, value), 250) }} />)}

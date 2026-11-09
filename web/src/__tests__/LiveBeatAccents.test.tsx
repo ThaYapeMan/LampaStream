@@ -4,7 +4,7 @@ import { LiveBeatAccents } from '@/components/LiveBeatAccents'
 import { updateCoupling, updateEnergyProfile, type Coupling, type EnergyProfile } from '@/lib/api'
 vi.mock('@/lib/api', () => ({updateCoupling:vi.fn(), updateEnergyProfile:vi.fn(), ENERGY_SOURCE_OPTIONS:[]}))
 const coupling = {id:'c', name:'Living room', beat_accent_mode:'onset'} as Coupling
-const profile = {id:'e', name:'Evening', agc_max_gain:64, onset_gain_floor:.3} as EnergyProfile
+const profile = {id:'e', name:'Evening', agc_max_gain:64, tracker_gain_floor:.3} as EnergyProfile
 
 describe('LiveBeatAccents', () => {
   it('disables the mode and parameters without an active coupling', () => {

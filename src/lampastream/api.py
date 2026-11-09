@@ -342,7 +342,11 @@ class EnergyProfileCreateBody(BaseModel):
     peak_reshape_enabled: bool = False
     peak_reshape_power: float = 0.4
     agc_max_gain: float = Field(default=64., ge=8, allow_inf_nan=False)
-    onset_gain_floor: float = Field(default=.3, ge=0, le=1, allow_inf_nan=False)
+    tracker_gain_floor: float = Field(default=.3, ge=0, le=1, allow_inf_nan=False)
+    onset_relative_k: float = Field(default=2., gt=1, allow_inf_nan=False)
+    onset_reference_window_s: float = Field(default=3., gt=0, allow_inf_nan=False)
+    onset_refractory_ms: float = Field(default=120., ge=60, le=200, allow_inf_nan=False)
+    onset_full_k: float = Field(default=3., gt=1, allow_inf_nan=False)
     blend_response: float = 0.1
 
 
@@ -365,7 +369,11 @@ class EnergyProfilePatchBody(BaseModel):
     peak_reshape_enabled: bool | None = None
     peak_reshape_power: float | None = None
     agc_max_gain: float | None = Field(default=None, ge=8, allow_inf_nan=False)
-    onset_gain_floor: float | None = Field(default=None, ge=0, le=1, allow_inf_nan=False)
+    tracker_gain_floor: float | None = Field(default=None, ge=0, le=1, allow_inf_nan=False)
+    onset_relative_k: float | None = Field(default=None, gt=1, allow_inf_nan=False)
+    onset_reference_window_s: float | None = Field(default=None, gt=0, allow_inf_nan=False)
+    onset_refractory_ms: float | None = Field(default=None, ge=60, le=200, allow_inf_nan=False)
+    onset_full_k: float | None = Field(default=None, gt=1, allow_inf_nan=False)
     blend_response: float | None = None
 
 
@@ -492,7 +500,8 @@ _C_PCM_FIELDS: frozenset[str] = frozenset({
 })
 _C_RENDER_FIELDS: frozenset[str] = frozenset({
     "entertainment_area_name", "light_count", "beat_accent_mode",
-    "agc_max_gain", "onset_gain_floor",
+    "agc_max_gain", "tracker_gain_floor", "onset_relative_k",
+    "onset_reference_window_s", "onset_refractory_ms", "onset_full_k",
     # EnergyProfile patch fields that propagate render changes:
     "high_energy_effect_id", "low_energy_effect_id",
     "blend_start", "blend_end", "blend_response",

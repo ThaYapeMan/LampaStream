@@ -23,7 +23,7 @@ from .models import (
 )
 from .palettes import Palette
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 COLLECTIONS = {
     "palettes": Palette,
     "genre_rules": GenreRule,
@@ -85,7 +85,9 @@ def validate_current(data: dict, *, references: bool = False) -> None:
                 raise ValueError(f"{key}: missing/duplicate ID {identity!r}")
             seen.add(identity)
             required = ({"beat_accent_mode"} if key == "couplings" else
-                        {"agc_max_gain", "onset_gain_floor"} if key == "energy_profiles" else set())
+                        {"agc_max_gain", "tracker_gain_floor", "onset_relative_k",
+                         "onset_reference_window_s", "onset_refractory_ms", "onset_full_k"}
+                        if key == "energy_profiles" else set())
             if not required <= row.keys():
                 raise ValueError(
                     f"{key}/{identity}: missing accent settings; run installer migration")

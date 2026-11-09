@@ -2001,18 +2001,38 @@ def test_accent_gain_limits_validate_and_propagate_live(client):
     coupling = _make_full_coupling(client._storage)
     client._storage.set_active_coupling_id(coupling.id)
     endpoint = f"/api/energy-profiles/{coupling.energy_profile_id}"
-    for body in ({"agc_max_gain": 128.}, {"onset_gain_floor": .7}):
+    for body in ({"agc_max_gain": 128.}, {"tracker_gain_floor": .7}):
         assert client.patch(endpoint, json=body).status_code == 200
         for profile in client._manager.update_render.call_args.args:
             if profile is not None:
                 for field, value in body.items():
                     assert getattr(profile, field) == value
     original = client.get(endpoint).json()
-    for body in ({"agc_max_gain": 7.}, {"onset_gain_floor": -1},
-                 {"onset_gain_floor": 1.1}):
+    for body in ({"agc_max_gain": 7.}, {"tracker_gain_floor": -1},
+                 {"tracker_gain_floor": 1.1}):
         assert client.patch(endpoint, json=body).status_code == 422
         assert client.get(endpoint).json() == original
     assert client.patch(f"/api/couplings/{coupling.id}",
                         json={"beat_accent_mode": "invalid"}).status_code == 422
+    client._manager.deactivate.assert_not_awaited()
+    client._manager.update_onset_pipeline.assert_not_called()
+
+
+def test_relative_gate_parameters_propagate_live_without_analysis_restart(client):
+    coupling = _make_full_coupling(client._storage)
+    client._storage.set_active_coupling_id(coupling.id)
+    endpoint = f"/api/energy-profiles/{coupling.energy_profile_id}"
+    body = dict(onset_relative_k=2.5, onset_full_k=3.5,
+                onset_reference_window_s=4., onset_refractory_ms=160.)
+    assert client.patch(endpoint,json=body).status_code == 200
+    for profile in client._manager.update_render.call_args.args:
+        if profile is not None:
+            for key,value in body.items():
+                assert getattr(profile,key) == value
+    original = client.get(endpoint).json()
+    for invalid in (dict(onset_full_k=2.),dict(onset_refractory_ms=59.),
+                    dict(onset_reference_window_s=0.),dict(onset_relative_k=1.)):
+        assert client.patch(endpoint,json=invalid).status_code in (400,422)
+        assert client.get(endpoint).json() == original
     client._manager.deactivate.assert_not_awaited()
     client._manager.update_onset_pipeline.assert_not_called()

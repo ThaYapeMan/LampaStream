@@ -13,13 +13,14 @@ import subprocess
 import sys
 from dataclasses import replace
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
 from replay_chain import decode  # noqa: E402
 
-from lampastream.beat_accents import select_events  # noqa: E402
+from lampastream.beat_accents import RelativeOnsetGate, select_events  # noqa: E402
 from lampastream.canonicalizer import (  # noqa: E402
     AudioCanonicalizer,
     CanonicalData,
@@ -33,11 +34,15 @@ from lampastream.player_manager import _make_canonical_pipeline  # noqa: E402
 BREAKS = [(210, 212), (240, 242), (261, 262), (270, 272)]
 
 
-def bench(path, out, reference=None, *, ceiling=64., floor=.3, estimate_tempo=False):
+def bench(path, out, reference=None, *, ceiling=64., floor=.3, estimate_tempo=False,
+          k=2., window_s=3., refractory_ms=120., full_k=None):
     pcm, rate, fmt = decode(path)
-    profile = Profile(agc_max_gain=ceiling, onset_gain_floor=floor)
+    full_k = k+1 if full_k is None else full_k
+    profile = Profile(agc_max_gain=ceiling, tracker_gain_floor=floor, onset_relative_k=k,
+        onset_reference_window_s=window_s, onset_refractory_ms=refractory_ms, onset_full_k=full_k)
+    onset_gate = RelativeOnsetGate(k, window_s, refractory_ms, full_k, profile.onset_delta_abs)
     pipeline = _make_canonical_pipeline(None, profile)
-    pipeline._beat_fusion.gain_settings = profile.agc_max_gain, profile.onset_gain_floor
+    pipeline._beat_fusion.gain_settings = profile.agc_max_gain, profile.tracker_gain_floor
     canonicalizer = AudioCanonicalizer()
     selected = {mode: [] for mode in ('onset', 'tracker')}
     maximum_gain = 0.
@@ -49,11 +54,13 @@ def bench(path, out, reference=None, *, ceiling=64., floor=.3, estimate_tempo=Fa
             maximum_gain = max(maximum_gain, record.features.agc_gain)
         for record in records:
             raw_events.extend(dict(time_s=e.candidate_sample/48000,
-                strength=e.strength, strength_raw=e.strength_raw, gain=record.features.agc_gain)
+                strength=e.strength, strength_raw=e.strength_raw, gain=record.features.agc_gain,
+                bass_strength=record.features.onset_bass_strength, bands=','.join(sorted(e.bands)),
+                event_id=json.dumps(e.id), epoch=e.epoch)
                 for e in record.features.diagnostic_events)
         for mode in selected:
             events = select_events(mode, [e for r in records for e in r.features.onset_events],
-                                   records, profile.agc_max_gain, profile.onset_gain_floor)
+                                   records, gate=onset_gate)
             selected[mode].extend(events)
             if mode == "onset":
                 accepted_events.extend(dict(time_s=e.candidate_sample/48000,
@@ -91,10 +98,12 @@ def bench(path, out, reference=None, *, ceiling=64., floor=.3, estimate_tempo=Fa
     probe = json.loads(subprocess.check_output(['ffprobe', '-v', 'error',
         '-show_entries', 'stream=codec_name,sample_rate,channels:format=duration',
         '-of', 'json', str(path)], text=True))
-    summary = dict(input=str(path.resolve()), input_sha256=hashlib.sha256(
+    summary = dict(relative_gate=dict(k=k, window_s=window_s, refractory_ms=refractory_ms,
+        full_k=full_k, absolute_min=profile.onset_delta_abs), input=str(path.resolve()),
+        input_sha256=hashlib.sha256(
         path.read_bytes()).hexdigest(), source_probe=probe, format=fmt, duration_s=duration,
                    agc_max_gain=profile.agc_max_gain, maximum_observed_gain=maximum_gain,
-                   onset_gain_floor=profile.onset_gain_floor, modes={})
+                   tracker_gain_floor=profile.tracker_gain_floor, modes={})
     gains = np.array([r['gain'] for r in gain_samples])
     weights = np.array([r['duration_s'] for r in gain_samples])
     order = np.argsort(gains)
@@ -131,7 +140,9 @@ def bench(path, out, reference=None, *, ceiling=64., floor=.3, estimate_tempo=Fa
             tempo, beats = librosa.beat.beat_track(y=mono, sr=rate, start_bpm=prior)
             bpm = float(np.asarray(tempo).reshape(-1)[0])
             estimates[str(prior)] = dict(start_bpm=prior, tempo_bpm=bpm,
-                                         beats_per_s=bpm/60, detected_beats=len(beats))
+                                         beats_per_s=bpm/60, detected_beats=len(beats),
+                                         beat_times_s=librosa.frames_to_time(
+                                             beats, sr=rate).tolist())
         summary['librosa'] = dict(version=librosa.__version__, estimates=estimates,
             reference='72.0', note='72 BPM prior supplied by owner; default prior also reported')
     reference_times = None
@@ -166,8 +177,67 @@ def bench(path, out, reference=None, *, ceiling=64., floor=.3, estimate_tempo=Fa
         if reference:
             os.environ['AB_REFERENCE_BEATS'] = str(reference)
         ab.write_analysis(destination, path)
+    add_coincidence(summary, selected)
     (out/'summary.json').write_text(json.dumps(summary, indent=2)+'\n')
     print(json.dumps(summary, indent=2))
+
+
+def add_coincidence(summary, selected):
+    estimates = summary.get('librosa', {}).get('estimates', {})
+    beats = estimates.get('120.0', {}).get('beat_times_s')
+    if beats is None:
+        return
+    for mode, events in selected.items():
+        coincident = 0
+        for event in events:
+            stamp = event.candidate_sample/48000
+            index = bisect.bisect_left(beats, stamp-.07)
+            coincident += index < len(beats) and beats[index] <= stamp+.07+1e-9
+        summary['modes'][mode]['librosa_coincidence'] = dict(
+            coincident=coincident, fired=len(events), tolerance_s=.07,
+            ratio=coincident/len(events) if events else None)
+
+
+def cached_gate(source, out, reference, *, k, refractory_ms, window_s=3., full_k=None):
+    """Replay immutable detector candidates through the production lighting gate."""
+    full_k = k+1 if full_k is None else full_k
+    summary = json.loads((source/'summary.json').read_text())
+    summary['candidate_cache'] = str(source.resolve())
+    minimum = summary['relative_gate']['absolute_min']
+    summary['relative_gate'] = dict(k=k, window_s=window_s, refractory_ms=refractory_ms,
+                                    full_k=full_k, absolute_min=minimum)
+    gate = RelativeOnsetGate(k, window_s, refractory_ms, full_k, minimum)
+    events = []
+    with (source/'raw-onsets.csv').open() as stream:
+        for row in csv.DictReader(stream):
+            event = SimpleNamespace(id=tuple(json.loads(row['event_id'])), epoch=row['epoch'],
+                candidate_sample=round(float(row['time_s'])*48000), predicted=False,
+                bands=frozenset(row['bands'].split(',')), strength_raw=float(row['strength_raw']),
+                strength=float(row['strength']))
+            if gate.accepts(event, float(row['bass_strength'])):
+                events.append(event)
+    mode = dict(accents=len(events), accents_per_s=len(events)/summary['duration_s'],
+                accents_per_minute=60*len(events)/summary['duration_s'],
+                predicted=0, break_accents=([sum(a <= e.candidate_sample/48000 < b for e in events)
+                                           for a,b in BREAKS]
+                                          if summary['duration_s'] >= 272 else None))
+    if reference:
+        with reference.open() as stream:
+            refs = [float(row['time_s']) for row in csv.DictReader(stream)]
+        mode['non_break_hits'] = {str(t): reference_hits(events, refs, summary['duration_s'],t)
+                                  for t in (.01,.05)}
+    summary['modes']['onset'] = mode
+    summary['strengths']['onset_accents'] = {field: distribution(
+        [getattr(event, field) for event in events]) for field in ('strength','strength_raw')}
+    add_coincidence(summary, {'onset':events})
+    out.mkdir(parents=True, exist_ok=True)
+    with (out/'accepted-onsets.csv').open('w') as stream:
+        writer = csv.DictWriter(stream,['time_s','strength_raw'])
+        writer.writeheader()
+        writer.writerows(dict(time_s=e.candidate_sample/48000, strength_raw=e.strength_raw)
+                         for e in events)
+    (out/'summary.json').write_text(json.dumps(summary,indent=2)+'\n')
+    return summary
 
 
 def reference_hits(events, references, duration, tolerance):
@@ -207,9 +277,20 @@ def main():
     parser.add_argument('--ceiling', type=float, default=64.)
     parser.add_argument('--floor', type=float, default=.3)
     parser.add_argument('--estimate-tempo', action='store_true')
+    parser.add_argument('--relative-k', type=float, default=2.)
+    parser.add_argument('--window-s', type=float, default=3.)
+    parser.add_argument('--refractory-ms', type=float, default=120.)
+    parser.add_argument('--full-k', type=float)
+    parser.add_argument('--candidate-cache', type=Path)
     args = parser.parse_args()
-    bench(args.input, args.out, args.reference, ceiling=args.ceiling, floor=args.floor,
-          estimate_tempo=args.estimate_tempo)
+    if args.candidate_cache:
+        print(json.dumps(cached_gate(args.candidate_cache, args.out, args.reference,
+            k=args.relative_k, refractory_ms=args.refractory_ms, window_s=args.window_s,
+            full_k=args.full_k), indent=2))
+    else:
+        bench(args.input, args.out, args.reference, ceiling=args.ceiling, floor=args.floor,
+              estimate_tempo=args.estimate_tempo, k=args.relative_k, window_s=args.window_s,
+              refractory_ms=args.refractory_ms, full_k=args.full_k)
 
 
 if __name__ == '__main__':

@@ -155,41 +155,54 @@ Its optional 64-byte YNPT tail exports `content_frame` at offset 52 and
 The segment is `/dev/shm/yeney-<lowercase-mac>`; the SHM v1 layout, ABI version,
 YNPT tail and `measurement_basis=lms-content-v1` contract are unchanged.
 
-## Live beat accents and gain limits (schema 3)
+## Live beat accents and the relative onset gate (schema 4)
 
-`Coupling.beat_accent_mode` selects lighting events before the scheduler: `off`
-feeds no events, `onset` feeds the existing BeatDetector events, and `tracker`
-feeds BeatFusion's detected/predicted beat and texture stream. New couplings and
-installer-migrated couplings use `onset`. Tracker analysis runs in every mode;
-measured tempo remains visible. All Effects receive the same selected feature
-stream and return Scenes as before. No source/output-specific timing rule is added.
-A live mode change invalidates scheduled events, unsent scenes, and envelope history.
+Coupling `beat_accent_mode` is live: Off supplies no accent events; Onset admits
+confirmed detector candidates through RelativeOnsetGate; Tracker consumes the
+existing fused stream. Selection happens before scheduler intake. Detector
+candidate generation, peak picking, canonical sample timing, audible clocks,
+tempo estimation and the Effects → Scenes boundary are unchanged.
 
-Energy Profiles persist `agc_max_gain` (default 64, minimum 8) and
-`onset_gain_floor` (default 0.3, range 0–1). Both update live. For gain `g` and
-ceiling `c`, let `p = 0` for `g <= 8`, otherwise
-`p = min(1, (g - 8) / max(c - 8, 1e-9))`. Thus at ceiling 8 the floor remains
-unchanged, and at any larger ceiling it rises monotonically to its configured
-maximum. BeatFusion's four energy triggers clamp `g = min(c, 1/max(slow, 1e-4))`
-and require logarithmic onset value at least `base_floor + onset_gain_floor*p`.
-The detector stream in Onset mode requires raw detector candidate strength at least
-`onset_gain_floor*min(g,c)*p`; its existing picker thresholds and silence gate still apply.
-This is an additional accent gate, not a change to the detector or tempo estimator.
-It leaves the floor unchanged through 8× and prevents gain alone from making
-near-silent energy pulses pass the energy trigger at full gain.
+The Onset gate uses raw candidate strengths, not saturated normalized confidence
+and not gain as a proxy for quietness. `onset_reference_window_s` W defaults to
+3 s. Before each decision, compute the median of all previous distinct candidates
+in [t−W,t], including candidates rejected by the ratio, absolute floor or
+refractory check. The current candidate is added after the decision. An empty
+reference seeds to the current value, so a constant level cannot cause a startup
+accent. Window and refractory time use candidate sample positions / 48000, not
+wall time. Duplicated event IDs cannot retrain or fire twice. Epoch/mode changes
+reset admission state; live changes to the four gate parameters retain history.
+An analyser-method/minimum change resets the reference to avoid mixing units.
 
-The installer explicitly upgrades persisted schema 2 to 3, preserving exact
-original bytes in a `pre-v3` backup. Runtime rejects old versions and schema-3
-couplings/profiles missing these settings. The display marks AGC as capped when
-its current gain reaches the active Energy Profile ceiling.
+When a candidate has bass support, use its published `onset_bass_strength` and
+the median of recent supported bass strengths, with `onset_relative_k` k. A
+bass-only event can use its own raw strength. Without bass support, require raw
+full-band strength ≥ `onset_full_k` × full-band median. Full-band history contains
+all candidates, including bass-supported candidates. Require k>1 and full k≥k.
+The default Combined analyser publishes full-band candidates without separate
+bass raw strengths; it therefore uses this stricter full-band branch. The gate
+does not infer bass from normalized bars or manufacture new band analysis.
 
-The LIGHTS-01 sendback-2 file bench tested floor coefficients 0.08, 0.10, 0.11,
-0.12, 0.15 and 0.3 at 64× on both reference recordings. No tested coefficient
-met the combined ballad-rate, zero-break-events and unchanged non-break recall
-criteria. The persisted default remains **0.3 by the owner's explicit fallback**,
-pending the owner's default decision; it is not a validated two-track setting.
-In particular, 0.11 gives Lou Rawls 1.061 events/s but leaves 43 Mau P break events
-and 751/797 reference hits versus 793/797 at zero added floor (±50 ms matching).
-Mau P's gain median/p90 are 64× and time above 8× is 99.990% of the file, so the
-floor must not be described as inactive on loud material. No detector, tracker
-or floor-mapping redesign was made in response to this trade-off.
+Both branches also require strength ≥ the active analyser's existing
+`onset_delta_abs` minimum (default 0.02 in the detector's existing raw units).
+`onset_refractory_ms` r defaults to 120 ms, editable from 60 to 200 ms; any
+candidate inside the interval after a fired accent is rejected but still trains
+its reference. k, W, r and full k are Energy Profile settings, editable live in
+the existing Now Playing parameter row without source/session/analyser restart.
+Provisional defaults are k=2, W=3 s, r=120 ms, full k=3 pending the owner decision
+recorded in the sendback-3 report: none of the requested sweep points meets Mau P's
+recall target, so the specified fallback has no eligible point.
+
+The 64× gain ceiling stays. `onset_gain_floor` is removed from schema-4 runtime
+models and renamed to `tracker_gain_floor` by installer migration, preserving its
+exact value. This legacy floor still controls Tracker's existing gain mapping
+and is labelled Tracker floor in the UI. It has no role in Onset admission.
+Tracker's gain rule and all DSP are unchanged: for g≤8 the additional floor is
+zero, otherwise p=min(1,(g−8)/max(c−8,1e-9)), and its logarithmic threshold is
+base_floor + tracker_gain_floor × p. Do not interpret gain as audio quietness.
+
+Installer migration upgrades schema 3 to 4, renames the old field and explicitly
+persists the four relative parameters. It retains exact-byte pre-v4 backups and
+atomic replacement. Runtime rejects schema 3 and schema-4 rows missing the new
+fields; there is no silent runtime migration. Older installer conversions also
+materialize the new settings before validation.

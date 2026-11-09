@@ -1431,3 +1431,26 @@ same tolerance and reference set apply to every coefficient and the f=0 baseline
 ±10 ms counts are also exported. These are file/event scores, not lamp observations.
 No coefficient from the requested grid satisfies both tracks; the owner-directed
 fallback keeps 0.3. See the itemised LIGHTS-01 report for the complete trade-off table.
+
+
+## LIGHTS-01 sendback 3 relative-gate bench
+
+The relative sweep keeps detector candidates immutable and replays them through
+the production RelativeOnsetGate for k={1.5,2,2.5,3,4}, r={80,120,160} ms,
+W=3 s and full k=k+1. A full DSP run on each file captures candidate IDs, raw
+strengths and available raw bass support; cached replay at matching settings is
+checked against the full run's results. This avoids changing candidate generation
+between points. `--candidate-cache`, `--relative-k`, `--refractory-ms`, `--window-s`
+and `--full-k` expose the same path in scripts/bench-beat-accents.py.
+
+Librosa's actual offline beat positions are exported. Lou coincidence counts
+fired events within ±70 ms of any offline beat, divided by fired events (empty
+outputs have no ratio). Mau P retains the fixed ±50/±10 ms hit definitions and
+four break windows from sendback 2. None of this measures lamp hardware timing.
+The Combined candidate stream has no separate bass raw support; the published
+full-band branch is used, rather than altering the analyser to make a score pass.
+
+The prior tracker f=0 artifact is 756/797, not 760/797. The 760/797 artifact used
+f=0.11. Sendback 3 reports both miss-bin tables with this provenance distinction;
+a fresh f=0 production-DSP run reproduces the original tracker metrics exactly.
+No tracker fix or re-timing is made.

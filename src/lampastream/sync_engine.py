@@ -3028,6 +3028,11 @@ class SyncEngine:
         # code detect the situation, and no new reader is spawned until
         # every retiring worker has exited.
         self._retiring: list[AudioPipeline] = []
+        from .beat_accents import RelativeOnsetGate
+        self._onset_accent_gate = RelativeOnsetGate()
+        self._accent_gate_context = (profile.beat_accent_mode, profile.onset_method,
+                                     profile.onset_delta_abs)
+        self._configure_accent_gain()
 
     def update_probe(self, probe: LatencyProbe) -> None:
         """Swap the latency probe live. Safe to call from the asyncio event loop."""
@@ -3513,10 +3518,20 @@ class SyncEngine:
             loudness_short_term_lufs=short_term)
 
     def _configure_accent_gain(self):
+        gate = getattr(self, "_onset_accent_gate", None)
+        if gate is not None:
+            context = (self.profile.beat_accent_mode, self.profile.onset_method,
+                       self.profile.onset_delta_abs)
+            if self._accent_gate_context != context:
+                gate.reset()
+            self._accent_gate_context = context
+            gate.configure(self.profile.onset_relative_k, self.profile.onset_reference_window_s,
+                           self.profile.onset_refractory_ms, self.profile.onset_full_k,
+                           self.profile.onset_delta_abs)
         fusion = getattr(self._analyser, "_beat_fusion", None)
         if fusion is not None:
             fusion.gain_settings = (
-                self.profile.agc_max_gain, self.profile.onset_gain_floor)
+                self.profile.agc_max_gain, self.profile.tracker_gain_floor)
 
     def _render_generation(self, output):
         publication = (getattr(self._analyser, "_latest_pub", None)
@@ -3598,7 +3613,7 @@ class SyncEngine:
             mode = self.profile.beat_accent_mode
             events = select_events("tracker" if self.profile.diagnostic_onsets
                                    and mode == "onset" else mode, events, records,
-                                   self.profile.agc_max_gain, self.profile.onset_gain_floor)
+                                   gate=self._onset_accent_gate)
             current_generation = self._render_generation(output)
             if current_generation != generation:
                 schedule.reset(current_generation)

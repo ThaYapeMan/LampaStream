@@ -26,6 +26,17 @@ ENERGY_SOURCES: frozenset[str] = frozenset({
 })
 
 
+def _validate_relative_gate(profile):
+    values = (profile.onset_relative_k, profile.onset_reference_window_s,
+              profile.onset_refractory_ms, profile.onset_full_k)
+    if not all(type(v) in (int, float) and math.isfinite(v) for v in values):
+        raise ValueError("Relative onset gate parameters must be finite")
+    if (profile.onset_relative_k <= 1 or profile.onset_reference_window_s <= 0
+            or not 60 <= profile.onset_refractory_ms <= 200
+            or profile.onset_full_k < profile.onset_relative_k):
+        raise ValueError("Require k > 1, window > 0, refractory 60..200 ms and full k >= k")
+
+
 def _validate_accent_gain(ceiling, floor):
     if (type(ceiling) not in (int, float) or not math.isfinite(ceiling) or ceiling < 8
             or type(floor) not in (int, float) or not math.isfinite(floor) or not 0 <= floor <= 1):
@@ -284,7 +295,11 @@ class Profile:
     blend_start: float = 0.3
     blend_end: float = 0.7
     agc_max_gain: float = 64.0
-    onset_gain_floor: float = 0.3
+    tracker_gain_floor: float = 0.3  # Tracker only; retained to preserve its gain rule.
+    onset_relative_k: float = 2.0
+    onset_reference_window_s: float = 3.0
+    onset_refractory_ms: float = 120.0
+    onset_full_k: float = 3.0
     energy_source: str = "sustained"
     lufs_floor: float = -30.0
     lufs_ceiling: float = -8.0
@@ -384,7 +399,8 @@ class Profile:
         _validate_onset_effect(self)
         _validate_band_colours(self.band_colours, self.band_playback,
                                self.band_advance, self.band_advance_interval_s)
-        _validate_accent_gain(self.agc_max_gain, self.onset_gain_floor)
+        _validate_relative_gate(self)
+        _validate_accent_gain(self.agc_max_gain, self.tracker_gain_floor)
         _validate_energy_source(
             self.energy_source, self.lufs_floor, self.lufs_ceiling, self.adaptation_tau_s,
             self.peak_envelope_auto, self.peak_attack_s, self.peak_release_s,
@@ -760,7 +776,11 @@ class EnergyProfile:
     blend_start: float = 0.3  # energy below this → pure low-energy (mix=0)
     blend_end: float = 0.7    # energy above this → pure high-energy (mix=1)
     agc_max_gain: float = 64.0
-    onset_gain_floor: float = 0.3
+    tracker_gain_floor: float = 0.3  # Tracker only; retained to preserve its gain rule.
+    onset_relative_k: float = 2.0
+    onset_reference_window_s: float = 3.0
+    onset_refractory_ms: float = 120.0
+    onset_full_k: float = 3.0
     energy_source: str = "sustained"
     lufs_floor: float = -30.0
     lufs_ceiling: float = -8.0
@@ -773,7 +793,8 @@ class EnergyProfile:
     blend_response: float = 0.1  # EMA alpha for mix smoothing
 
     def __post_init__(self) -> None:
-        _validate_accent_gain(self.agc_max_gain, self.onset_gain_floor)
+        _validate_relative_gate(self)
+        _validate_accent_gain(self.agc_max_gain, self.tracker_gain_floor)
         _validate_energy_source(
             self.energy_source, self.lufs_floor, self.lufs_ceiling, self.adaptation_tau_s,
             self.peak_envelope_auto, self.peak_attack_s, self.peak_release_s,
@@ -789,7 +810,12 @@ class EnergyProfile:
             "blend_end": self.blend_end,
             "blend_response": self.blend_response,
             "agc_max_gain": self.agc_max_gain,
-            "onset_gain_floor": self.onset_gain_floor,
+            "tracker_gain_floor": self.tracker_gain_floor,
+            "onset_relative_k": self.onset_relative_k,
+            "onset_reference_window_s": self.onset_reference_window_s,
+            "onset_refractory_ms": self.onset_refractory_ms,
+            "onset_full_k": self.onset_full_k,
+
             "energy_source": self.energy_source,
             "lufs_floor": self.lufs_floor,
             "lufs_ceiling": self.lufs_ceiling,
