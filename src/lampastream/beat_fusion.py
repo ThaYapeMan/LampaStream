@@ -37,6 +37,9 @@ class BeatFusion:
         self.grid_provider, self.prior, self.accent_mode = provider, prior, mode
         self.prior.next_index = None
         self.prior.grid = None
+        self.prior.onsets.clear()
+        self.prior.loud.clear()
+        self.prior.started = None
 
     def close(self):
         pass

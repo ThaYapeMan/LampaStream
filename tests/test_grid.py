@@ -128,10 +128,20 @@ async def integration(path, cache_path):
                     while adapter.state != 'ready':
                         assert adapter.state != 'failed'
                         await asyncio.sleep(.02)
-                prior = adapter.prior(0., 0)
-                consumer = GridPrior()
-                consumer.set(prior, 0.)
-                assert consumer.status(0.)['beat_source'] == 'grid'
+                from lampastream.canonicalizer import AnalysisPcmFrame
+                from lampastream.models import Profile
+                from lampastream.player_manager import _make_canonical_pipeline
+
+                pipeline = _make_canonical_pipeline(object(), Profile(beat_accent_mode='tracker'))
+                pipeline._beat_fusion.grid_provider = lambda frame, adapter=adapter: adapter.prior(
+                    frame.content_position_s, frame.sample_pos)
+                try:
+                    records = pipeline.feed(AnalysisPcmFrame(
+                        np.zeros((4096, 2), np.float32), 0, 'fixture', 'file', False,
+                        content_position_s=0.))
+                    assert records and all(r.features.beat_source == 'grid' for r in records)
+                finally:
+                    pipeline.stop()
                 assert adapter.cache_state == ('hit' if restart else 'miss')
                 assert len(session.requests) == 1
                 print(f'restart={restart} cache={adapter.cache_state} '
@@ -306,3 +316,17 @@ def test_next_queued_track_is_preanalysed_by_same_worker(tmp_path, monkeypatch, 
             finally:
                 await adapter.close()
     asyncio.run(run())
+
+
+def test_epoch_reset_clears_observations_but_preserves_track_rejection():
+    from lampastream.beat_fusion import BeatFusion
+
+    fusion = BeatFusion()
+    fusion.prior.set(('track', grid(), 0.), .1)
+    fusion.prior.onsets.extend([.5, 1.])
+    fusion.prior.ticks(8.2, True)
+    assert fusion.prior.blocked == 'track'
+    fusion.reset()
+    assert not fusion.prior.onsets and not fusion.prior.loud
+    fusion.prior.set(('track', grid(), 0.), 0.)
+    assert fusion.prior.grid is None and fusion.prior.blocked == 'track'
