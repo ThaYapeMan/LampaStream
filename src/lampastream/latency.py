@@ -103,6 +103,13 @@ class AutoLatencyProbe:
         self.startup_step_used = False
         self.mapping_generation = 0
         self.session_offset_ms = 0.
+        self._anchored_room_ms = None
+        self.session_anchor_at = None
+        self.guard_residual_ms = None
+        self._previous_guard_sample = None
+        self._last_pair_at = None
+        self._step_samples = []
+        self._last_guard_log = -math.inf
         self.cache = preference_cache if preference_cache is not None else {}
         self.raw_samples = deque(maxlen=9)
         self.rejected_samples = 0
@@ -164,7 +171,7 @@ class AutoLatencyProbe:
     def status(self):
         applied = self.current_delay_ms()
         if (self.position_clock is not None and self.state == 'measuring'
-                and not self.first and len(self.room_samples) >= 4
+                and self.session_anchor_at is not None
                 and abs(self.target_delay - applied) < 15):
             self.state = 'stable'
         status = latency_status(self.config, state=self.state, delay=applied, reason=self.reason)
@@ -178,9 +185,11 @@ class AutoLatencyProbe:
         )
         if self.position_clock is not None:
             status.update(measurement_basis='lms-content-v1',
-                          room_delay_ms=(round(statistics.median(self.room_samples))
-                                         if self.room_samples else None),
+                          room_delay_ms=(self._anchored_room_ms - (self.player_delay or 0)
+                                         if self.session_anchor_at is not None else None),
                           session_offset_ms=round(self.session_offset_ms, 3),
+                          session_anchor_at=self.session_anchor_at,
+                          guard_residual_ms=self.guard_residual_ms,
                           startup_step_used=self.startup_step_used)
         return status
 
@@ -200,7 +209,13 @@ class AutoLatencyProbe:
             self.raw_samples.clear()
             self.room_samples.clear()
             self.rejected_samples = 0
-            if new_track:
+            if self.position_clock is not None:
+                self.session_anchor_at = None
+                self.guard_residual_ms = None
+                self._previous_guard_sample = None
+                self._last_pair_at = None
+                self._step_samples.clear()
+            if new_track or self.position_clock is not None:
                 self.first = True
                 if not initial:
                     self.startup_at = context.changed_at
@@ -215,12 +230,67 @@ class AutoLatencyProbe:
             self.state = "measuring"
         return ready and now >= self.next_sample
 
-    def accept(self, residual, now, room_delay_ms=None):
+    def _guard(self, sample, room_delay_ms, sample_interval):
+        residual, _, now = sample
+        self.guard_residual_ms = round(residual * 1000 - self.session_offset_ms, 3)
+        previous = self._previous_guard_sample
+        if self._step_samples:
+            values = [entry[0][0] for entry in self._step_samples]
+            if (now - self._step_samples[-1][0][2] > sample_interval
+                    or max(*values, residual) - min(*values, residual) > .060 + 1e-12):
+                self._step_samples.clear()
+        if (self._step_samples or (previous is not None
+                and 0 < now - previous[2] <= sample_interval
+                and abs(residual - previous[0]) > .060 + 1e-12)):
+            self._step_samples.append((sample, room_delay_ms))
+            if len(self._step_samples) < 4:
+                return False
+            candidates, rooms = zip(*self._step_samples, strict=True)
+            self._step_samples.clear()
+            room_center = statistics.median(rooms)
+            if (abs(statistics.median(item[0] for item in candidates) * 1000
+                    - self.session_offset_ms) > 60 + 1e-9
+                    and all(abs(room - room_center) <= 20 for room in rooms)):
+                self.raw_samples.clear()
+                self.raw_samples.extend(candidates[:-1])
+                self.room_samples.clear()
+                self.room_samples.extend(rooms[:-1])
+                return True
+        return None
+
+    def _log_guard_slide(self, inliers, now):
+        if now - self._last_guard_log < 60:
+            return
+        rates = [(b - a) * 1000 / (tb - ta)
+                 for i, (a, _, ta) in enumerate(inliers)
+                 for b, _, tb in inliers[i + 1:] if tb - ta >= 15]
+        if rates and (rate := round(statistics.median(rates), 2)):
+            logging.getLogger(__name__).info(
+                "latency guard: residual slide %.2f ms/s against anchored session offset; "
+                "not applied (not a rate reference)", rate)
+            self._last_guard_log = now
+
+    def accept(self, residual, now, room_delay_ms=None, *, sample_interval=15):
         finite = math.isfinite(residual)
         plausible = finite and abs(residual * 1000) < MAX_AUTO_DELAY_MS
         stamp = time.time()
+        sample = residual, stamp, now
+        native = self.position_clock is not None
+        step = None
+        if native:
+            if room_delay_ms is None or not math.isfinite(room_delay_ms):
+                self.state = "not measurable"
+                self._step_samples.clear()
+                return False
+            if not plausible or abs(room_delay_ms) >= MAX_AUTO_DELAY_MS:
+                self._step_samples.clear()
+                return False
+            if self.session_anchor_at is not None:
+                step = self._guard(sample, room_delay_ms, sample_interval)
+                if step is False:
+                    return True
         if plausible:
-            self.raw_samples.append((residual, stamp, now))
+            self.raw_samples.append(sample)
         median = (statistics.median(value for value, _, _ in self.raw_samples)
                   if self.raw_samples else None)
         inliers = [(value, timestamp, sampled_at)
@@ -248,19 +318,24 @@ class AutoLatencyProbe:
                 self.next_sample = now + 3
                 self.burst_end = now + 30
             return False
-        if self.position_clock is not None:
-            if room_delay_ms is None or not math.isfinite(room_delay_ms):
-                self.state = "not measurable"
-                return False
-            if abs(room_delay_ms) >= MAX_AUTO_DELAY_MS:
-                return False
+        if native:
             self.room_samples.append(room_delay_ms)
+            self._previous_guard_sample = sample
         self.rejected_samples = 0
         self.samples.clear()
         self.sample_times.clear()
         self.samples.extend(value for value, _, _ in inliers)
         self.sample_times.extend(timestamp for _, timestamp, _ in inliers)
         self.last_sample = stamp
+        if native and self.session_anchor_at is not None and not step:
+            self._log_guard_slide(inliers, now)
+            with self._mapping_lock:
+                self._advance(now)
+                self.target_delay = self._anchored_room_ms + self.session_offset_ms + (
+                    self.config.trim_ms)
+                self.state = "stable" if abs(self.target_delay - self.delay) < 15 else "measuring"
+            self.reason = None
+            return True
         # A single candidate never sets or persists the delay. Four mutually
         # consistent values establish consensus, including after a window reset.
         ordered = sorted(value for value, _, _ in inliers)
@@ -275,28 +350,33 @@ class AutoLatencyProbe:
                 return True
         else:
             room_inliers = []
-        # The median of a 9-sample, 15-second window otherwise trails a
-        # 0.7 ms/s drift by 42 ms. Project the consensus to this sample's time
-        # with a robust, bounded drift rate; never extrapolate a lone sample.
-        slopes = [(b - a) / (tb - ta)
-                  for i, (a, _, ta) in enumerate(inliers)
-                  for b, _, tb in inliers[i + 1:] if tb - ta >= 15]
-        rate = max(-.001, min(.001, statistics.median(slopes))) if slopes else 0
-        estimate = statistics.median(value + rate * (now - sampled_at)
-                                     for value, _, sampled_at in inliers)
-        relative = estimate * 1000
-        measured = round(statistics.median(room_inliers) if self.position_clock else relative)
+        if native:
+            relative = statistics.median(value for value, _, _ in inliers) * 1000
+            measured = round(statistics.median(room_inliers))
+        else:
+            # Legacy position mapping projects the consensus to this sample.
+            slopes = [(b - a) / (tb - ta)
+                      for i, (a, _, ta) in enumerate(inliers)
+                      for b, _, tb in inliers[i + 1:] if tb - ta >= 15]
+            rate = max(-.001, min(.001, statistics.median(slopes))) if slopes else 0
+            measured = round(statistics.median(value + rate * (now - sampled_at)
+                                               for value, _, sampled_at in inliers) * 1000)
         measured += self.player_delay or 0
-        self.session_offset_ms = relative if self.position_clock else 0.
         if not abs(measured) < MAX_AUTO_DELAY_MS:
             return False
+        if native:
+            self._anchored_room_ms = measured
+            self.session_offset_ms = relative
+            self.session_anchor_at = stamp
+            self._last_guard_log = max(self._last_guard_log, now)
+            self.guard_residual_ms = round(residual * 1000 - relative, 3)
         with self._mapping_lock:
             self._advance(now)
             self.target_delay = measured + self.session_offset_ms + self.config.trim_ms
-            # One fresh, track-guarded consensus may establish the startup map.
+            # Only the first anchor in a transport session may step directly.
             # Never reopen this allowance on a late remeasurement/window reset.
             startup = self.startup_at if self.startup_at is not None else self.applied_at
-            if (self.position_clock is not None and not self.startup_step_used
+            if (native and self.first and not self.startup_step_used
                     and 0 <= now - startup <= 15):
                 if abs(self.delay - self.target_delay) > 1e-9:
                     self.mapping_generation += 1
@@ -398,8 +478,16 @@ class AutoLatencyProbe:
         # A notification may have arrived during the preference exchange.
         if context != self.follower.latency_context() or self.stopping:
             return
+        # Use the prior poll's scheduled deadline, including CLI exchange time.
+        # The run loop checks readiness every quarter second.
+        previous = self._last_pair_at
+        sample_interval = self.next_sample + .25 - previous if previous is not None else 15
         try:
             residual = await self._owned_call(self._pair)
+        except (OSError, ValueError):
+            self._step_samples.clear()
+            self._previous_guard_sample = None
+            raise
         finally:
             self.order = not self.order
             interval = (1 if self.position_clock else 3) if now < self.burst_end else 15
@@ -409,7 +497,8 @@ class AutoLatencyProbe:
         if self.position_clock is None:
             self.accept(residual, now)
         else:
-            self.accept(residual[0], now, residual[1])
+            self._last_pair_at = now
+            self.accept(residual[0], now, residual[1], sample_interval=sample_interval)
 
     async def _run(self):
         while not self.stopping:

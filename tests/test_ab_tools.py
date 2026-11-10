@@ -50,15 +50,18 @@ def test_logger_keeps_exact_clock_and_unknown_track_time():
         strength=0.7,
         predicted=False,
     )
-    assert logger.beat_row(event, 1234)["audible_t"] == 3.125
-    assert logger.beat_row(dict(event, detected_audible_t=None), 1234)["audible_t"] is None
-    assert logger.beat_row(dict(event, predicted=True), 1234)["source"] == "tempo_clock"
-    grid_row = logger.beat_row(dict(event, predicted=True, beat_source="grid"), 1234)
-    assert grid_row["source"] == "grid"
+    assert logger.beat_row(event, 1234, "tracker")["audible_t"] == 7.0
+    assert logger.beat_row(event, 1234, "bass_trigger")["audible_t"] == 3.125
+    unknown = dict(event, audible_t=None)
+    assert logger.beat_row(unknown, 1234, "tracker")["audible_t"] is None
 
 
-@pytest.mark.parametrize("mode,source", [("onset", "onset"), ("tracker", "grid")])
-def test_logger_csv_real_socket(tmp_path, mode, source):
+@pytest.mark.parametrize("mode,source", [("onset", "onset"), ("tracker", "grid"),
+                                          ("tracker", "tracker")])
+@pytest.mark.parametrize("raw_detector", [False, True])
+def test_logger_csv_real_socket(tmp_path, mode, source, raw_detector):
+    import csv
+
     import websockets
 
     logger = load("ab-logger")
@@ -74,10 +77,13 @@ def test_logger_csv_real_socket(tmp_path, mode, source):
                         events=[
                             dict(
                                 kind="beat",
+                                audible_t=4.7,
                                 detected_audible_t=4.6875,
                                 detected_audible_monotonic=200.0,
                                 strength=0.8,
-                                predicted=False,
+                                predicted=source == "grid",
+                                id=[1, "bass" if source == "onset" else "beat", 1],
+                                **({"beat_source": "grid"} if source == "grid" else {}),
                             )
                         ],
                     )
@@ -101,10 +107,20 @@ def test_logger_csv_real_socket(tmp_path, mode, source):
 
         async with websockets.serve(send, "127.0.0.1", 0) as server:
             port = server.sockets[0].getsockname()[1]
-            await logger.log("test", 0.1, tmp_path, f"ws://127.0.0.1:{port}")
+            await logger.log("test", 0.1, tmp_path, f"ws://127.0.0.1:{port}",
+                             raw_detector=raw_detector)
 
     asyncio.run(exercise())
-    assert "4.6875" in (tmp_path / "test-beats.csv").read_text()
+    with (tmp_path / "test-beats.csv").open() as stream:
+        rows = list(csv.DictReader(stream))
+    expected = [source]
+    if raw_detector and source != "grid":
+        expected.append("bass_trigger")
+    assert [row["source"] for row in rows] == expected
+    assert rows[0]["audible_t"] == "4.7"
+    assert all(row["detected_audible_t"] == "4.6875" for row in rows)
+    if len(rows) == 2:
+        assert rows[1]["audible_t"] == "4.6875"
     assert "128" in (tmp_path / "test-tempo.csv").read_text()
     status = json.loads((tmp_path / "test-status.jsonl").read_text().splitlines()[0])
     assert status['track']['observed_at'] == 100.
@@ -168,7 +184,7 @@ def test_capture_stops_owned_processes_and_player_on_sender_failure(tmp_path, mo
         return process
 
     monkeypatch.setattr(tool.subprocess, "Popen", popen)
-    def logger(label, *_):
+    def logger(label, *_, raw_detector=False):
         (tmp_path / f"{label}-manifest.json").write_text(json.dumps(
             dict(beat_accent_mode="onset", beat_accent_modes=["onset"])))
         return popen(["logger"])

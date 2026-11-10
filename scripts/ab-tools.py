@@ -433,7 +433,7 @@ def smoke(receiver, protocol_version="auto", pcm_pipe=None, debug_log=None):
     )
 
 
-def logger(label, duration, out):
+def logger(label, duration, out, *, raw_detector=False):
     ready = out / f".{label}-ready"
     process = subprocess.Popen(
         [
@@ -445,6 +445,7 @@ def logger(label, duration, out):
             str(out),
             "--ready",
             str(ready),
+            *(["--raw-detector"] if raw_detector else []),
         ]
     )
     deadline = time.monotonic() + 10
@@ -460,7 +461,7 @@ def utc():
     return datetime.now(UTC).isoformat()
 
 
-def capture(search, receiver, requested_duration, protocol_version="auto"):
+def capture(search, receiver, requested_duration, protocol_version="auto", *, raw_detector=False):
     couplings = capture_couplings()
     original = api("/status").get("active_coupling_id")
     player_name = os.environ.get("AB_LMS_PLAYER")
@@ -539,7 +540,7 @@ def capture(search, receiver, requested_duration, protocol_version="auto"):
         coupling_ids=couplings,
         original_coupling_id=original,
         clock_coordinates=(
-            "track seconds; missing anchors are empty; raw beat clocks are separate"
+            "accent track seconds; missing anchors are empty; raw beat clocks are separate"
         ),
     )
     active = []
@@ -578,7 +579,7 @@ def capture(search, receiver, requested_duration, protocol_version="auto"):
                 time.sleep(0.5)
                 if packet.poll() is not None:
                     raise RuntimeError("tcpdump failed (run capture with sudo); see " + str(out))
-                log = logger(label, seconds + 2, out)
+                log = logger(label, seconds + 2, out, raw_detector=raw_detector)
                 active.append(log)
                 if label == "lms":
                     armed = True
@@ -697,7 +698,7 @@ def write_analysis(out, track_path, title=None):
     lines = [
         "# A/B offsets",
         "",
-        "Detection track seconds versus nearest reference beat. "
+        "Accent track seconds versus nearest reference beat. "
         "Offsets are not latency measurements.",
         "",
     ]
@@ -725,7 +726,8 @@ def write_analysis(out, track_path, title=None):
         verdicts = {}
         for label in ("lms", "airplay"):
             with (out / f"{label}-beats.csv").open() as stream:
-                times = [float(r["audible_t"]) for r in csv.DictReader(stream) if r["audible_t"]]
+                times = [float(row["audible_t"]) for row in csv.DictReader(stream)
+                         if row["audible_t"] and row.get("source") != "bass_trigger"]
             offsets = {}
             for t in times:
                 if not math.isfinite(t) or t < ref[0] - 0.25 or t > ref[-1] + 0.25:
@@ -788,6 +790,7 @@ def main():
     cap.add_argument("receiver")
     cap.add_argument("--protocol-version", choices=("auto", "1", "2"), default="auto")
     cap.add_argument("duration", type=float, nargs="?")
+    cap.add_argument("--raw-detector", action="store_true")
     args = parser.parse_args()
     # SIGTERM must unwind the same cleanup as Ctrl-C.
     signal.signal(signal.SIGTERM, lambda *_: (_ for _ in ()).throw(KeyboardInterrupt()))
@@ -795,7 +798,8 @@ def main():
         if args.mode == "smoke":
             smoke(args.receiver, args.protocol_version, args.pcm_pipe, args.debug_log)
         else:
-            capture(args.search, args.receiver, args.duration, args.protocol_version)
+            capture(args.search, args.receiver, args.duration, args.protocol_version,
+                    raw_detector=args.raw_detector)
     except (Exception, KeyboardInterrupt) as error:
         parser.exit(getattr(error, "exit_code", 1), f"ERROR: {error or 'interrupted'}\n")
 

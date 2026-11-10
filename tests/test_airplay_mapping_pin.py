@@ -156,7 +156,9 @@ def test_airplay_actual_socket_detection_track_time_matches_82181c5(tmp_path, mo
                                 await task
                             with (tmp_path / f"{label}-beats.csv").open() as stream:
                                 count = sum(
-                                    row["source"] != "tempo_clock" for row in csv.DictReader(stream)
+                                    row.get("predicted") != "True"
+                                    and row["source"] != "tempo_clock"
+                                    for row in csv.DictReader(stream)
                                 )
                             if count == expected:
                                 break
@@ -200,8 +202,8 @@ def test_airplay_actual_socket_detection_track_time_matches_82181c5(tmp_path, mo
         ]
         wire_values = sorted(e["detected_audible_t"] for e in events)
         with (tmp_path / f"{label}-beats.csv").open() as stream:
-            rows = [row for row in csv.DictReader(stream) if row["source"] != "tempo_clock"]
-        assert all(row["audible_t"] == row["detected_audible_t"] for row in rows)
+            rows = [row for row in csv.DictReader(stream) if row["predicted"] != "True"]
+        assert [float(row["audible_t"]) for row in rows] == [event["audible_t"] for event in events]
         values[label] = sorted(float(row["detected_audible_t"]) for row in rows)
         assert values[label] == wire_values
     assert len(values["baseline"]) >= 60

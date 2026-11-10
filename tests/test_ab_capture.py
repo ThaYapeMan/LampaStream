@@ -86,10 +86,11 @@ def capture_tool(tmp_path, monkeypatch):
 
     monkeypatch.setattr(tool.subprocess, "Popen", process)
 
-    def logger(label, *_):
+    def logger(label, *_, raw_detector=False):
         (out / f"{label}-manifest.json").write_text(json.dumps(
             dict(beat_accent_mode="onset", beat_accent_modes=["onset"])))
         state["events"].append(("logger", label))
+        state["events"].append(("raw_detector", raw_detector))
         return process(["logger"])
 
     monkeypatch.setattr(tool, "logger", logger)
@@ -98,7 +99,8 @@ def capture_tool(tmp_path, monkeypatch):
 
 def test_activation_order_and_restore_recorded(capture_tool):
     tool, state = capture_tool
-    tool.capture("track", "receiver", 0.001)
+    tool.capture("track", "receiver", 0.001, raw_detector=True)
+    assert state["events"].count(("raw_detector", True)) == 2
     assert [x for x in state["events"] if x[0] in ("activate", "logger")] == [
         ("activate", "lms"),
         ("logger", "lms"),
@@ -116,7 +118,7 @@ def test_restore_on_failure_and_ctrl_c(capture_tool, monkeypatch, interrupted):
     tool, state = capture_tool
     error = KeyboardInterrupt if interrupted else RuntimeError
 
-    def fail(*_):
+    def fail(*_, raw_detector=False):
         raise error("logger stopped")
 
     monkeypatch.setattr(tool, "logger", fail)

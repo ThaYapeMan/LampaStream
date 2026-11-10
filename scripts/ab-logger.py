@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Log track seconds; absent track anchors stay empty, with raw beat clocks separate."""
+"""Log rendered accents in track seconds, with detector diagnostics on request."""
 
 import argparse
 import asyncio
@@ -30,31 +30,43 @@ BEAT_FIELDS = [
     "wall_t",
     "strength",
     "source",
+    "predicted",
 ]
 
 
-def beat_row(event, wall):
+def beat_row(event, wall, source):
     if event.get("detected_audible_monotonic") is None:
         raise RuntimeError("Preview event lacks detection time; deploy the updated server")
     return dict(
-        audible_t=event.get("detected_audible_t"),
+        audible_t=event.get("detected_audible_t" if source == "bass_trigger" else "audible_t"),
         detected_audible_t=event.get("detected_audible_t"),
         detected_audible_monotonic=event["detected_audible_monotonic"],
         wall_t=wall,
         strength=event.get("strength"),
-        source=(
-            "grid"
-            if event.get("beat_source") == "grid"
-            else "tempo_clock"
-            if event.get("predicted")
-            else "fused"
-            if event.get("on_beat")
-            else "bass_trigger"
-        ),
+        source=source,
+        predicted=bool(event.get("predicted")),
     )
 
 
-async def log(label, duration, out, url, ready=None):
+def beat_rows(event, wall, mode, raw_detector):
+    if event.get("kind") != "beat" or mode == "off":
+        return
+    identity = event.get("id", ())
+    onset = len(identity) > 1 and identity[1] in {"bass", "mid", "treble", "full"}
+    source = event.get("beat_source")
+    if source not in {"grid", "tracker", "onset"}:
+        source = "onset" if onset or mode == "onset" else "tracker"
+    yield beat_row(event, wall, source)
+    if (
+        raw_detector
+        and source != "grid"
+        and not event.get("predicted")
+        and not event.get("on_beat")
+    ):
+        yield beat_row(event, wall, "bass_trigger")
+
+
+async def log(label, duration, out, url, ready=None, *, raw_detector=False):
     out.mkdir(parents=True, exist_ok=True)
     async with websockets.connect(url, open_timeout=5) as socket:
         with (
@@ -67,6 +79,7 @@ async def log(label, duration, out, url, ready=None):
             bw.writeheader()
             if ready:
                 ready.touch()
+            mode = None
             deadline, next_row = time.monotonic() + duration, 0.0
             while time.monotonic() < deadline:
                 try:
@@ -110,8 +123,7 @@ async def log(label, duration, out, url, ready=None):
                         manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
                 if message.get("type") == "event":
                     for event in message.get("events", []):
-                        if event.get("kind") == "beat":
-                            bw.writerow(beat_row(event, wall))
+                        bw.writerows(beat_rows(event, wall, mode, raw_detector))
                     beats.flush()
                 if message.get("type") == "frame" and time.monotonic() >= next_row:
                     tw.writerow(
@@ -145,6 +157,11 @@ def main():
     parser.add_argument("--out", type=Path, default=Path("."))
     parser.add_argument("--url", default="ws://127.0.0.1:8420/ws/preview")
     parser.add_argument("--ready", type=Path)
+    parser.add_argument(
+        "--raw-detector",
+        action="store_true",
+        help="also record preview detector-origin beats as bass_trigger",
+    )
     args = parser.parse_args()
     if (
         Path(args.label).name != args.label
@@ -153,7 +170,16 @@ def main():
     ):
         parser.error("Use a simple label and a finite positive duration")
     try:
-        asyncio.run(log(args.label, args.duration, args.out, args.url, args.ready))
+        asyncio.run(
+            log(
+                args.label,
+                args.duration,
+                args.out,
+                args.url,
+                args.ready,
+                raw_detector=args.raw_detector,
+            )
+        )
     except (OSError, RuntimeError, websockets.WebSocketException) as error:
         parser.exit(1, f"ERROR: {error}\n")
 

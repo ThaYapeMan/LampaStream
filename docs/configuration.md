@@ -449,8 +449,12 @@ The native FLAC content-clock path waits one second after transport changes,
 then samples once per second for a thirty-second burst; steady samples are
 fifteen seconds apart. Paused, stopped, disconnected or mismatched tracks make
 no measurement requests. Nine raw residuals support a 60 ms median filter and
-four-sample consensus. A robust drift projection is bounded to ±1 ms/s. Precision
-is position consistency, not an acoustic measurement.
+four-sample consensus. The first consensus anchors the session offset. Later
+pairs guard that anchor. A new four-sample consensus must differ from the anchor
+by more than 60 ms and start with a jump of more than 60 ms from the previous
+accepted sample within one sampling interval. Gradual residual movement is
+diagnostic. The native content clock supplies the playback rate. Precision
+describes position consistency.
 
 The virtual player's CLI time uses the requested seek label; FLAC can start at
 an earlier frame boundary. The standard installer therefore builds the pinned
@@ -464,7 +468,7 @@ The probe separates a saved room/native-clock calibration from the live session'
 relative position and FLAC landing error:
 
 ```
-applied ms = saved room calibration + current session offset + trim
+applied ms = saved room calibration + anchored session offset + trim
 ```
 
 [The derivation and field evidence](research/lat03-sendback-1.md) define the terms.
@@ -475,14 +479,18 @@ existing configuration. No device-specific probes or new full-status polling
 are added.
 
 A fresh consensus may step directly **once in the first 15 seconds** of startup
-or a new track. The initial deadline starts at probe creation; ordinary events,
-trim edits and rejected-sample windows do not extend it. Later corrections slew
-at at most **5 ms/s**, including trim changes. The follower aligns the virtual
+or a new transport session after a track change, seek, pause/resume or sync
+change. The initial deadline starts at probe creation. Trim edits and sample
+rejections keep the current deadline. Confirmed guard steps and trim changes slew
+at at most **5 ms/s**. The follower aligns the virtual
 player once at track start; the probe never issues a late seek. Explicit user
 seeks still relay to the virtual player.
 
 The read-only status includes applied delay, room calibration, session offset,
-precision, sample count, measurement basis and startup-step state. `stable`
+precision, sample count, measurement basis and startup-step state.
+`session_anchor_at` is the Unix timestamp when consensus established or updated
+the session anchor. `guard_residual_ms` is the latest valid pair residual minus
+that anchor, in milliseconds. `stable`
 (“In sync”) requires applied and target to be within 15 ms; otherwise the state
 remains `measuring`. Missing content provenance remains measuring/not measurable,
 rather than declaring a false stable result. AirPlay metadata track time uses
