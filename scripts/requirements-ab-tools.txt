@@ -24,7 +24,7 @@ chacha20poly1305-reuseable==0.13.2
     #   pyatv
 charset-normalizer==3.5.2
     # via requests
-cryptography==49.0.0
+cryptography==50.0.2
     # via
     #   -r scripts/requirements-ab-tools.in
     #   chacha20poly1305-reuseable
