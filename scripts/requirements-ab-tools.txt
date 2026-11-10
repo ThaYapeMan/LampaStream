@@ -54,7 +54,7 @@ propcache==0.5.4
     # via
     #   aiohttp
     #   yarl
-protobuf==6.33.6
+protobuf==7.36.2
     # via
     #   -r scripts/requirements-ab-tools.in
     #   pyatv
