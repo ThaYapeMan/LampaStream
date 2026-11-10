@@ -749,7 +749,7 @@ async def get_status(request: Request):
         **trigger_status,
         **{key: preview.get(key) for key in (
             "grid_confidence", "grid_tempo", "grid_cache", "grid_fetch_state",
-            "grid_dropped_reason", "time_to_next_drop_s")},
+            "grid_dropped_reason", "time_to_next_drop_s", "provisional")},
         "beat_source": (coupling.beat_accent_mode if coupling
                         and coupling.beat_accent_mode != "tracker" else
                         preview.get("beat_source", "tracker")),

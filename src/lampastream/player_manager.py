@@ -1062,6 +1062,7 @@ class PlayerManager:
                 on_group_refresh=(session.head_start.group_refresh
                                   if getattr(session, "head_start", None) else None),
             )
+            session.track_source.follow_playlist(session.follower)
             session.follower_task = session.follower.start()
             session.follower_task.add_done_callback(_log_task_failure)
             return  # Auto mode must never schedule the manual unsync path.
@@ -1073,6 +1074,7 @@ class PlayerManager:
                 follow_mac=follow_mac,
                 lampastream_mac=profile.player_mac,
             )
+            session.track_source.follow_playlist(session.follower)
         else:
             log.warning(
                 "Coupling %r: follow_player_mac not configured — "

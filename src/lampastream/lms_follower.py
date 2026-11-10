@@ -126,6 +126,7 @@ class LmsFollower:
         self.position_alignment = None
         self._track_generation = 0
         self._transition_generation = 0
+        self._playlist_listeners = set()
         self._changed_at = time.monotonic()
 
     def _position_transition(self, *, newsong=False) -> None:
@@ -255,8 +256,23 @@ class LmsFollower:
             except Exception:
                 pass
 
+    def subscribe_playlist(self, callback):
+        """Reuse this session's existing notification feed for library queue changes."""
+        self._playlist_listeners.add(callback)
+        return lambda: self._playlist_listeners.discard(callback)
+
+    def _notify_playlist(self, line):
+        parts = line.split()
+        if (len(parts) >= 3 and unquote(parts[0]).lower() == self.target_mac
+                and parts[1] == 'playlist' and parts[2] in {
+                    'addtracks', 'add', 'insert', 'delete', 'move', 'clear', 'loadtracks',
+                    'load', 'resume', 'shuffle', 'repeat', 'edit', 'tracks'}):
+            for callback in tuple(self._playlist_listeners):
+                callback()
+
     async def _handle_line(self, line: str) -> None:
         """Dispatch one push-notification line from the listen 1 feed."""
+        self._notify_playlist(line)
         parts = line.split(" ", 2)
         if len(parts) < 2:
             return
@@ -681,6 +697,7 @@ class LmsSyncGroupObserver(LmsFollower):
                 pass
 
     async def _handle_line(self, line: str) -> None:
+        self._notify_playlist(line)
         # Observe only: even newsong/pause/stop must never reach the mirroring
         # dispatcher. A sync command may name either member, so refresh for any.
         parts = line.split()

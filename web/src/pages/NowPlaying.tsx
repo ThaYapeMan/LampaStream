@@ -447,14 +447,14 @@ export function NowPlaying({ expertMode = false, colour, channel_colours, onset,
       />
 
       <TrackProgress track={status?.track ?? null} connected={connected}
-        beatSource={status?.beat_source} tempoBpm={status?.tempo_bpm} tempoLocked={status?.tempo_locked}
+        beatSource={status?.grid_tempo ? "grid" : status?.beat_source} tempoBpm={status?.grid_tempo ?? status?.tempo_bpm} tempoLocked={!!status?.grid_tempo || status?.tempo_locked}
         showControls={!!status?.transport?.available}
         transport={status?.transport?.available && couplingId ? {
           couplingId, targetMac: status.transport.target_id || '',
           targetName: status.transport.target_name || 'Active player', actions: status.transport.actions,
         } : undefined} />
       {status?.transport && !status.transport.available && status.transport.reason && <p className="text-xs text-muted-foreground" role="status">{status.transport.reason}</p>}
-      {!expertMode && <p data-testid="bpm-note" className="text-xs text-muted-foreground italic leading-snug">{status?.beat_source === "grid" ? "BPM comes from whole-file analysis while the library grid is active." : "BPM is measured from the audio, not read from the track; it dims while the tempo clock is locking and settles once locked."}</p>}
+      {!expertMode && <p data-testid="bpm-note" className="text-xs text-muted-foreground italic leading-snug">{status?.grid_tempo ? "BPM comes from whole-file analysis while the library grid is active." : "BPM is measured from the audio, not read from the track; it dims while the tempo clock is locking and settles once locked."}</p>}
 
       {status?.active_coupling_id && <LightsRow key={status.active_coupling_id}
         couplingId={status.active_coupling_id} output={status.output_status} />}

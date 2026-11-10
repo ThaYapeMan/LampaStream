@@ -78,6 +78,8 @@ class LmsTrackPositionSource:
         self.grid_adapter = grid_adapter
         self._next_task = None
         self._grid_identity = None
+        self._playlist_unsubscribe = None
+        self._last_lookup_at = 0.
         self._task: asyncio.Task | None = None
         self._snapshot: TrackPosition | None = None
         self._selected: str | None = None
@@ -141,11 +143,31 @@ class LmsTrackPositionSource:
         changed = key != self._grid_identity or repeated
         self._grid_identity = key
         if self.grid_adapter and self.grid_adapter.select(
-                status.track_id, status.filesize, new_instance=changed):
-            if self._next_task:
-                self._next_task.cancel()
-            self._next_task = asyncio.create_task(self.grid_adapter.playlist_next(
-                self._host, self._port, self._selected, status.playlist_index))
+                status.track_id, status.filesize, new_instance=changed, duration=status.duration):
+            self._request_next("start")
+
+    def follow_playlist(self, follower):
+        if self._playlist_unsubscribe:
+            self._playlist_unsubscribe()
+        self._playlist_unsubscribe = follower.subscribe_playlist(
+            lambda: self._request_next('playlist-change'))
+
+    def _request_next(self, trigger):
+        if self.grid_adapter is None or not self._selected or self._grid_identity is None:
+            return
+        if self._next_task and not self._next_task.done():
+            if trigger == 'periodic':
+                return
+            self._next_task.cancel()
+        self._last_lookup_at = time.monotonic()
+        self._next_task = asyncio.create_task(self.grid_adapter.playlist_next(
+            self._host, self._port, self._selected, self._grid_identity[1], trigger=trigger))
+
+    def _periodic_lookup(self):
+        snapshot = self.read()
+        if (snapshot and snapshot.playing
+                and time.monotonic()-self._last_lookup_at >= 30):
+            self._request_next('periodic')
 
     def _details(self, status):
         host = f"[{self._host}]" if ":" in self._host else self._host
@@ -154,11 +176,9 @@ class LmsTrackPositionSource:
         return dict(genre=status.genre, album=status.album, artwork_url=url)
 
     async def close(self) -> None:
-        if self._next_task:
-            self._next_task.cancel()
-            await asyncio.gather(self._next_task, return_exceptions=True)
-        if self.grid_adapter:
-            await self.grid_adapter.close()
+        if self._playlist_unsubscribe:
+            self._playlist_unsubscribe()
+            self._playlist_unsubscribe = None
         if self._task is not None:
             self._task.cancel()
             try:
@@ -167,6 +187,11 @@ class LmsTrackPositionSource:
                 if asyncio.current_task().cancelling():
                     raise
             self._task = None
+        if self._next_task:
+            self._next_task.cancel()
+            await asyncio.gather(self._next_task, return_exceptions=True)
+        if self.grid_adapter:
+            await self.grid_adapter.close()
         self._snapshot = None
 
     async def _run(self) -> None:
@@ -184,6 +209,7 @@ class LmsTrackPositionSource:
                     await writer.drain()
                     last_received = time.monotonic()
                     while target == self._target():
+                        self._periodic_lookup()
                         try:
                             line = await asyncio.wait_for(reader.readline(), 1)
                         except TimeoutError:

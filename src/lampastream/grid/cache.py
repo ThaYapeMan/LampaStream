@@ -32,7 +32,7 @@ class GridCache:
                 return None
             path = self.root / f'{key}.json'
             grid = TrackGrid.from_dict(json.loads(path.read_text()))
-            if grid.file_sha256 != key:
+            if grid.provisional or grid.file_sha256 != key:
                 return None
             path.touch()
             return grid
@@ -40,6 +40,8 @@ class GridCache:
             return None
 
     def put(self, identity, grid):
+        if grid.provisional:
+            raise ValueError("A provisional grid cannot enter the full-file cache")
         self.root.mkdir(parents=True, exist_ok=True)
         self._write(self.root / f'{grid.file_sha256}.json', grid.to_dict())
         self._write(self._alias(identity), {'sha256': grid.file_sha256})

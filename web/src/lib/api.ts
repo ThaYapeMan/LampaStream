@@ -267,6 +267,7 @@ export interface AccentFeatures {
   beat_source?: "grid" | "tracker" | "onset" | "off"
   grid_confidence?: number | null
   grid_tempo?: number | null
+  provisional?: boolean
   grid_cache?: string | null
   grid_fetch_state?: string | null
   grid_dropped_reason?: string | null

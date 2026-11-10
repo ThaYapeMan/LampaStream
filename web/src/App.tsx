@@ -53,6 +53,13 @@ function ConnectionBadge({ connected, attempt }: { connected: boolean; attempt: 
 }
 
 export default function App() {
+  const [wideHeader, setWideHeader] = useState(() => window.matchMedia('(min-width: 1024px)').matches)
+  useEffect(() => {
+    const media = window.matchMedia('(min-width: 1024px)')
+    const changed = () => setWideHeader(media.matches)
+    media.addEventListener('change', changed)
+    return () => media.removeEventListener('change', changed)
+  }, [])
   const [expertMode, setExpertMode] = useState(() => {
     try { return localStorage.getItem('lampastream.expertMode') === 'true' }
     catch { return false }
@@ -81,9 +88,15 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <header className="border-b border-border shrink-0">
+      <header className="sticky top-0 z-30 bg-background border-b border-border shrink-0">
         <div className="px-4 py-4 flex items-center justify-between">
-          <h1 className="text-lg font-semibold tracking-tight">LampaStream</h1>
+          <div className="flex items-center gap-4">
+            <h1 className="text-lg font-semibold tracking-tight">LampaStream</h1>
+            {wideHeader && <>
+              {status?.version && <span data-testid="header-version" className="font-mono text-xs text-muted-foreground">{status.version}</span>}
+              <Appearance inline />
+            </>}
+          </div>
           <div className="flex items-center gap-3">
             <select aria-label="Editor mode" value={expertMode ? 'expert' : 'standard'}
               onChange={event => changeExpertMode(event.target.value === 'expert')}
@@ -112,10 +125,10 @@ export default function App() {
               {item.label}
             </button>
           ))}
-          <div className="mt-auto pt-6">
+          {!wideHeader && <div className="mt-auto pt-6">
             <Appearance />
             {status?.version && <div className="px-2 sm:px-4 pb-4 text-xs text-muted-foreground">{status.version}</div>}
-          </div>
+          </div>}
         </nav>
 
         <main className="flex-1 overflow-hidden flex flex-col">

@@ -230,7 +230,8 @@ class AudiblePreview:
                   if identity in self.confirmed and now-1 < stamp <= now]
         rhythm = {key: getattr(features, key, default) for key, default in (
             ('beat_source', 'tracker'), ('grid_confidence', None), ('grid_tempo', None),
-            ('grid_cache', None), ('grid_fetch_state', None), ('grid_dropped_reason', None),
+            ('provisional', False), ('grid_cache', None), ('grid_fetch_state', None),
+            ('grid_dropped_reason', None),
             ('time_to_next_drop_s', None), ('tempo_bpm', None), ('tempo_alt_bpm', None),
             ('tempo_confidence', 0.),
             ('tempo_locked', False), ('beat_phase', 0.), ('agc_gain', 1.), ('trigger_ratio', 0.))}

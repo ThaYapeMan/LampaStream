@@ -3,6 +3,7 @@ import asyncio
 import hashlib
 import io
 import os
+import time
 from dataclasses import replace
 from pathlib import Path
 
@@ -118,7 +119,9 @@ def test_fake_lms_current_next_and_restart_cache_hit(tmp_path):
 
 async def integration(path, cache_path):
     async with Session(path) as session:
+        lifetimes = []
         for restart in range(2):
+            started = time.monotonic()
             adapter = LmsGridAdapter('127.0.0.1', session.web_port, GridCache(cache_path))
             source = LmsTrackPositionSource('127.0.0.1', lambda: 'aa', session.cli_port,
                                             grid_adapter=adapter)
@@ -143,14 +146,16 @@ async def integration(path, cache_path):
                 finally:
                     pipeline.stop()
                 assert adapter.cache_state == ('hit' if restart else 'miss')
-                assert len(session.requests) == 1
+                assert len(session.requests) == (2 if path.stat().st_size > 16*1024**2 else 1)
                 print(f'restart={restart} cache={adapter.cache_state} '
                       f'fetches={len(session.requests)} '
                       f'beat_source=grid tempo={adapter.grid.tempo:.3f}')
             finally:
                 await source.close()
+                lifetimes.append(time.monotonic()-started)
         assert len([c for c in session.commands if 'subscribe' in c]) == 2
-        assert len([c for c in session.commands if 'subscribe' not in c]) == 2
+        lookups = len([c for c in session.commands if 'subscribe' not in c])
+        assert 2 <= lookups <= 2+sum(int(elapsed//30) for elapsed in lifetimes)
         assert all('tags:adglcKuf' in c or 'tags:uf' in c for c in session.commands)
 
 
@@ -188,12 +193,11 @@ def test_prior_is_ignored_in_onset_and_off_modes():
         pipeline = _make_canonical_pipeline(object(), Profile(beat_accent_mode=mode))
         assert pipeline._beat_fusion.accent_mode == mode
         from lampastream.canonicalizer import AnalysisPcmFrame
-        def forbidden(frame):
-            raise AssertionError("Onset/Off must not request the grid")
-        pipeline._beat_fusion.grid_provider = forbidden
+        pipeline._beat_fusion.grid_provider = lambda frame: ('track', grid(), 0.)
         records = pipeline.feed(AnalysisPcmFrame(np.zeros((4096, 2), np.float32),
                                                 0, "test", "test", False))
         assert records and all(r.features.beat_source != "grid" for r in records)
+        assert all(r.features.grid_tempo == 120 for r in records)
         pipeline.stop()
 
 
@@ -305,7 +309,9 @@ def test_next_queued_track_is_preanalysed_by_same_worker(tmp_path, monkeypatch, 
                     await adapter.queue.join()
                 assert adapter.grid.tempo == pytest.approx(120, abs=2)
                 assert cache.get(identity('44437', following.stat().st_size))
-                assert len(starts) == (1 if same_content else 2)
+                full_starts = [args for args in starts if "--head" not in args]
+                assert len(full_starts) == (1 if same_content else 2)
+                assert len(starts)-len(full_starts) == 1
                 assert len(session.requests) == 2
                 adapter.select('44437', following.stat().st_size)
                 async with asyncio.timeout(5):

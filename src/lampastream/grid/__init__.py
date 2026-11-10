@@ -24,6 +24,7 @@ class TrackGrid:
     sections: tuple[Section, ...]
     confidence: float
     timing_basis: str
+    provisional: bool = False
 
     def to_dict(self):
         return asdict(self)

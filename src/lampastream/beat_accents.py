@@ -88,7 +88,19 @@ def select_events(mode, tracker_events, records, *, gate=None):
     if mode == "off":
         return []
     if mode == "tracker":
-        return list(tracker_events)
+        fallback = [record for record in records
+                    if getattr(record.features, 'beat_source', 'tracker') == 'onset']
+        if not fallback:
+            return list(tracker_events)
+        # Source selection is feature data, independent of players and outputs.
+        sources = sorted((record.sample_pos, getattr(record.features, 'beat_source', 'tracker'))
+                         for record in records)
+        def source_at(event):
+            return next((source for sample, source in reversed(sources)
+                         if sample <= event.candidate_sample), sources[0][1])
+        live = [event for event in tracker_events if source_at(event) != 'onset']
+        admitted = select_events('onset', (), fallback, gate=gate)
+        return sorted([*live, *admitted], key=lambda event: event.candidate_sample)
     if mode != "onset":
         raise ValueError("Invalid beat_accent_mode")
     gate = gate if gate is not None else RelativeOnsetGate()

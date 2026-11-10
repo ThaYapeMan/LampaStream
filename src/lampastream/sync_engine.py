@@ -1731,8 +1731,9 @@ class CanonicalAnalysisPipeline:
 
         fusion = self._beat_fusion
         if fusion.grid_provider is not None:
-            value = (fusion.grid_provider(frame) if fusion.accent_mode == "tracker" else None)
-            fusion.prior.set(value, frame.sample_pos / 48000)
+            value = fusion.grid_provider(frame)
+            fusion.prior.set(value, frame.sample_pos / 48000,
+                             enabled=fusion.accent_mode == "tracker")
             fusion.grid_state = {**(fusion.grid_state or {}),
                                  **fusion.prior.status(frame.sample_pos / 48000)}
         spectrum_updates: list[ProcessorUpdate] = []

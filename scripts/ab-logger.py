@@ -101,7 +101,7 @@ async def log(label, duration, out, url, ready=None):
                     manifest = (json.loads(manifest_path.read_text())
                                 if manifest_path.exists() else {"beat_accent_modes": []})
                     fields = ("beat_source", "grid_confidence", "grid_tempo", "grid_cache",
-                              "grid_fetch_state", "grid_dropped_reason")
+                              "grid_fetch_state", "grid_dropped_reason", "provisional")
                     states = manifest.setdefault("grid_states", [])
                     state = {key: message.get(key) for key in fields}
                     if not states or states[-1] != state:

@@ -187,6 +187,7 @@ class AudioFeatures:
     beat_source: str = "tracker"
     grid_confidence: float | None = None
     grid_tempo: float | None = None
+    provisional: bool = False
     grid_cache: str | None = None
     grid_fetch_state: str | None = None
     grid_dropped_reason: str | None = None

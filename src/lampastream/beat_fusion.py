@@ -40,6 +40,9 @@ class BeatFusion:
         self.prior.onsets.clear()
         self.prior.loud.clear()
         self.prior.started = None
+        self.prior.available = None
+        self.prior.pending_grid = None
+        self.prior.last_emitted = -math.inf
 
     def close(self):
         pass
@@ -115,6 +118,8 @@ class BeatFusion:
                     # The live estimator has kept running throughout grid use.
                     self.last_grid = None
                 self.grid_state = {**(self.grid_state or {}), **self.prior.status(t)}
+                if self.prior.grid is None and not self.clock.locked:
+                    self.grid_state['beat_source'] = 'onset'
             for event in events:
                 # A prior can predict future events. Its contribution describes
                 # this observed hop; the event retains its future sample coordinate.

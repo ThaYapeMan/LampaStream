@@ -15,16 +15,25 @@ class GridPrior:
         self.grid = None
         self.origin = 0.
         self.blocked = None
+        self.blocked_provisional = False
         self.next_index = None
         self.started = None
         self.onsets = deque()
         self.loud = deque()
         self.reason = None
         self.metadata = {}
+        self.available = None
+        self.pending_grid = None
+        self.switch_at = None
+        self.last_emitted = -float("inf")
+        self.enabled = True
 
-    def set(self, value, now):
+    def set(self, value, now, *, enabled=True):
+        self.enabled = enabled
         if value is None:
             self.metadata = {}
+            self.available = None
+            self.pending_grid = None
             self.grid = None
             self.next_index = None
             return
@@ -32,15 +41,51 @@ class GridPrior:
         self.metadata = metadata[0] if metadata else {}
         identity_changed = identity != self.identity
         if identity_changed:
+            self.grid = None
+            self.next_index = None
             self.blocked = None
+            self.blocked_provisional = False
             self.onsets.clear()
             self.loud.clear()
             self.reason = None
+            self.pending_grid = None
+            self.last_emitted = -float("inf")
+        if (grid is not None and not grid.provisional and self.blocked_provisional
+                and self.blocked == identity):
+            self.blocked = None
+            self.blocked_provisional = False
+            self.reason = None
+        self.available = grid if identity != self.blocked else None
         changed = identity_changed or self.grid is None or abs(origin-self.origin) > .1
         self.identity, self.origin = identity, origin
-        if grid is None:
+        if (grid is None or not enabled
+                or (grid.provisional and now+origin >= grid.duration)):
             self.grid = None
+            self.pending_grid = None
             self.next_index = None
+            return
+        if self.grid is not None and grid is not self.grid and self.pending_grid is not grid:
+            period = 60/self.grid.tempo
+            first = next((b for b, kick in zip(self.grid.beats, self.grid.kick_flags,
+                                                strict=True) if kick), 0.)
+            following = next((b for b, kick in zip(grid.beats, grid.kick_flags,
+                                                    strict=True) if kick), 0.)
+            phase_error = abs(first-following)
+            disagree = (abs(grid.tempo/self.grid.tempo-1) > .02+1e-9
+                        or phase_error > period+1e-9)
+            if disagree:
+                log.warning('Provisional grid dropped before full adoption: tempo/phase mismatch')
+                self.grid = None
+                self.pending_grid = grid
+                next_index = bisect.bisect_right(grid.beats, now+self.origin)
+                self.switch_at = (grid.beats[next_index]-self.origin
+                                  if next_index < len(grid.beats) else now+.01)
+                return
+            self.pending_grid = grid
+            index = bisect.bisect_right(self.grid.beats, now+self.origin)
+            self.switch_at = (self.grid.beats[index]-self.origin
+                              if index is not None and index < len(self.grid.beats) else now)
+        if self.pending_grid is not None:
             return
         self.grid = grid if identity != self.blocked else None
         if changed and self.grid:
@@ -56,7 +101,15 @@ class GridPrior:
             self.loud.popleft()
         while self.onsets and self.onsets[0] < t-9:
             self.onsets.popleft()
+        if self.pending_grid is not None and t >= self.switch_at:
+            self.grid = self.pending_grid
+            self.pending_grid = None
+            self.next_index = bisect.bisect_right(
+                self.grid.beats, max(t-.01, self.last_emitted+.07)+self.origin)
+            log.info('Full grid adopted at beat boundary %.3fs', t+self.origin)
         grid = self.grid
+        if grid is not None and grid.provisional and t+self.origin >= grid.duration:
+            self.grid = grid = None
         if grid is None:
             return []
         if self.started is not None and t-self.started >= 8:
@@ -65,6 +118,7 @@ class GridPrior:
             if expected and self.loud and sum(v for _, v in self.loud)/len(self.loud) > .5:
                 confirmed = sum(any(abs(o-b) <= .07 for o in self.onsets) for b in expected)
                 if confirmed < .5*len(expected):
+                    self.blocked_provisional = grid.provisional
                     self.blocked, self.grid = self.identity, None
                     self.reason = 'audio contradicts grid'
                     log.warning('Grid dropped for %s: %s (%d/%d)', self.identity,
@@ -79,7 +133,10 @@ class GridPrior:
             if grid.kick_flags[i]:
                 drop = any(s.kind == 'drop' and abs(s.start-grid.beats[i]) < .001
                            for s in grid.sections)
-                result.append((grid.beats[i]-self.origin, 1. if drop else .8, i))
+                stamp = grid.beats[i]-self.origin
+                if stamp > self.last_emitted+.07:
+                    result.append((stamp, 1. if drop else .8, i))
+                    self.last_emitted = stamp
         return result
 
     def event(self, template, stamp, strength, index):
@@ -102,8 +159,10 @@ class GridPrior:
         grid = self.grid
         drops = ([s.start-self.origin-now for s in grid.sections
                   if s.kind == 'drop' and s.start >= now+self.origin] if grid else [])
+        fact = self.available if self.identity != self.blocked else None
         return dict(**self.metadata, beat_source='grid' if grid else 'tracker',
-                    grid_confidence=grid.confidence if grid else None,
-                    grid_tempo=grid.tempo if grid else None,
+                    grid_confidence=fact.confidence if fact else None,
+                    grid_tempo=fact.tempo if fact else None,
+                    provisional=bool(grid.provisional if grid else fact and fact.provisional),
                     grid_dropped_reason=self.reason,
                     time_to_next_drop_s=min(drops) if drops else None)
