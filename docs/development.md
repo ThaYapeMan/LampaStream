@@ -26,6 +26,37 @@ For Python source-only tests in an existing environment, pytest sets `pythonpath
 Tests that require the native library may skip; do not relabel them as native passes.
 Acceptance uses ffmpeg; install it separately when exercising file decoding.
 
+## Dependency updates: latest release through the gate
+
+Policy: **exact pin → bot PR → green CI → merge**. Follow new releases through
+reviewed updates rather than letting a production install float to a new version.
+Keep reviewed dependencies pinned exactly; when adopting a currently ranged
+requirement, convert it to an exact pin as part of its update review.
+
+We use Dependabot, already used in the owner's
+[pyatv repository](https://github.com/ThaYapeMan/pyatv/blob/master/.github/dependabot.yml).
+`.github/dependabot.yml` checks Python manifests at `/` and `/scripts` daily
+(Dependabot's `daily` schedule runs on weekdays), with no release cooldown.
+`group-by: dependency-name` groups the same package across those directories into
+one PR; different packages stay in separate PRs. There is no automatic merge.
+The configuration uses GitHub's
+[documented grouping and versioning options](https://docs.github.com/en/code-security/reference/supply-chain-security/dependabot-options-reference).
+
+The existing `pull_request` workflow runs the full Python matrix (3.11/3.12/3.13)
+and frontend unit/build/browser checks for bot PRs. Read release notes, review
+output/API changes, update compatibility code and verifier expectations where
+needed, and require all four jobs green before merging. Merging the reviewed PR
+advances the exact pin. The pre-push guard compares installed versions to the
+manifest pins; the installed verifier compares the actual Hue client with its
+wheel's exact requirement, allowing reviewed future pins without a second version
+constant. Run the full local pre-push gate before any manual master push.
+
+Initial bot PRs may cover other stale pins or floating lower bounds, including
+the optional AB-tools requirements. Review and pin them separately; do not merge
+those updates as part of GRID-01 send-back 3. A currently compatible range may
+still need a manifest update under the `increase` strategy; the bot does not
+by itself turn an existing range into an exact pin.
+
 ## Dependency ownership and wheel builds
 
 `scripts/native-build-packages.txt` is the Debian/Ubuntu CAVA build dependency

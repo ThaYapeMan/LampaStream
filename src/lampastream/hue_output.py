@@ -21,13 +21,34 @@ import logging
 import time
 from dataclasses import dataclass
 
-from hue_entertainment import EntertainmentSession, HueEntertainmentAPI, LightColorCommand
+from hue_entertainment import (
+    ColorMode,
+    EntertainmentSession,
+    HueEntertainmentAPI,
+    LightColorCommand,
+)
 
 from .hue_release import HueReleaseRest
 from .models import BridgeConfig
 from .types import Colour, OutputCapabilities, Position, Scene
 
 log = logging.getLogger(__name__)
+
+
+def create_hue_session(host: str, app_key: str, client_key: str) -> EntertainmentSession:
+    """Keep the production session and offline wire regression on explicit RGB."""
+    return EntertainmentSession(host, app_key, client_key, idle_timeout=0, color_mode=ColorMode.RGB)
+
+
+def hue_rgb_command(channel_id: int, colour: Colour) -> LightColorCommand:
+    """Preserve our existing wire bytes across the dependency's 0.3.0 RGB change.
+
+    0.1.2 treated values <=255 as 8-bit; 0.3.0 always shifts 16-bit input.
+    Expand that low range to duplicated bytes before the new encoder shifts it.
+    """
+    r, g, b = (value * 257 if value <= 255 else value for value in colour.to_16bit())
+    return LightColorCommand(channel_id=channel_id, red=r, green=g, blue=b)
+
 
 # ---------------------------------------------------------------------------
 # Configuration and channel info
@@ -172,7 +193,7 @@ class HueDriver:
     async def start(self) -> None:
         """Own the stream for the entire coupling, including silence and pause."""
         b = self._config.bridge
-        self._session = EntertainmentSession(b.host, b.app_key, b.client_key, idle_timeout=0)
+        self._session = create_hue_session(b.host, b.app_key, b.client_key)
         try:
             await self._connect(stop_others=True, capture=True)
         except BaseException:
@@ -411,8 +432,8 @@ class HueDriver:
         colours = [scene.color_at(ch.position, t) for ch in self._channels]
         self.last_colours = colours
         commands = [
-            LightColorCommand(channel_id=ch.channel_id, red=r, green=g, blue=b)
-            for ch, (r, g, b) in zip(self._channels, (c.to_16bit() for c in colours), strict=True)
+            hue_rgb_command(ch.channel_id, colour)
+            for ch, colour in zip(self._channels, colours, strict=True)
         ]
         self._last_commands = commands
         try:

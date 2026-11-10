@@ -9,6 +9,7 @@ import json
 import os
 import pwd
 import sys
+from importlib import metadata
 from pathlib import Path
 
 import numpy as np
@@ -16,6 +17,7 @@ import numpy as np
 import lampastream
 from lampastream.airplay_config import LEGACY_TIMING, SHAIRPORT_REVISION, timing_settings
 from lampastream.cavacore import CavaCoreBackend
+from lampastream.dependency_versions import verify_hue_dependency
 from lampastream.migration import migrate_file
 
 
@@ -45,6 +47,7 @@ def verify_grid_cache(path: Path, uid: int) -> None:
 
 
 def main() -> None:
+    verify_hue_dependency(metadata.requires('lampastream') or [])
     import librosa
     import soundfile
 

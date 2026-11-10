@@ -12,6 +12,7 @@ run_step() {
     printf '\n==> %s\n' "$STEP"
     "$@"
 }
+run_step 'Pinned runtime dependencies' python3 scripts/check-dependency-lock.py
 run_step 'Ruff' ruff check .
 run_step 'Build native cavacore' python3 scripts/build_native.py
 run_step 'Full backend (native required)' env LAMPASTREAM_REQUIRE_NATIVE=1 python3 -m pytest -v

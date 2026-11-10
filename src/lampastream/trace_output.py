@@ -42,10 +42,10 @@ def load_capabilities(path: str | Path) -> OutputCapabilities:
 
 
 def wire_rgb(colour: Colour) -> tuple[int, int, int]:
-    """Match hue-entertainment 0.1.2 dtls.py, including its <=255 branch.
+    """Match the Hue output adapter, retaining the original <=255 mapping.
 
-    The HueDriver first calls to_16bit(); the dependency reduces values >255
-    by shifting, but passes values <=255 through. Each resulting byte is
+    The HueDriver adapter preserves the original 0.1.2 mapping with the pinned
+    0.3.0 encoder: reduce values >255 by shifting, pass values <=255 through. Each resulting byte is
     duplicated on the wire. Do not replace this with round(channel * 255).
     """
     return tuple(min(255, value >> 8) if value > 255 else value

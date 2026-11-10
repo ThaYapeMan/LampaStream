@@ -8,13 +8,13 @@ import subprocess
 import sys
 import wave
 from pathlib import Path
-from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import numpy as np
 import pytest
-from hue_entertainment import LightColorCommand
-from hue_entertainment.dtls import HueDtlsStreamer
+from hue_entertainment import HueEntertainmentAPI
 
+from lampastream.hue_output import create_hue_session, hue_rgb_command
 from lampastream.trace_output import TraceOutput, load_room, wire_rgb
 from lampastream.types import Colour, UniformScene
 
@@ -143,15 +143,55 @@ def test_timestamped_requests_use_one_deadline_and_capability_transport_clock(re
 
 
 @pytest.mark.parametrize("value", [0, .5, 1, .5 + 1 / 1024, .5 + 1 / 2048, 1 / 65535])
-def test_virtual_output_matches_actual_hue_dependency_wire_bytes(value):
+def test_virtual_output_matches_actual_hue_dependency_wire_bytes(value, monkeypatch):
+    import asyncio
+    import queue
+
+    area_id = "00000000-0000-0000-0000-000000000001"
+    frames = queue.Queue()
+
+    class Transport:
+        def __init__(self, *args):
+            pass
+
+        def handshake(self):
+            pass
+
+        def send(self, data):
+            frames.put(data)
+
+        def close(self):
+            pass
+
+    # Fake only REST and encrypted transport. Real public session construction,
+    # start/send/close, streamer thread and encoder remain the production path.
+    monkeypatch.setattr('hue_entertainment.dtls._DtlsConnection', Transport)
+    for name in ('start_entertainment', 'stop_entertainment', 'close'):
+        monkeypatch.setattr(HueEntertainmentAPI, name, AsyncMock())
+    monkeypatch.setattr(HueEntertainmentAPI, 'get_entertainment_areas',
+                        AsyncMock(return_value=[]))
     colour = Colour(value, value, value)
-    command = LightColorCommand(channel_id=0, **dict(zip(
-        ("red", "green", "blue"), colour.to_16bit(), strict=True)))
-    # Exercise only the dependency's pure encoder. No socket or session is constructed.
-    stub = SimpleNamespace(_sequence=0, _area_uuid_bytes=b"0" * 36)
-    wire = HueDtlsStreamer._build_huestream_message(stub, [command])
-    assert wire[14] == 0x00
+
+    async def exercise():
+        session = create_hue_session('offline.invalid', 'app-key', '00' * 16)
+        try:
+            await session.start(area_id, stop_others=True)
+            session.send([hue_rgb_command(0, colour)])
+            first = await asyncio.to_thread(frames.get, True, 2)
+            session.send([hue_rgb_command(0, colour)])
+            second = await asyncio.to_thread(frames.get, True, 2)
+            assert second[11] == (first[11] + 1) % 256
+            return first
+        finally:
+            await session.aclose()
+
+    wire = asyncio.run(exercise())
+    assert len(wire) == 16 + 36 + 7
+    assert wire[:11] == b'HueStream\x02\x00'
+    assert wire[14] == 0x00  # explicit RGB, never XY/VIVID
+    assert wire[16:52] == area_id.encode('ascii')
     assert tuple(wire[-6::2]) == wire_rgb(colour)
+    assert wire[-6::2] == wire[-5::2]  # duplicated RGB bytes
     output = TraceOutput(load_room(ROOM))
     output.send(UniformScene(colour), 0)
     assert tuple(output.rows[0][k] for k in ("r8", "g8", "b8")) == tuple(wire[-6::2])

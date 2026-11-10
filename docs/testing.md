@@ -11,6 +11,17 @@ cd web
 npm test
 ```
 
+The pre-push gate first runs `python3 scripts/check-dependency-lock.py` with
+`.venv/bin` first on PATH. It rejects an unpinned Hue declaration or an installed
+Hue version different from that exact pin (currently 0.3.0), then checks every exact runtime pin in
+`pyproject.toml` against installed distribution metadata (currently Hue, librosa,
+and soundfile). `pyproject.toml` is the runtime pin source; no separate runtime
+requirements lock exists. The guard fails before tests; it does not silently
+upgrade or accept a cached version. Prepare the gate environment with
+`uv pip install --python .venv/bin/python '.[dev]'` (or the equivalent pip install)
+when a pin changes. Other dependencies with declared ranges are not fully locked
+by this check; it enforces the exact runtime pins, including this Hue client.
+
 Report passed/failed/skipped totals and warnings. Frontend unit tests are separate
 from Playwright end-to-end tests. Native skips are pending evidence, not failures or
 successful native execution. Restricted environments may prevent TestClient/network
@@ -282,8 +293,12 @@ unique integers 0–255 and coordinates are finite. The committed two-channel ro
 is a **synthetic** left/right fallback, not a claim about owner-area coordinates.
 Supply the owner's area positions through this file for physical comparisons.
 TraceOutput samples the same Scene protocol as HueDriver and matches
-hue-entertainment 0.1.2's command-to-wire conversion, including its unusual
-pass-through branch for 16-bit command values <=255.
+the pinned hue-entertainment 0.3.0 public session path. HueDriver explicitly
+selects RGB and expands command values <=255 before encoding, preserving the
+original 0.1.2 lamp bytes. The six wire regression cases create a real session,
+start an explicit area, send through its real encoder/sender thread, and close it;
+only REST and the encrypted DTLS transport are fake. They assert framing, RGB,
+area UUID, sequence increment, duplicated bytes, and virtual-output agreement.
 
 `--render-hz` accepts 20, 30 (default), 50 or 60 and sets the production
 `output_render_hz` profile setting. Injected sleep advances the virtual clock by

@@ -86,7 +86,7 @@ for (const theme of ['light', 'dark']) {
         ellipsis: getComputedStyle(el).textOverflow, whiteSpace: getComputedStyle(el).whiteSpace
       }))
       expect(truncation).toEqual({ clipped: true, overflow: 'hidden', ellipsis: 'ellipsis', whiteSpace: 'nowrap' })
-      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+      await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     }
   })
 }

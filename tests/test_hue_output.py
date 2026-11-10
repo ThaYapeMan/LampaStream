@@ -120,9 +120,10 @@ def test_hue_driver_last_colours_empty_on_new_instance():
 
 
 class LifecycleSession(_FakeSession):
-    def __init__(self, *args, idle_timeout=10):
+    def __init__(self, *args, idle_timeout=10, color_mode=None):
         super().__init__()
         self.idle_timeout = idle_timeout
+        self.color_mode = color_mode
         self.is_streaming = False
         self.starts = 0
         self.stops = 0
@@ -158,6 +159,8 @@ def test_driver_disables_idle_and_seeds_keepalive(monkeypatch):
         await driver.start()
         session = driver._session
         assert session.idle_timeout == 0
+        from hue_entertainment import ColorMode
+        assert session.color_mode is ColorMode.RGB
         assert len(session.calls) == 1
         assert all(c.red == c.green == c.blue == 0 for c in session.calls[0])
         assert driver.output_status == {'state': 'streaming', 'reason': None}

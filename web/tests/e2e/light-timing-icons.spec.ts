@@ -61,7 +61,7 @@ for (const theme of ['light', 'dark']) for (const kind of ['Sonos', 'LMS']) {
       await page.setViewportSize({ width, height: 1100 })
       await expect(diagram.locator('.truncate')).toHaveText(longName)
       expect(await diagram.locator('.truncate').evaluate(el => el.scrollWidth > el.clientWidth && getComputedStyle(el).textOverflow === 'ellipsis')).toBe(true)
-      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+      await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     }
   })
 }

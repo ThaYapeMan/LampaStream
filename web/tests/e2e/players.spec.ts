@@ -110,11 +110,9 @@ test('Players groups timings, selects AirPlay, switches Auto and stacks on phone
   const list = await page.getByRole('listbox').boundingBox()
   const timing = await page.getByTestId('light-timing').boundingBox()
   expect(timing!.y).toBeGreaterThan(list!.y + list!.height)
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= window.innerWidth
-    )
-  ).toBe(true)
+  await expect.poll(() => page.evaluate(
+    () => document.documentElement.scrollWidth <= window.innerWidth
+  )).toBe(true)
   await page.screenshot({ path: '/tmp/players-phone.png', fullPage: true })
 })
 for (const route of ['/latency', '/virtual-players'])

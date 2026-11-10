@@ -1,0 +1,17 @@
+version: 2
+updates:
+  - package-ecosystem: pip
+    directories:
+      - "/"
+      - "/scripts"
+    schedule:
+      interval: daily
+    cooldown:
+      default-days: 0
+    versioning-strategy: increase
+    open-pull-requests-limit: 20
+    groups:
+      by-package:
+        patterns:
+          - "*"
+        group-by: dependency-name

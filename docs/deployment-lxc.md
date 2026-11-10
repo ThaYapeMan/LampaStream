@@ -18,6 +18,18 @@ services. Do not reproduce separate manual dependency or producer-patching steps
 `--check` is read-only verification of an existing Debian 13/trixie x86_64
 installation with systemd running (`/run/systemd/system`). It does not install,
 migrate or modify the host. For development-host checks, see [testing](testing.md).
+The wheel pins `hue-entertainment==0.3.0`; the installer resolves that exact
+version from wheel metadata. Verification checks both the installed LampaStream
+requirement and client version, refusing a floating declaration or another version:
+
+```text
+Hue Entertainment client: hue-entertainment 0.3.0: PASS
+```
+
+HueDriver explicitly selects RGB. Its command adapter retains the original lamp
+bytes for very low RGB values despite the upstream 0.3.0 encoding change; XY/VIVID
+are not enabled by this update. No manual dependency installation is needed.
+
 Record its commit/binary hashes and run it twice to verify target idempotency.
 
 yeney-player paces LMS PCM internally. snd-dummy and `/dev/snd` passthrough are
