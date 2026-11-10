@@ -9,7 +9,7 @@ license-files = ["LICENSE"]
 authors = [{ name = "Jaap van Vliet" }]
 dependencies = [
     "fastapi>=0.115",
-    "uvicorn[standard]>=0.30",
+    "uvicorn[standard]>=0.54.0",
     "hue-entertainment==0.3.0",
     "numpy>=1.26",
     "Pillow>=10.4",
