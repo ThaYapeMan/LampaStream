@@ -28,7 +28,7 @@ ab-tools = [
 ]
 dev = [
     "pytest>=8.0",
-    "pytest-xdist>=3.6",
+    "pytest-xdist>=3.8.0",
     "ruff>=0.6",
     "httpx>=0.27",
     "matplotlib>=3.8",  # DSP comparison modules imported by the test suite
