@@ -461,13 +461,19 @@ def utc():
     return datetime.now(UTC).isoformat()
 
 
-def capture(search, receiver, requested_duration, protocol_version="auto", *, raw_detector=False):
+def bench_base():
+    """Persistent capture, reference and track root."""
+    return Path(os.environ.get("AB_BASE", "/var/lib/lampastream/ab"))
+
+
+def capture(search, receiver, requested_duration, protocol_version="auto", *,
+            raw_detector=False, anchor="content"):
     couplings = capture_couplings()
     original = api("/status").get("active_coupling_id")
     player_name = os.environ.get("AB_LMS_PLAYER")
     if not player_name:
         raise RuntimeError("AB_LMS_PLAYER is required (exact LMS room name)")
-    track_path = Path(os.environ.get("AB_TRACK_PATH", "/tmp/ab/track.flac"))
+    track_path = Path(os.environ.get("AB_TRACK_PATH", str(bench_base() / "track.flac")))
     if not track_path.is_file():
         raise RuntimeError(f"Local FLAC missing: {track_path}")
     for command in ("atvremote", "tcpdump", "ffprobe", "systemctl", "journalctl"):
@@ -525,7 +531,7 @@ def capture(search, receiver, requested_duration, protocol_version="auto", *, ra
     seconds = requested_duration if requested_duration is not None else duration + 5
     if not math.isfinite(seconds) or seconds <= 0:
         raise RuntimeError("Duration must be finite and positive")
-    base = Path("/tmp/ab")
+    base = bench_base()
     base.mkdir(parents=True, exist_ok=True)
     out = Path(tempfile.mkdtemp(prefix="ab-run-", dir=base))
     manifest = dict(
@@ -663,7 +669,7 @@ def capture(search, receiver, requested_duration, protocol_version="auto", *, ra
             print("Cleanup failed: " + "; ".join(cleanup_errors), file=sys.stderr)
             if sys.exc_info()[0] is None:
                 raise RuntimeError("Capture cleanup/restore failed; see " + str(out))
-    write_analysis(out, track_path, song["title"])
+    write_analysis(out, track_path, song["title"], anchor=anchor)
     archive = base / ("ab-" + datetime.now().strftime("%Y%m%d-%H%M") + ".tar.gz")
     if archive.exists():
         archive = base / (archive.name.removesuffix(".tar.gz") + "-" + out.name + ".tar.gz")
@@ -674,7 +680,7 @@ def capture(search, receiver, requested_duration, protocol_version="auto", *, ra
     print(archive, flush=True)
 
 
-def write_analysis(out, track_path, title=None):
+def write_analysis(out, track_path, title=None, *, anchor="content"):
     """Nearest reference beats, 30-second median/MAD; never infer a beat grid."""
     slug = re.sub(r"[^a-z0-9]+", "-", (title or track_path.stem).lower()).strip("-")
     explicit = os.environ.get("AB_REFERENCE_BEATS")
@@ -684,7 +690,8 @@ def write_analysis(out, track_path, title=None):
         else [
             track_path.parent / "beats.csv",
             Path.cwd() / "own" / slug / "beats.csv",
-            Path(os.environ.get("AB_REFERENCE_ROOT", "/tmp/ab")) / "own" / slug / "beats.csv",
+            Path(os.environ.get("AB_REFERENCE_ROOT", str(bench_base())))
+            / "own" / slug / "beats.csv",
             track_path.parent / "own" / slug / "beats.csv",
             HERE.parent / "tests" / "fixtures" / "own" / slug / "beats.csv",
             HERE.parent / "artifacts" / "acceptance" / "own" / slug / "beats.csv",
@@ -725,9 +732,39 @@ def write_analysis(out, track_path, title=None):
         bins = {}
         verdicts = {}
         for label in ("lms", "airplay"):
+            status_path = out / f"{label}-status.jsonl"
+            statuses = ([json.loads(line) for line in status_path.read_text().splitlines()]
+                        if status_path.exists() else [])
+            points = [(r["t_wall"], r["track"]["position_s"], r["track"]["observed_at"])
+                      for r in statuses if r.get("track")
+                      and r["track"].get("playing")
+                      and r["track"].get("position_s") is not None]
+            rate = None
+            if len(points) > 1:
+                xs = [p[2] for p in points]
+                ys = [p[1] for p in points]
+                xm, ym = statistics.mean(xs), statistics.mean(ys)
+                variance = sum((x-xm)**2 for x in xs)
+                if variance:
+                    rate = (sum((x-xm)*(y-ym) for x, y in zip(xs, ys, strict=True))
+                            / variance - 1) * 1000
+            fixed = next((p for p in points if p[1] >= 15), None)
+            coordinate = ("fixed anchor (first post-15 s status, slope 1)"
+                          if label == "lms" and anchor == "fixed" else
+                          "content_t" if label == "lms" else "audible_t (RTP anchor)")
+            lines.insert(-2, f"{label} table coordinate: {coordinate}; position_s rate vs wall: "
+                         + (f"{rate:+.3f} ms/s" if rate is not None else "unavailable"))
             with (out / f"{label}-beats.csv").open() as stream:
-                times = [float(row["audible_t"]) for row in csv.DictReader(stream)
-                         if row["audible_t"] and row.get("source") != "bass_trigger"]
+                events = [r for r in csv.DictReader(stream) if r.get("source") != "bass_trigger"]
+            times = []
+            for row in events:
+                if label == "lms" and anchor == "fixed":
+                    value = (fixed[1] + float(row["audible_monotonic"]) - fixed[2]
+                             if fixed and row.get("audible_monotonic") else None)
+                else:
+                    value = row.get("content_t" if label == "lms" else "audible_t")
+                if value is not None and value != "":
+                    times.append(float(value))
             offsets = {}
             for t in times:
                 if not math.isfinite(t) or t < ref[0] - 0.25 or t > ref[-1] + 0.25:
@@ -735,10 +772,9 @@ def write_analysis(out, track_path, title=None):
                 i = bisect.bisect_left(ref, t)
                 near = min(ref[max(0, i - 1) : min(len(ref), i + 1)], key=lambda x: abs(x - t))
                 offsets.setdefault(int(t // 30) * 30, []).append((t - near) * 1000)
-            # Match analyse_ab.py's phase unwrap around the route median.
             all_offsets = [v for values in offsets.values() for v in values]
             center = statistics.median(all_offsets) if all_offsets else 0.
-            medians = {}
+            medians, mads = {}, {}
             for start, values in offsets.items():
                 if period_ms:
                     values = [(v-center+period_ms/2) % period_ms-period_ms/2+center
@@ -746,18 +782,29 @@ def write_analysis(out, track_path, title=None):
                 median = statistics.median(values)
                 mad = statistics.median(abs(v - median) for v in values)
                 bins.setdefault(start, {})[label] = f"{median:+.1f} / {mad:.1f}, {len(values)}"
-                medians[start] = median
+                medians[start], mads[start] = median, mad
             ordered = sorted(medians)
-            verdicts[label] = (
-                bool(ordered)
-                and ordered[0] == 0
-                and ordered[-1] >= int(ref[-1] // 30) * 30
-                and all(abs(medians[k]) <= 40 for k in ordered)
-                and all(
-                    b - a == 30 and abs(medians[b] - medians[a]) < 20
-                    for a, b in zip(ordered, ordered[1:], strict=False)
-                )
-            )
+            delays = [r["light_timing"]["status"]["applied_delay_ms"] for r in statuses
+                      if r.get("light_timing") and r["light_timing"].get("status")
+                      and r["light_timing"]["status"].get("session_anchor_at") is not None
+                      and r["light_timing"]["status"].get("applied_delay_ms") is not None]
+            stable = bool(delays) and all(abs(d-delays[0]) <= 2 for d in delays)
+            no_step = all(abs(medians[b]-medians[a]) <= 10
+                          for a, b in zip(ordered, ordered[1:], strict=False)
+                          if b-a > 30)
+            verdicts[label] = (bool(ordered) and no_step
+                and all(abs(medians[k]-medians[ordered[0]]) <= 10 for k in ordered)
+                and all(m <= 15 for m in mads.values())
+                and (stable if label == "lms" else True))
+            if label == "airplay":
+                verdicts[label] = (bool(ordered) and ordered[0] == 0
+                    and ordered[-1] >= int(ref[-1] // 30) * 30
+                    and all(abs(medians[k]) <= 40 for k in ordered)
+                    and all(b-a == 30 and abs(medians[b]-medians[a]) < 20
+                            for a, b in zip(ordered, ordered[1:], strict=False)))
+            lines.insert(-2, f"{label}: absolute offset {center:+.1f} ms (not judged); "
+                         f"anchored applied delay constant ±2 ms: "
+                         f"{stable if label == 'lms' else 'N/A'}.")
         for start, values in sorted(bins.items()):
             lines.append(
                 f"| {start}–{start + 30} | {values.get('lms', '—')} "
@@ -767,12 +814,15 @@ def write_analysis(out, track_path, title=None):
             "",
             *[
                 f"{label}: {'PASS' if passed else 'FAIL / INCOMPLETE'} "
-                "(±40 ms; adjacent bins <20 ms)."
+                + ("(populated bins within ±10 ms of first; MAD ≤15 ms; "
+                   "no kickless-section step >10 ms; anchored applied delay ±2 ms)."
+                   if label == "lms" else "(±40 ms; adjacent bins <20 ms).")
                 for label, passed in verdicts.items()
             ],
             "",
             "Sparse beats, breaks, missing bins and nearest-beat phase ambiguity "
-            "require inspection.",
+            "require inspection; no step across a kickless section must be confirmed "
+            "from the bins on both sides (≤10 ms).",
         ]
     (out / "analysis.md").write_text("\n".join(lines) + "\n")
 
@@ -791,15 +841,22 @@ def main():
     cap.add_argument("--protocol-version", choices=("auto", "1", "2"), default="auto")
     cap.add_argument("duration", type=float, nargs="?")
     cap.add_argument("--raw-detector", action="store_true")
+    cap.add_argument("--anchor", choices=("content", "fixed"), default="content")
+    analysis = sub.add_parser("analyse")
+    analysis.add_argument("out", type=Path)
+    analysis.add_argument("track", type=Path)
+    analysis.add_argument("--anchor", choices=("content", "fixed"), default="content")
     args = parser.parse_args()
     # SIGTERM must unwind the same cleanup as Ctrl-C.
     signal.signal(signal.SIGTERM, lambda *_: (_ for _ in ()).throw(KeyboardInterrupt()))
     try:
         if args.mode == "smoke":
             smoke(args.receiver, args.protocol_version, args.pcm_pipe, args.debug_log)
+        elif args.mode == "analyse":
+            write_analysis(args.out, args.track, anchor=args.anchor)
         else:
             capture(args.search, args.receiver, args.duration, args.protocol_version,
-                    raw_detector=args.raw_detector)
+                    raw_detector=args.raw_detector, anchor=args.anchor)
     except (Exception, KeyboardInterrupt) as error:
         parser.exit(getattr(error, "exit_code", 1), f"ERROR: {error or 'interrupted'}\n")
 

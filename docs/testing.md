@@ -918,7 +918,7 @@ Sender command syntax and credential storage follow the
 
 ```bash
 sudo env AB_LMS_PLAYER='<exact YeneY/Sonos room name>' \
-  AB_TRACK_PATH=/tmp/ab/track.flac \
+  AB_TRACK_PATH=/var/lib/lampastream/ab/track.flac \
   scripts/ab-capture.sh 'Just A Little Bit More' '<receiver-id>'
 ```
 
@@ -929,7 +929,7 @@ must agree within one second (duration agreement does not prove file identity).
 The logger subscribes before playback. Owned tcpdump/logger/sender processes and
 the LMS room are stopped even on interruption. Unique working directories retain
 partial evidence on failure. Successful captures end by printing a tarball path
-in `/tmp/ab/`; credentials are excluded.
+in `/var/lib/lampastream/ab/`; credentials are excluded.
 
 The capture script requires `AB_LMS_COUPLING` and `AB_AIRPLAY_COUPLING` in
 addition to `AB_LMS_PLAYER`. If either is absent it lists available coupling IDs
@@ -943,20 +943,19 @@ restore success/error and cleanup errors, including partial runs.
 ```bash
 sudo env AB_LMS_PLAYER='<exact YeneY/Sonos room name>' \
   AB_LMS_COUPLING='<LMS coupling id>' AB_AIRPLAY_COUPLING='<AirPlay coupling id>' \
-  AB_TRACK_PATH=/tmp/ab/track.flac \
+  AB_TRACK_PATH=/var/lib/lampastream/ab/track.flac \
   scripts/ab-capture.sh 'Just A Little Bit More' '<receiver-id>'
 ```
 
 The standalone logger can also be used with an already active route:
 
 ```bash
-/opt/lampastream/.venv/bin/python scripts/ab-logger.py airplay 386 --out /tmp/ab
+/opt/lampastream/.venv/bin/python scripts/ab-logger.py airplay 386 --out /var/lib/lampastream/ab
 ```
 
 `*-tempo.csv` contains one frame per second, `*-beats.csv` every individual beat.
-Unknown track time falls back to the AudibleClock monotonic coordinate, never
-wall time. Until the AirPlay field regression is reproduced and fixed, an
-AirPlay CSV may therefore use a monotonic origin rather than track seconds.
+Unknown track coordinates are empty. Accent rows carry UI `audible_t`, optional
+`content_t`, and the separate room `audible_monotonic` coordinate.
 `wall_t`/`t_wall` are Unix wall-clock receipt times only.
 
 ### Preview beat wire fields
@@ -970,8 +969,8 @@ fields. Do not count repeated frame indicators as new beats.
 AB-01 adds `events[].audible_t` and `frame.audible_t`, track seconds mapped at the
 player boundary using the generic metadata anchor. They are null without a
 position anchor. Existing timestamped events already carry all detections, so a
-second `beats` list is unnecessary. The logger labels predicted events
-`tempo_clock`, on-grid confirmed events `fused`, and other beats `bass_trigger`.
+second `beats` list is unnecessary. The logger labels rendered accents by `beat_source`: `grid`, `tracker` or
+`onset`. `--raw-detector` adds separate `bass_trigger` diagnostic rows.
 The synthetic 128 BPM socket test checks detection-time spacing of 0.46875 s
 ± one 10 ms hop on **both** the normal and timestamped routes.
 
@@ -983,8 +982,8 @@ they may be clamped to actual send time, which is correct for preview activation
 New `events[].detected_audible_monotonic` is the analyser candidate sample mapped
 to the AudibleClock **before** any scheduling/presentation clamp, and
 `events[].detected_audible_t` is its player-layer track coordinate (null when
-unknown). `ab-logger.py` uses only these detection-time fields per beat and fails
-clearly when connected to an older server lacking them. It never reconstructs
+unknown). `ab-logger.py` retains these detection-time fields alongside each
+accent and fails clearly when connected to an older server lacking them. It never reconstructs
 detection time from message receipt or from presentation time. Scheduling,
 rendering, detection and thresholds remain unchanged.
 
@@ -1128,7 +1127,7 @@ change, or OwnTone substitution is involved.
 sudo scripts/ab-airplay-smoke.sh 'bc:24:11:f0:46:75' --protocol-version 1
 sudo scripts/ab-airplay-smoke.sh '48:A6:B8:20:39:64' --protocol-version auto
 sudo env AB_LMS_PLAYER='<room>' AB_LMS_COUPLING='<LMS id>' AB_AIRPLAY_COUPLING='<AirPlay id>' \
-  AB_TRACK_PATH=/tmp/ab/track.flac scripts/ab-capture.sh 'Just A Little Bit More' \
+  AB_TRACK_PATH=/var/lib/lampastream/ab/track.flac scripts/ab-capture.sh 'Just A Little Bit More' \
   'bc:24:11:f0:46:75' --protocol-version 1
 ```
 
@@ -1294,7 +1293,7 @@ connection races. To clear a truly stuck receiver, stop its sender, then run
 
 Captures now include `analysis.md`. Reference lookup uses `AB_REFERENCE_BEATS`
 when set; otherwise `beats.csv` beside `AB_TRACK_PATH`, or `own/<slug>/beats.csv`
-under the current directory, `AB_REFERENCE_ROOT` (default `/tmp/ab`), the track's
+under the current directory, `AB_REFERENCE_ROOT` (default `AB_BASE`), the track's
 parent, `tests/fixtures`, or `artifacts/acceptance`. The slug is the LMS title,
 lowercased with non-alphanumeric runs replaced by `-`. The exact reference is
 copied into the archive as `reference-beats.csv`. For this field track, explicit
@@ -1303,16 +1302,17 @@ selection avoids any naming ambiguity:
 ```bash
 sudo env AB_REFERENCE_BEATS=/path/to/analysis-kit/beats.csv \
   AB_LMS_PLAYER='<room>' AB_LMS_COUPLING='<LMS id>' AB_AIRPLAY_COUPLING='<AirPlay id>' \
-  AB_TRACK_PATH=/tmp/ab/track.flac scripts/ab-capture.sh \
+  AB_TRACK_PATH=/var/lib/lampastream/ab/track.flac scripts/ab-capture.sh \
   'Just A Little Bit More' 'bc:24:11:f0:46:75' --protocol-version 1
 ```
 
 The table reports each 30-second bin's nearest-reference offset median, MAD and
 count, with the analysis kit's median-centered phase unwrap. No reference gives
 NOT EVALUATED, never a fabricated verdict. Missing bins/full-track coverage fail
-acceptance; breaks and nearest-beat ambiguity still need inspection. LMS acceptance
-is ±40 ms from the first bin and <20 ms changes between adjacent bins; compare
-AirPlay with its previous capture too.
+acceptance; breaks and nearest-beat ambiguity still need inspection. LMS grid acceptance uses every populated 30 s bin within ±10 ms of the first
+bin, MAD ≤15 ms, no step across a kickless section, and anchored
+`applied_delay_ms` constant within ±2 ms after startup. Absolute offsets are
+reported without a latency verdict. Compare AirPlay with its previous capture too.
 
 Both logger CSVs use track seconds only in `audible_t`; missing anchors are empty,
 never raw monotonic seconds. Beats additionally expose `detected_audible_t` and
@@ -1344,9 +1344,10 @@ needs no host-private file for this track. The summary alongside it distinguishe
 librosa beat timestamps from the first kick. `*-status.jsonl` in each tarball now
 records the actual metadata anchor, source/latency status and trim.
 
-Field acceptance requires two consecutive captures: LMS ±40 ms from bin zero,
-<20 ms between adjacent median bins, and saved room calibration equal within
-10 ms. Check that `measurement_basis` is `lms-content-v1` and that a fresh startup
+Field acceptance requires two consecutive captures: LMS populated bin medians
+within ±10 ms of the first bin in content-clock or fixed-anchor coordinates,
+MAD ≤15 ms, no step across the kickless section, and anchored applied delay
+constant within ±2 ms after startup. Absolute LMS offsets are not judged. Check that `measurement_basis` is `lms-content-v1` and that a fresh startup
 consensus occurs within 15 seconds. AirPlay must return to the previous timing
 range. The exact historical cause of its 60 ms native/metadata relationship shift
 is not recoverable from the supplied archives; the new RTP origin removes that
@@ -1488,3 +1489,31 @@ the archived f=0 rule with the original sensitivity base floor. Tests cover all
 three stored modes through schema 3/4 migration, backup/idempotence, rejected
 retired fields and the new model/API creation default. Final full-track outputs
 are compared with the fixed sweep and archived f=0 Tracker result.
+
+
+### LAT-02 capture coordinates and persistent storage
+
+`AB_BASE` defaults to `/var/lib/lampastream/ab`. `install-ab-tools.sh` creates it
+root-owned with mode 0700. Capture directories, archives and `run.log` live there;
+`AB_TRACK_PATH` defaults to `$AB_BASE/track.flac` and `AB_REFERENCE_ROOT` defaults
+to `$AB_BASE`. Set the same override when installing and capturing.
+
+Accent CSVs preserve UI `audible_t` and add `content_t` and `audible_monotonic`.
+LMS tables default to `content_t`, read from the session's existing SHM v1/YNPT
+position clock at preview publication; missing provenance stays empty. AirPlay
+tables retain the RTP-derived `audible_t`. Each table names its coordinate.
+`--anchor fixed` maps LMS `audible_monotonic` through the first playing status
+position after 15 track seconds with slope 1, and reports the measured position
+slide in ms/s. This also supports older captures that lack `content_t`:
+
+```sh
+/opt/lampastream/.venv/bin/python scripts/ab-tools.py analyse \
+  /var/lib/lampastream/ab/run8 /var/lib/lampastream/ab/track.flac --anchor fixed
+```
+
+Tables judge relative stability, including the bins on both sides of a kickless
+section (≤10 ms step), and the anchored applied delay. Missing clock/delay evidence
+cannot pass. Inspect break boundaries and reference coverage. Offsets are not
+latency measurements: fixed-anchor absolute offsets depend on the chosen status
+anchor and per-session quantised LMS consensus. OUT-01 camera and CLOCK-01 YeneY
+millisecond play points establish absolute room alignment.

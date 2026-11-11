@@ -584,7 +584,12 @@ class PlayerManager:
 
     def _publish_preview(self, payload):
         if payload.get('type') == 'event':
+            session = getattr(self, "_active", None)
+            accessor = session.position_clock if session else None
+            anchor = accessor() if accessor else None
             payload = dict(payload, events=[dict(event,
+                content_t=(anchor[0] + event['audible_monotonic'] - anchor[1]
+                           if anchor is not None else None),
                 audible_t=self.track_time_at(event['audible_monotonic']),
                 detected_audible_t=self.track_time_at(event['detected_audible_monotonic']))
                 for event in payload['events']])

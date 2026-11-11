@@ -59,7 +59,8 @@ def test_logger_keeps_exact_clock_and_unknown_track_time():
 @pytest.mark.parametrize("mode,source", [("onset", "onset"), ("tracker", "grid"),
                                           ("tracker", "tracker")])
 @pytest.mark.parametrize("raw_detector", [False, True])
-def test_logger_csv_real_socket(tmp_path, mode, source, raw_detector):
+@pytest.mark.parametrize("content", [4.69, None])
+def test_logger_csv_real_socket(tmp_path, mode, source, raw_detector, content):
     import csv
 
     import websockets
@@ -78,6 +79,7 @@ def test_logger_csv_real_socket(tmp_path, mode, source, raw_detector):
                             dict(
                                 kind="beat",
                                 audible_t=4.7,
+                                **({"content_t": content} if content is not None else {}),
                                 detected_audible_t=4.6875,
                                 detected_audible_monotonic=200.0,
                                 strength=0.8,
@@ -118,6 +120,7 @@ def test_logger_csv_real_socket(tmp_path, mode, source, raw_detector):
         expected.append("bass_trigger")
     assert [row["source"] for row in rows] == expected
     assert rows[0]["audible_t"] == "4.7"
+    assert rows[0]["content_t"] == ("4.69" if content is not None else "")
     assert all(row["detected_audible_t"] == "4.6875" for row in rows)
     if len(rows) == 2:
         assert rows[1]["audible_t"] == "4.6875"
@@ -136,6 +139,7 @@ def test_logger_csv_real_socket(tmp_path, mode, source, raw_detector):
 
 def test_capture_stops_owned_processes_and_player_on_sender_failure(tmp_path, monkeypatch):
     tool = load("ab-tools")
+    monkeypatch.setenv("AB_BASE", str(tmp_path / "bench"))
     monkeypatch.setenv("AB_LMS_PLAYER", "Room")
     track = tmp_path / "track.flac"
     track.touch()
@@ -317,7 +321,7 @@ def test_capture_analysis_uses_reference_and_marks_missing_bins(tmp_path, monkey
             writer.writerows([[.5+i*.46875+offset] for i in range(260)])
     tool.write_analysis(out, tmp_path/'track.flac', 'Test Song')
     result = (out/'analysis.md').read_text()
-    assert '+200.0 / 0.0' in result and '+6.0 / 0.0' in result
+    assert 'content_t' in result and '+6.0 / 0.0' in result
     assert 'lms: FAIL' in result and 'airplay: PASS' in result
     assert (out/'reference-beats.csv').read_bytes() == reference.read_bytes()
     monkeypatch.setenv('AB_REFERENCE_BEATS', str(tmp_path/'missing.csv'))
@@ -432,3 +436,75 @@ def test_accent_bench_reference_hits_exclude_breaks_and_count_beats_once():
     assert result['tolerance_s'] == .05
     empty = bench.reference_hits([], [], 381., .05)
     assert empty['hits'] == 0 and empty['hit_rate'] is None
+
+
+@pytest.mark.parametrize('content', [12.5, None])
+def test_logger_content_coordinate_serializes_optional_payload(tmp_path, content):
+    import csv
+
+    logger = load('ab-logger')
+    event = dict(kind='beat', beat_source='grid', audible_t=12.4,
+                 audible_monotonic=112.5, detected_audible_monotonic=112.)
+    if content is not None:
+        event['content_t'] = content
+    path = tmp_path / 'beats.csv'
+    with path.open('w') as stream:
+        writer = csv.DictWriter(stream, logger.BEAT_FIELDS)
+        writer.writeheader()
+        writer.writerows(logger.beat_rows(event, 1000., 'tracker', False))
+    with path.open() as stream:
+        row = next(csv.DictReader(stream))
+    assert row['content_t'] == ('12.5' if content is not None else '')
+    assert row['audible_t'] == '12.4'
+    assert row['audible_monotonic'] == '112.5'
+
+
+def test_fixed_anchor_removes_half_ms_per_second_position_slide(tmp_path, monkeypatch):
+    import csv
+
+    tool = load('ab-tools')
+    reference = tmp_path / 'beats.csv'
+    reference.write_text('time_s\n' + ''.join(f'{t}\n' for t in range(1, 391)))
+    monkeypatch.setenv('AB_REFERENCE_BEATS', str(reference))
+    out = tmp_path / 'out'
+    out.mkdir()
+    statuses = []
+    for t in range(391):
+        statuses.append(dict(t_wall=1000+t, track=dict(
+            playing=True, position_s=t*.9995, observed_at=100+t),
+            light_timing=dict(status=dict(session_anchor_at=110,
+                                         applied_delay_ms=-115.))))
+    (out / 'lms-status.jsonl').write_text('\n'.join(map(json.dumps, statuses)))
+    for label in ('lms', 'airplay'):
+        with (out / f'{label}-beats.csv').open('w') as stream:
+            writer = csv.DictWriter(stream, ['audible_t', 'audible_monotonic', 'content_t'])
+            writer.writeheader()
+            writer.writerows(dict(audible_t=t*.9995, audible_monotonic=100+t,
+                                  content_t=t) for t in range(1, 391))
+    tool.write_analysis(out, tmp_path / 'track.flac', anchor='fixed')
+    result = (out / 'analysis.md').read_text()
+    assert 'position_s rate vs wall: -0.500 ms/s' in result
+    assert 'fixed anchor (first post-15 s status, slope 1)' in result
+    assert 'lms: PASS' in result
+    assert result.count('-8.0 / 0.0') == 13
+    tool.write_analysis(out, tmp_path / 'track.flac')
+    assert 'lms: PASS' in (out / 'analysis.md').read_text()
+    statuses[-1]['light_timing']['status']['applied_delay_ms'] = -111.
+    (out / 'lms-status.jsonl').write_text('\n'.join(map(json.dumps, statuses)))
+    tool.write_analysis(out, tmp_path / 'track.flac')
+    assert 'lms: FAIL' in (out / 'analysis.md').read_text()
+
+
+def test_bench_base_default_and_override(tmp_path, monkeypatch):
+    tool = load('ab-tools')
+    monkeypatch.delenv('AB_BASE', raising=False)
+    assert tool.bench_base() == Path('/var/lib/lampastream/ab')
+    monkeypatch.setenv('AB_BASE', str(tmp_path))
+    assert tool.bench_base() == tmp_path
+    source = (ROOT / 'scripts/ab-tools.py').read_text()
+    assert '/tmp' not in source
+    assert 'str(bench_base() / "track.flac")' in source
+    assert 'str(bench_base())' in source
+    wrapper = (ROOT / 'scripts/ab-capture.sh').read_text()
+    assert '$AB_BASE/run.log' in wrapper
+    assert '/var/lib/lampastream/ab' in wrapper

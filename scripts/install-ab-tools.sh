@@ -38,7 +38,7 @@ install_tools() {
     script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
     /opt/lampastream/.venv/bin/python -m pip install --force-reinstall -r "$script_dir/requirements-ab-tools.txt"
     /opt/lampastream/.venv/bin/python -m pip check
-    install -d -m 0700 /var/lib/lampastream/ab-tools
+    install -d -o root -g root -m 0700 /var/lib/lampastream/ab-tools "${AB_BASE:-/var/lib/lampastream/ab}"
 }
 if [[ $QUIET == 1 ]]; then
     OUTPUT_LOG=$(mktemp)

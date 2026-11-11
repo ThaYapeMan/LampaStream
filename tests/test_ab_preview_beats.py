@@ -136,3 +136,16 @@ def test_generic_player_anchor_maps_preview_track_time(player_kind, monkeypatch)
     assert PlayerManager.track_time_at(manager, 100.46875) == 10.46875
     manager.track_position = None
     assert PlayerManager.track_time_at(manager, 100.46875) is None
+
+
+@pytest.mark.parametrize('anchor', [(10., 100., 0.), None])
+def test_preview_content_time_uses_existing_session_clock(anchor):
+    published = []
+    manager = SimpleNamespace(
+        _active=SimpleNamespace(position_clock=lambda: anchor),
+        _preview_listeners=[published.append], track_time_at=lambda t: t-91.)
+    event = dict(audible_monotonic=101., detected_audible_monotonic=100.9)
+    PlayerManager._publish_preview(manager, dict(type='event', events=[event]))
+    result = published[0]['events'][0]
+    assert result['content_t'] == (11. if anchor else None)
+    assert result['audible_t'] == 10.

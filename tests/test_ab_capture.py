@@ -17,6 +17,7 @@ def capture_tool(tmp_path, monkeypatch):
     tool = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(tool)
     for name, value in [
+        ("AB_BASE", str(tmp_path / "bench")),
         ("AB_LMS_PLAYER", "Room"),
         ("AB_LMS_COUPLING", "lms"),
         ("AB_AIRPLAY_COUPLING", "airplay"),
@@ -164,3 +165,23 @@ def test_restore_failure_is_recorded(capture_tool, monkeypatch):
         tool.capture("track", "receiver", 0.001)
     result = json.loads((state["out"] / "manifest.json").read_text())["restore"]
     assert result == dict(requested_id="original", success=False, error="API unavailable")
+
+
+def test_capture_base_owns_default_track_archive_and_reference(capture_tool, monkeypatch):
+    tool, state = capture_tool
+    base = tool.bench_base()
+    base.mkdir()
+    track = base / 'track.flac'
+    track.touch()
+    monkeypatch.delenv('AB_TRACK_PATH')
+    monkeypatch.delenv('AB_REFERENCE_ROOT', raising=False)
+    reference = base / 'own' / 'track' / 'beats.csv'
+    reference.parent.mkdir(parents=True)
+    reference.write_text('time_s\n1\n')
+    for label in ('lms', 'airplay'):
+        (state['out'] / f'{label}-beats.csv').write_text('audible_t,content_t\n1,1\n')
+    tool.capture('track', 'receiver', .001)
+    assert list(base.glob('ab-*.tar.gz'))
+    manifest = json.loads((state['out'] / 'manifest.json').read_text())
+    assert manifest['local_track'] == str(track)
+    assert (state['out'] / 'reference-beats.csv').read_bytes() == reference.read_bytes()

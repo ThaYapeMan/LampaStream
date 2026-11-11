@@ -25,6 +25,8 @@ TEMPO_FIELDS = [
 ]
 BEAT_FIELDS = [
     "audible_t",
+    "content_t",
+    "audible_monotonic",
     "detected_audible_t",
     "detected_audible_monotonic",
     "wall_t",
@@ -39,6 +41,8 @@ def beat_row(event, wall, source):
         raise RuntimeError("Preview event lacks detection time; deploy the updated server")
     return dict(
         audible_t=event.get("detected_audible_t" if source == "bass_trigger" else "audible_t"),
+        content_t=event.get("content_t"),
+        audible_monotonic=event.get("audible_monotonic"),
         detected_audible_t=event.get("detected_audible_t"),
         detected_audible_monotonic=event["detected_audible_monotonic"],
         wall_t=wall,

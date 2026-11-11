@@ -59,3 +59,36 @@ accents on the content clock.
 
 The track display’s `position_s` slid −0.16 ms/s against wall time in the same
 capture. That display coordinate retains its existing behavior.
+
+## Field confirmation 2026-11-11
+
+Two captures of `21b3d18`, at 09:44 and 18:34, used Mau P, the LMS coupling
+in Tracker mode and the active library grid.
+
+LAT-02 did what it was meant to do: `applied_delay_ms` was **constant for the whole track** in both runs
+(−115.0 ms from the startup step at 13 s to the end; −149.2 ms in the evening run), `guard_residual_ms`
+reported, no re-anchor. 640 grid accents per run, MAD 6–10 ms per 30 s bin.
+
+But the capture's own per-bin table still shows a slide — now −0.58 ms/s, −215 ms over the track, in
+both runs, with the applied delay flat. So the slide is not in the lights. It is in the **coordinate the
+logger uses**:
+
+- `*-beats.csv` `audible_t` comes from `PlayerManager.track_time_at()`, which maps the event's room
+  monotonic time through `TrackPosition.position_s/observed_at` of the **followed player's LMS status
+  subscription** (`LmsTrackPositionSource._set_snapshot`, 5 ms/s bounded corrections). For a Sonos Port
+  that position is the UPnP `RelTime` integer-second re-anchor; in both captures it ran at
+  **−0.549 / −0.519 ms/s against wall time** (814 / 826 status rows).
+- Re-mapping the same grid events with **one anchor and slope 1** (first status position after 15 s plus
+  wall-clock elapsed) gives: residual slide **+0.018 ms/s** (both runs), every 30 s bin within
+  **−2.6 … +10.8 ms** (morning) and **−1.3 … +8.7 ms** (evening) of the first bin, MAD 6–10 ms.
+  The grid accents are steady; the yardstick moves.
+
+Consequence: the LMS acceptance table in `analysis.md` cannot pass while it is drawn in the followed
+player's `time ?` coordinate, whatever the lights do. The AirPlay route is unaffected (RTP anchor):
++10 … +14 ms constant, MAD 5 ms, in both runs.
+
+Two constant facts the capture can *not* judge and must say so: the absolute offset of the LMS route
+(+74 ms morning / +105 ms evening in the fixed-anchor coordinate) depends on the anchor chosen and on the
+per-session `time ?` consensus (the two sessions differ by 34 ms in applied delay and 31 ms in offset —
+the same quantised source). Absolute room alignment is OUT-01 (camera) and CLOCK-01 (YeneY ms play
+points), not this ticket.
