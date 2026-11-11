@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 @pytest.fixture
-def capture_tool(tmp_path, monkeypatch):
+def capture_tool(tmp_path, monkeypatch, ab_status):
     spec = importlib.util.spec_from_file_location("ab_capture", ROOT / "scripts/ab-tools.py")
     tool = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(tool)
@@ -90,6 +90,7 @@ def capture_tool(tmp_path, monkeypatch):
     def logger(label, *_, raw_detector=False):
         (out / f"{label}-manifest.json").write_text(json.dumps(
             dict(beat_accent_mode="onset", beat_accent_modes=["onset"])))
+        (out / f"{label}-status.jsonl").write_text(json.dumps(ab_status()) + "\n")
         state["events"].append(("logger", label))
         state["events"].append(("raw_detector", raw_detector))
         return process(["logger"])
@@ -185,3 +186,32 @@ def test_capture_base_owns_default_track_archive_and_reference(capture_tool, mon
     manifest = json.loads((state['out'] / 'manifest.json').read_text())
     assert manifest['local_track'] == str(track)
     assert (state['out'] / 'reference-beats.csv').read_bytes() == reference.read_bytes()
+
+
+def test_analysis_failure_keeps_archive_before_traceback(capture_tool, monkeypatch, capsys):
+    import sys
+    import tarfile
+
+    tool, state = capture_tool
+
+    def fail(*args, **kwargs):
+        archives = list(tool.bench_base().glob("ab-*.tar.gz"))
+        assert len(archives) == 1
+        assert str(archives[0]) in capsys.readouterr().out
+        with tarfile.open(archives[0]) as archive:
+            assert {"manifest.json", "lms-status.jsonl", "airplay-status.jsonl"} <= set(
+                archive.getnames())
+            manifest = json.load(archive.extractfile("manifest.json"))
+            assert manifest["restore"]["success"]
+        raise KeyError("analysis fixture failure")
+
+    monkeypatch.setattr(tool, "write_analysis", fail)
+    monkeypatch.setattr(sys, "argv", ["ab-tools.py", "capture", "track", "receiver", ".001"])
+    with pytest.raises(SystemExit) as error:
+        tool.main()
+    assert error.value.code == 1
+    diagnostic = capsys.readouterr().err
+    assert "Traceback (most recent call last)" in diagnostic
+    assert 'raise KeyError("analysis fixture failure")' in diagnostic
+    assert "KeyError: 'analysis fixture failure'" in diagnostic
+    assert (state["out"] / "manifest.json").is_file()

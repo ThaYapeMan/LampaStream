@@ -60,7 +60,7 @@ def test_logger_keeps_exact_clock_and_unknown_track_time():
                                           ("tracker", "tracker")])
 @pytest.mark.parametrize("raw_detector", [False, True])
 @pytest.mark.parametrize("content", [4.69, None])
-def test_logger_csv_real_socket(tmp_path, mode, source, raw_detector, content):
+def test_logger_csv_real_socket(tmp_path, mode, source, raw_detector, content, ab_status):
     import csv
 
     import websockets
@@ -69,8 +69,7 @@ def test_logger_csv_real_socket(tmp_path, mode, source, raw_detector, content):
 
     async def exercise():
         async def send(ws):
-            await ws.send(json.dumps(dict(type="status", track={"observed_at": 100.},
-                                          light_timing={"trim_ms": 60}, beat_accent_mode=mode)))
+            await ws.send(json.dumps(dict(type="status", **ab_status(), beat_accent_mode=mode)))
             await ws.send(
                 json.dumps(
                     dict(
@@ -126,7 +125,8 @@ def test_logger_csv_real_socket(tmp_path, mode, source, raw_detector, content):
         assert rows[1]["audible_t"] == "4.6875"
     assert "128" in (tmp_path / "test-tempo.csv").read_text()
     status = json.loads((tmp_path / "test-status.jsonl").read_text().splitlines()[0])
-    assert status['track']['observed_at'] == 100.
+    assert status['track'] == ab_status()['track']
+    assert 'observed_at' not in status['track']
     assert status['light_timing']['trim_ms'] == 60
     manifest = json.loads((tmp_path / 'test-manifest.json').read_text())
     assert manifest['beat_source'] == source
@@ -459,7 +459,7 @@ def test_logger_content_coordinate_serializes_optional_payload(tmp_path, content
     assert row['audible_monotonic'] == '112.5'
 
 
-def test_fixed_anchor_removes_half_ms_per_second_position_slide(tmp_path, monkeypatch):
+def test_fixed_anchor_removes_half_ms_per_second_position_slide(tmp_path, monkeypatch, ab_status):
     import csv
 
     tool = load('ab-tools')
@@ -470,10 +470,7 @@ def test_fixed_anchor_removes_half_ms_per_second_position_slide(tmp_path, monkey
     out.mkdir()
     statuses = []
     for t in range(391):
-        statuses.append(dict(t_wall=1000+t, track=dict(
-            playing=True, position_s=t*.9995, observed_at=100+t),
-            light_timing=dict(status=dict(session_anchor_at=110,
-                                         applied_delay_ms=-115.))))
+        statuses.append(ab_status(t*.9995, mono=100+t, wall=1000+t))
     (out / 'lms-status.jsonl').write_text('\n'.join(map(json.dumps, statuses)))
     for label in ('lms', 'airplay'):
         with (out / f'{label}-beats.csv').open('w') as stream:
@@ -508,3 +505,46 @@ def test_bench_base_default_and_override(tmp_path, monkeypatch):
     wrapper = (ROOT / 'scripts/ab-capture.sh').read_text()
     assert '$AB_BASE/run.log' in wrapper
     assert '/var/lib/lampastream/ab' in wrapper
+
+
+@pytest.mark.parametrize('anchor', ['content', 'fixed'])
+@pytest.mark.parametrize('archived', [False, True])
+def test_analysis_accepts_real_delivery_and_older_capture(tmp_path, monkeypatch, ab_status,
+                                                         anchor, archived):
+    import sys
+    import tarfile
+
+    from lampastream.track_position import TrackPosition
+
+    tool = load('ab-tools')
+    row = ab_status(16., mono=116., wall=1016.)
+    assert row['track'] == TrackPosition(position_s=16., playing=True,
+                                         observed_at=116.).for_delivery()
+    assert 'observed_at' not in row['track']
+    # Existing run 8 did not record a logger monotonic receipt timestamp.
+    del row['t_monotonic']
+    out = tmp_path / 'capture'
+    out.mkdir()
+    reference = tmp_path / 'reference.csv'
+    reference.write_text('time_s\n16\n17\n')
+    monkeypatch.setenv('AB_REFERENCE_BEATS', str(reference))
+    for label in ('lms', 'airplay'):
+        later = ab_status(17., mono=118., wall=1017.)
+        del later['t_monotonic']
+        (out / f'{label}-status.jsonl').write_text(
+            '\n'.join(map(json.dumps, [row, later])) + '\n')
+        (out / f'{label}-beats.csv').write_text(
+            'content_t,audible_t,audible_monotonic,wall_t\n16,16,116,1016\n17,17,117,1017\n')
+    target = out
+    if archived:
+        target = tmp_path / 'capture.tar.gz'
+        with tarfile.open(target, 'w:gz') as archive:
+            for path in out.iterdir():
+                archive.add(path, arcname=path.name)
+    monkeypatch.setattr(sys, 'argv', ['ab-tools.py', 'analyse', str(target),
+                                     str(tmp_path / 'track.flac'), '--anchor', anchor])
+    tool.main()
+    result = (tmp_path / 'capture-analysis.md' if archived else out / 'analysis.md').read_text()
+    assert 'lms: PASS' in result
+    assert 'position_s rate vs wall: +0.000 ms/s' in result
+    assert ('estimated wall/monotonic offset' in result) == (anchor == 'fixed')

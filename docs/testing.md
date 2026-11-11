@@ -1383,7 +1383,7 @@ values at each query's midpoint; the difference is the difference of these fits.
 (default `ws://127.0.0.1:8420/ws/preview`; override with `--service-url`). A separate
 reader drains events and records at most one fresh status per second without
 blocking SHM polling. CSV adds `service_t_mono`, `service_position_s`,
-`service_observed_at`, `applied_delay_ms`, `session_offset_ms` and
+`applied_delay_ms`, `session_offset_ms` and
 `median_residual_ms`. Positions are exactly the delivered track position, including
 the service's delivery rebase; unavailable/disconnected samples remain empty.
 A quiet websocket does not provide a new observation every second: stale anchors
@@ -1517,3 +1517,27 @@ cannot pass. Inspect break boundaries and reference coverage. Offsets are not
 latency measurements: fixed-anchor absolute offsets depend on the chosen status
 anchor and per-session quantised LMS consensus. OUT-01 camera and CLOCK-01 YeneY
 millisecond play points establish absolute room alignment.
+
+Capture writes `manifest.json`, packs the raw capture archive and prints its path
+before analysis starts. An analysis error exits nonzero with its full traceback
+in `$AB_BASE/run.log`; the capture directory and archive remain available.
+The archive contains the pre-analysis evidence; `analysis.md` and the copied
+reference are produced afterwards in the capture directory.
+Re-run analysis on a directory or `.tar.gz` archive with `analyse OUT TRACK`.
+Directory analysis writes `OUT/analysis.md`; archive analysis safely extracts into
+a temporary directory and writes `<archive-name>-analysis.md` beside the archive.
+Set `AB_REFERENCE_BEATS` to the reference CSV when re-analysing an archive.
+
+For run 8 on 112, after updating the installed tools:
+
+```sh
+AB_REFERENCE_BEATS=/var/lib/lampastream/ab/beats.csv /opt/lampastream/.venv/bin/python /opt/lampastream-src/scripts/ab-tools.py analyse /var/lib/lampastream/ab/ab-run-57cdmpvw /var/lib/lampastream/ab/track.flac --anchor content
+AB_REFERENCE_BEATS=/var/lib/lampastream/ab/beats.csv /opt/lampastream/.venv/bin/python /opt/lampastream-src/scripts/ab-tools.py analyse /var/lib/lampastream/ab/ab-run-57cdmpvw /var/lib/lampastream/ab/track.flac --anchor fixed
+```
+
+The second command replaces the first `analysis.md`; copy it first to retain both.
+Position rate uses delivered `position_s` against logger `t_wall`. New status rows
+also record logger `t_monotonic` for fixed-anchor mapping. For old captures such as
+run 8, fixed-anchor analysis estimates one constant wall/monotonic offset from beat
+receipt times and explicitly labels the approximate absolute phase. Receipt and
+publication delay can shift this constant; they do not establish room latency.

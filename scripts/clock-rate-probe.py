@@ -31,7 +31,7 @@ FIELDS = ('t_mono t_wall abs_write_pos ynpt_anchor_frame ynpt_play_mono_ns ynpt_
           'ynpt_flags ynpt_event_sequence content_frame content_flags generation gap_seq '
           'write_seq running lampastream_audible_t lms_own lms_followed lms_own_mono '
           'lms_followed_mono service_t_mono service_position_s applied_delay_ms '
-          'session_offset_ms median_residual_ms service_observed_at').split()
+          'session_offset_ms median_residual_ms').split()
 NAMES = ('Producer pacer rate', 'Arrival rate', 'Content rate',
          'Stamp clock vs reader clock', 'Pipeline mapping', 'Service position')
 
@@ -52,11 +52,10 @@ def fit(points):
 
 
 def service_sample(message, mono):
-    """Keep the A/B websocket's reported anchor verbatim, at receipt time."""
+    """Keep the A/B websocket's delivered position verbatim, at receipt time."""
     track = message.get('track') or {}
     status = (message.get('light_timing') or {}).get('status') or {}
     return dict(service_t_mono=mono, service_position_s=track.get('position_s'),
-                service_observed_at=track.get('observed_at'),
                 applied_delay_ms=message.get('applied_delay_ms'),
                 session_offset_ms=status.get('session_offset_ms'),
                 median_residual_ms=status.get('median_residual_ms'))

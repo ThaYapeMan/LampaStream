@@ -54,3 +54,28 @@ def require_native_library(request):
         if os.environ.get("LAMPASTREAM_REQUIRE_NATIVE") == "1":
             pytest.fail(message)
         pytest.skip(message)
+
+
+@pytest.fixture
+def ab_status(monkeypatch):
+    """Build capture payloads through the production delivery/status serializers."""
+    from types import SimpleNamespace
+
+    from lampastream.latency import AutoLatencyProbe
+    from lampastream.models import PlayerLatency
+    from lampastream.track_position import TrackPosition
+
+    def make(position=0., *, mono=100., wall=1000., delay=-115., trim=60):
+        monkeypatch.setattr("lampastream.track_position.time",
+                            SimpleNamespace(monotonic=lambda: mono))
+        track = TrackPosition(position_s=position, playing=True, observed_at=mono)
+        config = PlayerLatency(player_mac="aa:bb", strategy="auto", trim_ms=trim)
+        probe = AutoLatencyProbe(config, None, lambda *_: None,
+                                 clock=lambda: mono, position_clock=lambda: position)
+        probe.delay = delay
+        probe.target_delay = delay
+        probe._anchored_room_ms = delay
+        probe.session_anchor_at = 110.
+        return dict(t_wall=wall, t_monotonic=mono, track=track.for_delivery(),
+                    light_timing=dict(trim_ms=trim, status=probe.status()))
+    return make

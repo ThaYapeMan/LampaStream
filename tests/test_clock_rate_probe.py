@@ -59,7 +59,7 @@ def test_service_slopes_and_original_five_lines(tmp_path, position_rate, delay_r
                          content_frame=i*48000, content_flags=1, generation=1,
                          gap_seq=0, running=1, lampastream_audible_t=t,
                          **probe.service_sample(dict(type='status',
-                             track=dict(position_s=i*position_rate, observed_at=t),
+                             track=dict(position_s=i*position_rate),
                              applied_delay_ms=-70+i*delay_rate,
                              light_timing=dict(status=dict(session_offset_ms=12,
                                  median_residual_ms=80+i*residual_rate))), t)))
@@ -78,7 +78,7 @@ def test_service_slopes_and_original_five_lines(tmp_path, position_rate, delay_r
     assert f'median_residual_ms: {residual_rate:+.6f} ms/s' in result
     assert ('6. Service position' in result.splitlines()[-1]) == (position_rate != 1.)
     original = report([{k: v for k, v in row.items() if k not in {
-        'service_t_mono', 'service_position_s', 'service_observed_at',
+        'service_t_mono', 'service_position_s',
         'applied_delay_ms', 'session_offset_ms', 'median_residual_ms'}} for row in rows])
     assert result.splitlines()[2:7] == original.splitlines()[2:7]
 
@@ -94,12 +94,12 @@ def test_service_missing_status_and_consumed_samples():
     assert service.take() == {}  # no stale repeats at the SHM poll frequency
 
 
-def test_service_sample_preserves_reported_anchor_and_zero_values():
-    sample = probe.service_sample(dict(track=dict(position_s=0., observed_at=10.),
+def test_service_sample_preserves_delivered_position_and_zero_values():
+    sample = probe.service_sample(dict(track=dict(position_s=0.),
         applied_delay_ms=0., light_timing=dict(status=dict(
             session_offset_ms=-70., median_residual_ms=0.))), 12.)
     assert sample == dict(service_t_mono=12., service_position_s=0.,
-                          service_observed_at=10., applied_delay_ms=0.,
+                          applied_delay_ms=0.,
                           session_offset_ms=-70., median_residual_ms=0.)
 
 

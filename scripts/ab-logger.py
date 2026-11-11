@@ -97,7 +97,7 @@ async def log(label, duration, out, url, ready=None, *, raw_detector=False):
                 message, wall = json.loads(raw), time.time()
                 if message.get("type") == "status":
                     # Preserve the actual anchor/trim/source used during capture.
-                    status.write(json.dumps(dict(t_wall=wall, **{
+                    status.write(json.dumps(dict(t_wall=wall, t_monotonic=time.monotonic(), **{
                         key: message.get(key) for key in (
                             "track", "light_timing", "lms_timing", "active_player_type",
                             "beat_accent_mode")

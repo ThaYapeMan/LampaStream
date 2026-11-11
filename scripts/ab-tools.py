@@ -20,6 +20,7 @@ import sys
 import tarfile
 import tempfile
 import time
+import traceback
 from datetime import UTC, datetime
 from pathlib import Path
 from urllib.parse import quote, unquote
@@ -669,7 +670,6 @@ def capture(search, receiver, requested_duration, protocol_version="auto", *,
             print("Cleanup failed: " + "; ".join(cleanup_errors), file=sys.stderr)
             if sys.exc_info()[0] is None:
                 raise RuntimeError("Capture cleanup/restore failed; see " + str(out))
-    write_analysis(out, track_path, song["title"], anchor=anchor)
     archive = base / ("ab-" + datetime.now().strftime("%Y%m%d-%H%M") + ".tar.gz")
     if archive.exists():
         archive = base / (archive.name.removesuffix(".tar.gz") + "-" + out.name + ".tar.gz")
@@ -678,6 +678,7 @@ def capture(search, receiver, requested_duration, protocol_version="auto", *,
             if not path.name.startswith("."):
                 tar.add(path, arcname=path.name)
     print(archive, flush=True)
+    write_analysis(out, track_path, song["title"], anchor=anchor)
 
 
 def write_analysis(out, track_path, title=None, *, anchor="content"):
@@ -735,13 +736,13 @@ def write_analysis(out, track_path, title=None, *, anchor="content"):
             status_path = out / f"{label}-status.jsonl"
             statuses = ([json.loads(line) for line in status_path.read_text().splitlines()]
                         if status_path.exists() else [])
-            points = [(r["t_wall"], r["track"]["position_s"], r["track"]["observed_at"])
+            points = [(r["t_wall"], r["track"]["position_s"], r.get("t_monotonic"))
                       for r in statuses if r.get("track")
                       and r["track"].get("playing")
                       and r["track"].get("position_s") is not None]
             rate = None
             if len(points) > 1:
-                xs = [p[2] for p in points]
+                xs = [p[0] for p in points]
                 ys = [p[1] for p in points]
                 xm, ym = statistics.mean(xs), statistics.mean(ys)
                 variance = sum((x-xm)**2 for x in xs)
@@ -756,11 +757,21 @@ def write_analysis(out, track_path, title=None, *, anchor="content"):
                          + (f"{rate:+.3f} ms/s" if rate is not None else "unavailable"))
             with (out / f"{label}-beats.csv").open() as stream:
                 events = [r for r in csv.DictReader(stream) if r.get("source") != "bass_trigger"]
+            # Older captures have only wall receipt times. Estimate the constant
+            # clock offset once; receipt latency affects absolute phase, not slope.
+            clock_offsets = [float(r["wall_t"]) - float(r["audible_monotonic"])
+                             for r in events if r.get("wall_t") and r.get("audible_monotonic")]
+            fixed_mono = (fixed[2] if fixed and fixed[2] is not None else
+                          fixed[0] - statistics.median(clock_offsets)
+                          if fixed and clock_offsets else None)
+            if label == "lms" and anchor == "fixed" and fixed and fixed[2] is None:
+                lines.insert(-2, "Fixed anchor uses an estimated wall/monotonic offset "
+                             "from beat receipt times; absolute phase is approximate.")
             times = []
             for row in events:
                 if label == "lms" and anchor == "fixed":
-                    value = (fixed[1] + float(row["audible_monotonic"]) - fixed[2]
-                             if fixed and row.get("audible_monotonic") else None)
+                    value = (fixed[1] + float(row["audible_monotonic"]) - fixed_mono
+                             if fixed_mono is not None and row.get("audible_monotonic") else None)
                 else:
                     value = row.get("content_t" if label == "lms" else "audible_t")
                 if value is not None and value != "":
@@ -853,12 +864,24 @@ def main():
         if args.mode == "smoke":
             smoke(args.receiver, args.protocol_version, args.pcm_pipe, args.debug_log)
         elif args.mode == "analyse":
-            write_analysis(args.out, args.track, anchor=args.anchor)
+            if args.out.is_dir():
+                write_analysis(args.out, args.track, anchor=args.anchor)
+            else:
+                with tempfile.TemporaryDirectory(prefix="ab-analyse-") as directory:
+                    out = Path(directory)
+                    with tarfile.open(args.out, "r:gz") as tar:
+                        tar.extractall(out, filter="data")
+                    write_analysis(out, args.track, anchor=args.anchor)
+                    result = args.out.with_name(
+                        args.out.name.removesuffix(".tar.gz") + "-analysis.md")
+                    shutil.copyfile(out / "analysis.md", result)
+                    print(result, flush=True)
         else:
             capture(args.search, args.receiver, args.duration, args.protocol_version,
                     raw_detector=args.raw_detector, anchor=args.anchor)
     except (Exception, KeyboardInterrupt) as error:
-        parser.exit(getattr(error, "exit_code", 1), f"ERROR: {error or 'interrupted'}\n")
+        traceback.print_exc()
+        parser.exit(getattr(error, "exit_code", 1))
 
 
 if __name__ == "__main__":
