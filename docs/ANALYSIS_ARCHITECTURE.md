@@ -112,3 +112,39 @@ registry. Its normalization and legacy PCM tap must not be copied into CAVA Core
 These are implemented code contracts tested locally. Full target native execution,
 SHM deployment, wheel installation, resource stress and visual comparison
 **REQUIRE LXC VALIDATION**. This document does not claim those checks have passed.
+
+## Content grid tempo sections
+
+Grid analyser schema version 2 adds optional `Section.tempo`. The analyser stays
+independent of players, LMS identities and lighting outputs. Tempo discontinuities
+are detected with eight-beat slopes, sustained across sixteen slopes, avoiding
+false changes caused by the tracker's sample-hop quantisation. Boundaries are
+refined with local piecewise linear residuals. Rigid sections (interval spread
+below 4%) use an inlier-fitted lattice with reassigned indices to remove tracker
+insertions/deletions; expressive sections preserve tracker positions. One median
+attack phase correction uses kick-bearing beats only.
+
+Kick decisions compare nine-beat median on/off low-band attack energy against
+section-relative contrast and level. Contrast is 40% of the section median
+on/off ratio; the level is its on-beat p90 times max(0.02, 0.22 / max(1, ratio)).
+A section requires peak-offset MAD at most 20 ms to claim kick support.
+Four consecutive decisions confirm a state
+change, backdated to the first confirming beat. Short silent gaps additionally
+use a three-beat level median. The label tempo is the fitted tempo of the section
+with the greatest kick-bearing duration (total duration breaks ties).
+
+Old analyser-version cache entries are rejected by `TrackGrid.from_dict` and
+re-analysed on next play. The next load uses the new cached full grid; provisional
+head grids use the same fit/flag rules and never enter the full-file cache.
+
+Strong evidence bypasses marginal hysteresis: at least 1.0× the kick-bearing
+median turns a beat on, at most 0.25× turns it off. Kick-bearing runs anchor the
+median; a 17-supported-beat median follows volume changes exceeding a factor 1.5.
+Short breaks (up to 16 beats) identify isolated attack sections above 0.28× their
+adjacent run anchor; long breaks require 8× their own background median. Each
+isolated section has its own kick median. Other strong attacks must peak within
+12 ms of the lattice, avoiding an unrelated bass note in the wider ±70 ms
+marginal/absence window. After strong exceptions, marginal-only fragments shorter
+than four beats merge into the neighbouring state. Strong single kicks and
+single dropped kicks survive. These level sections are analyser-internal; the
+optional published section tempo remains additive metadata.

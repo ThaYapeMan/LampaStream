@@ -2,7 +2,7 @@
 
 librosa uses start_bpm=120 and tightness=100. Low-band attack energy is
 positive RMS rise in 5 ms windows after a 40–150 Hz fourth-order bandpass.
-The kick threshold is 15% of the track's 90th-percentile attack peak.
+Rigid tempo sections share a fitted lattice and persistent kick decisions.
 """
 from __future__ import annotations
 
@@ -10,12 +10,13 @@ import hashlib
 import io
 import json
 import subprocess
+from itertools import groupby
 
 import librosa
 import numpy as np
 import soundfile as sf
 import soxr
-from scipy.ndimage import gaussian_filter1d
+from scipy.ndimage import gaussian_filter1d, median_filter
 from scipy.signal import butter, correlate, find_peaks, sosfilt, stft
 
 from . import VERSION, Section, TrackGrid
@@ -148,14 +149,13 @@ def analyse_head(raw, seconds=60):
     _, tempo, beats = min((c for c in candidates if c[0] >= best_score*(1-1e-6)),
                           key=lambda c: c[1])
     beats = beats[(beats >= 0) & (beats < duration)]
-    values = [float(np.max(energy[max(0, round((b-.07)/step)):
-                                 min(len(energy), round((b+.07)/step)+1)])) for b in beats]
-    flags = np.asarray(values) >= threshold
+    beats, flags, tempo, tempo_sections = fit_sections(beats, energy, step, duration)
     confidence = float(np.clip(.5*np.mean(flags)+.5*(1-min(
         1., float(np.std(np.diff(beats)))/float(np.mean(np.diff(beats))))), 0, 1))
     return TrackGrid(VERSION, hashlib.sha256(raw).hexdigest(), duration, sr,
                      float(np.clip(tempo, 60, 180)), tuple(map(float, beats)),
-                     tuple(map(bool, flags)), sections_for(beats, flags, duration), confidence,
+                     tuple(map(bool, flags)),
+                     sections_for(beats, flags, duration)+tempo_sections, confidence,
                      'content-v1' if lossless else 'unknown', provisional=True)
 
 
@@ -191,13 +191,198 @@ def low_band_attacks(y, sr):
     return energy, hop, threshold
 
 
+def attack_values(beats, energy, step, radius=.07):
+    values, offsets = [], []
+    for beat in beats:
+        lo = max(0, min(len(energy)-1, round((beat-radius)/step)))
+        hi = max(lo+1, min(len(energy), round((beat+radius)/step)+1))
+        peak = lo+int(np.argmax(energy[lo:hi]))
+        values.append(energy[peak])
+        offsets.append(peak*step-beat)
+    return np.asarray(values), np.asarray(offsets)
+
+
+def kick_runs(beats, energy, step, period):
+    return kick_evidence(beats, energy, step, period)[0]
+
+
+def kick_evidence(beats, energy, step, period):
+    """Hysteretic marginal evidence with immediate, coherent strong evidence."""
+    on, offsets = attack_values(beats, energy, step)
+    # A bassline-only phase has scattered peak offsets. Do not claim kick
+    # support without a coherent section, especially in a provisional head.
+    if np.median(abs(offsets-np.median(offsets))) > .02:
+        empty = np.zeros(len(beats), dtype=bool)
+        return empty, empty.copy(), np.zeros(len(beats))
+    off, _ = attack_values(beats+period/2, energy, step)
+    # Normalise contrast to this tempo section: off-beat bass can be louder
+    # than a kick, so a universal absolute ratio is not reliable.
+    reference = float(np.median(on))/max(1e-12, float(np.median(off)))
+    window_on = median_filter(on, size=9, mode='nearest')
+    window_off = median_filter(off, size=9, mode='nearest')
+    level = np.percentile(on, 90)*max(.02, .22/max(1., reference))
+    decisions = (window_on >= .4*reference*np.maximum(1e-12, window_off)) & (
+        window_on >= max(1e-12, level))
+    # A four-beat silence must not disappear under a nine-beat median.
+    silent = median_filter(on, size=3, mode='nearest') < level
+    decisions[silent] = False
+    flags = np.zeros(len(beats), dtype=bool)
+    state, pending = False, 0
+    for i, decision in enumerate(decisions):
+        pending = pending+1 if decision != state else 0
+        if pending >= 4:
+            state = bool(decision)
+            flags[i-3:i+1] = state
+            pending = 0
+        flags[i] = state
+    supported = np.flatnonzero(flags)
+    if not len(supported):
+        return flags, np.zeros(len(beats), dtype=bool), np.zeros(len(beats))
+    # Kick-bearing runs establish level anchors. A local median can follow
+    # substantial volume changes inside a run without borrowing the body level
+    # for a quiet intro/outro.
+    spans = []
+    start = 0
+    anchors = np.zeros(len(beats))
+    for state, group in groupby(flags):
+        end = start+len(list(group))
+        spans.append((state, start, end))
+        if state:
+            anchors[start:end] = np.median(on[start:end])
+        start = end
+    section_level = np.interp(np.arange(len(beats)), supported, anchors[supported])
+    local = median_filter(on[supported], size=17, mode='nearest')
+    baseline = anchors[supported]
+    adjusted = np.where((local < baseline/1.5) | (local > baseline*1.5), local, baseline)
+    kick_level = np.interp(np.arange(len(beats)), supported, adjusted)
+    isolated = np.zeros(len(beats), dtype=bool)
+    for state, start, end in spans:
+        if state or start == 0:
+            continue
+        # Resolve isolated attacks within breaks as their own level sections.
+        # Short breaks retain a level anchor on both sides. Long breaks require
+        # an eightfold rise above their own background instead.
+        if end-start <= 16:
+            candidates = on[start:end] >= .28*section_level[start:end]
+        else:
+            candidates = on[start:end] > 8*max(1e-12, float(np.median(on[start:end])))
+        index = start
+        for present, group in groupby(candidates):
+            stop = index+len(list(group))
+            if present:
+                kick_level[index:stop] = np.median(on[index:stop])
+                isolated[index:stop] = True
+            index = stop
+    # A strong attack must be phase-coherent, or belong to an isolated attack
+    # section; a nearby bass note alone is insufficient strong evidence.
+    strong_on = (on >= kick_level) & ((abs(offsets) <= .012) | isolated)
+    strong_off = on <= .25*kick_level
+    ambiguous = ~(strong_on | strong_off)
+    flags[strong_on] = True
+    flags[strong_off] = False
+    # Strong exceptions may split a marginal run into short fragments. Merge
+    # only fragments containing no strong evidence; never erase an exception.
+    while True:
+        start = 0
+        for _, group in groupby(flags):
+            end = start+len(list(group))
+            if end-start < 4 and np.all(ambiguous[start:end]):
+                flags[start:end] = flags[start-1] if start else flags[end]
+                break
+            start = end
+        else:
+            break
+    return flags, ambiguous, kick_level
+
+
+def tempo_boundaries(observed):
+    # Eight-beat slopes suppress the 512-sample tracker hop quantisation.
+    if len(observed) < 25:
+        return [0, len(observed)]
+    slopes = (observed[8:]-observed[:-8])/8
+    boundaries = [0]
+    baseline = float(np.median(slopes[:16]))
+    i = 8
+    while i < len(slopes)-16:
+        following = slopes[i:i+16]
+        candidate = float(np.median(following))
+        if (abs(candidate/baseline-1) > .02
+                and np.all(abs(following/baseline-1) > .02)
+                and np.std(following)/candidate < .01):
+            boundaries.append(i+4)
+            baseline = candidate
+            i += 16
+        else:
+            i += 1
+    refined = [0]
+    for boundary in boundaries[1:]:
+        lo, hi = max(refined[-1]+8, boundary-12), min(len(observed)-8, boundary+13)
+        def cost(split):
+            total = 0.
+            for part in (observed[max(refined[-1], split-32):split],
+                         observed[split:min(len(observed), split+32)]):
+                x = np.arange(len(part))
+                slope, phase = np.polyfit(x, part, 1)
+                total += float(np.mean(np.minimum((part-phase-x*slope)**2, .05**2)))
+            return total
+        refined.append(min(range(lo, hi), key=cost))
+    return refined+[len(observed)]
+
+
+def fit_sections(observed, energy, step, duration):
+    """Fit rigid sections, preserving expressive tracker positions verbatim."""
+    result, flags, sections, choices = [], [], [], []
+    boundaries = tempo_boundaries(observed)
+    for start, end in zip(boundaries[:-1], boundaries[1:], strict=True):
+        positions = observed[start:end].copy()
+        if len(positions) < 3:
+            continue
+        intervals = np.diff(positions)
+        period = float(np.median(intervals))
+        rigid = np.std(intervals)/np.mean(intervals) < .04-1e-9
+        if rigid:
+            indices = np.arange(len(positions))
+            stride = max(2, len(positions)//8)
+            period = float(np.median((positions[stride:]-positions[:-stride])/stride))
+            phase = float(np.median(positions-indices*period))
+            # Reassign lattice indices so a DP insertion/deletion cannot bend
+            # an otherwise rigid section. Strong attacks determine the slope.
+            values, offsets = attack_values(positions, energy, step)
+            supported = values >= np.percentile(values, 90)*.5
+            attacks = positions+offsets
+            for _ in range(6):
+                indices = np.rint((attacks-phase)/period)
+                good = supported & (abs(attacks-(phase+indices*period)) < .07)
+                if np.count_nonzero(good) < 3:
+                    break
+                period, phase = map(float, np.polyfit(indices[good], attacks[good], 1))
+            lower = 0 if start == 0 else (observed[start-1]+observed[start])/2
+            upper = duration if end == len(observed) else (observed[end-1]+observed[end])/2
+            indices = np.arange(np.ceil((lower-phase)/period), np.ceil((upper-phase)/period))
+            positions = phase+indices*period
+            kick = kick_runs(positions, energy, step, period)
+            _, offsets = attack_values(positions, energy, step)
+            if np.any(kick):
+                positions += float(np.median(offsets[kick]))
+        kick = kick_runs(positions, energy, step, period)
+        valid = (positions >= 0) & (positions < duration)
+        positions, kick = positions[valid], kick[valid]
+        result.extend(positions)
+        flags.extend(kick)
+        tempo = 60/period
+        sections.append(Section('tempo', float(positions[0]),
+                                float((observed[end-1]+observed[end])/2)
+                                if end < len(observed) else duration, tempo))
+        choices.append((np.count_nonzero(kick)*period, len(positions)*period, tempo))
+    return np.asarray(result), np.asarray(flags), max(choices)[2], tuple(sections)
+
+
 def analyse(raw: bytes) -> TrackGrid:
     y, sr, lossless = decode(raw)
     duration = len(y) / sr
     if duration < 2 or not np.isfinite(y).all():
         raise ValueError('Audio must contain at least two seconds of finite samples')
     energy, hop, threshold = low_band_attacks(y, sr)
-    n = len(energy)
     _, tracked = librosa.beat.beat_track(y=y, sr=sr, hop_length=512,
                                          start_bpm=120, tightness=100, units='time', trim=False)
     if len(tracked) < 3:
@@ -219,51 +404,22 @@ def analyse(raw: bytes) -> TrackGrid:
         else:
             variants = [tracked]
         for observed in variants:
-            # Preserve expressive timing. Only a demonstrably rigid track is fitted.
-            regularity = np.std(np.diff(observed))/np.mean(np.diff(observed))
-            if regularity < .04:
-                indices = np.arange(len(observed))
-                step = max(2, len(observed)//8)
-                slope = float(np.median((observed[step:]-observed[:-step])/step))
-                phase = float(np.median(observed-indices*slope))
-                for _ in range(3):
-                    good_fit = abs(observed-(phase+indices*slope)) < .05
-                    slope, phase = np.polyfit(indices[good_fit], observed[good_fit], 1)
-                period = float(slope)
-                beats = observed.copy()
-            else:
-                beats = observed.copy()
-            offsets = []
-            values = []
-            for beat in beats:
-                lo, hi = max(0, round((beat-.07)*sr/hop)), min(n, round((beat+.07)*sr/hop)+1)
-                index = lo+int(np.argmax(energy[lo:hi]))
-                offsets.append(index*hop/sr-beat)
-                values.append(energy[index])
-            phase_shift = float(np.median(offsets))
-            beats = beats+phase_shift
+            beats, flags, refined_tempo, tempo_sections = fit_sections(
+                observed, energy, hop/sr, duration)
+            values, _ = attack_values(beats, energy, hop/sr)
             lag = round(period*sr/hop)
             rhythm = float(np.max(autocorrelation[max(1, lag-3):lag+4]))
             score = float(np.mean(values)*rhythm)
-            # Median inter-beat interval over the entire attack-refined file,
-            # rather than the quantised median of 512-sample beat hops.
-            attack_intervals = np.diff(observed+np.asarray(offsets))
-            refined_tempo = 60/float(np.median(attack_intervals))
-            scored.append((score, refined_tempo, beats))
+            scored.append((score, refined_tempo, beats, flags, tempo_sections))
     best = max(s[0] for s in scored)
-    _, tempo, beats = min((s for s in scored if s[0] >= best*(1-1e-6)), key=lambda s: s[1])
-    beats = beats[(beats >= 0) & (beats < duration)]
-    values = []
-    for beat in beats:
-        lo, hi = max(0, round((beat-.07)*sr/hop)), min(n, round((beat+.07)*sr/hop)+1)
-        values.append(float(np.max(energy[lo:hi])))
-    flags = np.asarray(values) >= threshold
+    _, tempo, beats, flags, tempo_sections = min(
+        (s for s in scored if s[0] >= best*(1-1e-6)), key=lambda s: s[1])
     good = flags
     regularity = 1 - min(1., float(np.std(np.diff(tracked)))/float(np.mean(np.diff(tracked))))
     confidence = float(np.clip(.5*regularity + .5*np.mean(good), 0, 1))
     return TrackGrid(VERSION, hashlib.sha256(raw).hexdigest(), duration, sr, float(tempo),
                      tuple(map(float, beats)), tuple(map(bool, flags)),
-                     sections_for(beats, flags, duration), confidence,
+                     sections_for(beats, flags, duration)+tempo_sections, confidence,
                      'content-v1' if lossless else 'unknown')
 
 

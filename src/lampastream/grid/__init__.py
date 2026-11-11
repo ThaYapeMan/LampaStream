@@ -2,7 +2,7 @@
 import math
 from dataclasses import asdict, dataclass
 
-VERSION = '1'
+VERSION = '2'
 
 
 @dataclass(frozen=True)
@@ -10,6 +10,7 @@ class Section:
     kind: str
     start: float
     end: float
+    tempo: float | None = None
 
 
 @dataclass(frozen=True)

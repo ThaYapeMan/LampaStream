@@ -861,3 +861,16 @@ stereo float PCM through yeney-core SHM v1. `YeneyCoreShmStereoSource` names tha
 reader; `SqueezeliteShmStereoSource` remains a deprecated alias for one release.
 Player-specific ingress owns timing knowledge. See the ROUTE-01
 [architecture](architecture.md); rendering and scheduling are shared.
+
+## Pre-analysed content grids
+
+Grid schema version 2 fits a straight lattice per rigid tempo section and keeps
+expressive tracker positions. Optional section tempi are analysis metadata; the
+single label/prior tempo comes from the longest kick-bearing tempo section.
+Kick flags use section-relative on/off attack contrast and level over a nine-beat
+window with four-beat hysteresis, including the provisional 60-second head grid.
+Version-1 cache entries are re-analysed on next play; a second play is a cache hit.
+No configuration migration or player/output changes are required.
+Strong attacks (≥1.0× their kick-bearing median) and clearly absent attacks
+(≤0.25×) bypass the four-beat marginal hysteresis. Short reference runs remain
+valid when supported by strong evidence; only marginal-only short runs merge.
