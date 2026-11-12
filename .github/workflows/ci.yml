@@ -32,7 +32,7 @@ jobs:
         run: |
           sudo apt-get update
           xargs sudo apt-get install -y --no-install-recommends < scripts/native-build-packages.txt
-          sudo apt-get install -y --no-install-recommends libflac-dev
+          sudo apt-get install -y --no-install-recommends libflac-dev ffmpeg
 
       - name: Install project
         run: pip install -e ".[dev]"
