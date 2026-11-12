@@ -115,6 +115,16 @@ SHM deployment, wheel installation, resource stress and visual comparison
 
 ## Content grid tempo sections
 
+![Target analysis architecture](diagrams/analysis-target.svg)
+
+The target grid analyser (library file, head window, rolling buffer) consumes
+canonical frames through the same AudioCanonicalizer, never raw decoded audio.
+One attack detector serves live and offline analysis. Only the beat-position
+engine may differ: a live clean-room tracker or an offline dynamic-programming
+tracker. GRID-01 send-back 5 and BEAT-02 part A implement this target where the
+code does not yet share the canonical path and detector; current deviations do
+not define the design.
+
 Grid analyser schema version 2 adds optional `Section.tempo`. The analyser stays
 independent of players, LMS identities and lighting outputs. Tempo discontinuities
 are detected with eight-beat slopes, sustained across sixteen slopes, avoiding

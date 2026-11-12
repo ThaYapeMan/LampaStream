@@ -66,6 +66,10 @@ with a backup and conflict checks. See [configuration](docs/configuration.md).
 
 ## Player-independent audio architecture
 
+![End-to-end audio architecture](docs/diagrams/end-to-end.svg)
+
+Every source reaches one canonical stage; nothing after it branches on source or output.
+
 ### VirtualPlayers
 
 A VirtualPlayer is the player/audio-source integration boundary. The LMS
@@ -91,6 +95,24 @@ One source-independent analyser turns canonical PCM into generic AudioFeatures
 and timestamped onset, beat and tempo events. After the canonical stage nothing
 may know whether audio came from LMS or AirPlay: analysis, rendering, preview and
 scheduling have no source- or route-specific code paths.
+
+![Beat source decision after canonicalization](docs/diagrams/beat-source-decision.svg)
+
+After the canonical stage the beat source is chosen by capability, never by source,
+within one source-independent analyser producing generic AudioFeatures. First: is
+the track known (fingerprint and duration in the grid database)? If so, its learned
+grid drives the accents from the first bar. If not: is the whole track available
+ahead of playback (a library file)? Then the file is analysed completely and the
+grid drives the accents. Otherwise (a stream) the live tracker carries the opening
+while a rolling grid is built on the audio received so far and refined as it plays;
+the finished grid is stored, so the next play is the known case. In every branch
+the live analysis keeps measuring: a grid accent without supporting audio stays
+dark (contradiction check), a tracker that disagrees with the grid takes over
+(watchdog), and the owner's corrections rank above every other source. Streams
+without identity (radio, podcasts, DJ sets) take the stream branch and store nothing.
+
+This is the owner's target decision of 2026-11-12; the shared canonical grid path
+and attack detector await implementation in GRID-01 send-back 5 and BEAT-02 part A.
 
 ### Renderer
 
@@ -183,6 +205,14 @@ future player ────┤
                   ▼
       Scene → controller / zone output
 ```
+
+The grid analyser (library file, head window, rolling buffer) consumes canonical
+PCM through the same AudioCanonicalizer and shares the attack detector with the
+live path — see [the target analysis diagram](docs/diagrams/analysis-target.svg).
+This is the target where not yet implemented; GRID-01 send-back 5 and BEAT-02
+part A implement it.
+
+![Target analysis architecture](docs/diagrams/analysis-target.svg)
 
 Canonicalization runs inside `CanonicalAnalysisPipeline`; the diagram shows the
 logical audio boundary. The pipeline owns shared analysis, processor orchestration,

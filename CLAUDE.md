@@ -14,6 +14,8 @@ Do not implement `docs/future/` proposals unless asked.
 
 ## Conventions
 
+- A ticket that changes a boundary in these diagrams regenerates them with `scripts/render-architecture-diagrams.py` and updates the prose next to them.
+
 - Code comments, docstrings, commit messages and documentation are English.
 - Do not add AI attribution to commits.
 - Run the full Python suite, Ruff and relevant frontend tests before reporting
