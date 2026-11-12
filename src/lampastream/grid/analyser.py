@@ -14,6 +14,14 @@ import tempfile
 from contextlib import contextmanager
 from itertools import groupby
 
+# The CLI owns a dedicated worker; ordinary API imports must not alter callers.
+if __name__ == '__main__':
+    import os
+
+    from .worker import worker_environment
+
+    os.environ.update(worker_environment())
+
 import librosa
 import numpy as np
 import soundfile as sf
@@ -669,9 +677,18 @@ def limit_address_space(duration, *, head=False):
 def main():
     import logging
     import mmap
+    import os
     import sys
     from pathlib import Path
 
+    from .worker import THREAD_VARIABLES
+
+    logging.warning('Grid worker thread budget=%s',
+                    {name: os.environ.get(name) for name in THREAD_VARIABLES})
+    profile = "--profile-memory" in sys.argv[2:]
+    if profile:
+        import tracemalloc
+        tracemalloc.start()
     head = "--head" in sys.argv[2:]
     path = Path(sys.argv[1])
     try:
@@ -692,6 +709,16 @@ def main():
         logging.error('Grid analysis unavailable; retaining tracker: %s: %s',
                       type(error).__name__, error)
         return 1
+    finally:
+        import resource
+        logging.warning('Grid worker peak_rss_bytes=%d',
+                        resource.getrusage(resource.RUSAGE_SELF).ru_maxrss*1024)
+        if profile:
+            logging.warning('Grid worker traced current/peak bytes=%s',
+                            tracemalloc.get_traced_memory())
+            for allocation in tracemalloc.take_snapshot().statistics('lineno')[:10]:
+                logging.warning('Grid worker allocation: %s', allocation)
+            tracemalloc.stop()
     return 0
 
 

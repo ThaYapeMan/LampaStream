@@ -11,6 +11,7 @@ import pytest
 import soundfile as sf
 
 from lampastream.grid.analyser import analyse, decode, low_band_attacks
+from lampastream.grid.worker import THREAD_VARIABLES, worker_environment
 
 
 def stereo_clicks(layout):
@@ -52,22 +53,29 @@ def test_stereo_accents_preserve_strength_and_grid():
 
 @pytest.mark.grid_memory
 def test_six_minute_rates_have_same_grid_under_one_gb(tmp_path):
-    grids = []
+    grids, peaks = [], []
     for rate in (44100, 96000, 192000):
         completed = subprocess.run(
             [sys.executable, str(Path(__file__).with_name('grid_memory_probe.py')),
              str(tmp_path/f'{rate}.flac'), str(rate)],
-            capture_output=True, text=True, check=True, timeout=120,
-            env={**os.environ, 'OPENBLAS_NUM_THREADS': '1', 'OMP_NUM_THREADS': '1'})
+            capture_output=True, text=True, check=True, timeout=180)
         measurement = json.loads(completed.stdout)
         print(f'rate={rate} peak_rss_bytes={measurement["peak_rss_bytes"]}')
-        assert measurement['peak_rss_bytes'] < 1_000_000_000
+        peaks.append(measurement['peak_rss_bytes'])
         grid = measurement['grid']
         assert grid['sample_rate'] == 48000
         assert grid['source_sample_rate'] == rate
         assert grid['source_channels'] == 2
         assert grid['duration'] == 360
         grids.append(grid)
+    if max(peaks) >= 1_000_000_000:
+        rate = (44100, 96000, 192000)[int(np.argmax(peaks))]
+        profile = subprocess.run(
+            [sys.executable, str(Path(__file__).with_name('grid_memory_probe.py')),
+             str(tmp_path/'profile.flac'), str(rate), '--profile-memory'],
+            capture_output=True, text=True, timeout=360)
+        print(f'Profile rate={rate} exit={profile.returncode}\n{profile.stderr}', flush=True)
+    assert max(peaks) < 1_000_000_000
     for grid in grids[1:]:
         assert grid['beats'] == pytest.approx(grids[0]['beats'], abs=.002)
         assert grid['kick_flags'] == grids[0]['kick_flags']
@@ -77,7 +85,10 @@ def test_worker_allocation_failure_logs_tracker_fallback(tmp_path):
     path = tmp_path/'clicks.flac'
     path.write_bytes(stereo_clicks('centre'))
     code = '''
+import os
 import resource
+from lampastream.grid.worker import worker_environment
+os.environ.update(worker_environment())
 import lampastream.grid.analyser as analyser
 original = analyser.limit_address_space
 def constrained(duration, **kwargs):
@@ -90,8 +101,7 @@ analyser.limit_address_space = constrained
 raise SystemExit(analyser.main())
 '''
     completed = subprocess.run(
-        [sys.executable, '-c', code, str(path)], capture_output=True, text=True, timeout=30,
-        env={**os.environ, 'OPENBLAS_NUM_THREADS': '1', 'OMP_NUM_THREADS': '1'})
+        [sys.executable, '-c', code, str(path)], capture_output=True, text=True, timeout=30)
     assert completed.returncode == 1  # A handled exit, never a signal/OOM kill.
     assert not completed.stdout
     assert 'Grid analysis unavailable; retaining tracker:' in completed.stderr
@@ -143,8 +153,18 @@ def test_head_worker_keeps_cold_numba_cache_unused(tmp_path):
     completed = subprocess.run(
         [sys.executable, '-m', 'lampastream.grid.analyser', str(source), '--head'],
         capture_output=True, text=True, check=True, timeout=30,
-        env={**os.environ, 'NUMBA_CACHE_DIR': str(cache),
-             'OPENBLAS_NUM_THREADS': '1', 'OMP_NUM_THREADS': '1'})
+        env={**{key: value for key, value in os.environ.items() if key not in THREAD_VARIABLES},
+             'NUMBA_CACHE_DIR': str(cache)})
     assert json.loads(completed.stdout)['provisional']
     assert not cache.exists() or not list(cache.rglob('*.nbc'))
     assert 'Grid worker memory bound=' in completed.stderr
+    for name in THREAD_VARIABLES:
+        assert f"'{name}': '1'" in completed.stderr
+
+
+def test_worker_environment_overrides_thread_counts_without_changing_parent(monkeypatch):
+    for variable in THREAD_VARIABLES:
+        monkeypatch.setenv(variable, '8')
+    child = worker_environment()
+    assert all(child[name] == '1' for name in THREAD_VARIABLES)
+    assert all(os.environ[name] == '8' for name in THREAD_VARIABLES)

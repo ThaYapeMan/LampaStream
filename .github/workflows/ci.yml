@@ -59,6 +59,9 @@ jobs:
       - name: Lint
         run: ruff check .
 
+      - name: Grid worker memory by native rate
+        run: pytest -q -s -n0 -m grid_memory tests/test_grid_memory.py
+
       - name: Test
         run: pytest -v
 

@@ -1,13 +1,12 @@
 """Isolated six-minute grid RSS measurement; invoked by test_grid_memory."""
 import json
-import resource
+import re
+import subprocess
 import sys
 from pathlib import Path
 
 import numpy as np
 import soundfile as sf
-
-from lampastream.grid.analyser import analyse
 
 
 def generate(path, rate):
@@ -27,6 +26,12 @@ def generate(path, rate):
 if __name__ == '__main__':
     path, rate = Path(sys.argv[1]), int(sys.argv[2])
     generate(path, rate)
-    result = analyse(path.read_bytes())
-    print(json.dumps(dict(grid=result.to_dict(),
-                          peak_rss_bytes=resource.getrusage(resource.RUSAGE_SELF).ru_maxrss*1024)))
+    command = ['nice', '-n', '10', sys.executable, '-m',
+               'lampastream.grid.analyser', str(path)]
+    if '--profile-memory' in sys.argv:
+        command.append('--profile-memory')
+    completed = subprocess.run(command, capture_output=True, text=True, timeout=300)
+    print(completed.stderr, file=sys.stderr, end='')
+    completed.check_returncode()
+    peak = int(re.search(r'Grid worker peak_rss_bytes=(\d+)', completed.stderr)[1])
+    print(json.dumps(dict(grid=json.loads(completed.stdout), peak_rss_bytes=peak)))

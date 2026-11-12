@@ -6,7 +6,6 @@ import hashlib
 import json
 import logging
 import math
-import os
 import re
 import sys
 import tempfile
@@ -18,6 +17,7 @@ import httpx
 
 from .grid import TrackGrid
 from .grid.cache import GridCache
+from .grid.worker import worker_environment
 
 log = logging.getLogger(__name__)
 
@@ -184,8 +184,7 @@ class LmsGridAdapter:
             'nice', '-n', '10', sys.executable, '-m', 'lampastream.grid.analyser', str(path),
             *(['--head'] if head else []), stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
-            env={**os.environ, 'NUMBA_CACHE_DIR': str(self.cache.root/'numba'),
-                 'OPENBLAS_NUM_THREADS': '1', 'OMP_NUM_THREADS': '1'})
+            env={**worker_environment(), 'NUMBA_CACHE_DIR': str(self.cache.root/'numba')})
         try:
             output, error = await asyncio.wait_for(self.process.communicate(), 30 if head else 180)
             if self.process.returncode:
