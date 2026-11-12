@@ -2,7 +2,7 @@
 import math
 from dataclasses import asdict, dataclass
 
-VERSION = '2'
+VERSION = '3'
 
 
 @dataclass(frozen=True)
@@ -26,6 +26,8 @@ class TrackGrid:
     confidence: float
     timing_basis: str
     provisional: bool = False
+    source_sample_rate: int = 48000
+    source_channels: int = 2
 
     def to_dict(self):
         return asdict(self)
@@ -39,7 +41,8 @@ class TrackGrid:
         grid = cls(**data)
         if (grid.analyser_version != VERSION or len(grid.beats) != len(grid.kick_flags)
                 or not math.isfinite(grid.duration) or grid.duration <= 0
-                or grid.sample_rate <= 0
+                or grid.sample_rate != 48000
+                or grid.source_sample_rate <= 0 or grid.source_channels not in (1, 2)
                 or len(grid.file_sha256) != 64
                 or not 60 <= grid.tempo <= 180 or not 0 <= grid.confidence <= 1
                 or not all(math.isfinite(b) and 0 <= b <= grid.duration for b in grid.beats)

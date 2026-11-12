@@ -2,7 +2,7 @@
 
 librosa uses start_bpm=120 and tightness=100. Low-band attack energy is
 positive RMS rise in 5 ms windows after a 40–150 Hz fourth-order bandpass.
-Rigid tempo sections share a fitted lattice and persistent kick decisions.
+Rigid tempo sections share a fitted lattice and persistent bass drum decisions.
 """
 from __future__ import annotations
 
@@ -10,94 +10,211 @@ import hashlib
 import io
 import json
 import subprocess
+import tempfile
+from contextlib import contextmanager
 from itertools import groupby
 
 import librosa
 import numpy as np
 import soundfile as sf
-import soxr
 from scipy.ndimage import gaussian_filter1d, median_filter
 from scipy.signal import butter, correlate, find_peaks, sosfilt, stft
 
+from ..canonicalizer import (
+    AudioCanonicalizer,
+    CanonicalData,
+    DataResult,
+    DecodedSourceFrame,
+    EndOfStream,
+)
 from . import VERSION, Section, TrackGrid
 
 
-def decode(raw: bytes):
+class BufferReader(io.RawIOBase):
+    """Seekable view of original bytes/mmap without BytesIO's whole-file copy."""
+    def __init__(self, raw):
+        self.raw = raw
+        self.position = 0
+
+    def readable(self):
+        return True
+
+    def seekable(self):
+        return True
+
+    def tell(self):
+        return self.position
+
+    def seek(self, offset, whence=0):
+        position = offset+(0 if whence == 0 else self.position if whence == 1 else len(self.raw))
+        if position < 0:
+            raise ValueError('Negative seek')
+        self.position = position
+        return position
+
+    def read(self, size=-1):
+        end = len(self.raw) if size < 0 else min(len(self.raw), self.position+size)
+        result = self.raw[self.position:end]
+        self.position = end
+        return result
+
+    def readinto(self, buffer):
+        data = self.read(len(buffer))
+        buffer[:len(data)] = data
+        return len(data)
+
+
+@contextmanager
+def decoded_stream(raw, seconds=None):
+    """Open native PCM without retaining a whole decoded file or pipe output."""
     try:
-        audio, rate = sf.read(io.BytesIO(raw), dtype='float32', always_2d=True)
-        # libsndfile cannot decode ALAC in M4A; use the existing FFmpeg tooling.
-        info = sf.info(io.BytesIO(raw))
-        lossless = info.subtype not in ('MPEG_LAYER_III', 'VORBIS', 'OPUS')
-        return audio.mean(axis=1), rate, lossless
+        stream = sf.SoundFile(BufferReader(raw))
     except sf.LibsndfileError:
-        probe = subprocess.run(['ffprobe', '-v', 'error', '-show_streams', '-of', 'json',
-                                'pipe:0'], input=raw, capture_output=True, check=True, timeout=30)
-        stream = next(s for s in json.loads(probe.stdout)['streams'] if s['codec_type'] == 'audio')
-        rate = int(stream['sample_rate'])
-        result = subprocess.run(['ffmpeg', '-v', 'error', '-i', 'pipe:0', '-f', 'f32le',
-                                 '-ac', '1', '-ar', str(rate), 'pipe:1'], input=raw,
-                                capture_output=True, check=True, timeout=120)
-        return np.frombuffer(result.stdout, '<f4'), rate, (
-            stream['codec_name'] in ('alac', 'flac') or stream['codec_name'].startswith('pcm_'))
+        # A regular input also supports M4A containers with a trailing moov atom.
+        with tempfile.TemporaryDirectory(prefix='grid-decode-') as directory:
+            from pathlib import Path
+            source = Path(directory)/'source'
+            output = Path(directory)/'native.wav'
+            source.write_bytes(raw)
+            probe = subprocess.run(
+                ['ffprobe', '-v', 'error', '-show_streams', '-of', 'json', str(source)],
+                capture_output=True, check=True, timeout=30)
+            metadata = next(s for s in json.loads(probe.stdout)['streams']
+                            if s['codec_type'] == 'audio')
+            lossless = (metadata['codec_name'] in ('alac', 'flac')
+                        or metadata['codec_name'].startswith('pcm_'))
+            subprocess.run(['ffmpeg', '-v', 'error', '-i', str(source), '-map', '0:a:0',
+                            *(['-t', str(seconds)] if seconds else []),
+                            '-c:a', 'pcm_f32le', '-rf64', 'always', str(output)],
+                           capture_output=True, check=True, timeout=120)
+            with sf.SoundFile(output) as stream:
+                yield stream, lossless
+    else:
+        with stream:
+            yield stream, stream.subtype not in ('MPEG_LAYER_III', 'VORBIS', 'OPUS')
+
+
+def canonical_decode(raw, seconds=None):
+    with decoded_stream(raw, seconds) as (stream, lossless):
+        rate, channels = stream.samplerate, stream.channels
+        if channels not in (1, 2):
+            raise ValueError('Grid requires mono or stereo source PCM')
+        count = min(len(stream), round(seconds*rate)) if seconds else len(stream)
+        output = np.empty((round(count*48000/rate)+4096, 2), np.float32)
+        canonicalizer = AudioCanonicalizer()
+        position = written = 0
+
+        def collect(results):
+            nonlocal written
+            for result in results:
+                if isinstance(result, CanonicalData):
+                    samples = result.frame.samples
+                    output[written:written+len(samples)] = samples
+                    written += len(samples)
+
+        while position < count:
+            try:
+                chunk = stream.read(min(16384, count-position), dtype='float32', always_2d=True)
+            except sf.LibsndfileError:
+                if seconds is None:
+                    raise
+                break  # A head prefix can end in a partial FLAC frame.
+            if not len(chunk):
+                break
+            if not np.isfinite(chunk).all():
+                raise ValueError('Non-finite source PCM')
+            collect(canonicalizer.push(DataResult(DecodedSourceFrame(
+                chunk, rate, channels, 'grid-file', position, False, None))))
+            position += len(chunk)
+        collect(canonicalizer.push(EndOfStream()))
+        return output[:written], 48000, lossless, rate, channels
+
+
+def decode(raw: bytes):
+    return canonical_decode(raw)[:3]
 
 
 def decode_head(raw, seconds=60):
-    """Decode bounded content from an original prefix, tolerating a final partial FLAC frame."""
-    try:
-        with sf.SoundFile(io.BytesIO(raw)) as stream:
-            rate = stream.samplerate
-            chunks = []
-            remaining = round(rate*seconds)
-            while remaining:
-                try:
-                    chunk = stream.read(min(16384, remaining), dtype='float32', always_2d=True)
-                except sf.LibsndfileError:
-                    break
-                if not len(chunk):
-                    break
-                chunks.append(chunk.mean(axis=1))
-                remaining -= len(chunk)
-            if not chunks or sum(map(len, chunks)) < 2*rate:
-                raise ValueError('Insufficient decodable head audio')
-            return np.concatenate(chunks), rate, stream.subtype not in (
-                'MPEG_LAYER_III', 'VORBIS', 'OPUS')
-    except sf.LibsndfileError:
-        probe = subprocess.run(['ffprobe', '-v', 'error', '-show_streams', '-of', 'json',
-                                'pipe:0'], input=raw, capture_output=True, check=True, timeout=10)
-        stream = next(s for s in json.loads(probe.stdout)['streams'] if s['codec_type'] == 'audio')
-        rate = int(stream['sample_rate'])
-        result = subprocess.run(['ffmpeg', '-v', 'error', '-i', 'pipe:0', '-t', str(seconds),
-                                 '-f', 'f32le', '-ac', '1', '-ar', str(rate), 'pipe:1'],
-                                input=raw, capture_output=True, check=True, timeout=20)
-        return np.frombuffer(result.stdout, '<f4'), rate, (
-            stream['codec_name'] in ('alac', 'flac') or stream['codec_name'].startswith('pcm_'))
+    return canonical_decode(raw, seconds)[:3]
+
+
+def stereo_attacks(audio, sr):
+    # Combine envelopes, never PCM: hard-panned and opposite-polarity attacks survive.
+    envelopes = [low_band_attacks(audio[:, channel], sr, allow_silence=True)
+                 for channel in range(2)]
+    energy = np.maximum(envelopes[0][0], envelopes[1][0])
+    if not np.any(energy):
+        raise ValueError('No low-band attacks found')
+    return energy, envelopes[0][1], max(e[2] for e in envelopes)
+
+
+def onset_envelope(y, sr):
+    """Default librosa mel flux with bounded STFT intermediates."""
+    frames = 1+len(y)//512
+    mel = np.empty((128, frames), np.float32)
+    for start in range(0, frames, 256):
+        stop = min(frames, start+256)
+        left, right = start*512-1024, (stop-1)*512+1024
+        block = y[max(0, left):min(len(y), right)]
+        if left < 0 or right > len(y):
+            block = np.pad(block, (max(0, -left), max(0, right-len(y))))
+        mel[:, start:stop] = librosa.feature.melspectrogram(
+            y=block, sr=sr, n_fft=2048, hop_length=512, center=False)
+    return librosa.onset.onset_strength(S=librosa.power_to_db(mel), sr=sr,
+                                       hop_length=512, aggregate=np.median)
+
+
+def global_tempo(onset, sr):
+    """Accumulate the default eight-second tempogram mean in bounded blocks."""
+    window = int(librosa.time_to_frames(8., sr=sr, hop_length=512))
+    padded = np.pad(onset, (window//2, window//2), mode='linear_ramp')
+    total = np.zeros(window, np.float64)
+    for start in range(0, len(onset), 256):
+        stop = min(len(onset), start+256)
+        block = padded[start:stop+window-1]
+        gram = librosa.feature.tempogram(onset_envelope=block, sr=sr, hop_length=512,
+                                        win_length=window, center=False)
+        total += gram.sum(axis=-1)
+    return librosa.feature.tempo(tg=(total/len(onset))[:, None], sr=sr,
+                                 hop_length=512, start_bpm=120)
 
 
 def analyse_head(raw, seconds=60):
     """Provisional spectral-onset DP grid without whole-file JIT warm-up.
 
-    A 64-band log-mel flux at 11025 Hz supplies candidate periods. Dynamic
+    A 64-band log-mel flux from canonical PCM supplies candidate periods. Dynamic
     programming scores their local beat paths; low-band energy and periodicity
     choose the path. The full analyser remains authoritative.
     """
-    y, sr, lossless = decode_head(raw, seconds)
+    audio, sr, lossless, source_rate, source_channels = canonical_decode(raw, seconds)
+    y = audio.mean(axis=1)
     if len(y) < 2*sr or not np.isfinite(y).all():
         raise ValueError('Insufficient finite head audio')
     duration = len(y)/sr
-    energy, hop, threshold = low_band_attacks(y, sr)
+    energy, hop, threshold = stereo_attacks(audio, sr)
     step = hop/sr
-    mono = soxr.resample(y, sr, 11025)
-    _, _, spectrum = stft(mono, fs=11025, nperseg=1024, noverlap=896)
-    frequencies = np.linspace(0, 5512.5, 513)
+    frequencies = np.linspace(0, sr/2, 2049)
     edges = 700*(10**(np.linspace(0, 2595*np.log10(1+5512.5/700), 66)/2595)-1)
     weights = np.maximum(0, np.minimum(
         (frequencies[None, :]-edges[:-2, None])/(edges[1:-1, None]-edges[:-2, None]),
         (edges[2:, None]-frequencies[None, :])/(edges[2:, None]-edges[1:-1, None])))
-    power = weights @ abs(spectrum)**2
+    # scipy's padded STFT can promote its FFT workspace to complex128.
+    # Keep the exact head frame lattice while bounding that workspace too.
+    frames = 1+int(np.ceil(len(y)/557))
+    power = np.empty((64, frames), np.float32)
+    for start in range(0, frames, 256):
+        stop = min(frames, start+256)
+        left, right = start*557-2048, (stop-1)*557+2048
+        block = y[max(0, left):min(len(y), right)]
+        if left < 0 or right > len(y):
+            block = np.pad(block, (max(0, -left), max(0, right-len(y))))
+        _, _, spectrum = stft(block, fs=sr, nperseg=4096, noverlap=4096-557,
+                              boundary=None, padded=False)
+        power[:, start:stop] = weights @ abs(spectrum)**2
     decibels = 10*np.log10(np.maximum(1e-12, power))
     onset = np.maximum(0, np.diff(decibels, axis=1)).mean(axis=0)
     autocorr = correlate(onset, onset, method='fft')[len(onset)-1:]
-    odf_step = 128/11025
+    odf_step = 557/sr
     low, high = round(60/180/odf_step), min(len(autocorr)-1, round(60/60/odf_step))
     peaks, _ = find_peaks(autocorr[low:high+1])
     lags = sorted(peaks+low, key=lambda lag: autocorr[lag], reverse=True)[:8]
@@ -132,13 +249,7 @@ def analyse_head(raw, seconds=60):
         beats = beats[beats < duration]
         if len(beats) < 3:
             continue
-        offsets = []
-        values = []
-        for beat in beats:
-            lo, hi = max(0, round((beat-.07)/step)), min(len(energy), round((beat+.07)/step)+1)
-            peak = lo+int(np.argmax(energy[lo:hi]))
-            offsets.append(peak*step-beat)
-            values.append(float(energy[peak]))
+        values, offsets = attack_values(beats, energy, step)
         score = float(autocorr[lag]*np.mean(values)*np.sqrt(len(beats)))
         tempo = 60/float(np.median(np.diff(beats+np.asarray(offsets))))
         beats = beats+float(np.median(offsets))
@@ -156,7 +267,8 @@ def analyse_head(raw, seconds=60):
                      float(np.clip(tempo, 60, 180)), tuple(map(float, beats)),
                      tuple(map(bool, flags)),
                      sections_for(beats, flags, duration)+tempo_sections, confidence,
-                     'content-v1' if lossless else 'unknown', provisional=True)
+                     'content-v1' if lossless else 'unknown', provisional=True,
+                     source_sample_rate=source_rate, source_channels=source_channels)
 
 
 def sections_for(beats, flags, duration):
@@ -176,15 +288,21 @@ def sections_for(beats, flags, duration):
     return tuple(sections)
 
 
-def low_band_attacks(y, sr):
+def low_band_attacks(y, sr, *, allow_silence=False):
+    if y.ndim == 2:
+        return stereo_attacks(y, sr)
     hop = max(1, round(sr * .005))
-    low = sosfilt(butter(4, [40, 150], btype='bandpass', fs=sr, output='sos'), y)
+    low = sosfilt(butter(4, [40, 150], btype='bandpass', fs=sr,
+                         output='sos').astype(np.float32), y)
     n = len(low) // hop
-    rms = np.sqrt(np.mean(low[:n*hop].reshape(n, hop)**2, axis=1))
-    energy = np.maximum(0, np.diff(rms, prepend=0))
+    np.square(low, out=low)
+    rms = np.sqrt(np.mean(low[:n*hop].reshape(n, hop), axis=1))
+    energy = np.maximum(0, np.diff(rms, prepend=np.float32(0)))
     peaks, _ = find_peaks(energy, distance=round(.16*sr/hop),
                           prominence=max(1e-9, float(np.max(energy))*.015))
     if not len(peaks):
+        if allow_silence:
+            return energy, hop, 0.
         raise ValueError('No low-band attacks found')
     strengths = energy[peaks]
     threshold = float(np.percentile(strengths, 90)) * .15
@@ -194,12 +312,30 @@ def low_band_attacks(y, sr):
 def attack_values(beats, energy, step, radius=.07):
     values, offsets = [], []
     for beat in beats:
-        lo = max(0, min(len(energy)-1, round((beat-radius)/step)))
-        hi = max(lo+1, min(len(energy), round((beat+radius)/step)+1))
-        peak = lo+int(np.argmax(energy[lo:hi]))
-        values.append(energy[peak])
-        offsets.append(peak*step-beat)
-    return np.asarray(values), np.asarray(offsets)
+        lo = max(0, int(np.ceil((beat-radius)/step)))
+        hi = min(len(energy), int(np.floor((beat+radius)/step))+1)
+        if hi <= lo:
+            values.append(0.)
+            offsets.append(0.)
+            continue
+        # Include envelope neighbours outside the search window so its edges
+        # cannot manufacture local peaks. Equal-strength plateaus use their
+        # scipy midpoint, with a deterministic earlier-peak tie break.
+        start, stop = max(0, lo-1), min(len(energy), hi+1)
+        peaks, _ = find_peaks(energy[start:stop])
+        peaks = peaks+start
+        peaks = peaks[(peaks >= lo) & (peaks < hi)]
+        sufficient = peaks[energy[peaks] >= .5*float(np.max(energy[lo:hi]))]
+        if len(sufficient):
+            peak = int(sufficient[np.argmin(abs(sufficient*step-beat))])
+            values.append(energy[peak])
+            offsets.append(peak*step-beat)
+        else:
+            # Silence or a monotone window has no attack, rather than an
+            # invented peak at the search boundary.
+            values.append(0.)
+            offsets.append(0.)
+    return np.asarray(values, dtype=energy.dtype), np.asarray(offsets)
 
 
 def kick_runs(beats, energy, step, period):
@@ -209,16 +345,20 @@ def kick_runs(beats, energy, step, period):
 def kick_evidence(beats, energy, step, period):
     """Hysteretic marginal evidence with immediate, coherent strong evidence."""
     on, offsets = attack_values(beats, energy, step)
-    # A bassline-only phase has scattered peak offsets. Do not claim kick
-    # support without a coherent section, especially in a provisional head.
-    if np.median(abs(offsets-np.median(offsets))) > .02:
-        empty = np.zeros(len(beats), dtype=bool)
-        return empty, empty.copy(), np.zeros(len(beats))
+    # Coherence is local evidence, not a veto on an entire tempo section.
+    # A tiny resampling perturbation near a section MAD threshold must not
+    # erase hundreds of otherwise supported bass drums. Preserve full weight up to
+    # the former 20 ms MAD limit, then reduce it smoothly in each local window.
+    windows = np.lib.stride_tricks.sliding_window_view(np.pad(offsets, (8, 8),
+                                                             mode='edge'), 17)
+    centre = np.median(windows, axis=1)
+    scatter = np.median(abs(windows-centre[:, None]), axis=1)
+    coherence = 1/(1+np.maximum(0, scatter/.02-1)**2)
     off, _ = attack_values(beats+period/2, energy, step)
     # Normalise contrast to this tempo section: off-beat bass can be louder
-    # than a kick, so a universal absolute ratio is not reliable.
+    # than a bass drum, so a universal absolute ratio is not reliable.
     reference = float(np.median(on))/max(1e-12, float(np.median(off)))
-    window_on = median_filter(on, size=9, mode='nearest')
+    window_on = median_filter(on*coherence, size=9, mode='nearest')
     window_off = median_filter(off, size=9, mode='nearest')
     level = np.percentile(on, 90)*max(.02, .22/max(1., reference))
     decisions = (window_on >= .4*reference*np.maximum(1e-12, window_off)) & (
@@ -238,7 +378,7 @@ def kick_evidence(beats, energy, step, period):
     supported = np.flatnonzero(flags)
     if not len(supported):
         return flags, np.zeros(len(beats), dtype=bool), np.zeros(len(beats))
-    # Kick-bearing runs establish level anchors. A local median can follow
+    # Runs with bass drums establish level anchors. A local median can follow
     # substantial volume changes inside a run without borrowing the body level
     # for a quiet intro/outro.
     spans = []
@@ -329,6 +469,72 @@ def tempo_boundaries(observed):
     return refined+[len(observed)]
 
 
+def interval_outliers(beats):
+    """Intervals outside 25% of the nine-interval local median."""
+    intervals = np.diff(beats)
+    local = median_filter(intervals, size=9, mode='nearest')
+    return np.flatnonzero(abs(intervals-local) > .25*local+1e-9)
+
+
+def repair_tracked_beats(beats, energy, step):
+    """Re-place anomalous passages using eight surrounding non-outlier beats.
+
+    Preserve the count. Snap each fitted position to the nearest sufficient
+    bass drum attack when available. Commit a passage only when its intervals
+    and both seams satisfy the local consistency criterion.
+    """
+    result = np.asarray(beats).copy()
+    if len(result) < 10:
+        return result
+    intervals = np.diff(result)
+    if np.std(intervals)/np.mean(intervals) < .04-1e-9:
+        # The existing lattice fit owns rigid timing; repair expressive paths.
+        return result
+    blocked = set()
+    for _ in range(len(result)):
+        bad = interval_outliers(result)
+        pending = [int(index) for index in bad if int(index) not in blocked]
+        if not pending:
+            break
+        target = pending[0]
+        lo, hi = target, target+1
+        excluded = set(map(int, np.r_[bad, bad+1]))
+        repaired = False
+        for _ in range(len(result)):
+            left = [index for index in range(lo) if index not in excluded][-4:]
+            right = [index for index in range(hi+1, len(result)) if index not in excluded][:4]
+            if len(left)+len(right) < 8:
+                break
+            anchors = np.asarray(left+right)
+            slope, phase = np.polyfit(anchors, result[anchors], 1)
+            if slope <= 0:
+                break
+            predicted = phase+np.arange(lo, hi+1)*slope
+            values, offsets = attack_values(predicted, energy, step)
+            proposed = result.copy()
+            proposed[lo:hi+1] = predicted+np.where(values > 0, offsets, 0.)
+            remaining = interval_outliers(proposed)
+            touching = remaining[(remaining >= max(0, lo-1)) & (remaining <= hi)]
+            if not len(touching) and np.all(np.diff(proposed) > 0):
+                result = proposed
+                repaired = True
+                break
+            grow_left = bool(np.any(touching <= lo))
+            grow_right = bool(np.any(touching >= hi-1))
+            if not grow_left and not grow_right:
+                grow_left = grow_right = True
+            previous = lo, hi
+            if grow_left:
+                lo = max(0, lo-1)
+            if grow_right:
+                hi = min(len(result)-1, hi+1)
+            if previous == (lo, hi):
+                break
+        if not repaired:
+            blocked.add(target)
+    return result
+
+
 def fit_sections(observed, energy, step, duration):
     """Fit rigid sections, preserving expressive tracker positions verbatim."""
     result, flags, sections, choices = [], [], [], []
@@ -378,20 +584,31 @@ def fit_sections(observed, energy, step, duration):
 
 
 def analyse(raw: bytes) -> TrackGrid:
-    y, sr, lossless = decode(raw)
+    audio, sr, lossless, source_rate, source_channels = canonical_decode(raw)
+    y = audio.mean(axis=1)
     duration = len(y) / sr
     if duration < 2 or not np.isfinite(y).all():
         raise ValueError('Audio must contain at least two seconds of finite samples')
-    energy, hop, threshold = low_band_attacks(y, sr)
-    _, tracked = librosa.beat.beat_track(y=y, sr=sr, hop_length=512,
-                                         start_bpm=120, tightness=100, units='time', trim=False)
+    energy, hop, threshold = stereo_attacks(audio, sr)
+    onset = onset_envelope(y, sr)
+    del y, audio
+    _, tracked = librosa.beat.beat_track(onset_envelope=onset, bpm=global_tempo(onset, sr),
+                                         sr=sr, hop_length=512, start_bpm=120, tightness=100,
+                                         units='time', trim=False)
     if len(tracked) < 3:
         raise ValueError('Insufficient beats')
+    tracked = repair_tracked_beats(tracked, energy, hop/sr)
     tempo = 60 / float(np.median(np.diff(tracked)))
-    candidates = sorted({tempo * scale for scale in (.5, 1, 2) if 60 <= tempo*scale <= 180})
+    # Tracker hop quantisation may straddle an endpoint of the tempo prior.
+    candidates = sorted({float(np.clip(tempo*scale, 60, 180)) for scale in (.5, 1, 2)
+                         if 59.4 <= tempo*scale <= 181.8})
     if not candidates:
         raise ValueError('No tempo in 60–180 BPM range')
-    autocorrelation = correlate(energy, energy, method="fft")[len(energy)-1:]
+    # Only lags around the 60–180 BPM candidates are consumed. Avoid a
+    # full FFT and its complex work arrays for the duration-length envelope.
+    autocorrelation = np.zeros(round(1.01*sr/hop)+4, np.float32)
+    for lag in range(1, len(autocorrelation)):
+        autocorrelation[lag] = np.dot(energy[lag:], energy[:-lag])
     scored = []
     base_period = float(np.median(np.diff(tracked)))
     for bpm in candidates:
@@ -420,11 +637,63 @@ def analyse(raw: bytes) -> TrackGrid:
     return TrackGrid(VERSION, hashlib.sha256(raw).hexdigest(), duration, sr, float(tempo),
                      tuple(map(float, beats)), tuple(map(bool, flags)),
                      sections_for(beats, flags, duration)+tempo_sections, confidence,
-                     'content-v1' if lossless else 'unknown')
+                     'content-v1' if lossless else 'unknown',
+                     source_sample_rate=source_rate, source_channels=source_channels)
+
+
+def limit_address_space(duration, *, head=False):
+    """Linux worker only: reserve duration-scaled scratch above imported VM.
+
+    Never apply a process-wide rlimit in callers of the public Python API.
+    The LMS adapter always launches this CLI in a dedicated child.
+    """
+    import resource
+    from pathlib import Path
+
+    # Materialise lazy DSP/JIT imports before measuring the imported VM floor.
+    # This fixed-size warm-up is independent of the source duration/rate.
+    if not head:
+        onset_envelope(np.zeros(4096, np.float32), 48000)
+        librosa.beat.beat_track(onset_envelope=np.ones(200, np.float32), sr=48000, bpm=120)
+    baseline = int(Path('/proc/self/statm').read_text().split()[0])*resource.getpagesize()
+    bound = min(2*1024**3, baseline+384*1024**2+round(duration*1024**2))
+    if baseline >= bound:
+        raise ValueError('Imported address space exceeds grid worker memory budget')
+    _, hard = resource.getrlimit(resource.RLIMIT_AS)
+    if hard != resource.RLIM_INFINITY:
+        bound = min(bound, hard)
+    resource.setrlimit(resource.RLIMIT_AS, (bound, hard))
+    return bound
+
+
+def main():
+    import logging
+    import mmap
+    import sys
+    from pathlib import Path
+
+    head = "--head" in sys.argv[2:]
+    path = Path(sys.argv[1])
+    try:
+        # Probe before reading original bytes or allocating canonical PCM. The
+        # decoder child inherits the same address-space ceiling.
+        probe = subprocess.run(['ffprobe', '-v', 'error', '-show_format', '-of', 'json',
+                                str(path)], capture_output=True, check=True, timeout=30)
+        duration = float(json.loads(probe.stdout)['format']['duration'])
+        if not np.isfinite(duration) or duration <= 0:
+            raise ValueError('Missing finite duration for grid memory budget')
+        bound = limit_address_space(min(60, duration) if head else duration, head=head)
+        logging.warning('Grid worker memory bound=%d bytes duration=%.3fs', bound, duration)
+        with (path.open('rb') as source,
+              mmap.mmap(source.fileno(), 0, access=mmap.ACCESS_READ) as raw):
+            function = analyse_head if head else analyse
+            print(json.dumps(function(raw).to_dict(), allow_nan=False))
+    except (MemoryError, OSError, ValueError, subprocess.SubprocessError) as error:
+        logging.error('Grid analysis unavailable; retaining tracker: %s: %s',
+                      type(error).__name__, error)
+        return 1
+    return 0
 
 
 if __name__ == '__main__':
-    import sys
-    from pathlib import Path
-    function = analyse_head if "--head" in sys.argv[2:] else analyse
-    print(json.dumps(function(Path(sys.argv[1]).read_bytes()).to_dict(), allow_nan=False))
+    raise SystemExit(main())

@@ -864,13 +864,46 @@ Player-specific ingress owns timing knowledge. See the ROUTE-01
 
 ## Pre-analysed content grids
 
-Grid schema version 2 fits a straight lattice per rigid tempo section and keeps
+Grid schema version 3 fits a straight lattice per rigid tempo section and keeps
 expressive tracker positions. Optional section tempi are analysis metadata; the
-single label/prior tempo comes from the longest kick-bearing tempo section.
-Kick flags use section-relative on/off attack contrast and level over a nine-beat
+single label/prior tempo comes from the longest tempo section with bass drums.
+bass drum flags use section-relative on/off attack contrast and level over a nine-beat
 window with four-beat hysteresis, including the provisional 60-second head grid.
-Version-1 cache entries are re-analysed on next play; a second play is a cache hit.
+Older analyser-version cache entries are re-analysed on next play; a second play is a cache hit.
 No configuration migration or player/output changes are required.
-Strong attacks (≥1.0× their kick-bearing median) and clearly absent attacks
+Strong attacks (≥1.0× their bass drum median) and clearly absent attacks
 (≤0.25×) bypass the four-beat marginal hysteresis. Short reference runs remain
 valid when supported by strong evidence; only marginal-only short runs merge.
+
+The file and provisional-head analyser decode native mono/stereo PCM in chunks
+and use the live `AudioCanonicalizer` to produce 48,000 Hz, two-channel float32
+frames with soxr. `sample_rate` records 48,000; `source_sample_rate` and
+`source_channels` retain the original format. The SHA-256 still identifies the
+original file bytes. Low-band attack envelopes are calculated independently on
+left and right and combined by maximum; only beat-position estimation uses mid.
+
+LMS grid analysis runs in a separate low-priority process. After fixed-size DSP
+import warm-up for full grids (the head avoids librosa JIT), its Linux address-space ceiling is the smaller of 2 GiB and
+imported virtual size + 384 MiB + 1 MiB per analysed second (head: at most 60 s).
+A lower inherited hard limit is respected. This is a virtual-memory ceiling,
+not an RSS reservation. STFT and tempo-autocorrelation scratch operate in blocks.
+A memory allocation failure logs `Grid analysis unavailable; retaining tracker`
+with the exception reason and exits normally with status 1. The existing adapter
+logs `Library grid unavailable ...; retaining live analysis`, marks the fetch
+failed and keeps the live tracker. Direct Python `analyse()` callers do not set
+process-wide limits; production LMS uses the bounded CLI worker.
+
+The original native-grid invariance check was retired after bit-exact ingress
+was proved. Current acceptance uses owner-reviewed music references and local
+expressive timing consistency; see [the findings](research/grid01-memory-findings.md).
+Local acceptance does not establish target deployment performance.
+
+GRID-01 send-back 5b replaces the whole-section 20 ms phase-MAD veto with
+smooth weights from centred 17-beat windows. Full weight is retained through
+20 ms MAD; larger local scatter gradually reduces marginal evidence. Strong
+individual evidence keeps its existing rules. This removes the resampler cliff.
+The 5d owner references exclude reduced accents from binary scoring and gate
+UDKM body agreement from 60 s; soft bass drums in quiet intros remain a known
+conservative gap. Misplaced expressive beats use a local eight-anchor fit and
+nearest-sufficient snap without changing their count. See the findings and 5d
+report for validation and the LXC 115 bench procedure before owner deployment.

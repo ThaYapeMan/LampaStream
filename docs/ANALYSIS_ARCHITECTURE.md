@@ -119,42 +119,94 @@ SHM deployment, wheel installation, resource stress and visual comparison
 
 The target grid analyser (library file, head window, rolling buffer) consumes
 canonical frames through the same AudioCanonicalizer, never raw decoded audio.
-One attack detector serves live and offline analysis. Only the beat-position
-engine may differ: a live clean-room tracker or an offline dynamic-programming
-tracker. GRID-01 send-back 5 and BEAT-02 part A implement this target where the
-code does not yet share the canonical path and detector; current deviations do
-not define the design.
+The file/head ingress now shares `AudioCanonicalizer` with live analysis: native
+decode chunks → 48 kHz stereo float32 frames. File/head low-band attack envelopes
+run per channel and combine by maximum; beat positions use a mid mix.
+One attack detector serves live and offline analysis in the target. Only the
+beat-position engine may differ: a live clean-room tracker or an offline dynamic-programming
+tracker. GRID-01 send-back 5 implements canonical file/head ingress; BEAT-02
+part A still owns sharing the live detector. Current deviations do not define
+the design.
 
-Grid analyser schema version 2 adds optional `Section.tempo`. The analyser stays
+Grid analyser schema version 3 retains optional `Section.tempo` and adds
+`source_sample_rate` and `source_channels`. The analyser stays
 independent of players, LMS identities and lighting outputs. Tempo discontinuities
 are detected with eight-beat slopes, sustained across sixteen slopes, avoiding
 false changes caused by the tracker's sample-hop quantisation. Boundaries are
 refined with local piecewise linear residuals. Rigid sections (interval spread
 below 4%) use an inlier-fitted lattice with reassigned indices to remove tracker
 insertions/deletions; expressive sections preserve tracker positions. One median
-attack phase correction uses kick-bearing beats only.
+attack phase correction uses beats with bass drums only.
 
-Kick decisions compare nine-beat median on/off low-band attack energy against
+bass drum decisions compare nine-beat median on/off low-band attack energy against
 section-relative contrast and level. Contrast is 40% of the section median
 on/off ratio; the level is its on-beat p90 times max(0.02, 0.22 / max(1, ratio)).
-A section requires peak-offset MAD at most 20 ms to claim kick support.
+Phase coherence is measured in a centred 17-beat window. Its weight is 1 up to
+20 ms offset MAD, then `1 / (1 + max(0, MAD / 0.02 - 1)^2)`. The nine-beat
+marginal on-energy median uses these per-beat weights. There is no section-wide
+zero return: a small resampler/dither perturbation cannot veto an entire tempo
+section. Strong individual evidence retains the existing override rules.
+For each predicted beat, the picker chooses the nearest local attack peak within
+±70 ms whose energy is at least half the window maximum.
 Four consecutive decisions confirm a state
 change, backdated to the first confirming beat. Short silent gaps additionally
 use a three-beat level median. The label tempo is the fitted tempo of the section
-with the greatest kick-bearing duration (total duration breaks ties).
+with the greatest duration with bass drums (total duration breaks ties).
 
 Old analyser-version cache entries are rejected by `TrackGrid.from_dict` and
 re-analysed on next play. The next load uses the new cached full grid; provisional
 head grids use the same fit/flag rules and never enter the full-file cache.
 
-Strong evidence bypasses marginal hysteresis: at least 1.0× the kick-bearing
-median turns a beat on, at most 0.25× turns it off. Kick-bearing runs anchor the
+Strong evidence bypasses marginal hysteresis: at least 1.0× the bass drum-bearing
+median turns a beat on, at most 0.25× turns it off. bass drum-bearing runs anchor the
 median; a 17-supported-beat median follows volume changes exceeding a factor 1.5.
 Short breaks (up to 16 beats) identify isolated attack sections above 0.28× their
 adjacent run anchor; long breaks require 8× their own background median. Each
-isolated section has its own kick median. Other strong attacks must peak within
+isolated section has its own bass drum median. Other strong attacks must peak within
 12 ms of the lattice, avoiding an unrelated bass note in the wider ±70 ms
 marginal/absence window. After strong exceptions, marginal-only fragments shorter
-than four beats merge into the neighbouring state. Strong single kicks and
-single dropped kicks survive. These level sections are analyser-internal; the
+than four beats merge into the neighbouring state. Strong single bass drums and
+single dropped bass drums survive. These level sections are analyser-internal; the
 optional published section tempo remains additive metadata.
+
+### File-grid memory boundary
+
+The existing LMS adapter launches a separate analyser subprocess; file analysis
+is not executed inside the service. Its CLI warms fixed-size lazy DSP imports for full grids (not heads),
+then sets Linux `RLIMIT_AS` to min(2 GiB, imported virtual size + 384 MiB +
+1 MiB × analysed seconds), respecting a lower inherited hard limit. The head
+window budgets at most 60 seconds. The public Python API does not modify its
+caller's resource limits. Allocation/probe/decode failure exits 1 with a logged
+reason; the existing adapter catches that grid failure and retains live analysis.
+No service resource limit, fusion, effects or output boundary changes.
+
+Canonical PCM is preallocated once from decoded duration. The decoder streams
+16,384 native frames at a time; FFmpeg writes native float PCM to a temporary
+file rather than capturing whole decoded output. A read-only mapping retains
+original bytes in CLI workers without copying them into a bytes buffer. Mel
+spectra and the eight-second tempogram are processed in blocks of 256 frames;
+the tempogram mean supplies the same librosa tempo prior, and the onset envelope
+is passed once to beat tracking. Low-band filters remain float32; only the short
+lag range needed for 60–180 BPM is correlated. Peak-RSS regressions execute in
+fresh subprocesses in normal CI via the `grid_memory` marker.
+
+Music acceptance follows the owner-reviewed references dated 2026-11-12; see
+[GRID-01 memory findings](research/grid01-memory-findings.md). Reduced accents
+are excluded from Boolean scoring, and quiet-intro misses are reported rather
+than relabelled or tuned away.
+
+### Expressive tracker passage repair
+
+A non-rigid tracked path with an interval outside ±25% of the nine-interval
+local median is repaired locally, without inserting or removing beats. Fit a
+line to four surrounding beats on each side, excluding the anomalous endpoints,
+then re-place the passage and snap each prediction to the nearest sufficient
+bass drum attack within ±70 ms when available. Expand the passage only if a
+seam still violates consistency; accept a repair only with increasing positions
+and consistent intervals. Rigid timing stays with the existing lattice fit.
+
+Owner-verified references dated 2026-11-12 distinguish absent (0), full bass
+drum (1) and reduced accent (2). Reduced reference rows are informational for
+the current Boolean `kick_flags`; BEAT-02 owns reduced-intensity output. UDKM
+uses the earliest layered transient phase and gates flag agreement on its body
+from 60 s; soft intro misses remain a documented conservative gap.
