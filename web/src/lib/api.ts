@@ -512,6 +512,7 @@ export interface MusicSettings {
   rules: GenreRule[]
 }
 export interface MusicStatus {
+  tempo_metadata?: TempoMetadata
   genre: string; raw_tags: string[]; source: string; palette_id: string
   energy_profile_id: string; manual: boolean; album_art_available?: boolean; album_art_outcome?: string
 }
@@ -540,16 +541,19 @@ export const releaseLights = (id: string) => request(`/api/couplings/${id}/relea
 
 
 export interface MetadataProvider {
+  display_label?: string; lookup?: { status: string; requested_at: number } | null
   name: string; capabilities: string[]; lookup_keys: string[]; rate_limit: number; ttl: number
   redistributable: boolean; requires_credentials: boolean; enabled: boolean
   status: 'active' | 'disabled' | 'obsolete'; consent: boolean; leaves_lan: boolean
   always_enabled: boolean; test_only: boolean; toggleable: boolean
 }
 export interface TempoMetadata {
+  provider_rows?: Array<{ provider: string; label: string; fields: { tempo?: number }; fetched_at: number; status: string }>
   identity: string | null; confirmed: boolean; tempo: number | null; phase_offset_s: number
   reason: string | null
   resolved_tempo: { provider: string; fields: { tempo?: number; phase_offset_s?: number }; confidence: number; redistributable: boolean } | null
 }
+export const getMetadataProviders = () => request<MetadataProvider[]>('/api/metadata-providers')
 export const getTempoMetadata = () => request<TempoMetadata>('/api/tempo-metadata')
 export const updateMetadataProvider = (name: string, body: { enabled?: boolean; consent?: boolean }) =>
   request<MetadataProvider>(`/api/metadata-providers/${encodeURIComponent(name)}`, json('PATCH', body))

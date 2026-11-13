@@ -46,11 +46,15 @@ class ProviderStore:
 
     def list(self):
         states = {}
+        lookups = {}
         if self.database.path.exists():
             with self.database.connect() as db:
                 self._sync(db)
                 states = {row[0]: row[1:] for row in db.execute(
                     'SELECT name,enabled,status,consent FROM metadata_providers')}
+                lookups = {row[0]: dict(status=row[1], requested_at=row[2])
+                           for row in db.execute('SELECT provider,status,requested_at FROM lookups '
+                                                 'ORDER BY requested_at')}
         result = []
         for name, spec in self.specs.items():
             enabled, status, consent = states.get(name, (
@@ -58,7 +62,7 @@ class ProviderStore:
                 'active' if spec.enabled else 'disabled', False))
             result.append(dict({k: v for k, v in asdict(spec).items() if k != 'module'},
                                enabled=bool(enabled and status != 'obsolete'), status=status,
-                               consent=bool(consent),
+                               consent=bool(consent), lookup=lookups.get(name),
                                toggleable=(not spec.always_enabled and status != 'obsolete'
                                            and (not spec.test_only or self.allow_test))))
         return result
@@ -94,6 +98,8 @@ class ProviderStore:
                                                  'external_id')}
         query['tags'] = {k: v for k, v in (identity.tags or {}).items()
                          if k.casefold() in ('tempo', 'tbpm', 'bpm')}
+        if spec.leaves_lan:
+            query = {'artist': identity.artist, 'title': identity.title}
         query_json = encode(query)
         with self.database.connect() as db:
             self._sync(db)
@@ -110,7 +116,7 @@ class ProviderStore:
             if not force and same_query:
                 if previous and (previous[1] == 0 or now < sum(previous)):
                     return False
-                if attempt[1] == 'empty' and now < attempt[2]+spec.ttl:
+                if attempt[1] not in ('pending', 'failed') and now < attempt[2]+spec.ttl:
                     return False
             last = db.execute('SELECT MAX(requested_at) FROM lookups WHERE provider=?',
                               (name,)).fetchone()[0]
@@ -162,8 +168,10 @@ class ProviderStore:
                                'redistributable=excluded.redistributable',
                                (key, name, now, spec.ttl, encode(fields), raw,
                                 result.confidence, int(spec.redistributable and current[2])))
+                outcome = 'ready' if fields else (
+                    result.status if result.status != 'ready' else 'empty')
                 db.execute('UPDATE lookups SET status=?,failures=0 WHERE identity_hash=? '
-                           'AND provider=?', ('ready' if fields else 'empty', key, name))
+                           'AND provider=?', (outcome, key, name))
             return bool(fields)
         except Exception:
             with self.database.connect() as db:
@@ -182,6 +190,22 @@ class ProviderStore:
             except Exception:
                 logging.getLogger(__name__).warning(
                     'Metadata provider %s unavailable; retaining stored rows', name, exc_info=True)
+
+    def display_rows(self, identity):
+        if not self.database.path.exists():
+            return []
+        with self.database.connect() as db:
+            self._sync(db)
+            rows = db.execute('SELECT m.provider,m.fields_json,m.fetched_at,l.status '
+                              'FROM track_metadata m LEFT JOIN lookups l '
+                              'ON m.identity_hash=l.identity_hash AND m.provider=l.provider '
+                              'JOIN metadata_providers p ON p.name=m.provider '
+                              "WHERE m.identity_hash=? AND p.enabled=1 AND p.status='active' "
+                              'ORDER BY p.priority DESC', (identity_hash(identity.key),)).fetchall()
+        return [dict(provider=name, label=self.specs[name].display_label,
+                     fields=json.loads(fields), fetched_at=fetched_at, status=status)
+                for name, fields, fetched_at, status in rows
+                if name in self.specs and self.specs[name].display_label]
 
     def resolve(self, identity):
         if not self.database.path.exists():

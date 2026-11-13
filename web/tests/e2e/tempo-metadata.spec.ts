@@ -36,8 +36,10 @@ test('provider lifecycle and consent use generic checkbox rows', async ({ page }
     { ...base, capabilities: ['tempo', 'phase_offset_s'], name: 'owner', enabled: true, status: 'active', always_enabled: true, test_only: false, redistributable: true, toggleable: false },
     { ...base, name: 'local-tags', enabled: true, status: 'active', always_enabled: true, test_only: false, redistributable: true, toggleable: false },
     { ...base, name: 'recorded-fixture', enabled: false, status: 'disabled', always_enabled: false, test_only: true, redistributable: false, toggleable: true },
-    { ...base, name: 'songbpm', enabled: false, status: 'obsolete', always_enabled: false, test_only: false, redistributable: false, leaves_lan: true, toggleable: false },
+    { ...base, name: 'songbpm', display_label: 'SongBPM', enabled: false, status: 'disabled', always_enabled: false, test_only: false, redistributable: false, leaves_lan: true, toggleable: true },
+    { ...base, name: 'beatport', display_label: 'Beatport', enabled: false, status: 'disabled', always_enabled: false, test_only: false, redistributable: false, leaves_lan: true, toggleable: true },
   ]
+  await page.route('**/api/metadata-providers', route => route.fulfill({ json: providers }))
   await page.route('**/api/music-settings', route => route.fulfill({ json: { providers, lastfm_enabled: false, api_key_configured: false, genre_mapping: { house: 'house' }, genres: ['house', 'other'], rules: [], transition_mode: 'crossfade', transition_duration_s: .7 } }))
   await page.route('**/api/metadata-providers/*', route => {
     const name = new URL(route.request().url()).pathname.split('/').pop()!
@@ -56,6 +58,22 @@ test('provider lifecycle and consent use generic checkbox rows', async ({ page }
   await expect(recorded.getByText('active', { exact: true })).toBeVisible()
   await recorded.getByRole('checkbox').uncheck()
   await expect(recorded.getByText('disabled', { exact: true })).toBeVisible()
-  await expect(page.getByRole('region', { name: 'Provider songbpm' }).getByRole('checkbox')).toBeDisabled()
-  await page.getByTestId('metadata-providers').screenshot({ path: '../.test-cache/beat-02-part-b/provider-settings.png' })
+  const songbpm = page.getByRole('region', { name: 'Provider songbpm' })
+  await expect(songbpm.getByRole('checkbox')).toBeEnabled()
+  await songbpm.getByRole('checkbox').check()
+  await expect(songbpm.getByText('active', { exact: true })).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Provider beatport' }).getByRole('checkbox')).not.toBeChecked()
+  await page.getByTestId('metadata-providers').screenshot({ path: '../.test-cache/beat-02-part-b-sendback-1/provider-settings.png' })
+})
+
+
+test('provider references stay beside measured tempo without replacing it', async ({ page }) => {
+  await setupPreview(page, () => ({ tempo_bpm: 143, tempo_locked: true,
+    music: { genre: 'other', source: '', raw_tags: [], palette_id: '', energy_profile_id: '', manual: false,
+      tempo_metadata: { identity: 'hint:recording', confirmed: false, tempo: 142,
+        phase_offset_s: 0, reason: null, resolved_tempo: null,
+        provider_rows: [{ provider: 'songbpm', label: 'SongBPM', fields: { tempo: 142 }, fetched_at: 1000, status: 'ready' },
+          { provider: 'beatport', label: 'Beatport', fields: { tempo: 144 }, fetched_at: 1000, status: 'ready' }] } } }))
+  await expect(page.getByTestId('track-tempo')).toHaveText('measured 143 BPM · SongBPM 142 · Beatport 144')
+  await page.getByTestId('track-tempo').screenshot({ path: '../.test-cache/beat-02-part-b-sendback-1/provider-label.png' })
 })

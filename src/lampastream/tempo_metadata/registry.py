@@ -22,6 +22,7 @@ class LookupResult:
     fields: dict
     raw_payload: dict
     confidence: float
+    status: str = 'ready'
 
 
 class Provider(Protocol):
@@ -45,6 +46,7 @@ class ProviderSpec:
     always_enabled: bool = False
     test_only: bool = False
     manual: bool = False
+    display_label: str = ''
 
     def make(self, **options):
         return import_module(self.module).Adapter(**options)
@@ -64,6 +66,10 @@ PROVIDERS = {
                      0., 3600., False, False, False, priority=10, test_only=True),
         ProviderSpec('songbpm', 'lampastream.tempo_metadata.songbpm',
                      ('tempo',), ('artist+title',), 1., 86400., False, False, False,
-                     status='obsolete', leaves_lan=True),
+                     priority=50, leaves_lan=True, display_label='SongBPM'),
+        ProviderSpec('beatport', 'lampastream.tempo_metadata.beatport',
+                     ('tempo', 'key', 'genre'), ('artist+title',), 1., 86400.,
+                     False, False, False, priority=75, leaves_lan=True,
+                     display_label='Beatport'),
     )
 }

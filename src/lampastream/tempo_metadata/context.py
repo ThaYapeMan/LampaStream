@@ -41,12 +41,13 @@ def snapshot(manager, store=None):
     store = store or ProviderStore()
     identity, grid = current_identity(manager)
     if identity is None:
-        return dict(identity=None, confirmed=False, resolved_tempo=None,
+        return dict(identity=None, confirmed=False, resolved_tempo=None, provider_rows=[],
                     tempo=None, phase_offset_s=0., reason='Waiting for track identity')
     resolved = store.resolve(identity)
     fields = resolved['fields'] if resolved else {}
     return dict(identity=identity.key, confirmed=identity.key.startswith('fp:'),
-                resolved_tempo=resolved, tempo=fields.get('tempo', grid.tempo if grid else None),
+                provider_rows=store.display_rows(identity), resolved_tempo=resolved,
+                tempo=fields.get('tempo', grid.tempo if grid else None),
                 phase_offset_s=fields.get('phase_offset_s', 0.),
                 reason=None if identity.key.startswith('fp:') else 'Waiting for audio fingerprint')
 

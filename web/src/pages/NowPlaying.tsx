@@ -447,7 +447,7 @@ export function NowPlaying({ expertMode = false, colour, channel_colours, onset,
         onChanged={() => setReloadKey((k) => k + 1)}
       />
 
-      <TrackProgress track={status?.track ?? null} connected={connected}
+      <TrackProgress providerRows={status?.music?.tempo_metadata?.provider_rows} track={status?.track ?? null} connected={connected}
         beatSource={status?.grid_tempo ? "grid" : status?.beat_source} tempoBpm={status?.grid_tempo ?? status?.tempo_bpm} tempoLocked={!!status?.grid_tempo || status?.tempo_locked}
         showControls={!!status?.transport?.available}
         transport={status?.transport?.available && couplingId ? {

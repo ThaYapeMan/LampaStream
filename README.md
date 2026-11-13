@@ -3,6 +3,17 @@
 > Formerly known as **HueSync**; renamed when the project outgrew Philips Hue.
 
 Music-reactive Philips Hue Entertainment lighting from LMS or AirPlay 2.
+
+LampaStream doesn't merely react to audio; it maintains a continuously corrected model of
+musical time and schedules lighting against the predicted audible timeline.
+
+MusicalTimeline is the track’s musical time for Effects: which beat, which bar,
+how fast and how sure. It combines measured canonical features with the stored
+grid. The Python class remains `BeatFusion`; its responsibilities are prior grid,
+live observations, correction, confidence and prediction. The grid database is a
+second input to this component, never a bypass around the analyser. Nothing after
+the canonical stage branches on source or output, and MusicalTimeline is no exception.
+
 LampaStream analyzes live audio, produces generic audio features, and renders Effects
 through a Hue Entertainment output driver. No microphone or precomputed BPM tags
 are required.
@@ -67,13 +78,6 @@ with a backup and conflict checks. See [configuration](docs/configuration.md).
 ## Player-independent audio architecture
 
 ![End-to-end audio architecture](docs/diagrams/end-to-end.svg)
-
-MusicalTimeline is the track’s musical time for Effects: which beat, which bar,
-how fast and how sure. It combines measured canonical features with the stored
-grid. The Python class remains `BeatFusion`; its responsibilities are prior grid,
-live observations, correction, confidence and prediction. The grid database is a
-second input to this component, never a bypass around the analyser. Nothing after
-the canonical stage branches on source or output, and MusicalTimeline is no exception.
 
 Every source reaches one canonical stage; nothing after it branches on source or output.
 

@@ -43,6 +43,14 @@ async def tempo_metadata(request: Request):
         raise HTTPException(503, 'Grid database unavailable; run the standard installer') from None
 
 
+@router.get('/metadata-providers')
+async def list_providers(request: Request):
+    try:
+        return await asyncio.to_thread(get_store(request).list)
+    except (OSError, sqlite3.Error):
+        raise HTTPException(503, 'Grid database unavailable; run the standard installer') from None
+
+
 @router.patch('/metadata-providers/{name}')
 async def configure_provider(name: str, request: Request, body: ProviderBody):
     try:
