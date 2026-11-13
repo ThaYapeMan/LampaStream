@@ -2,7 +2,7 @@
 #    uv pip compile scripts/requirements-ab-tools.in --python-version 3.11 --output-file scripts/requirements-ab-tools.txt
 aiohappyeyeballs==2.7.1
     # via aiohttp
-aiohttp==3.13.5
+aiohttp==3.14.5
     # via
     #   -r scripts/requirements-ab-tools.in
     #   pyatv
@@ -88,6 +88,7 @@ tinytag==2.2.1
     #   pyatv
 typing-extensions==4.16.0
     # via
+    #   aiohttp
     #   aiosignal
     #   pydantic
     #   pydantic-core
