@@ -78,7 +78,7 @@ srptools==1.0.1
     # via
     #   -r scripts/requirements-ab-tools.in
     #   pyatv
-tabulate==0.9.0
+tabulate==0.10.0
     # via
     #   -r scripts/requirements-ab-tools.in
     #   pyatv
