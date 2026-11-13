@@ -68,7 +68,7 @@ pydantic==2.13.4
     #   pyatv
 pydantic-core==2.46.4
     # via pydantic
-requests==2.32.5
+requests==2.34.2
     # via
     #   -r scripts/requirements-ab-tools.in
     #   pyatv
