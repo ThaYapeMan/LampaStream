@@ -179,6 +179,7 @@ async def _stop_follower(follower: LmsFollower, task: asyncio.Task) -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.serial
 def test_newsong_triggers_play() -> None:
     async def _test() -> None:
         server = MockLmsServer()
@@ -209,6 +210,7 @@ def test_newsong_triggers_play() -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.serial
 def test_newsong_from_other_player_ignored() -> None:
     async def _test() -> None:
         server = MockLmsServer()
@@ -239,6 +241,7 @@ def test_newsong_from_other_player_ignored() -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.serial
 def test_follower_reconnects_after_disconnect() -> None:
     """Follower reconnects and mirrors tracks after a listen 1 disconnect."""
     async def _test() -> None:
@@ -307,6 +310,7 @@ def test_follower_reconnects_after_disconnect() -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.serial
 def test_post_play_unsync_targets_only_lampastream_and_follow_macs() -> None:
     """After a newsong event, 'sync -' is sent to LampaStream's own MAC and the
     followed player's MAC only.  No other player in the LMS environment
@@ -358,6 +362,7 @@ def test_post_play_unsync_targets_only_lampastream_and_follow_macs() -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.serial
 def test_stop_terminates_follower() -> None:
     async def _test() -> None:
         server = MockLmsServer()
@@ -383,6 +388,7 @@ def test_stop_terminates_follower() -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.serial
 def test_master_stop_sends_stop_to_lampastream() -> None:
     """'playlist stop' from the master must propagate as a stop command to LampaStream.
 
@@ -414,6 +420,7 @@ def test_master_stop_sends_stop_to_lampastream() -> None:
     asyncio.run(_test())
 
 
+@pytest.mark.serial
 def test_stop_from_other_player_not_forwarded() -> None:
     """'playlist stop' from a player other than the master must be ignored."""
     async def _test() -> None:
@@ -437,6 +444,7 @@ def test_stop_from_other_player_not_forwarded() -> None:
     asyncio.run(_test())
 
 
+@pytest.mark.serial
 def test_master_pause_sends_pause_to_lampastream() -> None:
     """'playlist pause 1' from the master propagates as 'pause 1' to LampaStream.
 
@@ -473,6 +481,7 @@ def test_master_pause_sends_pause_to_lampastream() -> None:
     asyncio.run(_test())
 
 
+@pytest.mark.serial
 def test_manual_connect_seeds_playback_before_newsong() -> None:
     async def run():
         server = MockLmsServer()
@@ -498,6 +507,7 @@ def test_manual_connect_seeds_playback_before_newsong() -> None:
     asyncio.run(run())
 
 
+@pytest.mark.serial
 @pytest.mark.parametrize('mode', ['stop', 'pause'])
 def test_manual_connect_does_not_start_inactive_target(mode) -> None:
     async def run():
@@ -516,6 +526,7 @@ def test_manual_connect_does_not_start_inactive_target(mode) -> None:
     asyncio.run(run())
 
 
+@pytest.mark.serial
 def test_sync_group_connect_never_seeds_or_mirrors_playback() -> None:
     async def run():
         server = MockLmsServer()
@@ -537,6 +548,7 @@ def test_sync_group_connect_never_seeds_or_mirrors_playback() -> None:
     asyncio.run(run())
 
 
+@pytest.mark.serial
 @pytest.mark.parametrize('own_mode,own_url,expected_plays', [
     ('play', MOCK_URL, 1), ('stop', MOCK_URL, 2),
     ('play', 'http://lms.local/wrong.flac', 2),
@@ -566,6 +578,7 @@ def test_manual_reconnect_skips_only_already_playing_same_url(
     asyncio.run(run())
 
 
+@pytest.mark.serial
 def test_startup_and_newsong_each_align_once():
     async def run():
         server = MockLmsServer()
@@ -593,6 +606,7 @@ def test_startup_and_newsong_each_align_once():
     asyncio.run(run())
 
 
+@pytest.mark.serial
 @pytest.mark.parametrize('pause,resume,stop', [
     ('playlist pause 1', 'playlist pause 0', 'playlist stop'),
     ('pause 1', 'play', 'stop'),
@@ -717,6 +731,7 @@ def test_seed_alignment_does_not_seek_invalid_or_changed_source(monkeypatch, rea
                    for c in exchange.call_args_list)
 
 
+@pytest.mark.serial
 @pytest.mark.parametrize("initial,confirmed,commands", [
     ("play", "pause", [1]), ("pause", "play", [0]),
     ("play", "play", [1, 0]), ("pause", "pause", [0, 1]),
@@ -774,6 +789,7 @@ def test_pending_pause_confirmation_is_cancelled_by_new_state_or_shutdown(event,
     asyncio.run(run())
 
 
+@pytest.mark.serial
 def test_new_event_waits_for_confirmation_query_and_discards_stale_result(monkeypatch):
     import threading
     from unittest.mock import Mock
@@ -804,6 +820,7 @@ def test_new_event_waits_for_confirmation_query_and_discards_stale_result(monkey
     asyncio.run(run())
 
 
+@pytest.mark.serial
 def test_reused_same_url_realigns_retained_lms_position_within_three_seconds():
     """Field replay: the LMS queue survives AP with own=344.345s, room=66s."""
     async def run():

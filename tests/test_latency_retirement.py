@@ -128,6 +128,7 @@ def test_delayed_distinct_intervals_and_provenance(eos):
         cap.stop()
 
 
+@pytest.mark.serial
 def test_real_manager_teardown_retains_blocked_reader(tmp_path, monkeypatch):
     class Source:
         running = True

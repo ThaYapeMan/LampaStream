@@ -103,6 +103,7 @@ def test_service_sample_preserves_delivered_position_and_zero_values():
                           session_offset_ms=-70., median_residual_ms=0.)
 
 
+@pytest.mark.serial
 def test_service_websocket_sampling_and_shutdown(monkeypatch):
     from contextlib import nullcontext
 

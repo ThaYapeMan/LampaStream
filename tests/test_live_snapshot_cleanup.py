@@ -74,6 +74,7 @@ def test_live_ties_same_interval_and_new_epoch():
         cap.stop()
 
 
+@pytest.mark.serial
 def test_delayed_eos_does_not_replace_terminal_live_snapshot():
     cap = _make_cap()
 
@@ -126,6 +127,7 @@ def test_obsolete_late_drop_counter_removed():
         cap.stop()
 
 
+@pytest.mark.serial
 def test_follower_cleaned_once_across_blocked_teardown_retries(tmp_path, monkeypatch, caplog):
     class Source:
         running = True

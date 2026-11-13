@@ -56,6 +56,7 @@ def test_logger_keeps_exact_clock_and_unknown_track_time():
     assert logger.beat_row(unknown, 1234, "tracker")["audible_t"] is None
 
 
+@pytest.mark.serial
 @pytest.mark.parametrize("mode,source", [("onset", "onset"), ("tracker", "grid"),
                                           ("tracker", "tracker")])
 @pytest.mark.parametrize("raw_detector", [False, True])
@@ -357,6 +358,7 @@ def test_smoke_generated_pulse_is_minus_six_dbfs(tmp_path):
     print(f'Generated smoke pulse: peak={peak}/32768, {dbfs:.4f} dBFS')
 
 
+@pytest.mark.serial
 def test_busy_connection_probe_distinguishes_live_and_finished_session():
     import socket
 
@@ -376,6 +378,7 @@ def test_busy_connection_probe_distinguishes_live_and_finished_session():
         assert tool.receiver_connection('127.0.0.1', port) is False
 
 
+@pytest.mark.serial
 @pytest.mark.parametrize('peak,detected,passed', [(3000, True, False), (3001, False, False),
                                                 (3001, True, True)])
 @pytest.mark.parametrize("grid_source", [False, True])

@@ -62,8 +62,11 @@ jobs:
       - name: Grid worker memory by native rate
         run: pytest -q -s -n0 -m grid_memory tests/test_grid_memory.py
 
-      - name: Test
-        run: pytest -v
+      - name: Parallel tests
+        run: pytest -v -m 'not serial'
+
+      - name: Serial tests
+        run: pytest -v -m serial -n 0
 
   build-frontend:
     runs-on: ubuntu-latest

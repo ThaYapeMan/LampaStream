@@ -151,6 +151,7 @@ def test_negative_residual_never_seeks_a_running_track():
         assert probe.current_delay_ms() == -200
     asyncio.run(run())
 
+@pytest.mark.serial
 def test_fake_cli_only_positions_and_one_preference_no_paused_or_stopped_requests():
     async def run():
         commands = []
@@ -256,6 +257,7 @@ def test_preference_absence_is_cached_and_lowering_is_bounded():
     asyncio.run(run())
 
 
+@pytest.mark.serial
 def test_stop_owns_inflight_socket_worker_and_never_applies_retired_sample():
     import threading
     async def run():

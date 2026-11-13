@@ -133,7 +133,8 @@ gate in order; a failure means no push:
 ```bash
 ruff check .
 python3 scripts/build_native.py
-LAMPASTREAM_REQUIRE_NATIVE=1 python3 -m pytest -v
+LAMPASTREAM_REQUIRE_NATIVE=1 python3 -m pytest -v -m 'not serial'
+LAMPASTREAM_REQUIRE_NATIVE=1 python3 -m pytest -v -m serial -n 0
 npm --prefix web test
 npm --prefix web run test:e2e
 npm --prefix web run build

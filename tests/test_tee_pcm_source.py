@@ -98,6 +98,7 @@ def test_delegation_and_secondary_lifecycle():
         TeePcmSource(source, capacity=0)
 
 
+@pytest.mark.serial
 def test_undrained_secondary_is_bounded_and_primary_completes():
     # A full blocking queue would hang this worker. A generous deadline catches
     # per-read waiting without pretending to prove target realtime performance.

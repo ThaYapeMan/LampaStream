@@ -508,6 +508,7 @@ def _make_engine_and_start(source):
     return engine, cap
 
 
+@pytest.mark.serial
 def test_timeout_never_creates_second_concurrent_reader():
     """Round-3 blocker: on old-stop timeout, no rebuilt analyser may
     be started against the same source.  ``max_concurrent`` must stay
@@ -552,6 +553,7 @@ def test_timeout_never_creates_second_concurrent_reader():
         engine.stop()
 
 
+@pytest.mark.serial
 def test_shutdown_joins_retiring_worker():
     """SyncEngine.stop() must join both the current analyser and any
     workers left in _retiring."""
@@ -576,6 +578,7 @@ def test_shutdown_joins_retiring_worker():
         assert engine._retiring == []
 
 
+@pytest.mark.serial
 def test_subsequent_replace_refused_while_retirement_pending():
     """While retirement is in progress, replace_analyser() must
     refuse to start a new reader — that would violate the "at most
@@ -599,6 +602,7 @@ def test_subsequent_replace_refused_while_retirement_pending():
         engine.stop()
 
 
+@pytest.mark.serial
 def test_replace_after_retirement_completes_succeeds():
     """Once the retiring worker has actually exited, a subsequent
     replace_analyser() must succeed."""
@@ -631,6 +635,7 @@ def test_replace_after_retirement_completes_succeeds():
         engine.stop()
 
 
+@pytest.mark.serial
 def test_retirement_status_preserves_ownership_until_join():
     """Status observation cannot discard an unacknowledged stop timeout."""
     source = _BlockingSource()

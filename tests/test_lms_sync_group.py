@@ -1,8 +1,11 @@
 """Sync-group mode uses real CLI sockets and never sends playback/group commands."""
+
 import asyncio
 import contextlib
 from unittest.mock import AsyncMock, patch
 from urllib.parse import quote
+
+import pytest
 
 from lampastream.lms_follower import LmsSyncGroupObserver
 
@@ -53,6 +56,7 @@ class Server:
         await self.writer.drain()
 
 
+@pytest.mark.serial
 def test_passive_group_observation_transitions_and_cleanup():
     async def run():
         server = Server()
@@ -132,6 +136,7 @@ def test_query_failure_clears_target_and_recovers_without_playback():
     asyncio.run(run())
 
 
+@pytest.mark.serial
 def test_teardown_awaits_outstanding_sync_query():
     import threading
 
@@ -159,6 +164,7 @@ def test_teardown_awaits_outstanding_sync_query():
     asyncio.run(run())
 
 
+@pytest.mark.serial
 def test_sync_notification_refreshes_before_fallback_poll():
     async def run():
         server = Server()

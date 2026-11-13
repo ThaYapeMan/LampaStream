@@ -383,6 +383,7 @@ def test_metadata_uses_existing_reader():
     assert isinstance(event["local_raw_ns"], int)
 
 
+@pytest.mark.serial
 def test_measurement_overhead_bounded():
     diagnostics = TimingDiagnostics()
     config = PlayerLatency(player_mac='aa', strategy='auto')

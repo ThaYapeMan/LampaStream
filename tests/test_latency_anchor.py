@@ -7,6 +7,7 @@ import pytest
 from test_auto_latency import FOLLOW, OWN, fixture_probe
 
 
+@pytest.mark.serial
 @pytest.mark.parametrize("scenario", ["slide", "large step", "small step", "track", "seek"])
 def test_native_latency_guard(scenario, caplog):
     async def exercise():

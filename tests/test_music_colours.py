@@ -354,6 +354,7 @@ def test_cover_art_single_metadata_reader_binary_payload():
     assert source.read().artwork_data == image
     assert "artwork_data" not in source.read().for_delivery()
 
+@pytest.mark.serial
 @pytest.mark.anyio
 async def test_cover_art_decode_does_not_block_output_and_invalidated_metadata_is_discarded():
     import threading

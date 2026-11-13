@@ -414,6 +414,7 @@ async def test_busy_controller_does_not_cause_late_reacquisition_without_music(d
     await driver.aclose()
 
 
+@pytest.mark.serial
 @pytest.mark.anyio
 async def test_remote_stop_during_take_does_not_deadlock(driver):
     session = await started(driver)

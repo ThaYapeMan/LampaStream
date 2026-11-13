@@ -63,6 +63,7 @@ addopts = "-n auto"
 testpaths = ["tests"]
 pythonpath = ["src"]
 markers = [
+    "serial: real sockets or wall-clock worker deadlines; run alone with -n 0",
     "native: requires the compiled cavacore library",
     "grid_memory: six-minute canonical grid RSS regression (runs in CI)",
 ]

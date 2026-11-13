@@ -376,6 +376,7 @@ def test_beat_detector_reset_rebuilds_onset_pipeline():
     assert id(bd._state.onset_pipeline) != old_id
 
 
+@pytest.mark.serial
 def test_beat_detector_reset_rebuild_race_preserves_new_config():
     """A rebuild that completes concurrently with a reset must not be
     overwritten by the reset committing its captured-earlier state.
@@ -591,6 +592,7 @@ def test_h1_stop_closes_processors_after_thread_terminates():
     assert "engine_close" in close_calls
 
 
+@pytest.mark.serial
 def test_h1_close_not_called_when_thread_still_alive(monkeypatch):
     """If join() times out and thread is still alive, processors must NOT be closed."""
     close_calls: list[str] = []
@@ -638,6 +640,7 @@ def test_h1_close_not_called_when_thread_still_alive(monkeypatch):
     zombie.join(timeout=0.1)  # cleanup (daemon)
 
 
+@pytest.mark.serial
 def test_stop_timeout_defers_close_to_worker_finally():
     """When stop() times out, the worker's finally block must close
     processors exactly once when it eventually exits (item 15).

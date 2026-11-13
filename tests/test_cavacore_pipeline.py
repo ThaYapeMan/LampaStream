@@ -262,6 +262,7 @@ def test_multiple_epoch_transitions_stable() -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.serial
 def test_processing_latency_per_hop() -> None:
     """Measure wall-clock time per 480-sample hop and report it.
 
@@ -681,6 +682,7 @@ def test_factory_same_source_accepted_by_both_backends() -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.serial
 def test_worker_starts_and_stops_cleanly() -> None:
     """start() launches the worker thread; stop() joins it within 2 s."""
     src = MagicMock()

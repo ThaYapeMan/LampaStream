@@ -5,7 +5,8 @@
 From the repository root in the development environment:
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 python3 -B -m pytest -v -p no:cacheprovider
+PYTHONDONTWRITEBYTECODE=1 python3 -B -m pytest -v -p no:cacheprovider -m 'not serial'
+PYTHONDONTWRITEBYTECODE=1 python3 -B -m pytest -v -p no:cacheprovider -m serial -n 0
 python3 -B -m ruff check --no-cache .
 cd web
 npm test
@@ -21,6 +22,21 @@ upgrade or accept a cached version. Prepare the gate environment with
 `uv pip install --python .venv/bin/python '.[dev]'` (or the equivalent pip install)
 when a pin changes. Other dependencies with declared ranges are not fully locked
 by this check; it enforces the exact runtime pins, including this Hue client.
+
+The complete backend suite has two sequential phases: `-m 'not serial'` uses
+xdist as configured (up to four workers), then `-m serial -n 0` runs in the
+controller process after all workers have exited. The gate and every CI Python
+version use these same phases; neither phase may be omitted. A plain `pytest`
+invocation does not isolate marked tests automatically.
+
+Use `@pytest.mark.serial` on tests that bind real sockets (including the fake
+LMS and producer oracle) or assert real wall-clock processing/worker deadlines.
+Timed worker startup, shutdown and event waits belong here too. Mocked clocks,
+in-memory TestClient sockets, and subprocess timeouts used only as a safety
+bound do not by themselves require the marker. Run a selected timing test with
+`pytest -v -m serial -n 0 path/to/test.py`. Keep its deadlines, tolerances and
+assertions unchanged; do not add retries. Numerical-thread defaults in
+`tests/conftest.py` still apply to both phases.
 
 Report passed/failed/skipped totals and warnings. Frontend unit tests are separate
 from Playwright end-to-end tests. Native skips are pending evidence, not failures or
@@ -48,7 +64,8 @@ checkout's library from the repository root:
 ```sh
 python scripts/build_native.py
 pytest -v -m native
-LAMPASTREAM_REQUIRE_NATIVE=1 pytest -v
+LAMPASTREAM_REQUIRE_NATIVE=1 pytest -v -m 'not serial'
+LAMPASTREAM_REQUIRE_NATIVE=1 pytest -v -m serial -n 0
 ```
 
 `python scripts/build_native.py` writes
@@ -1082,7 +1099,8 @@ gate in order; a failure means no push:
 ```bash
 ruff check .
 python3 scripts/build_native.py
-LAMPASTREAM_REQUIRE_NATIVE=1 python3 -m pytest -v
+LAMPASTREAM_REQUIRE_NATIVE=1 python3 -m pytest -v -m 'not serial'
+LAMPASTREAM_REQUIRE_NATIVE=1 python3 -m pytest -v -m serial -n 0
 npm --prefix web test
 npm --prefix web run test:e2e
 npm --prefix web run build

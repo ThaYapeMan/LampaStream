@@ -60,6 +60,7 @@ def test_manifest_and_verifier(tmp_path, revision):
         verifier.verify_player(manifest, binary)
 
 
+@pytest.mark.serial
 def test_real_yeney_player_shm_v1(tmp_path, monkeypatch):
     for tool in ('gcc', 'g++', 'make', 'ar'):
         if shutil.which(tool) is None:

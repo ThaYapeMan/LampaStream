@@ -133,6 +133,7 @@ def test_connection_poll_window_then_continued_retry(registered_after, expected)
     asyncio.run(exercise())
 
 
+@pytest.mark.serial
 def test_stop_cancels_an_inflight_cli_immediately():
     async def exercise():
         _, source, _, head = setup()
@@ -243,6 +244,7 @@ def test_existing_observer_peers_drive_even_same_target_group_changes(monkeypatc
     asyncio.run(exercise())
 
 
+@pytest.mark.serial
 def test_session_teardown_cancels_pending_registration_without_waiting(tmp_path):
     from lampastream.models import Profile
     from lampastream.player_manager import ActiveSession, PlayerManager

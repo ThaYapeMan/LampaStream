@@ -43,6 +43,7 @@ def item(code, value=""):
     ).encode()
 
 
+@pytest.mark.serial
 def test_airplay_actual_socket_detection_track_time_matches_82181c5(tmp_path, monkeypatch):
     from lampastream import app
 

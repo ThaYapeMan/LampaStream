@@ -309,6 +309,7 @@ def test_event_push_coalesces_burst_and_retains_individual_clocks():
     assert messages[0]['hold_s'] == .08 and messages[0]['release_s'] == .25
 
 
+@pytest.mark.serial
 def test_socket_push_and_ping_run_while_periodic_producer_sleeps(monkeypatch):
     import time
 

@@ -92,6 +92,7 @@ def test_silent_audio_does_not_contradict_and_breaks_emit_nothing():
     assert prior.grid is not None
 
 
+@pytest.mark.serial
 def test_fetch_success_mismatch_http_failure_and_timeout(tmp_path):
     path = tmp_path/'source'
     path.write_bytes(clicks())
@@ -113,6 +114,7 @@ def test_fetch_success_mismatch_http_failure_and_timeout(tmp_path):
     asyncio.run(run())
 
 
+@pytest.mark.serial
 def test_fake_lms_current_next_and_restart_cache_hit(tmp_path):
     path = tmp_path/'source.flac'
     path.write_bytes(clicks())
@@ -161,6 +163,7 @@ async def integration(path, cache_path):
         assert all('tags:adglcKuf' in c or 'tags:uf' in c for c in session.commands)
 
 
+@pytest.mark.serial
 @pytest.mark.skipif(not os.environ.get('LAMPASTREAM_GRID_FIXTURE'), reason='private Mau P fixture')
 def test_fake_lms_mau_p(tmp_path):
     asyncio.run(integration(Path(os.environ['LAMPASTREAM_GRID_FIXTURE']), tmp_path/'cache'))
@@ -286,6 +289,7 @@ def test_track_change_clears_rejection_while_next_file_is_loading():
     assert prior.status(9.)['grid_fetch_state'] == 'fetching'
 
 
+@pytest.mark.serial
 @pytest.mark.parametrize("same_content", [False, True])
 def test_next_queued_track_is_preanalysed_by_same_worker(tmp_path, monkeypatch, same_content):
     current, following = tmp_path/'current.flac', tmp_path/'next.flac'

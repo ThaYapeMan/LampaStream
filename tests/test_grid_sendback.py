@@ -26,6 +26,7 @@ async def until(predicate, timeout=120):
             await asyncio.sleep(.01)
 
 
+@pytest.mark.serial
 def test_queue_append_mid_play_reuses_listen_feed_and_is_cached_before_change(tmp_path, caplog):
     caplog.set_level(logging.INFO)
     first, second = tmp_path/'a.flac', tmp_path/'b.flac'
@@ -79,6 +80,7 @@ def test_queue_append_mid_play_reuses_listen_feed_and_is_cached_before_change(tm
     asyncio.run(run())
 
 
+@pytest.mark.serial
 def test_periodic_queue_read_is_bounded_and_paused_tracks_do_not_poll(tmp_path, caplog):
     caplog.set_level(logging.INFO)
     path = tmp_path/'a.flac'
@@ -141,6 +143,7 @@ def test_full_grid_adopts_on_next_beat_without_duplicate_and_rejects_disagreemen
     assert any('dropped before full adoption' in r.message for r in caplog.records)
 
 
+@pytest.mark.serial
 def test_range_response_is_original_prefix_and_total_size_checked(tmp_path):
     path = tmp_path/'source.flac'
     path.write_bytes(clicks())
@@ -158,6 +161,7 @@ def test_range_response_is_original_prefix_and_total_size_checked(tmp_path):
     asyncio.run(run())
 
 
+@pytest.mark.serial
 def test_partial_container_failure_falls_back_to_verified_full_fetch(tmp_path, caplog):
     import hashlib
     caplog.set_level(logging.INFO)

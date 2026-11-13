@@ -410,6 +410,7 @@ def test_active_coupling_id_set_for_coupling_mode(tmp_path: Path) -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.serial
 def test_poll_sync_master_queries_follow_player_exactly_once(tmp_path: Path) -> None:
     """_poll_sync_master must query the follow player exactly once, then return.
 

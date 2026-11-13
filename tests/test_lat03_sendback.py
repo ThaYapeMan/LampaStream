@@ -109,6 +109,7 @@ def test_no_late_startup_step_and_missing_content_is_not_in_sync():
     assert probe.current_delay_ms() == pytest.approx(0.5)
 
 
+@pytest.mark.serial
 def test_upstream_real_flac_decoder_exports_absolute_seek_content(tmp_path):
     if not shutil.which("ffmpeg") or not shutil.which("ffprobe"):
         pytest.skip("ffmpeg/ffprobe unavailable")

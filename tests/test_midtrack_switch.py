@@ -22,6 +22,7 @@ from lampastream.track_position import AirPlayTrackPositionSource
 from lampastream.types import OutputCapabilities
 
 
+@pytest.mark.serial
 @pytest.mark.parametrize("initial", ["AirPlay", "LMS"])
 def test_midtrack_receiver_survives_airplay_lms_airplay(tmp_path, monkeypatch, initial):
     storage, airplay = _make_airplay_storage(tmp_path)
@@ -258,6 +259,7 @@ def test_midtrack_receiver_survives_airplay_lms_airplay(tmp_path, monkeypatch, i
     asyncio.run(exercise())
 
 
+@pytest.mark.serial
 def test_standby_reader_timeout_retains_descriptor_for_retry():
     from unittest.mock import Mock
 
@@ -294,6 +296,7 @@ def test_standby_reader_timeout_retains_descriptor_for_retry():
         receiver.close()
 
 
+@pytest.mark.serial
 def test_cancelled_receiver_acquisition_returns_standby_lease(tmp_path, monkeypatch):
     manager = pm.PlayerManager(pm.Storage(tmp_path / "cancel-config.json"))
     entered, finish = threading.Event(), threading.Event()

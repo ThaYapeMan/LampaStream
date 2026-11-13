@@ -19,7 +19,8 @@ def test_gate_shell_syntax_and_documented_steps():
     gate = (ROOT / "scripts/check-before-push.sh").read_text()
     for command in (
         "ruff check .",
-        "LAMPASTREAM_REQUIRE_NATIVE=1 python3 -m pytest -v",
+        "LAMPASTREAM_REQUIRE_NATIVE=1 python3 -m pytest -v -m 'not serial'",
+        "LAMPASTREAM_REQUIRE_NATIVE=1 python3 -m pytest -v -m serial -n 0",
         "npm --prefix web test",
         "npm --prefix web run test:e2e",
         "npm --prefix web run build",
@@ -29,7 +30,7 @@ def test_gate_shell_syntax_and_documented_steps():
             assert command in (ROOT / "docs" / doc).read_text()
 
 
-@pytest.mark.parametrize("failure", ["", "lock", "ruff", "backend", "browser"])
+@pytest.mark.parametrize("failure", ["", "lock", "ruff", "backend", "serial", "browser"])
 def test_gate_runs_in_order_and_stops_on_first_failure(tmp_path, failure):
     scripts = tmp_path / "scripts"
     scripts.mkdir()
@@ -45,6 +46,7 @@ def test_gate_runs_in_order_and_stops_on_first_failure(tmp_path, failure):
 label=$(basename "$0")
 [[ "$label $*" != *'check-dependency-lock.py'* ]] || label=lock
 [[ "$label $*" != *'pytest'* ]] || label=backend
+[[ "$label $*" != *'-m serial -n 0'* ]] || label=serial
 [[ "$label $*" != *'test:e2e'* ]] || label=browser
 echo "$label $*" >> "$GATE_LOG"
 [[ "$label" != "$GATE_FAILURE" ]] || exit 7
@@ -62,7 +64,7 @@ echo "$label $*" >> "$GATE_LOG"
         },
     )
     labels = [line.split()[0] for line in log.read_text().splitlines()]
-    expected = ["lock", "ruff", "python3", "backend", "npm", "browser", "npm", "git"]
+    expected = ["lock", "ruff", "python3", "backend", "serial", "npm", "browser", "npm", "git"]
     if failure:
         assert result.returncode == 7
         assert "LOCAL GATE FAILED" in result.stderr

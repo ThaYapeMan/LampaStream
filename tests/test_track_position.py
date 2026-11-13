@@ -1,9 +1,12 @@
 """Real read-only CLI subscription and FIFO wire protocols, with generic snapshots."""
+
 import asyncio
 import base64
 import os
 from unittest.mock import AsyncMock, patch
 from urllib.parse import quote
+
+import pytest
 
 from lampastream.lms_follower import LmsFollower, LmsSyncGroupObserver
 from lampastream.lms_status import _parse_status
@@ -39,6 +42,7 @@ def test_lms_metadata_tags_and_invalid_clocks():
     assert status.time is None and status.duration is None and status.waiting_to_play
 
 
+@pytest.mark.serial
 def test_lms_subscription_tracks_dynamic_target_without_playback_commands():
     async def run():
         target = ['aa:bb:cc:00:00:01']

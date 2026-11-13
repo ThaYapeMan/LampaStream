@@ -364,6 +364,7 @@ def test_future_schema_and_history_not_accepted(configured):
         validate_backup(backup)
 
 
+@pytest.mark.serial
 def test_restore_waits_for_inflight_api_mutation(configured, tmp_path):
     import asyncio
 

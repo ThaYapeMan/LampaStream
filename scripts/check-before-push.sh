@@ -15,7 +15,8 @@ run_step() {
 run_step 'Pinned runtime dependencies' python3 scripts/check-dependency-lock.py
 run_step 'Ruff' ruff check .
 run_step 'Build native cavacore' python3 scripts/build_native.py
-run_step 'Full backend (native required)' env LAMPASTREAM_REQUIRE_NATIVE=1 python3 -m pytest -v
+run_step 'Parallel backend (native required)' env LAMPASTREAM_REQUIRE_NATIVE=1 python3 -m pytest -v -m 'not serial'
+run_step 'Serial backend (native required)' env LAMPASTREAM_REQUIRE_NATIVE=1 python3 -m pytest -v -m serial -n 0
 run_step 'Frontend unit' npm --prefix web test
 run_step 'Frontend browser' npm --prefix web run test:e2e
 run_step 'Frontend production build' npm --prefix web run build

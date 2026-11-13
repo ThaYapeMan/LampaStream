@@ -17,6 +17,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import numpy as np
+import pytest
 from pipeline_factory import make_pipeline
 
 from lampastream.canonicalizer import (
@@ -147,6 +148,7 @@ class _SeqSource:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.serial
 def test_invalidation_clears_latest_via_run():
     """StreamInvalidated received by the real _run() worker must clear _latest.
 
@@ -258,6 +260,7 @@ def test_dsp_reset_exactly_once_after_invalidation():
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.serial
 def test_temp_no_data_does_not_reset_dsp_via_run():
     """TemporarilyNoData through the real _run() must not touch DSP state."""
     done = threading.Event()
@@ -323,6 +326,7 @@ def test_eos_clears_airplay_remainder():
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.serial
 def test_eos_no_busy_spin():
     """After EndOfStream, _run() must not spin at CPU rate.
 
@@ -413,6 +417,7 @@ def test_shm_torn_read_returns_stream_invalidated(tmp_path: Path) -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.serial
 def test_worker_exception_clears_latest():
     """If _run() worker raises, _latest must be cleared (no stale features).
 

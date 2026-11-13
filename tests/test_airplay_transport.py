@@ -12,6 +12,7 @@ from lampastream.storage import Storage
 from lampastream.track_position import AirPlayTrackPositionSource
 
 
+@pytest.mark.serial
 def test_dacp_commands_headers_expiry_and_disappearance():
     async def run():
         requests = []
