@@ -17,7 +17,7 @@ dependencies = [
     "soxr>=1.0",
     "librosa==0.11.0",
     "soundfile==0.14.0",
-    "zeroconf>=0.148,<1",
+    "zeroconf>=0.154.0,<1",
 ]
 
 [project.optional-dependencies]
