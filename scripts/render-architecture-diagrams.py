@@ -159,10 +159,80 @@ def analysis_target():
     )
 
 
+def track_identity():
+    b = box(240, 30, 200, 44, "AudioCanonicalizer", "", "teal")
+    b += arrow("M240 52 L160 52 L160 100") + arrow("M440 52 L520 52 L520 100")
+    b += box(60, 102, 200, 56, "Metadata hint, t = 0", "title, artist, duration", "gray")
+    b += box(
+        420, 102, 200, 56, "Fingerprint, t ≈ 10–15 s", "from the sound; file: before play", "teal"
+    )
+    b += arrow("M160 158 L160 184")
+    b += box(60, 186, 200, 56, "Early lookup", "known? + online prior (opt-in)", "gray")
+    b += arrow("M520 158 L520 214 L262 214") + label(390, 200, "confirms or overrides", "middle")
+    b += arrow("M160 242 L160 268")
+    b += box(60, 270, 200, 44, "Known by fingerprint?", "", "gray")
+    b += arrow("M60 292 L36 292 L36 400 L58 400") + label(44, 334, "yes")
+    b += arrow("M260 292 L340 292 L340 350") + label(350, 326, "no")
+    b += box(60, 372, 200, 56, "Learned grid drives", "from the first bar", "purple")
+    b += box(240, 352, 200, 44, "Whole track ahead?", "", "gray")
+    b += arrow("M340 396 L340 440") + label(350, 420, "yes (file)")
+    b += arrow("M440 374 L540 374 L540 440") + label(550, 420, "no (stream)")
+    b += box(240, 442, 200, 56, "File grid", "byte hash = cache key only", "purple")
+    b += box(450, 442, 190, 56, "Tracker + rolling grid", "buffer per identity, in RAM", "purple")
+    b += arrow("M340 498 L340 540") + arrow("M545 498 L545 540") + arrow("M160 428 L160 540")
+    b += box(
+        60,
+        542,
+        580,
+        56,
+        "Always: live analysis measures and corrects",
+        "at track end: full analysis → learned grid stored under the fingerprint; "
+        "audio never persisted",
+        "teal",
+    )
+    return svg(640, "Track identity and beat source: metadata hint, fingerprint, cache key", b)
+
+
+def stream_buffer():
+    b = box(240, 30, 200, 56, "Stream, canonical frames", "48 kHz stereo, in memory", "teal")
+    b += arrow("M340 86 L340 112")
+    b += box(240, 114, 200, 44, "Track identity present?", "", "gray")
+    b += arrow("M240 136 L160 136 L160 196") + label(170, 166, "yes")
+    b += arrow("M440 136 L540 136 L540 196") + label(530, 166, "no (radio, one-file mix)", "end")
+    b += box(60, 198, 200, 44, "Track known?", "", "gray")
+    b += box(440, 198, 200, 56, "Sliding window", "last 10 min, nothing stored", "purple")
+    b += arrow("M540 254 L540 280")
+    b += box(440, 282, 200, 56, "Tracker + rolling grid", "sections segment the mix", "teal")
+    b += arrow("M260 220 L300 220 L300 310 L262 310") + label(270, 262, "yes")
+    b += arrow("M160 242 L160 268") + label(170, 258, "no")
+    b += box(60, 270, 200, 56, "Online prior lookup", "SongBPM, Beatport; opt-in", "gray")
+    b += arrow("M160 326 L160 352")
+    b += box(
+        60, 354, 200, 56, "Learned grid or buffer", "known: grid drives; else buffer", "purple"
+    )
+    b += arrow("M160 410 L160 436")
+    b += box(60, 438, 200, 56, "Tracker + rolling grid", "seeded by the prior", "teal")
+    b += arrow("M160 494 L160 520")
+    b += box(60, 522, 200, 44, "Metadata changes?", "", "gray")
+    b += arrow("M60 544 L36 544 L36 466 L58 466") + label(44, 586, "no: keep buffering")
+    b += arrow("M260 544 L340 544 L340 480") + label(270, 564, "yes: track ended")
+    b += box(290, 424, 130, 56, "Full analysis", "learned grid → database", "purple")
+    b += arrow("M355 424 L355 380 L262 380") + label(365, 404, "new buffer, next track")
+    b += label(
+        340,
+        630,
+        "Audio lives in RAM for one track at most; only grids and metadata persist",
+        "middle",
+    )
+    return svg(660, "Stream branch: buffer per track identity, learned grid at identity end", b)
+
+
 DIAGRAMS = {
     "end-to-end.svg": end_to_end,
     "beat-source-decision.svg": beat_source_decision,
     "analysis-target.svg": analysis_target,
+    "track-identity.svg": track_identity,
+    "stream-buffer.svg": stream_buffer,
 }
 
 if __name__ == "__main__":

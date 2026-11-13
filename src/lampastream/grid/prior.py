@@ -46,6 +46,9 @@ class GridPrior:
             self.blocked = None
             self.blocked_provisional = False
             self.onsets.clear()
+            if hasattr(self, '_attack_tail'):
+                self._attack_tail.clear()
+                self._attack_levels.clear()
             self.loud.clear()
             self.reason = None
             self.pending_grid = None
@@ -94,6 +97,28 @@ class GridPrior:
 
     def observe(self, events):
         self.onsets.extend(e.candidate_sample/48000 for e in events if not e.predicted)
+
+    def reset_attacks(self):
+        self._attack_tail = deque(maxlen=3)
+        self._attack_levels = deque(maxlen=600)
+
+    def observe_attacks(self, frames):
+        """Confirm against the same per-channel canonical measurement as the grid.
+
+        Keep the neighbours across feed boundaries; an envelope block boundary
+        must not invent a peak or lose the last candidate of the preceding feed.
+        """
+        if not hasattr(self, '_attack_tail'):
+            self.reset_attacks()
+        for sample, value in frames:
+            self._attack_tail.append((sample/48000, value))
+            self._attack_levels.append(value)
+            if len(self._attack_tail) < 3:
+                continue
+            before, candidate, after = self._attack_tail
+            threshold = max(1e-9, max(self._attack_levels)*.015)
+            if candidate[1] > before[1] and candidate[1] >= after[1] and candidate[1] > threshold:
+                self.onsets.append(candidate[0])
 
     def ticks(self, t, loud, *, horizon=0.):
         self.loud.append((t, loud))

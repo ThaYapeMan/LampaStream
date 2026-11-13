@@ -20,14 +20,14 @@ export function Backup() {
   async function exportConfig() {
     setBusy(true); setError(''); setMessage('')
     try {
-      const response = await fetch('/api/config/export', { cache: 'no-store' })
+      const response = await fetch('/api/backup/export', { cache: 'no-store' })
       if (!response.ok) throw new Error(await failure(response))
       const blob = await response.blob()
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
       // Filename is generated locally; credentials never influence it.
-      link.download = `lampastream-backup-${new Date().toISOString().replace(/:/g, '')}.json`
+      link.download = `lampastream-backup-${new Date().toISOString().replace(/:/g, '')}.zip`
       document.body.appendChild(link)
       link.click(); link.remove()
       const revoke = URL.revokeObjectURL.bind(URL)
@@ -42,9 +42,11 @@ export function Backup() {
     if (!file || !confirmed) return
     setBusy(true); setError(''); setMessage('')
     try {
-      if (file.size > LIMIT) throw new Error('Backup exceeds the 4 MiB limit.')
-      const response = await fetch('/api/config/import', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: file,
+      const full = file.name.toLowerCase().endsWith('.zip')
+      const limit = full ? 64 * 1024 ** 3 : LIMIT
+      if (file.size > limit) throw new Error(`Backup exceeds the ${full ? '64 GiB' : '4 MiB'} limit.`)
+      const response = await fetch(full ? '/api/backup/import' : '/api/config/import', {
+        method: 'POST', headers: { 'Content-Type': full ? 'application/zip' : 'application/json' }, body: file,
         cache: 'no-store',
       })
       if (!response.ok) throw new Error(await failure(response))
@@ -59,17 +61,18 @@ export function Backup() {
     <section className="space-y-5">
       <h2 className="text-xl font-semibold">Backup and restore</h2>
       <p>Downloads all LampaStream configuration, including player settings, Hue Bridge pairing credentials,
-        zones, analysers, energy profiles, effects, couplings and player latencies.</p>
+        zones, analysers, energy profiles, effects, couplings, player latencies, beat grids and track metadata.</p>
       <p className="font-medium">Keep this file secure. It contains credentials that may grant access
         to paired lighting controllers. LampaStream has no authentication; use a trusted network only.</p>
       <Button onClick={exportConfig} disabled={busy}>Export LampaStream configuration</Button>
       <hr />
       <h3 className="font-semibold">Restore LampaStream configuration</h3>
-      <p>Restore replaces all current configuration and creates a safety backup on the server.
+      <p>A ZIP restore replaces configuration and grids and creates safety backups on the server.
+        A JSON backup restores configuration only.
         Deactivate the current Coupling first and wait for teardown to finish. Playback is not restored.</p>
       <label className="block space-y-2">
-        <span>Backup JSON file (maximum 4 MiB)</span>
-        <input type="file" accept=".json,application/json" disabled={busy}
+        <span>Backup ZIP or JSON file (ZIP: maximum 64 GiB; JSON: maximum 4 MiB)</span>
+        <input type="file" accept=".zip,.json,application/zip,application/json" disabled={busy}
           onChange={e => { setFile(e.target.files?.[0] ?? null); setConfirmed(false); setError(''); setMessage('') }} />
       </label>
       {file && <p>Selected file: {file.name}</p>}

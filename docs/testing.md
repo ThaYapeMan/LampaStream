@@ -1541,3 +1541,29 @@ also record logger `t_monotonic` for fixed-anchor mapping. For old captures such
 run 8, fixed-anchor analysis estimates one constant wall/monotonic offset from beat
 receipt times and explicitly labels the approximate absolute phase. Receipt and
 publication delay can shift this constant; they do not establish room latency.
+
+
+### Numerical resources in parallel backend tests
+
+The default pytest worker count is bounded to four. Each worker also defaults
+BLAS, OpenMP and Numba pools to one thread before test modules import numerical
+libraries. The independent grid subprocess already enforces its own one-thread
+budget. This prevents a four-core test host from running sixteen competing BLAS
+threads while a low-priority file-grid job must meet the unchanged queue deadline.
+It changes test-process resource allocation, not runtime DSP, source clocks,
+subprocess niceness or acceptance thresholds. Explicit caller thread settings
+remain available for deliberate stress measurements.
+
+Full backups include configuration and grids in a ZIP. Offline CLI commands:
+
+```bash
+python -m lampastream.backup_archive --config /etc/lampastream/config.json export /secure/backup.zip
+python -m lampastream.backup_archive --config /etc/lampastream/config.json import /secure/backup.zip --check
+# Stop LampaStream before the actual offline restore (the runtime lease is enforced).
+python -m lampastream.backup_archive --config /etc/lampastream/config.json import /secure/backup.zip
+```
+
+The HTTP Backup page instead requires the current Coupling to be deactivated and
+fully torn down. `tests/test_backup_archive.py` kills a subprocess at both sides
+of the configuration commit and verifies recovery on the next Storage read.
+No player or output is started by either restore path.

@@ -81,15 +81,12 @@ def test_old_grid_cache_is_rejected(tmp_path):
     grid = analyse(synth(np.arange(.5, 16, .5), 16))
     cache = GridCache(tmp_path)
     cache.put('file', grid)
-    path = tmp_path/f'{grid.file_sha256}.json'
-    import json
-    data = json.loads(path.read_text())
-    data['analyser_version'] = '1'
-    path.write_text(json.dumps(data))
+    with cache.database.connect() as database:
+        database.execute("UPDATE grids SET superseded=1")
     assert cache.get('file') is None
     cache.put('file', grid)
     assert cache.get('file') == grid
-    assert grid.analyser_version == VERSION == '3'
+    assert grid.analyser_version == VERSION == '4'
     assert TrackGrid.from_dict(grid.to_dict()) == grid
 
 

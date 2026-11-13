@@ -96,7 +96,7 @@ and timestamped onset, beat and tempo events. After the canonical stage nothing
 may know whether audio came from LMS or AirPlay: analysis, rendering, preview and
 scheduling have no source- or route-specific code paths.
 
-![Beat source decision after canonicalization](docs/diagrams/beat-source-decision.svg)
+![Track identity and beat source after canonicalization](docs/diagrams/track-identity.svg)
 
 After the canonical stage the beat source is chosen by capability, never by source,
 within one source-independent analyser producing generic AudioFeatures. First: is
@@ -111,8 +111,9 @@ dark (contradiction check), a tracker that disagrees with the grid takes over
 (watchdog), and the owner's corrections rank above every other source. Streams
 without identity (radio, podcasts, DJ sets) take the stream branch and store nothing.
 
-This is the owner's target decision of 2026-11-12; the shared canonical grid path
-and attack detector await implementation in GRID-01 send-back 5 and BEAT-02 part A.
+This is the owner's target decision of 2026-11-12. The canonical file/head path,
+shared low-band attack measurement, SQLite storage and fingerprint foundation
+are present; stream buffering, providers and learned-grid execution remain pending.
 
 ### Renderer
 

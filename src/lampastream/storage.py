@@ -31,7 +31,7 @@ from .models import (
 from .palettes import Palette, starter_palettes
 from .schema import REFERENCES, empty_config, validate_current
 
-_lock = threading.Lock()
+_lock = threading.RLock()
 
 
 class ReferencedEntityError(ValueError):
@@ -50,6 +50,8 @@ class Storage:
         self._read()
 
     def _read(self) -> dict:
+        from .backup_archive import recover_restore
+        recover_restore(self.path)
         with self.path.open("r", encoding="utf-8") as f:
             data = json.load(f)
         validate_current(data)

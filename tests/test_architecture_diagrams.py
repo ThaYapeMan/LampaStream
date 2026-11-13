@@ -17,7 +17,8 @@ def test_architecture_diagrams_reproduce_committed_svgs(tmp_path):
         check=True,
     )
     committed = root / "docs/diagrams"
-    expected = {"end-to-end.svg", "beat-source-decision.svg", "analysis-target.svg"}
+    expected = {"end-to-end.svg", "beat-source-decision.svg", "analysis-target.svg",
+                "track-identity.svg", "stream-buffer.svg"}
     assert {path.name for path in tmp_path.iterdir()} == expected
     assert {path.name for path in committed.glob("*.svg")} == expected
     for name in sorted(expected):

@@ -12,7 +12,7 @@ afterEach(() => vi.unstubAllGlobals())
 
 function chooseFile(name = 'backup.json') {
   const file = new File(['{"format":"lampastream-config-backup"}'], name, { type: 'application/json' })
-  fireEvent.change(screen.getByLabelText(/Backup JSON file/), { target: { files: [file] } })
+  fireEvent.change(screen.getByLabelText(/Backup ZIP or JSON file/), { target: { files: [file] } })
   return file
 }
 
@@ -65,7 +65,7 @@ describe('Backup and restore', () => {
     render(<Backup />)
     const file = new File(['x'], 'huge.json', { type: 'application/json' })
     Object.defineProperty(file, 'size', { value: 4 * 1024 * 1024 + 1 })
-    fireEvent.change(screen.getByLabelText(/Backup JSON file/), { target: { files: [file] } })
+    fireEvent.change(screen.getByLabelText(/Backup ZIP or JSON file/), { target: { files: [file] } })
     fireEvent.click(screen.getByRole('checkbox'))
     fireEvent.click(screen.getByRole('button', { name: 'Restore configuration' }))
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('4 MiB'))
@@ -81,9 +81,21 @@ describe('Backup and restore', () => {
     render(<Backup />)
     fireEvent.click(screen.getByRole('button', { name: 'Export LampaStream configuration' }))
     await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Backup downloaded'))
-    expect(fetchMock).toHaveBeenCalledWith('/api/config/export', { cache: 'no-store' })
+    expect(fetchMock).toHaveBeenCalledWith('/api/backup/export', { cache: 'no-store' })
     expect(create).toHaveBeenCalledWith(blob)
     expect(click).toHaveBeenCalledOnce()
     click.mockRestore()
   })
+})
+
+it('restores a full ZIP using the archive endpoint and media type', async () => {
+  fetchMock.mockResolvedValue({ ok: true })
+  render(<Backup />)
+  const file = new File(['zip'], 'backup.zip', { type: 'application/zip' })
+  fireEvent.change(screen.getByLabelText(/Backup ZIP or JSON file/), { target: { files: [file] } })
+  fireEvent.click(screen.getByRole('checkbox'))
+  fireEvent.click(screen.getByRole('button', { name: 'Restore configuration' }))
+  await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/backup/import',
+    expect.objectContaining({ method: 'POST', body: file,
+      headers: { 'Content-Type': 'application/zip' } })))
 })

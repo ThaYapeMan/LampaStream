@@ -290,12 +290,18 @@ AIRPLAY_BUILD_DIR="$WORK/airplay" LAMPASTREAM_DEFER_START=1 LAMPASTREAM_DEPENDEN
 log '4/7 Migrate persisted configuration before starting current runtime'
 migrate_huesync_layout
 "$RELEASE/venv/bin/python" -I -B -m lampastream.migration "$CONFIG"
+"$RELEASE/venv/bin/python" -I -B -m lampastream.grid.migration \
+    /var/lib/lampastream/grids /var/lib/lampastream/grids.db
+chown lampastream:lampastream /var/lib/lampastream/grids.db
+chmod 0640 /var/lib/lampastream/grids.db
 chown lampastream:lampastream "$CONFIG"
 chmod 0640 "$CONFIG"
 log '5/7 Install the repository service and narrow AirPlay restart authorization'
 install -m 0644 "$WORK/systemd/lampastream.service" /etc/systemd/system/lampastream.service
 install -d /etc/polkit-1/rules.d
 install -m 0644 "$WORK/systemd/49-lampastream-airplay.rules" /etc/polkit-1/rules.d/
+install -m 0644 "$WORK/systemd/lampastream-grids-maintenance.service" /etc/systemd/system/
+install -m 0644 "$WORK/systemd/lampastream-grids-maintenance.timer" /etc/systemd/system/
 systemctl daemon-reload
 "$RELEASE/venv/bin/python" -I -B "$WORK/scripts/write-install-manifest.py" "$COMMIT" "$SHORT" "$RELEASE" "$YENEY_CORE_REVISION"
 log '6/7 Verify installed artifacts and current schema before activation'
@@ -308,6 +314,7 @@ ln -sfn "$RELEASE/venv" "$PREFIX/.venv.next"
 mv -Tf "$PREFIX/.venv.next" "$PREFIX/.venv"
 systemd-analyze verify /etc/systemd/system/lampastream.service
 log '7/7 Start verified services'
+systemctl enable --now lampastream-grids-maintenance.timer
 systemctl enable avahi-daemon nqptp shairport-sync lampastream
 systemctl restart avahi-daemon nqptp shairport-sync lampastream
 verify_services

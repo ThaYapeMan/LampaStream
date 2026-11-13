@@ -1,0 +1,15 @@
+[Unit]
+Description=LampaStream grid database maintenance
+ConditionPathExists=/var/lib/lampastream/grids.db
+
+[Service]
+Type=oneshot
+User=lampastream
+Group=lampastream
+ExecStart=/opt/lampastream/.venv/bin/python -I -B -m lampastream.grid.database maintain
+Nice=10
+PrivateTmp=true
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/lampastream

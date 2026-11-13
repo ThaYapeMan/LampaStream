@@ -22,3 +22,17 @@ are explicit so the images render on GitHub without host CSS.
 A ticket that changes a boundary regenerates the matching diagram and updates
 its adjacent prose in README.md, docs/ANALYSIS_ARCHITECTURE.md and, where relevant,
 docs/audio-pipeline.md. The existing ASCII internal analysis diagram is retained.
+
+- `track-identity.svg` is the leading BEAT-02 decision tree. Metadata supplies
+  an early hint; fingerprint and duration establish identity. Byte hashes only
+  avoid re-analysis of identical file bytes. The simplified capability view
+  remains available in `beat-source-decision.svg`.
+- `stream-buffer.svg` describes the target stream buffer ownership: one track
+  in RAM with identity, or a ten-minute sliding window without identity. Rolling
+  and learned stream execution are not implemented by the storage cutover alone.
+
+A learned metadata hint requires artist, title and duration within one second.
+It remains provisional until audio fingerprint confirmation; unsupported accents
+stay dark. A later fingerprint confirms or overrides that hint. The decision
+is recorded separately from metadata identity. Anonymous streams use the sliding
+window and rolling analysis, with no stored grids or provider lookups.

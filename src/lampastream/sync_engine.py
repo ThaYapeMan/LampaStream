@@ -24,6 +24,7 @@ from functools import cache
 
 import numpy as np
 
+from .attacks import AttackDetector
 from .canonicalizer import (
     AnalysisPcmFrame,
     AudioCanonicalizer,
@@ -834,6 +835,7 @@ class _BeatState:
     mid_hz: int
     picker_options: dict
     pending: list
+    attack_detector: AttackDetector
     onset_pipeline: object  # StftOnsetPipeline | MultibandStftPipeline | SuperfluxStftPipeline
 
 
@@ -882,6 +884,7 @@ class BeatDetector:
         # contract is preserved.
         self._rebuild_lock = threading.Lock()
         self._envelope_frames = ()
+        self._attack_frames = ()
 
     @property
     def processor_id(self) -> str:
@@ -891,6 +894,11 @@ class BeatDetector:
     def envelope_frames(self) -> tuple[OnsetEnvelopeFrame, ...]:
         """Raw ODF values from the last feed; no picker state is modified."""
         return self._envelope_frames
+
+    @property
+    def attack_frames(self):
+        """Canonical low-band RMS-rise measurements shared with grid analysis."""
+        return self._attack_frames
 
     @staticmethod
     def _tap_frames(state, pipeline, starts, magnitudes, levels, attack_hops):
@@ -962,6 +970,7 @@ class BeatDetector:
             bass_hz=bass_hz,
             mid_hz=mid_hz,
             onset_pipeline=pipeline,
+            attack_detector=AttackDetector(),
         )
 
     @staticmethod
@@ -998,6 +1007,10 @@ class BeatDetector:
         # rebuild() may replace self._state after this point, but this feed()
         # call finishes on the captured configuration.
         state = self._state
+        attack_start = frame.sample_start-len(state.attack_detector.carry)
+        attack_values = state.attack_detector.feed(frame.pcm)
+        self._attack_frames = tuple((attack_start+i*state.attack_detector.hop, float(value))
+                                    for i, value in enumerate(attack_values))
         pipeline = state.onset_pipeline
         hop = pipeline.hop
         entries = []
@@ -1741,7 +1754,7 @@ class CanonicalAnalysisPipeline:
         for proc in self._processors:
             updates = proc.feed(shared_frame)
             if proc is self._beat_detector and fusion.grid_provider is not None:
-                fusion.prior.observe(e for pu in updates for e in pu.onset_events)
+                fusion.prior.observe_attacks(self._beat_detector.attack_frames)
             for pu in updates:
                 if pu.bars is not None:
                     spectrum_updates.append(pu)

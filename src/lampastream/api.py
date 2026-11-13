@@ -8,13 +8,17 @@ used by the HTML routes in app.py.
 from __future__ import annotations
 
 import asyncio
+import shutil
+import tempfile
 import uuid
 from dataclasses import replace
+from pathlib import Path
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import FileResponse, JSONResponse, Response
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+from starlette.background import BackgroundTask
 
 from . import __git_hash__, __version__, hue_bridge
 from .backup import (
@@ -25,6 +29,7 @@ from .backup import (
     export_configuration,
     restore_configuration,
 )
+from .backup_archive import MAX_ARCHIVE_BYTES, export_archive, restore_archive
 from .hue_output import get_channel_infos
 from .latency import latency_status
 from .lms_discovery import discover_lms
@@ -57,7 +62,7 @@ _VERSION_STRING = f"{__version__}+{__git_hash__}"
 async def configuration_mutation_guard(request: Request):
     """Serialize API writes/full exports so restore cannot cross an in-flight update."""
     if (request.method in {'POST', 'PATCH', 'PUT', 'DELETE'}
-            or request.url.path == '/api/config/export'):
+            or request.url.path in {'/api/config/export', '/api/backup/export'}):
         if not hasattr(request.app.state, 'configuration_mutation_lock'):
             request.app.state.configuration_mutation_lock = asyncio.Lock()
         async with request.app.state.configuration_mutation_lock:
@@ -1805,6 +1810,53 @@ async def import_config(request: Request):
         'safety_backup_created': True,
         'message': 'Configuration restored. Activate a restored Coupling when ready.',
     })
+
+@router.get('/backup/export')
+async def export_full_backup(request: Request):
+    directory = Path(tempfile.mkdtemp(prefix='lampastream-export-'))
+    destination = directory/'lampastream-backup.zip'
+    try:
+        await asyncio.to_thread(export_archive, _storage(request), destination)
+    except (BackupError, OSError, ValueError):
+        shutil.rmtree(directory)
+        return JSONResponse(status_code=422, headers=_BACKUP_HEADERS,
+                            content={'detail': {'code': 'backup_failed',
+                                                'message': 'Full backup could not be created'}})
+    return FileResponse(destination, media_type='application/zip',
+                        filename='lampastream-backup.zip', headers=_BACKUP_HEADERS,
+                        background=BackgroundTask(shutil.rmtree, directory))
+
+
+@router.post('/backup/import')
+async def import_full_backup(request: Request):
+    def error(status, code, message):
+        return JSONResponse(status_code=status, headers=_BACKUP_HEADERS,
+                            content={'detail': {'code': code, 'message': message}})
+    if request.headers.get('content-type', '').split(';')[0].lower() != 'application/zip':
+        return error(415, 'zip_required', 'Upload the ZIP backup as application/zip')
+    if not _manager(request).configuration_restore_ready:
+        return error(409, 'runtime_active', 'Deactivate the current Coupling before restore')
+    with tempfile.TemporaryDirectory(prefix='lampastream-upload-') as directory:
+        source = Path(directory)/'backup.zip'
+        count = 0
+        try:
+            with source.open('xb') as stream:
+                async for chunk in request.stream():
+                    count += len(chunk)
+                    if count > MAX_ARCHIVE_BYTES:
+                        return error(413, 'backup_too_large',
+                                     'Full backup exceeds the 64 GiB limit')
+                    await asyncio.to_thread(stream.write, chunk)
+            await asyncio.to_thread(restore_archive, _storage(request), source)
+        except (BackupError, OSError, ValueError):
+            return error(409, 'restore_failed',
+                         'Full backup restore failed; safety copies retained')
+    return JSONResponse(headers=_BACKUP_HEADERS, content={
+        'status': 'restored', 'runtime': 'inactive', 'restart_required': False,
+        'safety_backup_created': True,
+        'message': 'Configuration and grids restored. Activate a Coupling when ready.',
+    })
+
 
 # Shared colour library and metadata settings (render-only, no receiver operations).
 class PaletteBody(BaseModel):

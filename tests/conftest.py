@@ -2,6 +2,14 @@ import os
 import sys
 import tempfile
 
+# Four pytest workers already provide CPU parallelism. Letting each BLAS/Numba
+# pool claim all cores starves the deliberately low-priority grid subprocess
+# and turns the real queue deadline into a test-host scheduling artefact.
+# This is test-process configuration, never a runtime library side effect.
+for _thread_variable in ('OPENBLAS_NUM_THREADS', 'OMP_NUM_THREADS',
+                         'MKL_NUM_THREADS', 'NUMBA_NUM_THREADS'):
+    os.environ.setdefault(_thread_variable, '1')
+
 # Make scripts/ importable for test_capture_energy.py.
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 

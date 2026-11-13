@@ -53,3 +53,36 @@ installer command/metadata tests, frontend build/tests, pinned producer patch/ob
 full link with extracted Debian libraries, and wheel/native smoke execution. These do
 not prove a fresh booted Debian LXC install, service permissions, host ALSA passthrough,
 AirPlay timing, or realtime behavior. Those remain target acceptance tasks.
+
+
+## Grid cache cutover
+
+Grid persistence has its own SQLite `user_version=1`, independent of configuration
+schema 5. The installer stops the runtime, then runs
+`python -I -B -m lampastream.grid.migration /var/lib/lampastream/grids /var/lib/lampastream/grids.db`.
+It archives exact JSON bytes in `grids.pre-sqlite.<digest>.tar`, imports into a
+separate database, checks that the input did not change, and atomically publishes
+it. Repeating a completed cutover is a schema-checked no-op. Malformed input leaves
+the original JSON and backup intact, without publishing a database.
+
+Analyser/schema version 4 adds canonical audio fingerprints and the section/bar
+metadata fields. Older analyser grids remain superseded and are re-analysed on
+next access. Historical JSON remains archival and is never a runtime fallback.
+The daily `lampastream-grids-maintenance.timer` checks whether a weekly vacuum is
+due. LRU evicts current grid entries and their aliases; superseded grids and
+provider records are retained. SQLite online backup is available through
+`python -m lampastream.grid.database backup --destination /secure/grids.db`.
+The Backup UI now exports a ZIP containing both current configuration and the
+SQLite snapshot, and accepts either a full ZIP or a current-schema configuration
+JSON. Full CLI export/import uses `python -m lampastream.backup_archive`; import
+requires the existing offline configuration lease. Whole-file grid restore uses
+the stable `grids.db.lock`; a durable `config.json.restore-pending.json` journal
+resolves interruptions before Storage reads configuration. No historical entity
+schema conversion or audio persistence is added to runtime.
+
+
+`last_used` is an opaque increasing LRU sequence, not a listening timestamp.
+Restore coordination uses a private `grids.db.restore-pending` marker alongside
+the stable lock. Maintenance cannot modify a pending snapshot before recovery;
+an orphan marker after journal cleanup is completed on the next Storage read.
+Neither operational file is included in the portable archive or grid records.

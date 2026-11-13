@@ -63,7 +63,9 @@ def test_sections_and_cache_lru(tmp_path):
     assert cache.get(identity('b', 42)) is None
     assert cache.get(identity('a', 42)).file_sha256 == 'a'*64
     assert cache.get(identity('a', 43)) is None
-    assert len(list(tmp_path.glob('identity-*.json'))) == 2
+    with cache.database.connect() as database:
+        assert database.execute('SELECT count(*) FROM identities').fetchone()[0] == 2
+    assert not list(tmp_path.glob('*.json'))
 
 
 def test_contradiction_and_handover():

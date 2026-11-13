@@ -26,8 +26,9 @@ import librosa
 import numpy as np
 import soundfile as sf
 from scipy.ndimage import gaussian_filter1d, median_filter
-from scipy.signal import butter, correlate, find_peaks, sosfilt, stft
+from scipy.signal import correlate, find_peaks, stft
 
+from ..attacks import attack_envelope
 from ..canonicalizer import (
     AudioCanonicalizer,
     CanonicalData,
@@ -36,6 +37,8 @@ from ..canonicalizer import (
     EndOfStream,
 )
 from . import VERSION, Section, TrackGrid
+from .fingerprint import fingerprint
+from .rhythm import describe
 
 
 class BufferReader(io.RawIOBase):
@@ -195,11 +198,15 @@ def analyse_head(raw, seconds=60):
     choose the path. The full analyser remains authoritative.
     """
     audio, sr, lossless, source_rate, source_channels = canonical_decode(raw, seconds)
+    audio_fingerprint = fingerprint(audio).to_dict()
     y = audio.mean(axis=1)
     if len(y) < 2*sr or not np.isfinite(y).all():
         raise ValueError('Insufficient finite head audio')
     duration = len(y)/sr
     energy, hop, threshold = stereo_attacks(audio, sr)
+    bands = {'low': energy,
+             'mid': attack_envelope(audio, band=(150, 2000))[0],
+             'high': attack_envelope(audio, band=(2000, 10000))[0]}
     step = hop/sr
     frequencies = np.linspace(0, sr/2, 2049)
     edges = 700*(10**(np.linspace(0, 2595*np.log10(1+5512.5/700), 66)/2595)-1)
@@ -271,12 +278,16 @@ def analyse_head(raw, seconds=60):
     beats, flags, tempo, tempo_sections = fit_sections(beats, energy, step, duration)
     confidence = float(np.clip(.5*np.mean(flags)+.5*(1-min(
         1., float(np.std(np.diff(beats)))/float(np.mean(np.diff(beats))))), 0, 1))
+    tempo_sections, rhythm_sections, downbeats = describe(
+        beats, flags, tempo_sections, bands, hop/sr, duration)
     return TrackGrid(VERSION, hashlib.sha256(raw).hexdigest(), duration, sr,
                      float(np.clip(tempo, 60, 180)), tuple(map(float, beats)),
                      tuple(map(bool, flags)),
-                     sections_for(beats, flags, duration)+tempo_sections, confidence,
+                     sections_for(beats, flags, duration)+tempo_sections+rhythm_sections,
+                     confidence,
                      'content-v1' if lossless else 'unknown', provisional=True,
-                     source_sample_rate=source_rate, source_channels=source_channels)
+                     source_sample_rate=source_rate, source_channels=source_channels,
+                     audio_fingerprint=audio_fingerprint, downbeats=downbeats)
 
 
 def sections_for(beats, flags, duration):
@@ -299,13 +310,7 @@ def sections_for(beats, flags, duration):
 def low_band_attacks(y, sr, *, allow_silence=False):
     if y.ndim == 2:
         return stereo_attacks(y, sr)
-    hop = max(1, round(sr * .005))
-    low = sosfilt(butter(4, [40, 150], btype='bandpass', fs=sr,
-                         output='sos').astype(np.float32), y)
-    n = len(low) // hop
-    np.square(low, out=low)
-    rms = np.sqrt(np.mean(low[:n*hop].reshape(n, hop), axis=1))
-    energy = np.maximum(0, np.diff(rms, prepend=np.float32(0)))
+    energy, hop = attack_envelope(y, sample_rate=sr)
     peaks, _ = find_peaks(energy, distance=round(.16*sr/hop),
                           prominence=max(1e-9, float(np.max(energy))*.015))
     if not len(peaks):
@@ -593,11 +598,15 @@ def fit_sections(observed, energy, step, duration):
 
 def analyse(raw: bytes) -> TrackGrid:
     audio, sr, lossless, source_rate, source_channels = canonical_decode(raw)
+    audio_fingerprint = fingerprint(audio).to_dict()
     y = audio.mean(axis=1)
     duration = len(y) / sr
     if duration < 2 or not np.isfinite(y).all():
         raise ValueError('Audio must contain at least two seconds of finite samples')
     energy, hop, threshold = stereo_attacks(audio, sr)
+    bands = {'low': energy,
+             'mid': attack_envelope(audio, band=(150, 2000))[0],
+             'high': attack_envelope(audio, band=(2000, 10000))[0]}
     onset = onset_envelope(y, sr)
     del y, audio
     _, tracked = librosa.beat.beat_track(onset_envelope=onset, bpm=global_tempo(onset, sr),
@@ -642,11 +651,15 @@ def analyse(raw: bytes) -> TrackGrid:
     good = flags
     regularity = 1 - min(1., float(np.std(np.diff(tracked)))/float(np.mean(np.diff(tracked))))
     confidence = float(np.clip(.5*regularity + .5*np.mean(good), 0, 1))
+    tempo_sections, rhythm_sections, downbeats = describe(
+        beats, flags, tempo_sections, bands, hop/sr, duration)
     return TrackGrid(VERSION, hashlib.sha256(raw).hexdigest(), duration, sr, float(tempo),
                      tuple(map(float, beats)), tuple(map(bool, flags)),
-                     sections_for(beats, flags, duration)+tempo_sections, confidence,
+                     sections_for(beats, flags, duration)+tempo_sections+rhythm_sections,
+                     confidence,
                      'content-v1' if lossless else 'unknown',
-                     source_sample_rate=source_rate, source_channels=source_channels)
+                     source_sample_rate=source_rate, source_channels=source_channels,
+                     audio_fingerprint=audio_fingerprint, downbeats=downbeats)
 
 
 def limit_address_space(duration, *, head=False):

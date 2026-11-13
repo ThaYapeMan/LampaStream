@@ -38,6 +38,7 @@ class BeatFusion:
         self.prior.next_index = None
         self.prior.grid = None
         self.prior.onsets.clear()
+        self.prior.reset_attacks()
         self.prior.loud.clear()
         self.prior.started = None
         self.prior.available = None

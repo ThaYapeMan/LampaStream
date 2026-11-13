@@ -124,12 +124,14 @@ decode chunks → 48 kHz stereo float32 frames. File/head low-band attack envelo
 run per channel and combine by maximum; beat positions use a mid mix.
 One attack detector serves live and offline analysis in the target. Only the
 beat-position engine may differ: a live clean-room tracker or an offline dynamic-programming
-tracker. GRID-01 send-back 5 implements canonical file/head ingress; BEAT-02
-part A still owns sharing the live detector. Current deviations do not define
+tracker. GRID-01 send-back 5 implements canonical file/head ingress; BEAT-02 shares the causal per-channel low-band RMS-rise measurement
+through `attacks.py`. BeatDetector exposes it for live grid confirmation; its
+configured spectral onset algorithms remain responsible for general onsets. Current deviations do not define
 the design.
 
-Grid analyser schema version 3 retains optional `Section.tempo` and adds
-`source_sample_rate` and `source_channels`. The analyser stays
+Grid analyser schema version 4 retains optional `Section.tempo` and the
+original source format descriptors. It adds canonical fingerprints, carrying
+bands, bar estimates with confidence and downbeat positions. The analyser stays
 independent of players, LMS identities and lighting outputs. Tempo discontinuities
 are detected with eight-beat slopes, sustained across sixteen slopes, avoiding
 false changes caused by the tracker's sample-hop quantisation. Boundaries are
@@ -153,7 +155,7 @@ change, backdated to the first confirming beat. Short silent gaps additionally
 use a three-beat level median. The label tempo is the fitted tempo of the section
 with the greatest duration with bass drums (total duration breaks ties).
 
-Old analyser-version cache entries are rejected by `TrackGrid.from_dict` and
+Old analyser-version entries are retained as superseded rows in SQLite and
 re-analysed on next play. The next load uses the new cached full grid; provisional
 head grids use the same fit/flag rules and never enter the full-file cache.
 
@@ -210,3 +212,48 @@ drum (1) and reduced accent (2). Reduced reference rows are informational for
 the current Boolean `kick_flags`; BEAT-02 owns reduced-intensity output. UDKM
 uses the earliest layered transient phase and gates flag agreement on its body
 from 60 s; soft intro misses remain a documented conservative gap.
+
+
+## Track identity and stream buffering
+
+![Track identity decision tree](diagrams/track-identity.svg)
+
+This is the leading BEAT-02 target, rather than a fixed stage timeline. A
+metadata hint may provisionally reuse a learned grid only with matching artist,
+title and duration within one second. Fingerprint confirmation promotes it;
+contradiction overrides it at a beat boundary. Metadata alone never establishes
+a confirmed stored identity. The byte hash remains a file cache key.
+
+![Stream buffer ownership](diagrams/stream-buffer.svg)
+
+Identified audio stays in RAM for one track. Anonymous audio uses a ten-minute
+sliding window for rolling analysis, without storage or lookups. These stream
+execution stages are pending; the storage foundation does not enable them.
+
+The SQLite cache is `/var/lib/lampastream/grids.db`. Installation explicitly
+archives and imports the historical JSON cache before startup; runtime never
+reads it. `grid.database` owns schema checks, transactions, LRU, superseded
+rows, online SQLite backup and weekly vacuum maintenance. `grid.fingerprint`
+computes clean-room spectral landmarks from canonical audio and returns segment
+offsets, rejecting ambiguous matches. Neither module knows a physical player,
+LMS track IDs, output hardware or source paths. Section carrying bands use on/off shared attack ratios across four bars.
+Bar length (3/4 or 4/4), phase and confidence come from periodic per-beat energy;
+unaccented patterns have zero confidence. These annotations never move a beat
+or change an existing bass-drum flag. Effects use is part of BEAT-02 part F.
+
+
+## Full backup transaction
+
+Full Backup downloads a ZIP containing current configuration JSON, an online
+SQLite snapshot and checksums. ZIP upload is streamed to private temporary
+storage; the archive and exact SQLite schema are validated before mutation.
+The existing current-schema JSON backup remains configuration-only.
+
+Storage retains ownership of configuration. A durable local restore journal
+coordinates the two files: the database publishes first, configuration rename
+commits, and the next Storage read completes or rolls back an interrupted
+transaction. Both pre-restore snapshots are retained. A stable database lock
+coordinates short-lived SQLite connections, maintenance and whole-file restore
+across processes. A durable pending marker blocks maintenance and cache reads
+until interrupted publication has been recovered. The analysis pipeline and PlayerManager lifecycle boundaries
+are unchanged; HTTP restore still requires successful source/session teardown.
