@@ -105,6 +105,8 @@ class GridDatabase:
         try:
             if os.geteuid() == 0:
                 owner = self.path.stat() if self.path.exists() else self.path.parent.stat()
+                if owner.st_uid == 0:
+                    owner = self.path.parent.stat()
                 os.fchown(descriptor, owner.st_uid, owner.st_gid)
             fcntl.flock(descriptor, fcntl.LOCK_EX if exclusive else fcntl.LOCK_SH)
             yield

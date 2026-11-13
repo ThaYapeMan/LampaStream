@@ -74,6 +74,13 @@ verify() {
     [[ -f /etc/polkit-1/rules.d/49-lampastream-airplay.rules ]] || fail 'AirPlay service permission missing'
     "$environment/bin/python" -I -B "$SCRIPT_DIR/verify-install.py" "$COMMIT" "$SHORT" "$CONFIG"
     "$environment/bin/python" -I -B -m pip check
+    if [[ "$EUID" == 0 ]]; then
+        runuser -u lampastream -- "$environment/bin/python" -I -B \
+            -m lampastream.grid.permissions check /var/lib/lampastream/grids.db
+    else
+        "$environment/bin/python" -I -B -m lampastream.grid.permissions check \
+            /var/lib/lampastream/grids.db
+    fi
     repo_check
     printf 'AirPlay prerequisites: PASS\nRepository tracked state: CLEAN\n'
 }
@@ -224,7 +231,7 @@ if [[ "$CHECK" == 1 ]]; then
     exit 0
 fi
 [[ "$EUID" == 0 ]] || fail 'Run installation with sudo (check mode needs no root)'
-# No concurrent installs/migrations; check mode acquires no file lock and writes nothing.
+# No concurrent installs/migrations. Check mode only tests an existing shared grid lease.
 exec 9>/run/lock/lampastream-install.lock
 flock -n 9 || fail 'Another installer is running'
 python3 -B "$REPO_DIR/scripts/manage-releases.py" check "$PREFIX"
@@ -237,7 +244,7 @@ id lampastream >/dev/null 2>&1 || useradd --system --gid lampastream --home-dir 
 usermod -a -G audio lampastream
 install -d -m 0755 "$PREFIX/releases"
 install -d -m 0750 -o lampastream -g lampastream /etc/lampastream
-install -d -m 0750 -o lampastream -g lampastream /var/lib/lampastream/grids
+install -d -m 0750 -o lampastream -g lampastream /var/lib/lampastream /var/lib/lampastream/grids
 # An earlier checkout-local venv is archived only after the new candidate verifies.
 [[ ! -e "$PREFIX/.venv" || -L "$PREFIX/.venv" || -f "$PREFIX/.venv/pyvenv.cfg" ]] ||
     fail '/opt/lampastream/.venv exists but is not a recognizable virtual environment'
@@ -292,8 +299,8 @@ migrate_huesync_layout
 "$RELEASE/venv/bin/python" -I -B -m lampastream.migration "$CONFIG"
 "$RELEASE/venv/bin/python" -I -B -m lampastream.grid.migration \
     /var/lib/lampastream/grids /var/lib/lampastream/grids.db
-chown lampastream:lampastream /var/lib/lampastream/grids.db
-chmod 0640 /var/lib/lampastream/grids.db
+"$RELEASE/venv/bin/python" -I -B -m lampastream.grid.permissions own \
+    /var/lib/lampastream/grids.db
 chown lampastream:lampastream "$CONFIG"
 chmod 0640 "$CONFIG"
 log '5/7 Install the repository service and narrow AirPlay restart authorization'

@@ -907,3 +907,26 @@ UDKM body agreement from 60 s; soft bass drums in quiet intros remain a known
 conservative gap. Misplaced expressive beats use a local eight-anchor fit and
 nearest-sufficient snap without changing their count. See the findings and 5d
 report for validation and the LXC 115 bench procedure before owner deployment.
+
+## Grid database service ownership
+
+The standard installer gives `lampastream:lampastream` ownership of
+`/var/lib/lampastream` (0750), `grids.db` (0640), `grids.db.lock` (0600),
+`grids.db.restore-pending` (0640 when present), migration archives and restore
+safety backups (0640). It fixes these immediately after grid migration.
+Root-run grid maintenance or backup must not leave a root-owned lock in the
+service-owned directory. The stable lock retains O_NOFOLLOW protection.
+
+`sudo ./scripts/install-lampastream.sh --check` verifies the database and shared
+lease as the service user and prints `Grid database access: PASS`. It does not
+repair permissions. A root-owned 0600 lock produces `grid_fetch_state: failed`;
+Now Playing shows “measured” instead of “grid”. The one-line repair for the
+owner-reported lock defect is:
+
+```sh
+sudo chown lampastream:lampastream /var/lib/lampastream/grids.db.lock
+```
+
+Use the standard installer to reconcile the full set of directory, database,
+sidecar and backup permissions. The check releases its shared lease immediately;
+it never creates a missing lock or changes ownership.
