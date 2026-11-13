@@ -8,7 +8,7 @@ license = "PolyForm-Noncommercial-1.0.0"
 license-files = ["LICENSE"]
 authors = [{ name = "Jaap van Vliet" }]
 dependencies = [
-    "fastapi>=0.115",
+    "fastapi>=0.162.4",
     "uvicorn[standard]>=0.30",
     "hue-entertainment==0.3.0",
     "numpy>=1.26",
