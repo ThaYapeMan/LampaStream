@@ -1,0 +1,12 @@
+{
+  "format": "normalized-tempo-provider-fixture-v1",
+  "tracks": [
+    {
+      "key": "fp:reference",
+      "artist": "Artist",
+      "title": "Track",
+      "fields": {"tempo": 128.0},
+      "confidence": 0.9
+    }
+  ]
+}

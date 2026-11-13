@@ -18,14 +18,73 @@ from . import VERSION, TrackGrid
 from .database import GridDatabase
 
 
+def upgrade_database(destination):
+    """Installer-only schema 1→2, backed up and atomically published under lease."""
+    from contextlib import closing
+
+    from .database import DATABASE_VERSION, DDL, GRID_DDL, METADATA_DDL
+
+    database = GridDatabase(destination)
+    with database.lease(exclusive=True):
+        if database.restore_marker.exists():
+            raise ValueError('Finish pending restore recovery before migration')
+        with closing(sqlite3.connect(destination)) as source:
+            version = source.execute('PRAGMA user_version').fetchone()[0]
+            if version == DATABASE_VERSION:
+                with database._connect():
+                    pass
+                return False
+            if version != 1:
+                raise ValueError('Unsupported grid database version')
+            schema = lambda db: db.execute(  # noqa: E731
+                'SELECT type,name,tbl_name,sql FROM sqlite_master ORDER BY type,name').fetchall()
+            with closing(sqlite3.connect(':memory:')) as reference:
+                reference.executescript(GRID_DDL)
+                if schema(source) != schema(reference):
+                    raise ValueError('Unexpected old grid schema')
+            if source.execute('PRAGMA integrity_check').fetchall() != [('ok',)]:
+                raise ValueError('Old database failed integrity check')
+            owner = destination.stat()
+            fd, saved = tempfile.mkstemp(prefix=destination.name+'.pre-metadata-v2.',
+                                        suffix='.sqlite', dir=destination.parent)
+            os.close(fd)
+            with closing(sqlite3.connect(saved)) as backup:
+                source.backup(backup)
+            os.chown(saved, owner.st_uid, owner.st_gid)
+            os.chmod(saved, 0o640)
+            with open(saved, 'rb') as stream:
+                os.fsync(stream.fileno())
+            fd, staging = tempfile.mkstemp(prefix='.grids-schema-', dir=destination.parent)
+            os.close(fd)
+            try:
+                with closing(sqlite3.connect(staging)) as target:
+                    source.backup(target)
+                    target.executescript(METADATA_DDL)
+                    target.execute(f'PRAGMA user_version={DATABASE_VERSION}')
+                    target.commit()
+                    with closing(sqlite3.connect(':memory:')) as reference:
+                        reference.executescript(DDL)
+                        if schema(target) != schema(reference):
+                            raise ValueError('Upgraded grid schema differs')
+                os.chown(staging, owner.st_uid, owner.st_gid)
+                os.chmod(staging, 0o640)
+                with open(staging, 'rb') as stream:
+                    os.fsync(stream.fileno())
+                os.replace(staging, destination)
+                descriptor = os.open(destination.parent, os.O_RDONLY | os.O_DIRECTORY)
+                try:
+                    os.fsync(descriptor)
+                finally:
+                    os.close(descriptor)
+            finally:
+                Path(staging).unlink(missing_ok=True)
+    return True
+
+
 def migrate(directory, destination):
     directory, destination = Path(directory), Path(destination).absolute()
     if destination.exists():
-        # Idempotent only after a successful schema-checked cutover.
-        database = GridDatabase(destination)
-        with database.connect():
-            pass
-        return False
+        return upgrade_database(destination)
     files = sorted(directory.glob('*.json'))
     contents = {path.name: path.read_bytes() for path in files}
     digest = hashlib.sha256()

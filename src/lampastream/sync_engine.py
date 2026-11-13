@@ -1451,6 +1451,9 @@ class CanonicalAnalysisPipeline:
                             profile.beat_latency_ms, profile.onset_silence_gate_dbfs)
         previous = self._beat_fusion
         fusion.grid_provider, fusion.prior = previous.grid_provider, previous.prior
+        for key in ('content_origin', 'position_epoch', 'position_identity', 'position_source',
+                    'position_offset', 'position_last', 'beat_index_jumps'):
+            setattr(fusion, key, getattr(previous, key))
         fusion.accent_mode = profile.beat_accent_mode
         self._processors = tuple(fusion if p is previous else p for p in self._processors)
         self._beat_fusion = fusion
@@ -1743,6 +1746,8 @@ class CanonicalAnalysisPipeline:
         )
 
         fusion = self._beat_fusion
+        fusion.content_origin = ((frame.content_position_s-frame.sample_pos/48000)
+                                 if frame.content_position_s is not None else 0.)
         if fusion.grid_provider is not None:
             value = fusion.grid_provider(frame)
             fusion.prior.set(value, frame.sample_pos / 48000,
@@ -1876,6 +1881,23 @@ class CanonicalAnalysisPipeline:
                     aggregates = previous[3]
 
             features = self._build_features(bars, these_others)
+            # Musical time is assembled once on canonical input, before publication.
+            # A replay/consumer can republish that immutable record without running
+            # a reset or unrelated live clock over its already analysed features.
+            fusion = self._beat_fusion
+            position = fusion.position(start/_CAP_SAMPLE_RATE+fusion.content_origin,
+                                       identity=epoch_id, epoch=epoch_id)
+            events = tuple(replace(event, beat_position=fusion.position(
+                event.candidate_sample/_CAP_SAMPLE_RATE+fusion.content_origin,
+                identity=epoch_id, epoch=epoch_id, advance=False))
+                for event in features.onset_events)
+            features = replace(features, beat_position=position, beat_source=position.source,
+                               tempo_bpm=position.tempo, beat_phase=position.beat_phase,
+                               tempo_confidence=position.confidence, onset_events=events,
+                               beat_index_jumps=fusion.beat_index_jumps,
+                               **({'grid_tempo': position.tempo,
+                                   'grid_confidence': position.confidence}
+                                  if fusion.prior.grid is not None else {}))
             if aggregates is not None:
                 for name, value in aggregates.items():
                     setattr(features, name, value)

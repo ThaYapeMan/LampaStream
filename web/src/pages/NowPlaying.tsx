@@ -1,3 +1,4 @@
+import { OwnerTempo } from '@/components/OwnerTempo'
 import { LiveBeatAccents } from '@/components/LiveBeatAccents'
 import { LightsRow } from '@/components/LightsRow'
 import { MusicChoices } from '@/components/MusicChoices'
@@ -481,11 +482,19 @@ export function NowPlaying({ expertMode = false, colour, channel_colours, onset,
             </section>
             <section className="min-w-0 rounded-xl border p-4" aria-label="Analysis">
               <h3 className="mb-4 text-sm text-muted-foreground">Analysis</h3>
-              {expertMode && <p className="mb-3 text-sm tabular-nums" data-testid="tempo">Tempo {status?.tempo_bpm ? `${Math.round(status.tempo_bpm)} BPM` : '—'} · {status?.tempo_locked ? 'Locked' : 'Unlocked'} · {Math.round((status?.tempo_confidence ?? 0)*100)}%</p>}
+              {expertMode && <p className="mb-3 text-sm tabular-nums" data-testid="tempo">
+                {status?.beat_position ? <span data-testid="beat-position">
+                  {status.beat_position.source} {status.beat_position.tempo ? `${Math.round(status.beat_position.tempo)} BPM` : '—'}
+                  {' · '}beat {status.beat_position.beat_index}
+                  {' · '}bar {status.beat_position.bar_index}.{Math.floor(status.beat_position.bar_phase * status.beat_position.beats_per_bar) + 1}
+                </span> : <>Tempo {status?.tempo_bpm ? `${Math.round(status.tempo_bpm)} BPM` : '—'}</>}
+                {' · '}{status?.tempo_locked ? 'Locked' : 'Unlocked'} · {Math.round((status?.tempo_confidence ?? 0)*100)}%
+              </p>}
               <StatusGrid status={status} analyser={activeAnalyser} effects={effects} profile={activeEnergyProfile}
                 manual={!!couplingId && (status?.music?.manual ?? !!(activeCoupling?.manual_energy_profile_id || activeCoupling?.manual_palette_id))} onOpen={onOpenEnergyProfile} />
             </section>
           </div>
+          {status?.beat_position && <OwnerTempo active={!!couplingId} />}
           <LiveEnergySource expertMode={expertMode} profile={activeEnergyProfile} active={!!couplingId}
             effects={effects} onOpenEffect={onOpenEffect}
             gauge={<div data-testid="energy-blend">

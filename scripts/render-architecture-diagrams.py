@@ -81,23 +81,37 @@ def svg(h, title, body):
     )
 
 
+def timeline_box(x, y, w=280):
+    b = (f'<rect x="{x}" y="{y}" width="{w}" height="110" rx="8" '
+         'fill="#EEEDFE" stroke="#534AB7" stroke-width="0.75"/>'
+         f'<text x="{x+w/2}" y="{y+25}" text-anchor="middle" '
+         f'font-size="14" font-weight="500" fill="#3C3489" {F}>'
+         'MusicalTimeline (BeatFusion)</text>')
+    # Five responsibilities stay inside the component, separate from its inputs.
+    for offset, text in ((48, "prior grid · live observations"),
+                         (70, "correction · confidence"), (92, "prediction")):
+        b += label(x+w/2, y+offset, text, "middle")
+    return b
+
+
 def end_to_end():
     b = box(40, 40, 120, 56, "VirtualPlayer", "LMS, AirPlay, …", "gray")
     b += box(190, 40, 140, 56, "Canonical PCM", "48 kHz stereo + clock", "teal")
     b += box(360, 40, 150, 56, "CanonicalAnalysis", "Pipeline, processors", "teal")
     b += box(540, 40, 100, 56, "Audio", "Features", "purple")
     b += arrow("M160 68 L188 68") + arrow("M330 68 L358 68") + arrow("M510 68 L538 68")
-    b += box(540, 160, 100, 56, "Renderer", "Effects → Scene", "purple") + arrow("M590 96 L590 158")
-    b += box(360, 160, 150, 56, "Scheduler", "audible time, lookahead", "purple") + arrow(
-        "M540 188 L512 188"
-    )
-    b += box(190, 160, 140, 56, "Outputs", "by capability (Hue, …)", "gray") + arrow(
-        "M360 188 L332 188"
-    )
-    b += box(40, 160, 120, 56, "Grid database", "priors, learned grids", "purple")
-    b += arrow("M100 160 L100 120 L430 120 L430 98", dash=True, color="#7F77DD")
-    b += label(340, 250, "Nothing after the canonical stage branches on source or output", "middle")
-    return svg(280, "LampaStream end-to-end flow", b)
+    b += box(40, 180, 240, 56, "Grid database", "prior and learned grids", "purple")
+    b += timeline_box(350, 150, 290)
+    b += arrow("M590 96 L590 148") + label(580, 130, "measured", "end")
+    b += arrow("M280 208 L348 208", dash=True, color="#7F77DD")
+    b += arrow("M495 260 L495 286 L130 286 L130 318")
+    b += label(300, 279, "BeatPosition", "middle")
+    b += box(40, 320, 180, 56, "Scheduler", "audible time, lookahead", "purple")
+    b += box(250, 320, 180, 56, "Renderer", "Effects → Scene", "purple")
+    b += box(460, 320, 180, 56, "Outputs", "by capability (Hue, …)", "gray")
+    b += arrow("M220 348 L248 348") + arrow("M430 348 L458 348")
+    b += label(340, 415, "Nothing after the canonical stage branches on source or output", "middle")
+    return svg(440, "LampaStream end-to-end flow", b)
 
 
 def beat_source_decision():
@@ -118,7 +132,7 @@ def beat_source_decision():
         400,
         600,
         56,
-        "Always: live analysis measures and corrects",
+        "MusicalTimeline: live analysis measures and corrects",
         "Contradiction check, watchdog, owner corrections",
         "teal",
     )
@@ -127,36 +141,24 @@ def beat_source_decision():
 
 
 def analysis_target():
-    b = box(40, 60, 130, 56, "VirtualPlayer", "live stream PCM", "gray")
-    b += box(40, 260, 130, 56, "Library file", "LMS download", "gray")
-    b += box(210, 160, 140, 56, "AudioCanonicalizer", "48 kHz stereo, soxr", "teal")
-    b += arrow("M170 88 L190 88 L190 188 L208 188")
-    b += '<path d="M170 288 L190 288 L190 188" fill="none" stroke="#888780" stroke-width="1.5"/>'
-    b += box(390, 160, 140, 56, "One attack detector", "per channel, shared", "teal") + arrow(
-        "M350 188 L388 188"
-    )
-    b += box(390, 60, 140, 56, "Live analysis", "BeatDetector, tracker", "teal") + arrow(
-        "M460 160 L460 118"
-    )
-    b += dashed(380, 240, 160, 96, "bounded subprocess")
-    b += box(390, 268, 140, 56, "Grid analyser", "whole file or head", "teal") + arrow(
-        "M460 216 L460 238"
-    )
-    b += box(570, 60, 70, 56, "Beat", "Fusion", "purple") + arrow("M530 88 L568 88")
-    b += box(570, 268, 70, 56, "Grid", "database", "purple") + arrow("M530 296 L568 296")
-    b += arrow("M605 268 L605 118", dash=True, color="#7F77DD")
-    b += label(
-        340,
-        380,
-        "One ingress, one detector; only the beat-position engine differs "
-        "(live tracker / offline tracker)",
-        "middle",
-    )
-    return svg(
-        420,
-        "Target analysis architecture: file and stream share the canonicalizer and the detector",
-        b,
-    )
+    b = box(20, 60, 130, 56, "VirtualPlayer", "live stream PCM", "gray")
+    b += box(20, 280, 130, 56, "Library file", "LMS download", "gray")
+    b += box(180, 170, 160, 56, "AudioCanonicalizer", "48 kHz stereo, soxr", "teal")
+    b += arrow("M150 88 L165 88 L165 198 L178 198")
+    b += '<path d="M150 308 L165 308 L165 198" fill="none" stroke="#888780"/>'
+    b += box(370, 170, 180, 56, "One attack detector", "per channel, shared", "teal")
+    b += arrow("M340 198 L368 198")
+    b += box(180, 30, 160, 56, "Live analysis", "BeatDetector, tracker", "teal")
+    b += arrow("M460 170 L460 148 L260 148 L260 88")
+    b += timeline_box(370, 10, 290) + arrow("M340 58 L368 58")
+    b += dashed(180, 260, 180, 100, "bounded subprocess")
+    b += box(190, 292, 160, 56, "Grid analyser", "whole file or head", "teal")
+    b += arrow("M460 226 L460 245 L270 245 L270 290")
+    b += box(490, 292, 170, 56, "Grid database", "prior and learned grids", "purple")
+    b += arrow("M350 320 L488 320")
+    b += arrow("M620 292 L620 122", dash=True, color="#7F77DD")
+    b += label(340, 395, "One canonical ingress and shared detector; one MusicalTimeline", "middle")
+    return svg(420, "Target analysis architecture: canonical measurements and grid prior", b)
 
 
 def track_identity():
@@ -185,7 +187,7 @@ def track_identity():
         542,
         580,
         56,
-        "Always: live analysis measures and corrects",
+        "MusicalTimeline: live analysis measures and corrects",
         "at track end: full analysis → learned grid stored under the fingerprint; "
         "audio never persisted",
         "teal",

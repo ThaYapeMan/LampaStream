@@ -115,6 +115,25 @@ class UniformScene:
 
 
 @dataclass(frozen=True)
+class BeatPosition:
+    """MusicalTimeline position on the canonical content clock.
+
+    Until measured downbeats arrive, confidence is capped at 0.5 and Effects
+    should use beat-level behavior when downbeat_measured is False.
+    """
+
+    tempo: float | None = None
+    beat_phase: float = 0.
+    beat_index: int = 0
+    bar_phase: float = 0.
+    bar_index: int = 0
+    confidence: float = 0.
+    source: str = "onset"
+    beats_per_bar: int = 4
+    downbeat_measured: bool = False
+
+
+@dataclass(frozen=True)
 class OnsetEvent:
     """Candidate-attributed onset in canonical sample coordinates."""
 
@@ -136,6 +155,7 @@ class OnsetEvent:
     beat_phase: float = 0.
     bar_position: int | None = None
     predicted: bool = False
+    beat_position: BeatPosition | None = None
 
 
 @dataclass(frozen=True)
@@ -152,6 +172,10 @@ class OnsetEnvelopeFrame:
 @dataclass
 class AudioFeatures:
     """Processed audio data for one analysis frame.
+
+    Deprecated for one release: tempo_bpm, beat_phase, tempo_confidence and
+    grid tempo/confidence scalars mirror beat_position when a grid is active.
+    Read beat_position for musical time. Cache/fetch diagnostics remain separate.
 
     Produced by an Analyser; consumed by Effects.  Fields not yet provided
     by a backend are left at their defaults so effects degrade gracefully.
@@ -182,6 +206,8 @@ class AudioFeatures:
 
     # Onset detection.  onset=True on frames where a note or drum hit starts.
     # onset_strength is the raw spectral flux value (unnormalised).
+    beat_position: BeatPosition = BeatPosition()
+    beat_index_jumps: int = 0
     diagnostic_events: tuple[OnsetEvent, ...] = ()
     onset_raw_frames: tuple[OnsetEnvelopeFrame, ...] = ()
     beat_source: str = "tracker"

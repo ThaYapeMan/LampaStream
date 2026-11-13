@@ -263,7 +263,20 @@ export interface OutputCapabilities {
   min_visible_hold_s: number
   supports_per_channel_timing: boolean
 }
+export interface BeatPosition {
+  tempo: number | null
+  beat_phase: number
+  beat_index: number
+  bar_phase: number
+  bar_index: number
+  confidence: number
+  source: 'grid' | 'tracker' | 'onset'
+  beats_per_bar: number
+  downbeat_measured: boolean
+}
 export interface AccentFeatures {
+  beat_position?: BeatPosition
+  beat_index_jumps?: number
   beat_source?: "grid" | "tracker" | "onset" | "off"
   grid_confidence?: number | null
   grid_tempo?: number | null
@@ -489,6 +502,7 @@ export interface PaletteStop { colour: string; position: number }
 export interface Palette { id: string; name: string; stops: PaletteStop[] }
 export interface GenreRule { id: string; genre: string; palette_id: string; energy_profile_id: string }
 export interface MusicSettings {
+  providers?: MetadataProvider[]
   lastfm_enabled: boolean
   api_key_configured: boolean
   genre_mapping: Record<string, string>
@@ -511,7 +525,7 @@ export const previewPalette = (palette: Palette, positions: number[]) =>
   request<Array<{ r: number; g: number; b: number }>>('/api/palettes/preview',
     json('POST', { name: palette.name, stops: palette.stops, positions }))
 export const getMusicSettings = () => request<MusicSettings>('/api/music-settings')
-export const updateMusicSettings = (body: Partial<Omit<MusicSettings, 'rules' | 'genres'>> & { lastfm_api_key?: string }) =>
+export const updateMusicSettings = (body: Partial<Omit<MusicSettings, 'rules' | 'genres' | 'providers'>> & { lastfm_api_key?: string }) =>
   request<MusicSettings>('/api/music-settings', json('PATCH', body))
 export const saveGenreRule = (body: Omit<GenreRule, 'id'>) => request<GenreRule>('/api/genre-rules', json('POST', body))
 export const deleteGenreRule = (id: string) => request<void>(`/api/genre-rules/${id}`, { method: 'DELETE' })
@@ -523,3 +537,21 @@ export const updateGenreRule = (id: string, body: Omit<GenreRule, 'id'>) => requ
 export const takeLights = (id: string) => request(`/api/couplings/${id}/take-lights`, { method: "POST" })
 
 export const releaseLights = (id: string) => request(`/api/couplings/${id}/release-lights`, { method: "POST" })
+
+
+export interface MetadataProvider {
+  name: string; capabilities: string[]; lookup_keys: string[]; rate_limit: number; ttl: number
+  redistributable: boolean; requires_credentials: boolean; enabled: boolean
+  status: 'active' | 'disabled' | 'obsolete'; consent: boolean; leaves_lan: boolean
+  always_enabled: boolean; test_only: boolean; toggleable: boolean
+}
+export interface TempoMetadata {
+  identity: string | null; confirmed: boolean; tempo: number | null; phase_offset_s: number
+  reason: string | null
+  resolved_tempo: { provider: string; fields: { tempo?: number; phase_offset_s?: number }; confidence: number; redistributable: boolean } | null
+}
+export const getTempoMetadata = () => request<TempoMetadata>('/api/tempo-metadata')
+export const updateMetadataProvider = (name: string, body: { enabled?: boolean; consent?: boolean }) =>
+  request<MetadataProvider>(`/api/metadata-providers/${encodeURIComponent(name)}`, json('PATCH', body))
+export const correctTempo = (body: { identity: string; action: 'half' | 'double' | 'tap' | 'nudge'; tempo?: number; nudge_ms?: number }) =>
+  request<TempoMetadata>('/api/tempo/correction', json('POST', body))

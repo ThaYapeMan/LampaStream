@@ -1585,3 +1585,17 @@ The HTTP Backup page instead requires the current Coupling to be deactivated and
 fully torn down. `tests/test_backup_archive.py` kills a subprocess at both sides
 of the configuration commit and verifies recovery on the next Storage read.
 No player or output is started by either restore path.
+
+## Metadata providers and musical position
+
+`tests/test_tempo_metadata.py` covers registry acquisition from recorded JSON,
+local file/sender BPM fields, active/disabled/obsolete retention and ranking,
+consent revocation, global rate limits, failed-refresh retention, schema-1 to 2
+migration and API owner corrections with stale-identity rejection. No provider
+makes a network request. SongBPM remains a documented offline skeleton.
+`tests/test_beat_position.py` covers reference indices, meter, content origin,
+handovers, onset zeros and republication without re-estimation. Set
+`LAMPASTREAM_BEAT_POSITION_REFERENCE` to the private Mau P beats.csv to run its
+814 reference rows; without that file it is an explicit skip. Browser tests use
+mocked preview/API payloads for provider rows and owner controls; their screenshots
+are UI evidence, not live acoustic or lighting measurements.

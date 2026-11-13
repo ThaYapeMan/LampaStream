@@ -68,6 +68,13 @@ with a backup and conflict checks. See [configuration](docs/configuration.md).
 
 ![End-to-end audio architecture](docs/diagrams/end-to-end.svg)
 
+MusicalTimeline is the track’s musical time for Effects: which beat, which bar,
+how fast and how sure. It combines measured canonical features with the stored
+grid. The Python class remains `BeatFusion`; its responsibilities are prior grid,
+live observations, correction, confidence and prediction. The grid database is a
+second input to this component, never a bypass around the analyser. Nothing after
+the canonical stage branches on source or output, and MusicalTimeline is no exception.
+
 Every source reaches one canonical stage; nothing after it branches on source or output.
 
 ### VirtualPlayers

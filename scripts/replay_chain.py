@@ -656,6 +656,9 @@ class Replay:
         event_rows = []
         for data in self.engine.event_records.values():
             event_row = asdict(data["event"])
+            # The replay event CSV keeps its existing diagnostic schema. The
+            # live accent logger exports the musical indices separately.
+            event_row.pop('beat_position')
             if self.args.diagnostic_onsets:
                 for key in ("band", "kind", "on_beat", "beat_phase", "bar_position", "predicted"):
                     event_row.pop(key)

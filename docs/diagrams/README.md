@@ -36,3 +36,10 @@ It remains provisional until audio fingerprint confirmation; unsupported accents
 stay dark. A later fingerprint confirms or overrides that hint. The decision
 is recorded separately from metadata identity. Anonymous streams use the sliding
 window and rolling analysis, with no stored grids or provider lookups.
+
+MusicalTimeline (the `BeatFusion` class) takes measured AudioFeatures and grid
+priors, then publishes BeatPosition to scheduling/rendering. The end-to-end view
+has no database-to-analyser arrow. The target view retains live analysis →
+MusicalTimeline ← grid database. The decision view keeps its shape and names
+MusicalTimeline as the selected-source consumer. Each timeline box lists prior
+grid, live observations, correction, confidence and prediction.

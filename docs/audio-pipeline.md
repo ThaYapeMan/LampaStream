@@ -231,7 +231,7 @@ unpublished schema-4 intermediate name). Tracker runs exactly as the old f=0
 path: EnergyTrigger uses its original sensitivity base floor
 `.08 * 2 ** ((50-sensitivity)/25)`, AGC capped at the Energy Profile ceiling,
 log energy, adaptive ratio/mean, rise tests and refractory. No term depends on
-gain to raise the floor. BeatFusion/TempoClock prediction remains Tracker-only;
+gain to raise the floor. MusicalTimeline/TempoClock prediction remains Tracker-only;
 the detector's candidate generation, timing and the tempo algorithm are unchanged.
 
 The ticket's cited Tracker 760/797 result is the archived f=0.11 run; the actual

@@ -34,7 +34,7 @@ and retain live analysis.
 The strict lossless source publishes an optional generic `content_position_s`
 coordinate. Canonicalization resamples that coordinate independently of room
 play time. The LMS adapter supplies a generic prior `(identity, grid, origin,
-metadata)` to BeatFusion. After this boundary nothing knows LMS. Onset detection
+metadata)` to MusicalTimeline (`BeatFusion`). After this boundary nothing knows LMS. Onset detection
 and the live tempo clock continue running. Grid beats produce existing
 ProcessorUpdates and OnsetEvents, pass through existing AudioFeatures and the
 same audible clock, scheduler, Effects, Scenes and output driver. Grid beats

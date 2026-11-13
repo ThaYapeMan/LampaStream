@@ -296,6 +296,8 @@ install -m 0644 "$WORK/third_party/yeney-core/LICENSE" "$WORK/third_party/yeney-
 AIRPLAY_BUILD_DIR="$WORK/airplay" LAMPASTREAM_DEFER_START=1 LAMPASTREAM_DEPENDENCIES_READY=1 bash "$WORK/scripts/setup-airplay.sh"
 log '4/7 Migrate persisted configuration before starting current runtime'
 migrate_huesync_layout
+# Schema upgrades publish a replacement database; stop old readers before cutover.
+if systemctl is-active --quiet lampastream; then systemctl stop lampastream; fi
 "$RELEASE/venv/bin/python" -I -B -m lampastream.migration "$CONFIG"
 "$RELEASE/venv/bin/python" -I -B -m lampastream.grid.migration \
     /var/lib/lampastream/grids /var/lib/lampastream/grids.db

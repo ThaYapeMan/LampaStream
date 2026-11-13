@@ -24,7 +24,9 @@ def track_key(track):
 
 
 class MusicDirector:
-    def __init__(self, storage, apply, current_track, *, transport=None, current_palette=None):
+    def __init__(self, storage, apply, current_track, *, transport=None, current_palette=None,
+                 tempo_refresh=None):
+        self.tempo_refresh = tempo_refresh
         self.storage, self.apply, self.current_track = storage, apply, current_track
         self.lookup = GenreLookup(storage.music_settings, transport=transport)
         self.transport = transport
@@ -167,4 +169,8 @@ class MusicDirector:
         while True:
             current = self.storage.get_coupling(coupling.id) or coupling
             await self.step(self.current_track(), current)
+            if self.tempo_refresh is not None:
+                state = await self.tempo_refresh()
+                if state is not None:
+                    self.status['tempo_metadata'] = state
             await asyncio.sleep(0.5)

@@ -34,6 +34,7 @@ class TrackPosition:
     artwork_url: str | None = None
     artwork_data: bytes | None = None
     artwork_hash: str | None = None
+    tempo_bpm: float | None = None
 
     def position_now(self) -> float | None:
         if self.position_s is None:
@@ -48,7 +49,8 @@ class TrackPosition:
         del result['observed_at']
         result.pop('artwork_data', None)
         return {k: v for k, v in result.items()
-                if k not in ('genre', 'album', 'artwork_url', 'artwork_hash') or v is not None}
+                if k not in ('genre', 'album', 'artwork_url', 'artwork_hash', 'tempo_bpm')
+                or v is not None}
 
 
 class TrackPositionSource(Protocol):
@@ -406,6 +408,13 @@ class AirPlayTrackPositionSource:
                     self._track_id = changes.pop('_identity', self._track_id)
                     if changes:
                         self._update(**changes)
+            elif kind == 'core' and code == 'asbt' and len(data) == 2:
+                tempo = int.from_bytes(data, 'big')
+                if 20 <= tempo <= 400:
+                    if self._batch is not None:
+                        self._batch['tempo_bpm'] = float(tempo)
+                    else:
+                        self._update(tempo_bpm=float(tempo))
             elif kind == 'core' and code == 'gnre' and len(data) == 2:
                 genres = {7: 'hip-hop', 8: 'jazz', 9: 'metal', 13: 'pop', 14: 'r&b',
                           15: 'rap', 17: 'rock', 18: 'techno', 26: 'ambient',
@@ -454,7 +463,8 @@ class AirPlayTrackPositionSource:
                 self._update(**changes)
         elif kind == 'ssnc':
             if code == 'mdst':
-                self._batch = {'title': None, 'artist': None, 'genre': None, 'album': None}
+                self._batch = {'title': None, 'artist': None, 'genre': None, 'album': None,
+                               'tempo_bpm': None}
             elif code == 'mden' and self._batch is not None:
                 identity = self._batch.pop('_identity', self._track_id)
                 changed = ((self._track_id is not None and identity != self._track_id)

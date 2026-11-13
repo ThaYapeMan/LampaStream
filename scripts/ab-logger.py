@@ -33,6 +33,8 @@ BEAT_FIELDS = [
     "strength",
     "source",
     "predicted",
+    "beat_index",
+    "bar_index",
 ]
 
 
@@ -49,6 +51,8 @@ def beat_row(event, wall, source):
         strength=event.get("strength"),
         source=source,
         predicted=bool(event.get("predicted")),
+        beat_index=event.get("beat_index", 0),
+        bar_index=event.get("bar_index", 0),
     )
 
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import heapq
 import math
-from dataclasses import dataclass, replace
+from dataclasses import asdict, dataclass, replace
 
 from .onset_envelope import TriggerEnvelope
 
@@ -107,7 +107,11 @@ class AudiblePreview:
                                    kind=event.kind, predicted=event.predicted,
                                    confidence=event.confidence, strength=event.strength,
                                    on_beat=event.on_beat, beat_phase=event.beat_phase,
-                                   bar_position=event.bar_position))
+                                   bar_position=event.bar_position,
+                                   beat_index=(event.beat_position.beat_index
+                                               if event.beat_position else 0),
+                                   bar_index=(event.beat_position.bar_index
+                                              if event.beat_position else 0)))
             channels = [dict(zip(('r', 'g', 'b'), c.to_16bit(), strict=True))
                         for c in colours]
             for event in events:
@@ -235,6 +239,9 @@ class AudiblePreview:
             ('time_to_next_drop_s', None), ('tempo_bpm', None), ('tempo_alt_bpm', None),
             ('tempo_confidence', 0.),
             ('tempo_locked', False), ('beat_phase', 0.), ('agc_gain', 1.), ('trigger_ratio', 0.))}
+        if features is not None:
+            rhythm['beat_position'] = asdict(features.beat_position)
+            rhythm['beat_index_jumps'] = features.beat_index_jumps
         mode = self.metadata.profile.beat_accent_mode if self.metadata else "tracker"
         if mode != "tracker":
             rhythm["beat_source"] = mode

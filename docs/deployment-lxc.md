@@ -121,3 +121,10 @@ sudo chown lampastream:lampastream /var/lib/lampastream/grids.db.lock
 Use the standard installer to reconcile the full set of directory, database,
 sidecar and backup permissions. The check releases its shared lease immediately;
 it never creates a missing lock or changes ownership.
+
+BEAT-02 B upgrades grids.db from schema 1 to 2 during the standard installer.
+The installer stops an active old service before persisted-schema cutover, retains
+an online SQLite safety snapshot (`grids.db.pre-metadata-v2.*.sqlite`), then applies
+the same service-user ownership policy and verifies access before release start.
+Use 115 first and leave it disabled after the bench, then deploy the accepted
+commit on 112. Runtime and uploaded backups accept only the exact current schema.

@@ -442,8 +442,22 @@ class PlayerManager:
             from .palettes import Palette
             stops = session.sync_engine.profile.palette_stops
             return Palette(name="Current colours", stops=stops) if stops else None
+        last_tempo_refresh = [-float('inf')]
+        async def refresh_tempo():
+            from .tempo_metadata.context import refresh
+            if self._active is not session or session.stopping:
+                return None
+            now = time.monotonic()
+            if now-last_tempo_refresh[0] < 2:
+                return None
+            last_tempo_refresh[0] = now
+            try:
+                return await asyncio.to_thread(refresh, self)
+            except Exception:
+                log.warning('Tempo metadata unavailable; retaining live analysis', exc_info=True)
+                return None
         session.music = MusicDirector(self.storage, apply, lambda: self.track_position,
-                                      current_palette=current_palette)
+                                      current_palette=current_palette, tempo_refresh=refresh_tempo)
         session.music_task = asyncio.create_task(session.music.run(session.coupling),
                                                 name="music-colours")
         session.music_task.add_done_callback(_log_task_failure)

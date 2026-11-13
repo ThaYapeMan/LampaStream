@@ -753,6 +753,7 @@ async def get_status(request: Request):
     return {
         **trigger_status,
         **{key: preview.get(key) for key in (
+            "beat_position", "beat_index_jumps",
             "grid_confidence", "grid_tempo", "grid_cache", "grid_fetch_state",
             "grid_dropped_reason", "time_to_next_drop_s", "provisional")},
         "beat_source": (coupling.beat_accent_mode if coupling
@@ -1964,8 +1965,10 @@ async def delete_palette(identity: str, request: Request):
 @router.get("/music-settings")
 async def music_settings(request: Request):
     from .genres import GENRES
+    from .tempo_metadata.api import get_store
     settings = _storage(request).music_settings().to_safe_dict()
-    return dict(settings, genres=list(GENRES),
+    providers = await asyncio.to_thread(get_store(request).list)
+    return dict(settings, providers=providers, genres=list(GENRES),
                 rules=[r.to_dict() for r in _storage(request).list_genre_rules()])
 
 
@@ -2082,3 +2085,9 @@ async def release_coupling_lights(coupling_id: str, request: Request):
         raise HTTPException(409, "Activate this coupling first")
     await manager._active.hue_driver.release("You released the lights", explicit=True)
     return manager.output_status
+
+
+# Static metadata-provider endpoints share the API mutation/restore guard.
+from .tempo_metadata.api import router as metadata_router  # noqa: E402
+
+router.include_router(metadata_router)

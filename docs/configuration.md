@@ -930,3 +930,27 @@ sudo chown lampastream:lampastream /var/lib/lampastream/grids.db.lock
 Use the standard installer to reconcile the full set of directory, database,
 sidecar and backup permissions. The check releases its shared lease immediately;
 it never creates a missing lock or changes ownership.
+
+## Tempo provider settings and track corrections
+
+Music settings lists owner, local-tags, recorded-fixture and the reserved SongBPM
+slot. Owner and local-tags are always local/enabled. Recorded-fixture is available
+only in a test harness. SongBPM is obsolete/unavailable until a separate permitted
+adapter and recorded-page fixture arrive. Every external lookup defaults off.
+Provider enable/disable, lifecycle, priority and sharing consent live in grids.db,
+not in a second source-specific configuration. Consent defaults off and only marks
+eligible rows for a future grid export; these controls upload nothing.
+
+Now Playing uses the existing outline-button pattern for Half tempo, Double tempo,
+Tap tempo and ±20 ms phase nudges. Corrections are saved for the verified audio
+recording above other metadata. Hint-only identities keep these buttons disabled.
+Requests include the recording identity, so a track change rejects a stale click.
+The readout distinguishes a saved correction from the currently measured musical
+time. Prior seeding is part E; providers only write metadata. “Back to automatic”
+is outside B and belongs to COUPLE-01.
+
+The installer backs up schema-1 grids.db to `grids.db.pre-metadata-v2.*.sqlite`
+before atomically upgrading to schema 2. Existing grids, metadata and lookups are
+retained. Runtime never upgrades a historical schema. Full backup validation now
+requires the exact current schema 2; an old full ZIP must not be treated as a
+current backup. Existing configuration-only backups remain supported.

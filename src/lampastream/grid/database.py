@@ -17,10 +17,11 @@ from contextlib import contextmanager
 from dataclasses import replace
 from pathlib import Path
 
+from ..tempo_metadata.schema import DDL as METADATA_DDL
 from . import GRID_SCHEMA_VERSION, VERSION, TrackGrid
 
-DATABASE_VERSION = 1
-DDL = """
+DATABASE_VERSION = 2
+GRID_DDL = """
 CREATE TABLE grids (
     content_hash TEXT NOT NULL,
     analyser_version TEXT NOT NULL,
@@ -74,6 +75,9 @@ CREATE TABLE maintenance (
     completed_at REAL NOT NULL
 );
 """
+
+
+DDL = GRID_DDL + METADATA_DDL
 
 
 def identity_hash(identity: str) -> str:

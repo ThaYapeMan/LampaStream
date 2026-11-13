@@ -235,8 +235,15 @@ class LmsGridAdapter:
                 if grid.file_sha256 != content_hash:
                     raise ValueError('Analyser content hash mismatch')
             await asyncio.to_thread(self.cache.put, key, grid)
-        self._publish(key, grid, 'full', started)
-        log.info('Library grid %s miss %.2f BPM', key, grid.tempo)
+            self._publish(key, grid, 'full', started)
+            log.info('Library grid %s miss %.2f BPM', key, grid.tempo)
+            # File tags are metadata acquisition, never canonical analysis work.
+            try:
+                from .tempo_metadata.file_tags import capture
+                await asyncio.to_thread(capture, path, grid, self.cache.database)
+            except Exception:
+                log.warning('File tempo tags unavailable; retaining the verified grid',
+                            exc_info=True)
 
     async def _worker(self):
         while True:

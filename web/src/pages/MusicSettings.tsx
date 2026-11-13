@@ -1,3 +1,4 @@
+import { MetadataProviders } from '@/components/MetadataProviders'
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -29,6 +30,7 @@ export function MusicSettings() {
   return <section className="min-w-0 space-y-6"><header><h1 className="text-2xl font-semibold">Music settings</h1><p className="text-sm text-muted-foreground">Let the track guide the colours. Your choices always come first.</p></header>
     {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
     {!settings ? <p role="status">Loading settings…</p> : <>
+      <MetadataProviders initial={settings.providers ?? []} />
       <Card><CardHeader><CardTitle>Genre detection</CardTitle></CardHeader><CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">Track tags are used first. If a tag is missing or unrecognised, Last.fm can suggest a genre.</p>
         <label className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" className="h-5 w-5" disabled={busy} checked={settings.lastfm_enabled} onChange={e => { const enabled = e.target.checked; setSettings({ ...settings, lastfm_enabled: enabled }); action(async () => { try { const updated = await updateMusicSettings({ lastfm_enabled: enabled }); setSettings({ ...settings, ...updated }); setMessage(enabled ? 'Last.fm lookup enabled' : 'Last.fm lookup switched off') } catch (error) { setSettings(settings); throw error } }) }} />Look up missing tags with Last.fm</label>

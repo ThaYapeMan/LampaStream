@@ -14,6 +14,18 @@ Audio ingress → CanonicalAnalysisPipeline → SharedAnalysisFrame
     → PublicationRecord → AudioFeatures → Effects → Scene → output driver
 ```
 
+MusicalTimeline is the track’s musical time for Effects: which beat, which bar,
+how fast and how sure. It combines measured canonical features with the stored
+grid. The Python class remains `BeatFusion`; its responsibilities are prior grid,
+live observations, correction, confidence and prediction. The grid database is a
+second input to this component, never a bypass around the analyser. Nothing after
+the canonical stage branches on source or output, and MusicalTimeline is no exception.
+
+`BeatPosition` is frozen and travels with every canonical AudioFeatures frame.
+All fields use the canonical content clock. Until part F, bar confidence is capped
+at 0.5 and `downbeat_measured` is false; Effects keep beat-level behavior.
+The existing tempo/phase/grid scalars remain deprecated for one release.
+
 ## Ownership
 
 | Component | Owns |
@@ -257,3 +269,33 @@ coordinates short-lived SQLite connections, maintenance and whole-file restore
 across processes. A durable pending marker blocks maintenance and cache reads
 until interrupted publication has been recovered. The analysis pipeline and PlayerManager lifecycle boundaries
 are unchanged; HTTP restore still requires successful source/session teardown.
+
+## Tempo metadata providers (BEAT-02 B)
+
+The static `tempo_metadata.registry.PROVIDERS` definitions own adapter construction,
+capabilities, lookup keys, rate limits, TTL, licensing, credentials and default
+activation. Adding a provider needs one definition, one adapter and a recorded
+fixture test. There is no discovery or new processor framework. Adapters return
+normalized fields, raw payload and confidence to `ProviderStore`; they never
+import or mutate the pipeline. Acquisition runs in metadata/acquisition work,
+not on the canonical analysis or renderer thread.
+
+SQLite `metadata_providers` stores activation, lifecycle, priority and explicit
+redistribution consent. `resolved_tempo` ranks active rows ahead of disabled and
+obsolete rows, with the owner's active correction highest. Disabling a provider
+stops lookups/refreshes while cached rows remain usable. An obsolete registry
+entry can never be queried or enabled; its rows remain frozen and TTL does not
+remove them. Purge is separate. TTL controls refresh, not row deletion.
+
+Local TBPM/BPM tags are read when a downloaded file exists; sender tempo metadata
+is normalized by the metadata adapter. An artist/title/duration lookup hint is
+explicitly unconfirmed and never enters the confirmed identity table. Owner
+corrections require a distinctive, duration-bearing audio fingerprint from a
+verified recording; provisional hints cannot confirm it. A grid rejection does
+not erase the acquisition adapter's verified recording identity.
+
+Part B exposes the ranked metadata result and records owner tap, octave and phase
+corrections. The prior/seeding connection to musical estimation belongs to part E;
+providers do not directly retune clocks or manufacture accents. Parts C/D add live
+fingerprint/rolling/learned-grid acquisition through the same interfaces. The
+SongBPM slot has no request code: it awaits owner permission and a saved page.
