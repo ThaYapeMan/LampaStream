@@ -86,7 +86,7 @@ for safety backups, offline runtime exclusion, API errors and format versions.
 
 
 The LMS VirtualPlayer is yeney-player from `third_party/yeney-core` pinned to
-`9fba26f0bcc9a10def8063c5d269b2bbe62b687a` (ALAC remains `5d8c5db`), a virtual
+`9d5aa42fd3bf7715788c75a9627910a3750df494` (ALAC remains `5d8c5db`), a virtual
 player synced to the listening room (YeneY/Sonos or another LMS player), delivering
 stereo float PCM through yeney-core SHM v1. `YeneyCoreShmStereoSource` names that
 reader; `SqueezeliteShmStereoSource` remains a deprecated alias for one release.

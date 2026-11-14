@@ -149,11 +149,11 @@ pause/seek/end, bounded parsing, teardown, and generic UI rendering. Live LMS,
 iOS sender behavior, and the rebuilt target Shairport service still require LXC
 validation.
 
-The pinned upstream yeney-core producer is `9fba26f` (ALAC `5d8c5db`).
+The pinned upstream yeney-core producer is `9d5aa42` (ALAC `5d8c5db`).
 Its optional 64-byte YNPT tail exports `content_frame` at offset 52 and
 `content_flags` at offset 60 (bit 0: known). No local producer patch is applied.
 The segment is `/dev/shm/yeney-<lowercase-mac>`; the SHM v1 layout, ABI version,
-YNPT tail and `measurement_basis=lms-content-v1` contract are unchanged.
+YNPT tail are unchanged; LAT-05 revises the calibration basis below.
 
 ## Live beat accents and the relative onset gate (schema 5)
 
@@ -243,3 +243,58 @@ previously absent relative parameters with the accepted k=8/W=3/r=160/full k=9
 values, and preserves every existing stored mode. It retains exact-byte pre-v5
 backups and atomic replacement. Runtime rejects historical schemas and current
 rows missing required settings; no runtime migration is installed.
+
+
+## Proven stream origins (LAT-05)
+
+yeney-core `9d5aa42` establishes the origin before PCM enters canonical analysis.
+FLAC supplies its decoded frame index, including after a seek. ALAC/M4A now uses
+LMS's preserved `mdhd` duration minus the delivered `stts` duration, requiring
+consistent complete tables and an exact whole-packet difference. Original trim
+coordinates are intersected with the delivered range. An unprovable M4A origin
+and MP3 remain unknown. LampaStream consumes the core's known bit without
+file-type branches or sound comparison; unknown streams are never measured.
+
+The old `9fba26f` core published `trimBegin` as a known origin for every M4A
+response, commonly a false zero after LMS had sought. This explains the 112
+field evidence: errors grew with the alignment seek, with 0.549, 0.744, 0.806
+and 1.013 s seeks refused by the landing guard. With proven origins, the landing
+error follows the real packet landing rather than the whole seek.
+LMS may land more than one packet before the request: the real LMS 9.1.1
+0.744 s seek delivered frame 28,672 at 44.1 kHz (0.650158730 s), 93.841 ms
+early. The reference PCM must match at the reported origin; distance from the
+request is informational. Silent or repeated PCM earlier in a track does not
+change the delivered block's coordinate.
+
+AIFF/WAV remains a known limitation: the core's `PcmWorker` calls
+`setSourceStart(0)` even after a seek. The unchanged 0.5 s landing guard remains
+its protection, pending a separate core fix. No adapter guesses an origin.
+
+Saved `lms-content-v1` room calibrations from M4A can contain the false origin.
+The new `measurement_basis=lms-content-v2` invalidates saved v1 starting values
+and measures afresh for all files, since saved rows do not record the file type.
+Room/session/trim arithmetic and the once-per-session startup step are unchanged.
+
+The SHM player does not request the core's optional sample-rate conversion
+(`Sink::conversionRate()` defaults to zero). LampaStream performs canonical
+resampling itself. Other core hosts enabling conversion receive output-frame
+origins only for divisible landings with zero gapless phase. Consumers needing
+from-start-identical PCM must skip the settling frames; YNPT does not carry that
+internal callback's settling bound.
+
+While playing without a session anchor the probe logs every ten seconds:
+`latency probe waiting: reason=… track=… seek_s=… since_s=…`.
+The first caught probe exception per play also logs its text at WARNING.
+Unknown origins say `Stream origin unknown for this file`; excessive landings
+say `Seek landing >500 ms: ambiguous absolute content origin`. Missing or stale
+clocks retain `No fresh absolute PCM content clock`. After fifteen seconds the
+reason appears through the existing `latency_warning` display and clears when
+anchored. Every `latency basis` is followed by a `latency sample` outcome:
+accepted, rejected, or held as a step candidate.
+
+`/api/status` exposes `session_anchor_set`, `current_play` and
+`applied_delay_play`; `/api/player-latencies` exposes them in each active probe's
+`status`. Play identifiers are follower transition numbers, so seek and
+pause/resume transitions distinguish sessions even for the same track. Before
+a new anchor, `applied_delay_play` still identifies the earlier mapping (or is
+null at service start); no timing arithmetic or layout changes are implied.

@@ -37,7 +37,7 @@ def test_two_seek_landings_save_the_same_room_delay_and_lock_correctly():
             "room",
             strategy="auto",
             measured_delay_ms=saved[-1] if saved else 141,
-            measurement_basis="lms-content-v1" if saved else None,
+            measurement_basis="lms-content-v2" if saved else None,
         )
         probe = AutoLatencyProbe(
             config,

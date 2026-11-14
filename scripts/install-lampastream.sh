@@ -272,7 +272,7 @@ python3 -m venv "$RELEASE/venv"
 # The wheel metadata pins hue-entertainment==0.3.0; verify() checks both declaration and version.
 "$RELEASE/venv/bin/pip" install "$WORK"/wheels/*.whl
 log '3/7 Build pinned SHM v1 yeney-player and AirPlay 2'
-YENEY_CORE_REVISION=9fba26f0bcc9a10def8063c5d269b2bbe62b687a
+YENEY_CORE_REVISION=9d5aa42fd3bf7715788c75a9627910a3750df494
 # Git archives omit submodule contents. Submodules were updated before repo_check.
 # Verify both immutable pins,
 # then archive their committed sources separately into the isolated build tree.

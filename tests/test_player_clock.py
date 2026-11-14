@@ -439,7 +439,7 @@ def test_content_tail_controls_absolute_position_and_latency_basis(tmp_path, tai
             assert source.position_clock is None
             with pytest.raises(ValueError, match='No fresh absolute PCM content clock'):
                 probe._pair()
-        assert probe.status()['measurement_basis'] == 'lms-content-v1'
+        assert probe.status()['measurement_basis'] == 'lms-content-v2'
         assert result.frame.play_monotonic == (100.0 if tail else None)
     finally:
         source.close()

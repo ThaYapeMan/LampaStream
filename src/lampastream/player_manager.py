@@ -373,6 +373,7 @@ class ActiveSession:
         self.unsync_task: asyncio.Task | None = None
         self.track_source: TrackPositionSource | None = None
         self.position_clock = None
+        self.origin_known = None
         self.airplay_receiver: AirPlayReceiver | None = None
         self.safety_task: asyncio.Task | None = None
 
@@ -1129,6 +1130,7 @@ class PlayerManager:
         source.use_player_clock = True
         raw_source = source
         session.position_clock = lambda: raw_source.position_clock
+        session.origin_known = lambda: raw_source.content_origin_known
         session.lms_timed_source = None
         session.head_start = None
         if (player and player.follow_mode == "sync_group"
@@ -1520,6 +1522,16 @@ class PlayerManager:
                     reason=("Head start is off" if player.head_start_ms == 0
                             else "Head start could not be verified; using delay instead"))
 
+    @property
+    def latency_play_status(self):
+        session = self._active
+        probe = session.probe if session else None
+        if isinstance(probe, AutoLatencyProbe) and probe.position_clock is not None:
+            return dict(current_play=probe.current_play,
+                        applied_delay_play=probe.applied_delay_play,
+                        session_anchor_set=probe.session_anchor_at is not None)
+        return dict(current_play=None, applied_delay_play=None, session_anchor_set=False)
+
     def latency_status(self, config) -> dict:
         session = self._active
         airplay = any(player.type == VirtualPlayerType.AIRPLAY
@@ -1655,11 +1667,13 @@ class PlayerManager:
                         current.measured_delay_ms = measured
                         current.measured_at = timestamp
                         current.measurement_basis = (
-                            'lms-content-v1' if session.position_clock is not None else None)
+                            'lms-content-v2' if session.position_clock is not None else None)
                         self.storage.save_player_latency(current)
                 new_probe = AutoLatencyProbe(
                     pl, session.follower, persist, session.latency_preferences,
-                    position_clock=session.position_clock)
+                    position_clock=session.position_clock,
+                    origin_known=session.origin_known,
+                    warning=lambda value: setattr(self, "latency_warning", value))
                 self.latency_warning = None
             elif pl.strategy == "fixed":
                 new_probe = FixedLatencyProbe(pl.fixed_delay_ms)

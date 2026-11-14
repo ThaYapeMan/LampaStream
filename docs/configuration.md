@@ -458,14 +458,15 @@ describes position consistency.
 
 The virtual player's CLI time uses the requested seek label; FLAC can start at
 an earlier frame boundary. The standard installer therefore builds the pinned
-upstream producer at `9fba26f`. Its optional YNPT content
-position comes from the actual FLAC frame header. Other codecs without an
-absolute content position cannot establish this calibration; use Fixed when the
+upstream producer at `9d5aa42`. Its optional YNPT content
+position comes from the decoded FLAC frame header or proven ALAC/M4A packet
+tables. Streams without a known absolute content position cannot establish
+this calibration; use Fixed when the
 status reports `not measurable`.
 
 The followed player's `playerpref playDelay ?` is still read once per activation.
 The probe separates a saved room/native-clock calibration from the live session's
-relative position and FLAC landing error:
+relative position and packet landing error:
 
 ```
 applied ms = saved room calibration + anchored session offset + trim
@@ -473,8 +474,8 @@ applied ms = saved room calibration + anchored session offset + trim
 
 [The derivation and field evidence](research/lat03-sendback-1.md) define the terms.
 `measured_delay_ms` excludes the session offset and trim, and includes Player Delay.
-`measurement_basis=lms-content-v1` identifies this meaning. Earlier untagged numbers
-are not reused as seek-independent calibration. None and Fixed retain their
+`measurement_basis=lms-content-v2` identifies the corrected content-origin basis.
+Earlier untagged and v1 numbers are not reused as seek-independent calibration. None and Fixed retain their
 existing configuration. No device-specific probes or new full-status polling
 are added.
 
@@ -954,3 +955,58 @@ before atomically upgrading to schema 2. Existing grids, metadata and lookups ar
 retained. Runtime never upgrades a historical schema. Full backup validation now
 requires the exact current schema 2; an old full ZIP must not be treated as a
 current backup. Existing configuration-only backups remain supported.
+
+
+## Proven stream origins (LAT-05)
+
+yeney-core `9d5aa42` establishes the origin before PCM enters canonical analysis.
+FLAC supplies its decoded frame index, including after a seek. ALAC/M4A now uses
+LMS's preserved `mdhd` duration minus the delivered `stts` duration, requiring
+consistent complete tables and an exact whole-packet difference. Original trim
+coordinates are intersected with the delivered range. An unprovable M4A origin
+and MP3 remain unknown. LampaStream consumes the core's known bit without
+file-type branches or sound comparison; unknown streams are never measured.
+
+The old `9fba26f` core published `trimBegin` as a known origin for every M4A
+response, commonly a false zero after LMS had sought. This explains the 112
+field evidence: errors grew with the alignment seek, with 0.549, 0.744, 0.806
+and 1.013 s seeks refused by the landing guard. With proven origins, the landing
+error follows the real packet landing rather than the whole seek.
+LMS may land more than one packet before the request: the real LMS 9.1.1
+0.744 s seek delivered frame 28,672 at 44.1 kHz (0.650158730 s), 93.841 ms
+early. The reference PCM must match at the reported origin; distance from the
+request is informational. Silent or repeated PCM earlier in a track does not
+change the delivered block's coordinate.
+
+AIFF/WAV remains a known limitation: the core's `PcmWorker` calls
+`setSourceStart(0)` even after a seek. The unchanged 0.5 s landing guard remains
+its protection, pending a separate core fix. No adapter guesses an origin.
+
+Saved `lms-content-v1` room calibrations from M4A can contain the false origin.
+The new `measurement_basis=lms-content-v2` invalidates saved v1 starting values
+and measures afresh for all files, since saved rows do not record the file type.
+Room/session/trim arithmetic and the once-per-session startup step are unchanged.
+
+The SHM player does not request the core's optional sample-rate conversion
+(`Sink::conversionRate()` defaults to zero). LampaStream performs canonical
+resampling itself. Other core hosts enabling conversion receive output-frame
+origins only for divisible landings with zero gapless phase. Consumers needing
+from-start-identical PCM must skip the settling frames; YNPT does not carry that
+internal callback's settling bound.
+
+While playing without a session anchor the probe logs every ten seconds:
+`latency probe waiting: reason=… track=… seek_s=… since_s=…`.
+The first caught probe exception per play also logs its text at WARNING.
+Unknown origins say `Stream origin unknown for this file`; excessive landings
+say `Seek landing >500 ms: ambiguous absolute content origin`. Missing or stale
+clocks retain `No fresh absolute PCM content clock`. After fifteen seconds the
+reason appears through the existing `latency_warning` display and clears when
+anchored. Every `latency basis` is followed by a `latency sample` outcome:
+accepted, rejected, or held as a step candidate.
+
+`/api/status` exposes `session_anchor_set`, `current_play` and
+`applied_delay_play`; `/api/player-latencies` exposes them in each active probe's
+`status`. Play identifiers are follower transition numbers, so seek and
+pause/resume transitions distinguish sessions even for the same track. Before
+a new anchor, `applied_delay_play` still identifies the earlier mapping (or is
+null at service start); no timing arithmetic or layout changes are implied.

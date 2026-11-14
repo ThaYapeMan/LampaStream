@@ -160,7 +160,7 @@ class PlayerLatency:
     trim_ms: int = 0
     measured_delay_ms: int | None = None  # untrimmed LMS or AirPlay timing estimate
     measured_at: float | None = None  # Unix seconds
-    measurement_basis: str | None = None  # lms-content-v1 excludes session position offset
+    measurement_basis: str | None = None  # lms-content-v2 excludes session position offset
 
     def __post_init__(self) -> None:
         if self.strategy not in {"none", "fixed", "auto"}:

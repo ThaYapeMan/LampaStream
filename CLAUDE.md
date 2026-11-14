@@ -58,4 +58,4 @@ Auto latency uses standard LMS `time ?` pairs and a once-per-activation
 `playerpref playDelay ?` read, guarded by follower notifications. Do not add
 periodic followed-player status queries, UPnP or device-specific probes.
 See docs/configuration.md#automatic-followed-player-latency.
-yeney-core is pinned to 9fba26f (ALAC remains 5d8c5db); The segment is `/dev/shm/yeney-<mac>`; the SHM v1 layout is unchanged; optional YNPT timing adds a 64-byte tail.
+yeney-core is pinned to 9d5aa42 (ALAC remains 5d8c5db); The segment is `/dev/shm/yeney-<mac>`; the SHM v1 layout is unchanged; optional YNPT timing adds a 64-byte tail.

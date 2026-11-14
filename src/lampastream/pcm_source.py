@@ -420,6 +420,7 @@ class YeneyCoreShmStereoSource:
         self.overwrite_invalidations = 0
         # VirtualPlayer enables native timing; legacy readers may explicitly opt out.
         self.position_clock = None
+        self.content_origin_known = None
         self.content_origin = None
         self._content_boundary = None
         self.use_player_clock = False
@@ -471,6 +472,7 @@ class YeneyCoreShmStereoSource:
         self._clock_event_seq = None
         self._clock_segments.clear()
         self.position_clock = None
+        self.content_origin_known = None
         self._require_v1 = require_v1
         fd = path.open("rb")
         try:
@@ -667,6 +669,7 @@ class YeneyCoreShmStereoSource:
         self._clock_event_seq = None
         self._clock_segments.clear()
         self.position_clock = None
+        self.content_origin_known = None
         self._abs_write_pos_frames = 0
         self._prev_gap_seq = 0
         self._prev_index = 0
@@ -820,6 +823,7 @@ class YeneyCoreShmStereoSource:
                 self._clock_event_seq = timing.event_seq
                 self._clock_segments.clear()
                 self.position_clock = None
+                self.content_origin_known = None
             new_event = self._clock_event_seq != timing.event_seq
             if new_event:
                 old_seq = self._clock_event_seq
@@ -841,6 +845,7 @@ class YeneyCoreShmStereoSource:
                               timing.event_abs_frame)
                     self._clock_segments.clear()
                     self.position_clock = None
+                    self.content_origin_known = None
                     self.content_origin = None
                     self._content_boundary = (timing.event_abs_frame
                                               if timing.event_flags & DISCONTINUITY else None)
@@ -890,6 +895,7 @@ class YeneyCoreShmStereoSource:
             _log.info("LMS stream invalidated: generation change")
             self._clock_segments.clear()
             self.position_clock = None
+            self.content_origin_known = None
             self._clock_event_seq = ext.timing.event_seq if ext.timing else None
             self._prev_generation = ext.generation
             self._abs_write_pos_frames = ext.abs_write_pos
@@ -904,6 +910,7 @@ class YeneyCoreShmStereoSource:
             _log.info("LMS stream invalidated: frame position regression")
             self._clock_segments.clear()
             self.position_clock = None
+            self.content_origin_known = None
             self._abs_write_pos_frames = ext.abs_write_pos
             self._prev_gap_seq = ext.gap_seq
             self._prev_index = buf_index_before
@@ -914,6 +921,7 @@ class YeneyCoreShmStereoSource:
             _log.info("LMS stream invalidated: skipped PCM export")
             self._clock_segments.clear()
             self.position_clock = None
+            self.content_origin_known = None
             self._prev_gap_seq = ext.gap_seq
             self._abs_write_pos_frames = ext.abs_write_pos
             self._prev_index = buf_index_before
@@ -928,6 +936,7 @@ class YeneyCoreShmStereoSource:
             _log.info("LMS stream invalidated: PCM ring overrun")
             self._clock_segments.clear()
             self.position_clock = None
+            self.content_origin_known = None
             # A full lap (or more) has been overwritten between polls.
             self._abs_write_pos_frames = ext.abs_write_pos
             self._prev_index = buf_index_before
@@ -977,6 +986,7 @@ class YeneyCoreShmStereoSource:
             _log.info("LMS stream invalidated: %s", cause)
             self._clock_segments.clear()
             self.position_clock = None
+            self.content_origin_known = None
             if ext_after is not None:
                 self._prev_generation = ext_after.generation
                 self._prev_gap_seq = ext_after.gap_seq
@@ -1000,6 +1010,7 @@ class YeneyCoreShmStereoSource:
                 _log.info("LMS stream invalidated: PCM window overwritten during copy")
                 self._clock_segments.clear()
                 self.position_clock = None
+                self.content_origin_known = None
                 self._abs_write_pos_frames = confirmed.abs_write_pos
                 self._prev_index = (confirmed.legacy_header or self._read_header())[1]
                 return StreamInvalidated(InvalidationCause.UNKNOWN, None)
@@ -1039,6 +1050,8 @@ class YeneyCoreShmStereoSource:
             over_range=over_range,
             wall_ns=wall_ns,
         )
+        self.content_origin_known = (bool(stamp_clock.content_flags & 1)
+                                     if stamp_clock is not None else None)
         if stamp_clock is not None and stamp_clock.content_flags & 1:
             position = (stamp_clock.content_frame + start_abs_pos
                         - stamp_clock.anchor_abs_frame) / rate

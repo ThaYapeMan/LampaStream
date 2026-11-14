@@ -16,7 +16,7 @@ from lampastream.pcm_source import SHM_SEGMENT_PREFIX, DataResult, SqueezeliteSh
 
 ROOT = Path(__file__).resolve().parents[1]
 CORE = ROOT / 'third_party/yeney-core'
-REVISION = '9fba26f0bcc9a10def8063c5d269b2bbe62b687a'
+REVISION = '9d5aa42fd3bf7715788c75a9627910a3750df494'
 
 
 def load_script(name):
@@ -50,9 +50,9 @@ def test_manifest_and_verifier(tmp_path, revision):
         'yeney_player_sha256': hashlib.sha256(binary.read_bytes()).hexdigest(),
     }
     verifier.verify_player(manifest, binary)
-    with pytest.raises(AssertionError, match='Producer upgrade required: yeney-core 9fba26f'):
+    with pytest.raises(AssertionError, match='Producer upgrade required: yeney-core 9d5aa42'):
         verifier.verify_player(dict(manifest, yeney_core_revision='foreign'), binary)
-    with pytest.raises(AssertionError, match='Producer upgrade required: yeney-core 9fba26f'):
+    with pytest.raises(AssertionError, match='Producer upgrade required: yeney-core 9d5aa42'):
         verifier.verify_player(dict(manifest, yeney_core_revision=
                                     'dc8cf3a373a9d9b38e98fc7d1929ac268c585c77'), binary)
     binary.write_bytes(b'replaced binary')

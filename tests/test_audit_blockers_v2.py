@@ -51,7 +51,7 @@ _INSTALL_SCRIPT = Path(__file__).resolve().parents[1] / "scripts/install-lampast
 
 def test_installer_builds_pinned_shm_producer():
     body = _INSTALL_SCRIPT.read_text()
-    assert 'YENEY_CORE_REVISION=9fba26f0bcc9a10def8063c5d269b2bbe62b687a' in body
+    assert 'YENEY_CORE_REVISION=9d5aa42fd3bf7715788c75a9627910a3750df494' in body
     assert '"$WORK/third_party/yeney-core" -j"$(nproc)" yeney-player' in body
     assert 'rev-parse HEAD' in body
 

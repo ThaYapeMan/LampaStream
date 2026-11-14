@@ -184,7 +184,7 @@ allows only measurement position/preference commands. Migration tests verify exa
 backups, reserved-field retirement and idempotency; API tests reject writable
 measurement fields and invalid trims. `web/src/__tests__/Latency.test.tsx` and
 `web/tests/e2e/latency.spec.ts` exercise Auto status, trim, fallback and the removed
-ALSA editor field. The real SHM integration builds yeney-player at `9fba26f` and
+ALSA editor field. The real SHM integration builds yeney-player at `9d5aa42` and
 reads it through the unchanged strict-v1 PCM consumer.
 
 Another repository may run tests concurrently on the development machine. If the
@@ -1343,7 +1343,7 @@ empty-unknown rule prevents coordinate mixing when metadata is actually absent.
 
 [Content-clock evidence and derivation](research/lat03-sendback-1.md) supersede
 the earlier session-relative persistence. Deploy using the standard installer:
-it builds upstream yeney-core at `9fba26f` without a local producer patch,
+it builds upstream yeney-core at `9d5aa42` without a local producer patch,
 then records and verifies the revision and binary hash. The SHM v1 prefix
 remains unchanged; the optional YNPT tail exports absolute FLAC content positions.
 
@@ -1365,7 +1365,7 @@ records the actual metadata anchor, source/latency status and trim.
 Field acceptance requires two consecutive captures: LMS populated bin medians
 within ±10 ms of the first bin in content-clock or fixed-anchor coordinates,
 MAD ≤15 ms, no step across the kickless section, and anchored applied delay
-constant within ±2 ms after startup. Absolute LMS offsets are not judged. Check that `measurement_basis` is `lms-content-v1` and that a fresh startup
+constant within ±2 ms after startup. Absolute LMS offsets are not judged. Check that `measurement_basis` is `lms-content-v2` and that a fresh startup
 consensus occurs within 15 seconds. AirPlay must return to the previous timing
 range. The exact historical cause of its 60 ms native/metadata relationship shift
 is not recoverable from the supplied archives; the new RTP origin removes that
@@ -1599,3 +1599,24 @@ handovers, onset zeros and republication without re-estimation. Set
 814 reference rows; without that file it is an explicit skip. Browser tests use
 mocked preview/API payloads for provider rows and owner controls; their screenshots
 are UI evidence, not live acoustic or lighting measurements.
+
+
+### LAT-05 proven origins and per-play diagnostics
+
+`tests/test_lat05.py` runs the real producer before (`9fba26f`) and after
+(`9d5aa42`) against the three private ALAC fixtures and real cached LMS 9.1.1
+loopback responses, including short seeks and 60/300 s seeks where available.
+The original-file FFmpeg reference block must match at the reported frame;
+searching for its first occurrence is invalid for silent/repeated openings.
+Landing errors are printed, not bounded by a packet. A proven M4A landing
+beyond the unchanged 0.5 s guard is an owner stop condition before pushing.
+The before case loads f640132's actual latency module alongside the old core.
+
+The same serial module covers Mau P FLAC, the FISHER AIFF PcmWorker zero-origin
+gap, unprovable M4A and a temporary local MP3, and seven follower transport
+notification sequences. Transport intervals and paired LMS positions use a
+controlled clock; origins come from real SHM. This validates the local mapping
+and transition contracts, not a live Sonos room. Private/cache absence is an
+explicit skip in CI; the normal SHM require_v1 gate still runs there.
+Deterministic checks cover warning cadence/clearing, caught exceptions,
+calibration-basis invalidation, sample outcomes and both status APIs.

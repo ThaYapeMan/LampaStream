@@ -514,7 +514,7 @@ def test_yeney_core_pin_and_distribution_notices() -> None:
     core = ROOT / 'third_party/yeney-core'
     revision = subprocess.check_output(['git', '-C', str(core), 'rev-parse', 'HEAD'],
                                        text=True).strip()
-    assert revision == '9fba26f0bcc9a10def8063c5d269b2bbe62b687a'
+    assert revision == '9d5aa42fd3bf7715788c75a9627910a3750df494'
     assert 'ThaYapeMan/yeney-core.git' in (ROOT / '.gitmodules').read_text()
     for name in ('LICENSE', 'THIRD_PARTY_NOTICES.md'):
         assert (ROOT / 'distribution/yeney-core' / name).read_bytes() == (core / name).read_bytes()

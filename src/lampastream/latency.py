@@ -69,6 +69,7 @@ class FollowPositionContext:
 
 def latency_status(config, *, state="idle", strategy=None, delay=None, reason=None):
     return {
+        "current_play": None, "applied_delay_play": None, "session_anchor_set": False,
         "strategy": strategy or config.strategy,
         "applied_delay_ms": delay if delay is not None else (
             config.fixed_delay_ms if config.strategy == "fixed" else
@@ -92,12 +93,17 @@ class AutoLatencyProbe:
     """
 
     def __init__(self, config, follower, persist, preference_cache=None, *,
-                 clock=time.monotonic, position_clock=None):
+                 clock=time.monotonic, position_clock=None, origin_known=None, warning=None):
         self.config = config
         self.follower = follower
         self.persist = persist
         self.clock = clock
         self.position_clock = position_clock
+        self.origin_known = origin_known
+        self.warning = warning
+        self._exception_logged = False
+        self._last_waiting_log = -math.inf
+        self.applied_delay_play = None
         self.room_samples = deque(maxlen=9)
         self.startup_at = clock()
         self.startup_step_used = False
@@ -116,7 +122,7 @@ class AutoLatencyProbe:
         self.samples = deque(maxlen=7)
         self.sample_times = deque(maxlen=7)
         measured = config.measured_delay_ms or 0
-        if position_clock is not None and config.measurement_basis != 'lms-content-v1':
+        if position_clock is not None and config.measurement_basis != 'lms-content-v2':
             measured = 0  # old saved values include the previous seek landing
         # Discard persisted estimates poisoned by the old same-URL reuse path.
         if not abs(measured) < MAX_AUTO_DELAY_MS:
@@ -184,7 +190,10 @@ class AutoLatencyProbe:
                      for value, stamp in zip(self.samples, self.sample_times, strict=True)],
         )
         if self.position_clock is not None:
-            status.update(measurement_basis='lms-content-v1',
+            status.update(current_play=self.current_play,
+                          applied_delay_play=self.applied_delay_play,
+                          session_anchor_set=self.session_anchor_at is not None,
+                          measurement_basis='lms-content-v2',
                           room_delay_ms=(self._anchored_room_ms - (self.player_delay or 0)
                                          if self.session_anchor_at is not None else None),
                           session_offset_ms=round(self.session_offset_ms, 3),
@@ -192,6 +201,10 @@ class AutoLatencyProbe:
                           guard_residual_ms=self.guard_residual_ms,
                           startup_step_used=self.startup_step_used)
         return status
+
+    @property
+    def current_play(self):
+        return self.context.transition if self.context else None
 
     def precision_ms(self):
         if not self.samples:
@@ -204,6 +217,11 @@ class AutoLatencyProbe:
             initial = self.context is None
             new_track = initial or context.track != self.context.track
             self.context = context
+            self._exception_logged = False
+            self._last_waiting_log = context.changed_at
+            self.reason = None
+            if self.warning:
+                self.warning(None)
             self.samples.clear()
             self.sample_times.clear()
             self.raw_samples.clear()
@@ -279,15 +297,19 @@ class AutoLatencyProbe:
         step = None
         if native:
             if room_delay_ms is None or not math.isfinite(room_delay_ms):
+                logging.getLogger(__name__).info("latency sample: rejected: invalid room delay")
                 self.state = "not measurable"
                 self._step_samples.clear()
                 return False
             if not plausible or abs(room_delay_ms) >= MAX_AUTO_DELAY_MS:
+                logging.getLogger(__name__).info(
+                    "latency sample: rejected: outside room-latency range")
                 self._step_samples.clear()
                 return False
             if self.session_anchor_at is not None:
                 step = self._guard(sample, room_delay_ms, sample_interval)
                 if step is False:
+                    logging.getLogger(__name__).info("latency sample: held as a step candidate")
                     return True
         if plausible:
             self.raw_samples.append(sample)
@@ -368,6 +390,9 @@ class AutoLatencyProbe:
             self._anchored_room_ms = measured
             self.session_offset_ms = relative
             self.session_anchor_at = stamp
+            self.applied_delay_play = self.current_play
+            if self.warning:
+                self.warning(None)
             self._last_guard_log = max(self._last_guard_log, now)
             self.guard_residual_ms = round(residual * 1000 - relative, 3)
         with self._mapping_lock:
@@ -391,7 +416,7 @@ class AutoLatencyProbe:
         self.reason = None
         self.state = ("stable" if self.position_clock is None
                       or abs(self.target_delay - self.delay) < 15 else "measuring")
-        self.config.measurement_basis = ('lms-content-v1'
+        self.config.measurement_basis = ('lms-content-v2'
                                          if self.position_clock is not None else None)
         self.persist(measured, self.last_sample)
         return True
@@ -430,6 +455,8 @@ class AutoLatencyProbe:
         residual = a - b - (ta - tb)
         if self.position_clock is None:
             return residual
+        if self.origin_known is not None and self.origin_known() is False:
+            raise ValueError("Stream origin unknown for this file")
         anchor = self.position_clock()
         if anchor is None or abs(self.clock() - anchor[1]) > .5:
             raise ValueError("No fresh absolute PCM content clock")
@@ -484,6 +511,10 @@ class AutoLatencyProbe:
         sample_interval = self.next_sample + .25 - previous if previous is not None else 15
         try:
             residual = await self._owned_call(self._pair)
+        except asyncio.CancelledError:
+            if self.position_clock is not None:
+                logging.getLogger(__name__).info("latency sample: rejected: probe stopped")
+            raise
         except (OSError, ValueError):
             self._step_samples.clear()
             self._previous_guard_sample = None
@@ -493,12 +524,32 @@ class AutoLatencyProbe:
             interval = (1 if self.position_clock else 3) if now < self.burst_end else 15
             self.next_sample = self.clock() + interval
         if self.stopping or context != self.follower.latency_context():
+            if self.position_clock is not None:
+                logging.getLogger(__name__).info(
+                    "latency sample: rejected: playback changed during position pair")
             return
         if self.position_clock is None:
             self.accept(residual, now)
         else:
             self._last_pair_at = now
             self.accept(residual[0], now, residual[1], sample_interval=sample_interval)
+
+    def report_waiting(self):
+        context = self.context
+        if (self.position_clock is None or context is None or not context.playing
+                or self.session_anchor_at is not None):
+            return
+        now = self.clock()
+        since = max(0., now - context.changed_at)
+        reason = self.reason or "Waiting for position consensus"
+        if since >= 15 and self.warning:
+            self.warning(reason)
+        if now - self._last_waiting_log >= 10:
+            alignment = self.follower.position_alignment
+            logging.getLogger(__name__).info(
+                "latency probe waiting: reason=%s track=%s seek_s=%s since_s=%.3f",
+                reason, context.track, alignment[1] if alignment else None, since)
+            self._last_waiting_log = now
 
     async def _run(self):
         while not self.stopping:
@@ -508,4 +559,8 @@ class AutoLatencyProbe:
                 self.state = ("measuring" if self.clock() - self.startup_at <= 15
                               else "not measurable")
                 self.reason = str(error)
+                if not self._exception_logged:
+                    logging.getLogger(__name__).warning("latency probe: %s", error)
+                    self._exception_logged = True
+            self.report_waiting()
             await asyncio.sleep(.25)

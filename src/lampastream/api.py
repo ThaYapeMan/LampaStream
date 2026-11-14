@@ -773,6 +773,8 @@ async def get_status(request: Request):
         "sync_master_name": manager.detected_sync_master_name,
         "applied_delay_ms": manager.applied_delay_ms,
         "latency_warning": manager.latency_warning,
+        **(manager.latency_play_status
+           if isinstance(manager.latency_play_status, dict) else {}),
         "lms_timing": manager.lms_timing if isinstance(manager.lms_timing, dict) else None,
         "processes": manager.process_status,
         "bridge_connected": manager.bridge_connected,
