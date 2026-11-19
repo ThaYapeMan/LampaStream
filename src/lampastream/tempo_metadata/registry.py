@@ -25,6 +25,7 @@ class LookupResult:
     raw_payload: dict
     confidence: float
     status: str = 'ready'
+    http_status: int | None = None
 
 
 class Provider(Protocol):

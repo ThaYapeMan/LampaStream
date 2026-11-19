@@ -2,10 +2,19 @@
 import json
 import logging
 import time
+from dataclasses import replace
 
 from .http_page import fetch_json
 from .registry import PROVIDERS
-from .search_page import Document, featured_title, no_result, select, title_parts, valid_tempo
+from .search_page import (
+    Document,
+    featured_title,
+    no_result,
+    search_query,
+    select,
+    title_parts,
+    valid_tempo,
+)
 
 SEARCH_URL = 'https://api.beatport.com/v4/catalog/search/'
 log = logging.getLogger(__name__)
@@ -105,8 +114,7 @@ class Adapter:
         if not self.credentials:
             return no_result('credentials_not_configured')
         started = time.monotonic()
-        title, _, _ = title_parts(identity.title)
-        query = f'{identity.artist} {title}'.strip()
+        query = search_query(identity)
         params = {'q': query, 'type': 'tracks', 'per_page': 25}
         page = self.fetch(SEARCH_URL, params=params, headers={
             'Authorization': f'Bearer {self.credentials}', 'Accept': 'application/json'})
@@ -119,8 +127,9 @@ class Adapter:
                       429: 'rate_limited'}.get(page.http_status)
             result = no_result(status or {'too_large': 'unreadable', 'not_found': 'http_error'}
                                .get(page.status, page.status))
-        log.info('provider=beatport http=%s bytes=%d candidates=%d status=%s match=%s '
-                 'tempo=%s elapsed_ms=%d', page.http_status, page.byte_count, len(candidates or ()),
+        log.info('provider=beatport query=%s http=%s bytes=%d candidates=%d status=%s match=%s '
+                 'tempo=%s elapsed_ms=%d', json.dumps(query, ensure_ascii=False), page.http_status,
+                 page.byte_count, len(candidates or ()),
                  result.status, result.fields.get('match'), result.fields.get('tempo'),
                  round((time.monotonic() - started) * 1000))
-        return result
+        return replace(result, http_status=page.http_status)

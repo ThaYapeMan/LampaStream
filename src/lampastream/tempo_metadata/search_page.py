@@ -54,7 +54,8 @@ _ARTIST_SEPARATOR = re.compile(
 _FEATURE = re.compile(r'\s*(?:[([]\s*)?\b(?:feat\.|ft\.|featuring\b)\s*', re.I)
 _BRACKET_SUFFIX = re.compile(r'\s*[([]([^()\[\]]+)[)\]]$')
 _DASH_SUFFIX = re.compile(r'\s+[-–—]\s+(?:(?!\s+[-–—]\s+).)+$')
-_VERSION = re.compile(r'\b(?:mix|remix|edit|version|extended|original|dub|rework)\b', re.I)
+_VERSION = re.compile(
+    r'\b(?:mix|remix|edit|version|extended|original|dub|rework|remaster|remastered)\b', re.I)
 log = logging.getLogger(__name__)
 
 
@@ -85,9 +86,21 @@ def featured_title(title):
     return base.strip(), feature[0].rstrip(')] ') if feature else ''
 
 
+def _artist_parts(*credits):
+    for credit in credits:
+        for part in _ARTIST_SEPARATOR.split(credit):
+            if normalized(part):
+                yield part.strip()
+
+
 def artist_names(*credits):
-    return {name for credit in credits for part in _ARTIST_SEPARATOR.split(credit)
-            if (name := normalized(part))}
+    return {normalized(part) for part in _artist_parts(*credits)}
+
+
+def search_query(identity):
+    artist = next(_artist_parts(identity.artist, identity.album_artist), '')
+    title, _, _ = title_parts(identity.title)
+    return ' '.join(filter(None, (artist, title)))
 
 
 def isrc_key(isrc):
@@ -164,7 +177,7 @@ def accepted(rows, match, confidence):
 
 def lookup(provider, identity, url, client, candidates_from, confidence, *, post=False):
     start = time.monotonic()
-    query = f'{identity.artist} {identity.title}'
+    query = search_query(identity)
     request = {'method': 'POST', 'data': {'query': query}} if post else {'params': {'q': query}}
     page = fetch(url, client=client, **request)
     candidates = candidates_from(page.body) if page.status == 'ready' else None
@@ -195,7 +208,7 @@ def lookup(provider, identity, url, client, candidates_from, confidence, *, post
     else:
         log.info(message + ' accepted=- reason=%s elapsed_ms=%d', *prefix, result.status, elapsed)
     return LookupResult(result.fields, dict(url=page.url, track=result.raw_payload),
-                        result.confidence, result.status)
+                        result.confidence, result.status, page.http_status)
 
 
 def no_result(status, raw=None):

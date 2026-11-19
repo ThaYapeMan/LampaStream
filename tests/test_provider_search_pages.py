@@ -61,7 +61,8 @@ def test_recorded_parser_matches_identity_not_search_rank(recorded):
 
 
 @pytest.mark.serial
-def test_recorded_fetch_and_persistence_loopback(recorded, tmp_path):
+def test_recorded_fetch_and_persistence_loopback(recorded, tmp_path, caplog):
+    caplog.set_level('INFO')
     name, module, html, identity, fields = recorded
     requests = []
     if name == 'beatport':
@@ -115,7 +116,7 @@ def test_recorded_fetch_and_persistence_loopback(recorded, tmp_path):
             method, path, body = requests[0]
             if name == 'songbpm':
                 assert method == 'POST'
-                assert parse_qs(body) == {'query': [f'{identity.artist} {identity.title}']}
+                assert parse_qs(body) == {'query': [f'{identity.artist} Just A Little Bit More']}
             else:
                 assert method == 'GET'
                 assert parse_qs(urlsplit(path).query) == {
@@ -466,3 +467,66 @@ def test_acquire_continues_after_beatport_exception(tmp_path, songbpm_available,
     expected = 'songbpm' if songbpm_available else None
     assert (resolved['provider'] if resolved else None) == expected
     assert 'sensitive-exception-detail' not in caplog.text
+
+@pytest.mark.parametrize(('title', 'parts'), [
+    ('Respect - 2003 Remaster', ('Respect', '2003 Remaster', '')),
+    ('Stay - Remastered', ('Stay', 'Remastered', '')),
+    ('The Remastered Heart', ('The Remastered Heart', '', '')),
+])
+def test_remaster_suffix(title, parts):
+    assert title_parts(title) == parts
+
+
+@pytest.mark.serial
+def test_text_search_queries_on_loopback():
+    queries = []
+    fillers = (
+        ('Aretha Franklin', 'Respect', '2:28', 115),
+        ('New Constellations', 'Hot Blooded', '4:47', 100),
+        ('Max Glaser', 'Lift', '1:13', 132),
+        ('Aretha Franklin', 'Respect - 2003 Remaster', '2:22', 115),
+        ('Aretha Franklin', 'Respect - 2021 Remaster', '2:27', 115),
+    )
+    html = ''.join(song(artist=artist, title=title, duration=duration, bpm=bpm)
+                   for artist, title, duration, bpm in fillers)
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_POST(self):
+            body = self.rfile.read(int(self.headers['Content-Length'])).decode()
+            queries.append(parse_qs(body)['query'][0])
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(html.encode())
+
+        def do_GET(self):
+            queries.append(parse_qs(urlsplit(self.path).query)['q'][0])
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b'{"tracks":[]}')
+
+    cases = [
+        ('Mau P', 'Just A Little Bit More (Extended)', '', 'Mau P Just A Little Bit More'),
+        ('Sting & Joss Stone', "Love Sneakin' Up On You", '', "Sting Love Sneakin' Up On You"),
+        ('Béa', 'Night Drive (feat. X)', '', 'Béa Night Drive'),
+        ('Béa', 'Night Drive - Original Mix', '', 'Béa Night Drive'),
+        ('', 'Night Drive', 'Béa & Other', 'Béa Night Drive'),
+        ('', 'Night Drive', '', 'Night Drive'),
+    ]
+    with ThreadingHTTPServer(('127.0.0.1', 0), Handler) as server:
+        worker = Thread(target=server.serve_forever, daemon=True)
+        worker.start()
+        try:
+            url = f'http://127.0.0.1:{server.server_port}/searches'
+            song_adapter = songbpm.Adapter(url=url)
+            beatport_adapter = beatport.Adapter(
+                credentials='fixture', fetch=lambda _url, **kwargs: http_page.fetch_json(
+                    url, **kwargs))
+            for artist, title, album_artist, expected in cases:
+                identity = Identity('query', artist, title, album_artist=album_artist)
+                assert song_adapter.lookup(identity).status == 'not_found'
+                assert beatport_adapter.lookup(identity).status == 'not_found'
+                assert queries[-2:] == [expected, expected]
+            assert len(queries) == 2 * len(cases)
+        finally:
+            server.shutdown()
+            worker.join()
