@@ -3,6 +3,11 @@
 Python source is in `src/lampastream`, tests in `tests`, the React frontend in `web`.
 Read [the frozen architecture](ANALYSIS_ARCHITECTURE.md) before changing analysis.
 
+## Units
+
+LampaStream uses metric (SI) units only, in code comments, documentation, logs, the
+interface and reports: metres, millimetres, kilograms, °C. Imperial units are not used.
+
 ## Environment
 
 Supported Python range is `>=3.11`; CI covers 3.11, 3.12 and the Debian 13

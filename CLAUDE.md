@@ -17,6 +17,8 @@ Do not implement `docs/future/` proposals unless asked.
 - A ticket that changes a boundary in these diagrams regenerates them with `scripts/render-architecture-diagrams.py` and updates the prose next to them.
 
 - Code comments, docstrings, commit messages and documentation are English.
+- Metric (SI) units only, in code comments, documentation, logs, the interface and
+  reports: metres, millimetres, kilograms, °C. Never imperial units.
 - Do not add AI attribution to commits.
 - Run the full Python suite, Ruff and relevant frontend tests before reporting
   validation. Report skipped tests and warnings. A subset is not the full suite.
