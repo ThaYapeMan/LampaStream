@@ -12,6 +12,9 @@ from ..grid.database import GridDatabase, encode, identity_hash
 from .registry import PROVIDERS
 
 _FILE_IDENTITY = 'local-file-identity'
+_EXTERNAL_CACHE_STATES = {'ready', 'not_found', 'ambiguous', 'octave_ambiguous'}
+_FAILURE_COOLDOWN_S = 60.
+_PENDING_LEASE_S = 30.
 
 
 class ProviderStore:
@@ -63,9 +66,13 @@ class ProviderStore:
             enabled, status, consent = states.get(name, (
                 spec.enabled, spec.status if spec.status == 'obsolete' else
                 'active' if spec.enabled else 'disabled', False))
-            result.append(dict({k: v for k, v in asdict(spec).items() if k != 'module'},
+            lookup = lookups.get(name)
+            if spec.requires_credentials and not spec.credentials(self.options.get(name, {})):
+                lookup = dict(status='credentials_not_configured', requested_at=None)
+            result.append(dict({k: v for k, v in asdict(spec).items()
+                                if k not in ('module', 'credential_env')},
                                enabled=bool(enabled and status != 'obsolete'), status=status,
-                               consent=bool(consent), lookup=lookups.get(name),
+                               consent=bool(consent), lookup=lookup,
                                toggleable=(not spec.always_enabled and status != 'obsolete'
                                            and (not spec.test_only or self.allow_test))))
         return result
@@ -91,6 +98,12 @@ class ProviderStore:
 
     def lookup(self, name, identity, *, force=False):
         spec = self.specs[name]
+        options = self.options.get(name, {})
+        if spec.requires_credentials:
+            credentials = spec.credentials(options)
+            if not credentials:
+                return False
+            options = {**options, 'credentials': credentials}
         available = {'fingerprint': bool(identity.fingerprint),
                      'external_id': bool(identity.external_id), 'ISRC': bool(identity.isrc),
                      'artist+title': bool(identity.artist and identity.title)}
@@ -104,7 +117,8 @@ class ProviderStore:
         if spec.leaves_lan:
             query = {'artist': identity.artist, 'title': identity.title,
                      'album_artist': identity.album_artist,
-                     'isrc': identity.isrc, 'adapter_version': spec.adapter_version}
+                     'isrc': identity.isrc, 'duration': identity.duration,
+                     'adapter_version': spec.adapter_version}
         query_json = encode(query)
         with self.database.connect() as db:
             self._sync(db)
@@ -131,13 +145,19 @@ class ProviderStore:
             if not force and same_query:
                 if previous and (previous[1] == 0 or now < sum(previous)):
                     return False
-                if attempt[1] not in ('pending', 'failed') and now < attempt[2]+spec.ttl:
+                cacheable = (attempt[1] in _EXTERNAL_CACHE_STATES if spec.leaves_lan
+                             else attempt[1] not in ('pending', 'failed'))
+                if cacheable and now < attempt[2] + spec.ttl:
                     return False
             last = db.execute('SELECT MAX(requested_at) FROM lookups WHERE provider=?',
                               (name,)).fetchone()[0]
             if last is not None and now < last+spec.rate_limit:
                 return False
-            if spec.requires_credentials and not self.options.get(name, {}).get('credentials'):
+            if spec.leaves_lan and db.execute(
+                    "SELECT 1 FROM lookups WHERE provider=? AND status='rate_limited' "
+                    "AND retry_after>? LIMIT 1", (name, now)).fetchone():
+                return False
+            if attempt and attempt[1] == 'pending' and now < attempt[0]:
                 return False
             if attempt and not outdated and now < attempt[0]:
                 return False
@@ -145,9 +165,10 @@ class ProviderStore:
                        '(identity_hash,provider) DO UPDATE SET query_json=excluded.query_json,'
                        'status=excluded.status,requested_at=excluded.requested_at,'
                        'retry_after=excluded.retry_after',
-                       (key, name, query_json, 'pending', now, now+spec.rate_limit))
+                       (key, name, query_json, 'pending', now,
+                        now + (_PENDING_LEASE_S if spec.leaves_lan else spec.rate_limit)))
         try:
-            result = spec.make(**self.options.get(name, {})).lookup(identity)
+            result = spec.make(**options).lookup(identity)
             fields = dict(result.fields)
             if set(fields)-set(spec.capabilities):
                 raise ValueError('Provider returned unsupported normalized fields')
@@ -173,6 +194,10 @@ class ProviderStore:
                 # A disable/retirement while lookup was running must freeze existing rows.
                 if not current[0] or current[1] != 'active':
                     return False
+                claim = db.execute('SELECT requested_at FROM lookups WHERE identity_hash=? '
+                                   'AND provider=?', (key, name)).fetchone()
+                if claim != (now,):
+                    return False
                 if fields:
                     db.execute('INSERT INTO track_metadata VALUES(?,?,?,?,?,?,?,?) '
                                'ON CONFLICT(identity_hash,provider) DO UPDATE SET '
@@ -185,14 +210,20 @@ class ProviderStore:
                                 result.confidence, int(spec.redistributable and current[2])))
                 outcome = 'ready' if fields else (
                     result.status if result.status != 'ready' else 'empty')
-                db.execute('UPDATE lookups SET status=?,failures=0 WHERE identity_hash=? '
-                           'AND provider=?', (outcome, key, name))
+                retry_after = now + spec.rate_limit
+                if spec.leaves_lan and outcome not in _EXTERNAL_CACHE_STATES:
+                    retry_after = self.clock() + max(_FAILURE_COOLDOWN_S, spec.rate_limit)
+                db.execute('UPDATE lookups SET status=?,failures=0,retry_after=? '
+                           'WHERE identity_hash=? AND provider=?',
+                           (outcome, retry_after, key, name))
             return bool(fields)
         except Exception:
             with self.database.connect() as db:
                 db.execute('UPDATE lookups SET status=\'failed\',failures=failures+1,'
-                           'retry_after=? WHERE identity_hash=? AND provider=?',
-                           (now+(0. if spec.manual else max(60., spec.rate_limit)), key, name))
+                           'retry_after=? WHERE identity_hash=? AND provider=? AND requested_at=?',
+                           (self.clock() + (0. if spec.manual else
+                                            max(_FAILURE_COOLDOWN_S, spec.rate_limit)),
+                            key, name, now))
             raise
 
     def save_file_identity(self, identity, *, album_artist, isrc):
@@ -221,7 +252,7 @@ class ProviderStore:
                 self.lookup(name, identity)
             except Exception:
                 logging.getLogger(__name__).warning(
-                    'Metadata provider %s unavailable; retaining stored rows', name, exc_info=True)
+                    'Metadata provider %s unavailable; retaining stored rows', name)
 
     def display_rows(self, identity):
         if not self.database.path.exists():

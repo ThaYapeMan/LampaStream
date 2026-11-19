@@ -941,28 +941,41 @@ provider permits it to receive the played artist and title as search text.
 Sharing consent is separate and provider values stay local. Providers and
 lookup outcomes are stored in grids.db.
 
+Beatport uses its v4 catalog API. Ask Beatport for approval to use catalog
+track search and to cache selected metadata locally. Obtain an approved bearer
+access token for that integration. Set `LAMPASTREAM_BEATPORT_ACCESS_TOKEN` in
+the service environment using a root-only systemd `EnvironmentFile` drop-in,
+then enable Beatport in Music settings. Renew the token through the approved
+Beatport mechanism and restart the service after replacement. The application
+reports `credentials_not_configured` when the token is absent. SongBPM remains
+opt-in and uses its website search form.
+
 An available matching ISRC takes precedence. Otherwise the adapters compare
 folded base titles and artist credits, including featured artists and the album
-artist when available. Equivalent versions are preferred, followed by a
-unique duration within two seconds, then agreement on tempo within 0.5 BPM.
-Among several equivalent versions, duration can select one before considering
-tempo agreement. A unique title and duration can also match across different
-credits. The accepted fields record the matching rule and retain the provider's
+artist when available. Beatport requires an equivalent mix, such as Extended
+and Extended Mix. Among equivalent candidates, a unique duration within two
+seconds breaks a tie, followed by tempo agreement within 0.5 BPM. SongBPM
+can also resolve versionless results and offers a unique title-and-duration
+fallback. The accepted fields record the matching rule and retain the provider's
 artist for a title-and-duration match.
 
-Music settings shows the latest lookup status. `ready` means a row was
-accepted, `not_found` means a readable page offered no qualifying match,
-`ambiguous` means the adapter could not choose, and `unreadable` means it
-could not read the results. `blocked`, `http_error` and `timeout` describe
-request failures. Each actual lookup emits one INFO line under
-`lampastream.tempo_metadata`, with provider, query, HTTP status, response
-bytes, candidate count, accepted title and match and tempo (or failure
-reason), and elapsed milliseconds. Cache hits are silent.
+Music settings shows the latest lookup status. `ready` means a row was accepted,
+`not_found` means a readable search returned no qualifying match, and `ambiguous`
+means the candidates could not be distinguished. `octave_ambiguous` reports
+unresolved half/double-tempo candidates without selecting a BPM.
+`unreadable` signals invalid
+data. Request failures include `blocked`, `authentication_failed`,
+`rate_limited`, `network_error`, `http_error`, and timeout statuses. Beatport
+reports connect and read timeouts separately. Its lookup log contains the
+HTTP status, response size, candidate count, outcome, accepted tempo and elapsed
+time. Cache hits are silent.
 
-Lookups are limited to one per second per provider. Current-version outcomes
-are cached for 24 hours. Older unsuccessful outcomes are retried after an
-adapter upgrade. Accepted rows retain their original fetch time through an
-unsuccessful refresh. The display payload exposes age and staleness.
+Lookups are paced at one per second per provider. Accepted results, misses and
+ambiguous results use the 24-hour TTL. Provider failures use a 60-second
+cooldown per identity. Rate limiting pauses requests across all identities for
+that provider. Older unsuccessful outcomes can be retried after an adapter
+upgrade. Accepted rows retain their original fetch time through an unsuccessful
+refresh. The display payload exposes age and staleness.
 Now Playing appends the available key and genre under the track title,
 using provider priority per field. A question mark beside the provider
 identifies a match based on title and duration alone.

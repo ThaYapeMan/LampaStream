@@ -1,4 +1,5 @@
 """Static provider definitions, following the engine/output registry pattern."""
+import os
 from dataclasses import dataclass
 from importlib import import_module
 from typing import Protocol
@@ -49,6 +50,11 @@ class ProviderSpec:
     manual: bool = False
     display_label: str = ''
     adapter_version: int = 1
+    credential_env: str = ''
+
+    def credentials(self, options):
+        value = options.get('credentials')
+        return (os.environ.get(self.credential_env, '') if value is None else value).strip()
 
     def make(self, **options):
         return import_module(self.module).Adapter(**options)
@@ -66,14 +72,15 @@ PROVIDERS = {
         ProviderSpec('recorded-fixture', 'lampastream.tempo_metadata.recorded_fixture',
                      ('tempo',), ('artist+title', 'ISRC', 'external_id', 'fingerprint'),
                      0., 3600., False, False, False, priority=10, test_only=True),
+        ProviderSpec('beatport', 'lampastream.tempo_metadata.beatport',
+                     ('tempo', 'key', 'genre', 'duration', 'match', 'artist'),
+                     ('artist+title',), 1., 86400.,
+                     False, True, False, priority=75, leaves_lan=True,
+                     display_label='Beatport', adapter_version=3,
+                     credential_env='LAMPASTREAM_BEATPORT_ACCESS_TOKEN'),
         ProviderSpec('songbpm', 'lampastream.tempo_metadata.songbpm',
                      ('tempo', 'key', 'duration', 'match', 'artist'), ('artist+title',),
                      1., 86400., False, False, False,
                      priority=50, leaves_lan=True, display_label='SongBPM', adapter_version=2),
-        ProviderSpec('beatport', 'lampastream.tempo_metadata.beatport',
-                     ('tempo', 'key', 'genre', 'duration', 'match', 'artist'),
-                     ('artist+title',), 1., 86400.,
-                     False, False, False, priority=75, leaves_lan=True,
-                     display_label='Beatport', adapter_version=2),
     )
 }

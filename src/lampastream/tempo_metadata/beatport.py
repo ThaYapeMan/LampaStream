@@ -1,7 +1,14 @@
-"""Personal, nonredistributable Beatport search metadata over plain HTTP."""
+"""Optional, nonredistributable Beatport v4 catalog metadata."""
 import json
+import logging
+import time
 
-from .search_page import Document, featured_title, lookup, no_result, select, valid_tempo
+from .http_page import fetch_json
+from .registry import PROVIDERS
+from .search_page import Document, featured_title, no_result, select, title_parts, valid_tempo
+
+SEARCH_URL = 'https://api.beatport.com/v4/catalog/search/'
+log = logging.getLogger(__name__)
 
 
 def candidates_from(html):
@@ -41,10 +48,79 @@ def parse(html, identity):
     return no_result('unreadable') if candidates is None else select(candidates, identity, .9)
 
 
+def _name(value):
+    name = value.get('name') if isinstance(value, dict) else None
+    return name if isinstance(name, str) else None
+
+
+def api_candidates(body):
+    """Normalize the v4 search envelope and keep only catalog metadata."""
+    try:
+        tracks = json.loads(body)['tracks']
+    except (KeyError, ValueError, TypeError, RecursionError):
+        return None
+    if not isinstance(tracks, list):
+        return None
+    candidates = []
+    for track in tracks:
+        if not isinstance(track, dict):
+            return None
+        name = _name(track)
+        mix = track.get('mix_name')
+        isrc = track.get('isrc')
+        credits = track.get('artists')
+        bpm = track.get('bpm')
+        if (not name or not isinstance(credits, list)
+                or (bpm is not None and not valid_tempo(bpm))
+                or (mix is not None and not isinstance(mix, str))
+                or (isrc is not None and not isinstance(isrc, str))):
+            return None
+        artists = [artist for credit in credits if (artist := _name(credit))]
+        if not artists:
+            return None
+        if bpm is None:
+            continue
+        title, suffix, feature = title_parts(name)
+        version = mix or suffix
+        length = track.get('length_ms')
+        duration = (length / 1000 if type(length) in (int, float)
+                    and 0 < length <= 86400000 else None)
+        key, genre = _name(track.get('key')), _name(track.get('genre'))
+        raw = dict(id=track['id'] if type(track.get('id')) is int else None,
+                   title=title, mix_name=version, artists=artists, bpm=bpm,
+                   duration=duration, isrc=isrc, release=_name(track.get('release')),
+                   key=key, genre=genre)
+        candidates.append(dict(artists=artists, title=title, feature=feature, version=version,
+                               isrc=isrc, tempo=bpm, duration=duration, key=key, genre=genre,
+                               raw=raw))
+    return candidates
+
+
 class Adapter:
-    def __init__(self, *, url='https://www.beatport.com/nl/search', client=None):
-        self.url, self.client = url, client
+    def __init__(self, *, credentials=None, fetch=fetch_json):
+        self.credentials = PROVIDERS['beatport'].credentials({'credentials': credentials})
+        self.fetch = fetch
 
     def lookup(self, identity):
-        # Only selected track data survives; session tokens in the page are discarded.
-        return lookup('beatport', identity, self.url, self.client, candidates_from, .9)
+        if not self.credentials:
+            return no_result('credentials_not_configured')
+        started = time.monotonic()
+        title, _, _ = title_parts(identity.title)
+        query = f'{identity.artist} {title}'.strip()
+        params = {'q': query, 'type': 'tracks', 'per_page': 25}
+        page = self.fetch(SEARCH_URL, params=params, headers={
+            'Authorization': f'Bearer {self.credentials}', 'Accept': 'application/json'})
+        candidates = api_candidates(page.body) if page.status == 'ready' else None
+        if page.status == 'ready':
+            result = (select(candidates, identity, .9, strict_version=True)
+                      if candidates is not None else no_result('unreadable'))
+        else:
+            status = {401: 'authentication_failed', 403: 'blocked',
+                      429: 'rate_limited'}.get(page.http_status)
+            result = no_result(status or {'too_large': 'unreadable', 'not_found': 'http_error'}
+                               .get(page.status, page.status))
+        log.info('provider=beatport http=%s bytes=%d candidates=%d status=%s match=%s '
+                 'tempo=%s elapsed_ms=%d', page.http_status, page.byte_count, len(candidates or ()),
+                 result.status, result.fields.get('match'), result.fields.get('tempo'),
+                 round((time.monotonic() - started) * 1000))
+        return result

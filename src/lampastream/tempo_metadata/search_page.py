@@ -94,14 +94,16 @@ def isrc_key(isrc):
     return ''.join(c for c in isrc.upper() if c.isalnum())
 
 
-def select(candidates, identity, confidence):
+def select(candidates, identity, confidence, *, strict_version=False):
+    base, version, feature = title_parts(identity.title)
     isrc = isrc_key(identity.isrc)
     if isrc:
         for row in candidates:
+            if strict_version and version and version_key(row['version']) != version_key(version):
+                continue
             if isrc_key(row.get('isrc') or '') == isrc:
                 return accepted([row], 'isrc', 1.)
 
-    base, version, feature = title_parts(identity.title)
     names = artist_names(identity.artist, identity.album_artist, feature)
     base_matches = [row for row in candidates if normalized(row['title']) == normalized(base)]
     matches = [row for row in base_matches if names.intersection(
@@ -111,6 +113,11 @@ def select(candidates, identity, confidence):
         return [row for row in rows if identity.duration is not None
                 and row.get('duration') is not None
                 and abs(row['duration'] - identity.duration) <= 2]
+
+    if strict_version:
+        matches = [row for row in matches if version_key(row['version']) == version_key(version)]
+        if not matches:
+            return no_result('not_found')
 
     if not matches:
         fallback = duration_matches(base_matches)
@@ -132,8 +139,12 @@ def select(candidates, identity, confidence):
             return accepted(by_duration, 'duration', confidence)
 
     tempos = [row['tempo'] for row in matches]
-    if max(tempos) - min(tempos) <= .5:
+    low, high = min(tempos), max(tempos)
+    if high - low <= .5:
         return accepted(matches, 'base_title', confidence)
+    if strict_version and abs(high - 2 * low) <= .5 and all(
+            min(abs(tempo - low), abs(tempo - high)) <= .5 for tempo in tempos):
+        return no_result('octave_ambiguous')
     return no_result('ambiguous')
 
 
@@ -158,8 +169,9 @@ def lookup(provider, identity, url, client, candidates_from, confidence, *, post
     page = fetch(url, client=client, **request)
     candidates = candidates_from(page.body) if page.status == 'ready' else None
     if page.status != 'ready':
-        status = {'too_large': 'unreadable', 'not_found': 'http_error',
-                  'network_error': 'http_error'}.get(page.status, page.status)
+        status = {401: 'authentication_failed', 429: 'rate_limited'}.get(page.http_status)
+        status = status or {'too_large': 'unreadable', 'not_found': 'http_error',
+                            'network_error': 'network_error'}.get(page.status, page.status)
         result = no_result(status)
     elif candidates is None:
         result = no_result('unreadable')

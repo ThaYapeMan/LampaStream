@@ -12,8 +12,9 @@ import httpx
 import pytest
 
 from lampastream.grid.database import GridDatabase
-from lampastream.tempo_metadata import beatport, songbpm
+from lampastream.tempo_metadata import beatport, http_page, songbpm
 from lampastream.tempo_metadata.registry import Identity
+from lampastream.tempo_metadata.search_page import title_parts
 from lampastream.tempo_metadata.store import ProviderStore
 
 CASES = [
@@ -63,6 +64,9 @@ def test_recorded_parser_matches_identity_not_search_rank(recorded):
 def test_recorded_fetch_and_persistence_loopback(recorded, tmp_path):
     name, module, html, identity, fields = recorded
     requests = []
+    if name == 'beatport':
+        html = json.dumps({'tracks': [catalog_track(row['raw'])
+                                     for row in beatport.candidates_from(html)]})
 
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self):
@@ -91,9 +95,13 @@ def test_recorded_fetch_and_persistence_loopback(recorded, tmp_path):
     try:
         with httpx.Client(trust_env=False, follow_redirects=True) as client:
             url = f'http://127.0.0.1:{server.server_port}/searches'
+            options = {'url': url, 'client': client}
+            if name == 'beatport':
+                def fetch(_url, **kwargs):
+                    return http_page.fetch_json(url, **kwargs)
+                options = {'credentials': 'fixture', 'fetch': fetch}
             store = ProviderStore(GridDatabase.create(tmp_path/'grid.db'),
-                                  options={name: {'url': url, 'client': client}},
-                                  clock=lambda: 1000.)
+                                  options={name: options}, clock=lambda: 1000.)
             assert not store.lookup(name, identity)
             store.configure(name, enabled=True)
             assert store.lookup(name, identity)
@@ -111,7 +119,8 @@ def test_recorded_fetch_and_persistence_loopback(recorded, tmp_path):
             else:
                 assert method == 'GET'
                 assert parse_qs(urlsplit(path).query) == {
-                    'q': [f'{identity.artist} {identity.title}']}
+                    'q': [f'{identity.artist} {title_parts(identity.title)[0]}'],
+                    'type': ['tracks'], 'per_page': ['25']}
             assert next(p for p in store.list() if p['name'] == name)['lookup']['status'] == 'ready'
             store.configure(name, enabled=False)
             assert store.display_rows(identity) == []
@@ -123,28 +132,27 @@ def test_recorded_fetch_and_persistence_loopback(recorded, tmp_path):
         thread.join()
 
 
-@pytest.mark.parametrize('module', [songbpm, beatport])
 @pytest.mark.parametrize('status', [403, 404, 429, 500])
-def test_adapter_http_status_is_clean(module, status):
+def test_songbpm_http_status_is_clean(status):
     with httpx.Client(transport=httpx.MockTransport(
             lambda request: httpx.Response(status))) as client:
-        result = module.Adapter(client=client).lookup(Identity('x', 'Artist', 'Title'))
+        result = songbpm.Adapter(client=client).lookup(Identity('x', 'Artist', 'Title'))
     assert result.fields == {}
-    assert result.status in ('blocked', 'not_found', 'http_error')
+    assert result.status == {403: 'blocked', 404: 'http_error',
+                             429: 'rate_limited', 500: 'http_error'}[status]
 
 
-@pytest.mark.parametrize('module', [songbpm, beatport])
-def test_timeout_does_not_escape_adapter(module):
+def test_songbpm_timeout_does_not_escape_adapter():
     def timeout(request):
         raise httpx.ReadTimeout('loopback timeout simulation', request=request)
     with httpx.Client(transport=httpx.MockTransport(timeout)) as client:
-        result = module.Adapter(client=client).lookup(Identity('x', 'Artist', 'Title'))
+        result = songbpm.Adapter(client=client).lookup(Identity('x', 'Artist', 'Title'))
     assert result.fields == {}
     assert result.status == 'timeout'
 
 
-@pytest.mark.parametrize('name', ['songbpm', 'beatport'])
-def test_no_result_status_cached_and_rate_limited(tmp_path, name):
+def test_songbpm_failure_cooldown(tmp_path):
+    name = 'songbpm'
     requests = []
     def blocked(request):
         requests.append(request)
@@ -158,10 +166,10 @@ def test_no_result_status_cached_and_rate_limited(tmp_path, name):
         assert not store.lookup(name, identity)
         assert not store.lookup(name, replace(identity, key='two'))  # global rate limit
         now[0] += 2
-        assert not store.lookup(name, identity)  # negative result TTL
+        assert not store.lookup(name, identity)  # provider cooldown
         assert len(requests) == 1
         assert next(p for p in store.list() if p['name'] == name)['lookup']['status'] == 'blocked'
-        now[0] += 86400
+        now[0] += 60
         assert not store.lookup(name, identity)
         assert len(requests) == 2
 
@@ -257,16 +265,15 @@ def test_unreadable_versus_empty(module, empty):
     assert module.parse(empty, identity).status == 'not_found'
 
 
-@pytest.mark.parametrize('name', ['songbpm', 'beatport'])
-def test_adapter_version_and_retention(tmp_path, name, caplog):
+def test_songbpm_adapter_version_and_retention(tmp_path, caplog):
+    name = 'songbpm'
     from lampastream.grid.database import identity_hash
     from lampastream.tempo_metadata.registry import PROVIDERS
     caplog.set_level('INFO', logger='lampastream.tempo_metadata')
     identity = Identity('one', 'Bea', 'Night Drive', 200)
     current = [1000.]
     statuses = [200, 500]
-    html = (song(artist='Bea', title='Night Drive', duration='3:20')
-            if name == 'songbpm' else beatport_page(track()))
+    html = song(artist='Bea', title='Night Drive', duration='3:20')
     with httpx.Client(transport=httpx.MockTransport(
             lambda _: httpx.Response(statuses.pop(0), text=html))) as client:
         database = GridDatabase.create(tmp_path/'grid.db')
@@ -299,3 +306,163 @@ def test_adapter_version_and_retention(tmp_path, name, caplog):
         assert row['fetched_at'] == 1000.
         assert row['fields']['match'] == 'exact'
         assert store.resolve(identity)['fields'] == row['fields']
+
+
+def catalog_track(old):
+    """Represent the public catalog fields from a recorded storefront row."""
+    return dict(id=42, name=old['track_name'], mix_name=old.get('mix_name'),
+                bpm=old['bpm'], length_ms=old.get('length'), isrc=old.get('isrc'),
+                key={'name': old.get('key_name')},
+                genre={'name': ', '.join(g['genre_name'] for g in old.get('genre') or [])},
+                artists=[{'name': a['artist_name']} for a in old['artists']
+                         if a['artist_type_name'] == 'Artist'])
+
+
+MAU = Identity('hint:extended', 'MAU P', 'Just A Little Bit More (Extended)', 381.221)
+
+
+def mau_track(**overrides):
+    return dict(dict(id=123, name='Just A Little Bit More', mix_name='Extended Mix',
+                     artists=[{'name': 'Mau P'}], bpm=128, length_ms=381221,
+                     isrc='NLAAA2600001', key={'name': 'Gb Major'},
+                     genre={'name': 'Dance / Pop'}, release={'name': 'Example Release'}),
+                **overrides)
+
+
+def catalog_response(*tracks):
+    return http_page.Page('ready', beatport.SEARCH_URL, json.dumps({'tracks': tracks}), 200)
+
+
+@pytest.mark.parametrize(('low', 'high'), [(64, 128), (70, 140), (87, 174)])
+def test_beatport_octave_ambiguity_preserves_tempo_semantics(low, high):
+    response = catalog_response(mau_track(bpm=low), mau_track(bpm=high))
+    adapter = beatport.Adapter(credentials='fixture', fetch=lambda *_args, **_kwargs: response)
+    result = adapter.lookup(replace(MAU, duration=None))
+    assert result.fields == {}
+    assert result.status == 'octave_ambiguous'
+
+
+def test_beatport_api_exact_version_duration_and_isrc(caplog):
+    def request(url, **kwargs):
+        assert url == beatport.SEARCH_URL
+        assert kwargs['params'] == {
+            'q': 'MAU P Just A Little Bit More', 'type': 'tracks', 'per_page': 25}
+        assert kwargs['headers'] == {
+            'Authorization': 'Bearer fixture-secret', 'Accept': 'application/json'}
+        return catalog_response(
+            mau_track(id=3, mix_name='Original Mix', length_ms=381221),
+            mau_track(id=4, mix_name='DJ Example Remix', length_ms=381221),
+            mau_track(id=5, bpm=64, length_ms=400000, isrc='NLAAA2600002'),
+            mau_track(id=6, artists=[{'name': 'Other'}]), mau_track())
+
+    caplog.set_level('INFO', logger=beatport.__name__)
+    adapter = beatport.Adapter(credentials='fixture-secret', fetch=request)
+    exact = adapter.lookup(MAU)
+    assert exact.fields == {'tempo': 128, 'match': 'exact', 'duration': 381.221,
+                            'key': 'Gb Major', 'genre': 'Dance / Pop'}
+    assert exact.raw_payload['id'] == 123
+    assert exact.raw_payload['mix_name'] == 'Extended Mix'
+    assert exact.raw_payload['release'] == 'Example Release'
+    by_isrc = adapter.lookup(replace(MAU, isrc='NL-AAA-26-00002'))
+    assert by_isrc.fields['match'] == 'isrc'
+    assert by_isrc.fields['tempo'] == 64
+    assert 'fixture-secret' not in caplog.text
+
+
+@pytest.mark.parametrize('candidate', [mau_track(mix_name='Original'),
+                                      mau_track(mix_name='DJ Example Remix'),
+                                      mau_track(artists=[{'name': 'Other'}])])
+def test_beatport_rejects_wrong_identity(candidate):
+    adapter = beatport.Adapter(credentials='fixture', fetch=lambda *_a, **_kw:
+                               catalog_response(candidate))
+    assert adapter.lookup(MAU).status == 'not_found'
+
+
+@pytest.mark.parametrize('body', ['<html>error</html>', '{"tracks":{}}',
+                                  '{"tracks":[{"name":"track","bpm":"128"}]}'])
+def test_beatport_malformed_response(body):
+    adapter = beatport.Adapter(credentials='fixture', fetch=lambda *_a, **_kw:
+                               http_page.Page('ready', beatport.SEARCH_URL, body, 200))
+    assert adapter.lookup(MAU).status == 'unreadable'
+
+
+@pytest.mark.parametrize('code, status', [(401, 'authentication_failed'), (403, 'blocked'),
+                                         (404, 'http_error'), (429, 'rate_limited'),
+                                         (503, 'http_error')])
+def test_beatport_provider_failures(code, status):
+    adapter = beatport.Adapter(credentials='fixture', fetch=lambda *_a, **_kw:
+                               http_page.Page('http_error', beatport.SEARCH_URL, http_status=code))
+    assert adapter.lookup(MAU).status == status
+
+
+def test_beatport_credentials_not_configured(tmp_path, monkeypatch):
+    monkeypatch.delenv('LAMPASTREAM_BEATPORT_ACCESS_TOKEN', raising=False)
+
+    def unexpected(*_a, **_kw):
+        pytest.fail('Unconfigured provider attempted a request')
+
+    assert beatport.Adapter(fetch=unexpected).lookup(MAU).status == 'credentials_not_configured'
+    db = GridDatabase.create(tmp_path/'grid.db')
+    store = ProviderStore(db, options={'beatport': {'fetch': unexpected}})
+    provider = store.configure('beatport', enabled=True)
+    assert provider['lookup']['status'] == 'credentials_not_configured'
+    assert not store.lookup('beatport', MAU)
+    with db.connect() as conn:
+        assert not conn.execute('SELECT 1 FROM lookups').fetchall()
+
+
+@pytest.mark.parametrize('outcome', ['ready', 'not_found', 'rate_limited', 'read_timeout'])
+def test_beatport_cache_miss_and_rate_limit(tmp_path, outcome):
+    requests = []
+
+    def request(url, **kwargs):
+        requests.append(kwargs)
+        if outcome == 'ready':
+            return catalog_response(mau_track())
+        if outcome == 'not_found':
+            return catalog_response()
+        if outcome == 'rate_limited':
+            return http_page.Page('blocked', url, http_status=429)
+        return http_page.Page('read_timeout', url)
+
+    db = GridDatabase.create(tmp_path/f'{outcome}.db')
+    now = [1000.]
+    options = {'beatport': {'credentials': 'fixture', 'fetch': request}}
+    store = ProviderStore(db, options=options, clock=lambda: now[0])
+    store.configure('beatport', enabled=True)
+    assert store.lookup('beatport', MAU) == (outcome == 'ready')
+    now[0] += 2
+    assert not store.lookup('beatport', MAU)
+    if outcome == 'rate_limited':
+        assert not store.lookup('beatport', replace(MAU, key='new-track'))
+    assert len(requests) == 1
+    now[0] += 60
+    store.lookup('beatport', MAU)
+    assert len(requests) == (1 if outcome in ('ready', 'not_found') else 2)
+
+@pytest.mark.parametrize('songbpm_available', [True, False])
+def test_acquire_continues_after_beatport_exception(tmp_path, songbpm_available, caplog):
+    calls = []
+
+    def beatport_failed(*_a, **_kw):
+        calls.append('beatport')
+        raise ValueError('sensitive-exception-detail')
+
+    def songbpm_response(request):
+        calls.append('songbpm')
+        if not songbpm_available:
+            raise httpx.ReadTimeout('fixture', request=request)
+        return httpx.Response(200, text=song(artist='Mau P', title='Just A Little Bit More',
+                                             bpm=128))
+    with httpx.Client(transport=httpx.MockTransport(songbpm_response)) as client:
+        store = ProviderStore(GridDatabase.create(tmp_path/'grid.db'), options={
+            'beatport': {'credentials': 'fixture', 'fetch': beatport_failed},
+            'songbpm': {'client': client}})
+        for provider in ('beatport', 'songbpm'):
+            store.configure(provider, enabled=True)
+        store.acquire(MAU)
+    assert calls == ['beatport', 'songbpm']
+    resolved = store.resolve(MAU)
+    expected = 'songbpm' if songbpm_available else None
+    assert (resolved['provider'] if resolved else None) == expected
+    assert 'sensitive-exception-detail' not in caplog.text

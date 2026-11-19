@@ -87,3 +87,34 @@ def test_timeout_is_clean_result_without_retry(page_server):
     assert page.status == 'timeout'
     assert page.body == ''
     assert requests == ['/slow']
+
+
+@pytest.mark.parametrize('error, status', [
+    (httpx.ConnectTimeout, 'connect_timeout'), (httpx.ReadTimeout, 'read_timeout'),
+    (httpx.ConnectError, 'network_error'),
+])
+def test_catalog_transport_exceptions(monkeypatch, error, status):
+    from lampastream.tempo_metadata.http_page import fetch_json
+    original = httpx.AsyncClient
+
+    def fail(request):
+        raise error('offline transport fixture', request=request)
+
+    monkeypatch.setattr(httpx, 'AsyncClient', lambda **kwargs:
+                        original(transport=httpx.MockTransport(fail), **kwargs))
+    assert fetch_json('https://example.invalid/', params={}, headers={}).status == status
+
+
+def test_catalog_overall_timeout(monkeypatch):
+    import asyncio
+
+    from lampastream.tempo_metadata.http_page import fetch_json
+    original = httpx.AsyncClient
+
+    async def wait_for_cancellation(_request):
+        await asyncio.Event().wait()
+
+    monkeypatch.setattr(httpx, 'AsyncClient', lambda **kwargs:
+                        original(transport=httpx.MockTransport(wait_for_cancellation), **kwargs))
+    result = fetch_json('https://example.invalid/', params={}, headers={}, overall_timeout=.02)
+    assert result.status == 'timeout'
