@@ -155,6 +155,8 @@ def test_api_fixture_acquisition_owner_controls_and_stale_track_guard(tmp_path):
                             json={'enabled': True}).status_code == 200
         data = client.get('/api/tempo-metadata').json()
         assert data['confirmed'] and data['tempo'] == 128.
+        assert data['providers'] == client.get('/api/metadata-providers').json()
+        assert all({'paused_until', 'http_status'} <= row.keys() for row in data['providers'])
         for action, extra, expected in [('half', {}, 64.), ('double', {}, 128.),
                                         ('tap', {'tempo': 96.}, 96.)]:
             response = client.post('/api/tempo/correction',

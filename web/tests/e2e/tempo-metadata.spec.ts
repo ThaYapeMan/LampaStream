@@ -36,7 +36,7 @@ test('provider lifecycle and consent use generic checkbox rows', async ({ page }
     { ...base, capabilities: ['tempo', 'phase_offset_s'], name: 'owner', enabled: true, status: 'active', always_enabled: true, test_only: false, redistributable: true, toggleable: false },
     { ...base, name: 'local-tags', enabled: true, status: 'active', always_enabled: true, test_only: false, redistributable: true, toggleable: false },
     { ...base, name: 'recorded-fixture', enabled: false, status: 'disabled', always_enabled: false, test_only: true, redistributable: false, toggleable: true },
-    { ...base, name: 'songbpm', display_label: 'SongBPM', enabled: false, status: 'disabled', always_enabled: false, test_only: false, redistributable: false, leaves_lan: true, toggleable: true },
+    { ...base, name: 'songbpm', display_label: 'SongBPM', enabled: false, status: 'disabled', lookup: { status: 'blocked', requested_at: null }, http_status: 403, paused_until: 1795194900, always_enabled: false, test_only: false, redistributable: false, leaves_lan: true, toggleable: true },
     { ...base, name: 'beatport', display_label: 'Beatport', enabled: false, status: 'disabled', always_enabled: false, test_only: false, redistributable: false, leaves_lan: true, toggleable: true },
   ]
   await page.route('**/api/metadata-providers', route => route.fulfill({ json: providers }))
@@ -60,6 +60,10 @@ test('provider lifecycle and consent use generic checkbox rows', async ({ page }
   await expect(recorded.getByText('disabled', { exact: true })).toBeVisible()
   const songbpm = page.getByRole('region', { name: 'Provider songbpm' })
   await expect(songbpm.getByRole('checkbox')).toBeEnabled()
+  const localPause = await page.evaluate(() => new Intl.DateTimeFormat('en-GB', {
+    day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+  }).format(new Date(1795194900 * 1000)).replace(',', ''))
+  await expect(songbpm.getByText(`Refused by the website (HTTP 403) — next try ${localPause}`)).toBeVisible()
   await songbpm.getByRole('checkbox').check()
   await expect(songbpm.getByText('active', { exact: true })).toBeVisible()
   await expect(page.getByRole('region', { name: 'Provider beatport' }).getByRole('checkbox')).not.toBeChecked()

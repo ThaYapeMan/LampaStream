@@ -25,11 +25,12 @@ def current_identity(manager):
     fingerprint = grid.audio_fingerprint if grid and not grid.provisional else None
     key = fingerprint_key(fingerprint)
     if key is None:
-        if (track is None or not track.artist or not track.title or not track.duration_s):
+        if (track is None or not track.title or not track.duration_s):
             return None, None
         # An early lookup hint is explicitly unconfirmed and cannot store an
         # owner correction or attach a learned grid. It never enters identities.
-        hint = (track.artist.strip().casefold(), track.title.strip().casefold(), track.duration_s)
+        hint = ((track.artist or '').strip().casefold(), track.title.strip().casefold(),
+                track.duration_s)
         key = 'hint:'+hashlib.sha256(encode(hint).encode()).hexdigest()
     tags = {'tempo': track.tempo_bpm} if track and track.tempo_bpm is not None else {}
     return Identity(key, artist=track.artist or '' if track else '',

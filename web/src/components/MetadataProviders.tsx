@@ -2,6 +2,41 @@ import { useEffect, useRef, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { getMetadataProviders, updateMetadataProvider, type MetadataProvider } from '@/lib/api'
 
+const pauseDate = new Intl.DateTimeFormat('en-GB', {
+  day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+})
+
+export function providerLookupText(provider: Pick<MetadataProvider, 'lookup' | 'http_status' | 'paused_until'>) {
+  const status = provider.lookup?.status
+  const nextTry = provider.paused_until == null ? '' :
+    ` — next try ${pauseDate.format(new Date(provider.paused_until * 1000)).replace(',', '')}`
+  switch (status) {
+    case 'ready': return 'Lookup: found'
+    case 'empty':
+    case 'not_found': return 'Lookup: this track is not known there'
+    case 'ambiguous':
+    case 'octave_ambiguous': return 'Lookup: several possible matches, none chosen'
+    case 'credentials_not_configured': return 'Not set up: no access token'
+    case 'authentication_failed': return 'The website does not accept the access token'
+    case 'blocked': {
+      const http = provider.http_status == null ? '' : ` (HTTP ${provider.http_status})`
+      return `Refused by the website${http}${nextTry}`
+    }
+    case 'rate_limited': return `Asked too often${nextTry}`
+    case 'timeout':
+    case 'connect_timeout':
+    case 'read_timeout':
+    case 'write_timeout':
+    case 'pool_timeout':
+    case 'network_error':
+    case 'http_error':
+    case 'failed': return 'The website did not answer'
+    case 'unreadable': return "The website's answer could not be read"
+    case 'pending': return 'Lookup in progress'
+    default: return ''
+  }
+}
+
 export function MetadataProviders({ initial }: { initial: MetadataProvider[] }) {
   const [providers, setProviders] = useState(initial)
   const [busy, setBusy] = useState(false)
@@ -40,7 +75,7 @@ export function MetadataProviders({ initial }: { initial: MetadataProvider[] }) 
           onChange={e => void update(provider.name, { enabled: e.target.checked })} />
         <span>{provider.display_label || provider.name}</span><span className="ml-auto text-muted-foreground">{provider.status}</span>
       </label>
-      <p className="text-xs text-muted-foreground">{provider.lookup && <span>Lookup: {provider.lookup.status} · </span>}{provider.capabilities.join(', ')} · {provider.leaves_lan ? 'Enabling consents to sending artist and title to this service for display-only values' : 'Local'}{provider.always_enabled ? ' · Always enabled' : ''}{provider.test_only ? ' · Test harness only' : ''}</p>
+      <p className="text-xs text-muted-foreground">{provider.lookup && <span>{providerLookupText(provider)} · </span>}{provider.capabilities.join(', ')} · {provider.leaves_lan ? 'Enabling consents to sending artist and title to this service for display-only values' : 'Local'}{provider.always_enabled ? ' · Always enabled' : ''}{provider.test_only ? ' · Test harness only' : ''}</p>
       {provider.redistributable && <label className="flex min-h-11 items-center gap-3 text-sm"><input type="checkbox" checked={provider.consent} disabled={busy}
         onChange={e => void update(provider.name, { consent: e.target.checked })} />Allow sharing {provider.name} results in a future grid export</label>}
     </section>)}

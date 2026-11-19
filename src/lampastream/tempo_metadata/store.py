@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import math
 import time
 from dataclasses import asdict
@@ -15,6 +16,16 @@ _FILE_IDENTITY = 'local-file-identity'
 _EXTERNAL_CACHE_STATES = {'ready', 'not_found', 'ambiguous', 'octave_ambiguous'}
 _FAILURE_COOLDOWN_S = 60.
 _PENDING_LEASE_S = 30.
+# A reserved key outside the hashed track-identity namespace.
+_PROVIDER_REQUEST = 'provider-request'
+_PAUSE_STATES = {'blocked', 'rate_limited', 'authentication_failed'}
+_PAUSE_S = 24 * 3600
+_PAUSE_LOG_S = 3600
+log = logging.getLogger(__name__)
+
+
+def _credential_digest(credentials):
+    return hashlib.sha256(credentials.encode()).hexdigest() if credentials else None
 
 
 class ProviderStore:
@@ -53,6 +64,8 @@ class ProviderStore:
     def list(self):
         states = {}
         lookups = {}
+        requests = {}
+        now = self.clock()
         if self.database.path.exists():
             with self.database.connect() as db:
                 self._sync(db)
@@ -60,19 +73,37 @@ class ProviderStore:
                     'SELECT name,enabled,status,consent FROM metadata_providers')}
                 lookups = {row[0]: dict(status=row[1], requested_at=row[2])
                            for row in db.execute('SELECT provider,status,requested_at FROM lookups '
-                                                 'ORDER BY requested_at')}
+                                                 'WHERE identity_hash<>? ORDER BY requested_at',
+                                                 (_PROVIDER_REQUEST,))}
+                requests = {name: (requested, outcome, json.loads(state))
+                            for name, requested, outcome, state in db.execute(
+                    'SELECT provider,requested_at,status,query_json FROM lookups '
+                    'WHERE identity_hash=?', (_PROVIDER_REQUEST,))}
         result = []
         for name, spec in self.specs.items():
             enabled, status, consent = states.get(name, (
                 spec.enabled, spec.status if spec.status == 'obsolete' else
                 'active' if spec.enabled else 'disabled', False))
             lookup = lookups.get(name)
-            if spec.requires_credentials and not spec.credentials(self.options.get(name, {})):
+            credentials = (spec.credentials(self.options.get(name, {}))
+                           if spec.requires_credentials else '')
+            http_status = paused_until = None
+            if name in requests:
+                requested, outcome, state = requests[name]
+                until, code = state['paused_until'], state['http_status']
+                if state['credential_digest'] == _credential_digest(credentials):
+                    if lookup and lookup['requested_at'] == requested:
+                        http_status = code
+                    if enabled and until is not None and now < until:
+                        paused_until, http_status = until, code
+                        lookup = dict(status=outcome, requested_at=requested)
+            if spec.requires_credentials and not credentials:
                 lookup = dict(status='credentials_not_configured', requested_at=None)
             result.append(dict({k: v for k, v in asdict(spec).items()
                                 if k not in ('module', 'credential_env')},
                                enabled=bool(enabled and status != 'obsolete'), status=status,
                                consent=bool(consent), lookup=lookup,
+                               paused_until=paused_until, http_status=http_status,
                                toggleable=(not spec.always_enabled and status != 'obsolete'
                                            and (not spec.test_only or self.allow_test))))
         return result
@@ -87,6 +118,14 @@ class ProviderStore:
         with self.database.connect() as db:
             self._sync(db)
             if enabled is not None:
+                was_enabled, = db.execute('SELECT enabled FROM metadata_providers WHERE name=?',
+                                          (name,)).fetchone()
+                if spec.leaves_lan and enabled != was_enabled:
+                    db.execute("UPDATE lookups SET query_json=json_set(query_json, "
+                               "'$.paused_until',NULL) WHERE identity_hash=? AND provider=?",
+                               (_PROVIDER_REQUEST, name))
+                    db.execute("DELETE FROM lookups WHERE provider=? AND status='pending'",
+                               (name,))
                 db.execute('UPDATE metadata_providers SET enabled=?,status=? WHERE name=?',
                            (int(enabled), 'active' if enabled else 'disabled', name))
             if consent is not None:
@@ -99,14 +138,15 @@ class ProviderStore:
     def lookup(self, name, identity, *, force=False):
         spec = self.specs[name]
         options = self.options.get(name, {})
+        credentials = spec.credentials(options) if spec.requires_credentials else ''
+        digest = _credential_digest(credentials)
         if spec.requires_credentials:
-            credentials = spec.credentials(options)
             if not credentials:
                 return False
             options = {**options, 'credentials': credentials}
         available = {'fingerprint': bool(identity.fingerprint),
                      'external_id': bool(identity.external_id), 'ISRC': bool(identity.isrc),
-                     'artist+title': bool(identity.artist and identity.title)}
+                     'artist+title': bool(identity.title and (identity.artist or spec.leaves_lan))}
         if not any(available.get(key, False) for key in spec.lookup_keys):
             return False
         now, key = self.clock(), identity_hash(identity.key)
@@ -127,6 +167,23 @@ class ProviderStore:
                 (name,)).fetchone()
             if not enabled or status != 'active' or spec.test_only and not self.allow_test:
                 return False
+            request = self._request_state(db, name) if spec.leaves_lan else None
+            retry_paused = bool(request and request[2]['paused_until'] is not None)
+            if retry_paused:
+                _, outcome, state = request
+                until = state['paused_until']
+                if state['credential_digest'] == digest and now < until:
+                    last_log = state['last_pause_log']
+                    if last_log is None or now >= last_log + _PAUSE_LOG_S:
+                        db.execute("UPDATE lookups SET query_json=json_set(query_json, "
+                                   "'$.last_pause_log',?) WHERE identity_hash=? AND provider=?",
+                                   (now, _PROVIDER_REQUEST, name))
+                        log.info('provider=%s http=%s status=%s paused_until=%.0f',
+                                 name, state['http_status'], outcome, until)
+                    return False
+                if db.execute("SELECT 1 FROM lookups WHERE provider=? AND status='pending' "
+                              "AND retry_after>? LIMIT 1", (name, now)).fetchone():
+                    return False
             previous = db.execute('SELECT fetched_at,ttl FROM track_metadata '
                                   'WHERE identity_hash=? AND provider=?', (key, name)).fetchone()
             attempt = db.execute('SELECT retry_after,status,requested_at,query_json FROM lookups '
@@ -135,31 +192,28 @@ class ProviderStore:
             old_query = json.loads(attempt[3]) if spec.leaves_lan and attempt else {}
             outdated = (spec.leaves_lan and attempt and attempt[1] != 'ready'
                         and old_query.get('adapter_version', 1) < spec.adapter_version)
-            if spec.leaves_lan and previous and not force and now < sum(previous):
+            if spec.leaves_lan and previous and not (force or retry_paused) and now < sum(previous):
                 # Keep fresh accepted rows across adapter upgrades. Newly available
                 # ISRC or album artist can improve the match for the same recording.
                 improved = any(query[field] and old_query.get(field) != query[field]
                                for field in ('isrc', 'album_artist'))
                 if not improved:
                     return False
-            if not force and same_query:
+            if not (force or retry_paused) and same_query:
                 if previous and (previous[1] == 0 or now < sum(previous)):
                     return False
                 cacheable = (attempt[1] in _EXTERNAL_CACHE_STATES if spec.leaves_lan
                              else attempt[1] not in ('pending', 'failed'))
                 if cacheable and now < attempt[2] + spec.ttl:
                     return False
-            last = db.execute('SELECT MAX(requested_at) FROM lookups WHERE provider=?',
-                              (name,)).fetchone()[0]
+            last = db.execute('SELECT MAX(requested_at) FROM lookups WHERE provider=? '
+                              'AND identity_hash<>?',
+                              (name, _PROVIDER_REQUEST)).fetchone()[0]
             if last is not None and now < last+spec.rate_limit:
-                return False
-            if spec.leaves_lan and db.execute(
-                    "SELECT 1 FROM lookups WHERE provider=? AND status='rate_limited' "
-                    "AND retry_after>? LIMIT 1", (name, now)).fetchone():
                 return False
             if attempt and attempt[1] == 'pending' and now < attempt[0]:
                 return False
-            if attempt and not outdated and now < attempt[0]:
+            if attempt and not (outdated or retry_paused) and now < attempt[0]:
                 return False
             db.execute('INSERT INTO lookups VALUES(?,?,?,?,?,?,0) ON CONFLICT '
                        '(identity_hash,provider) DO UPDATE SET query_json=excluded.query_json,'
@@ -196,7 +250,9 @@ class ProviderStore:
                     return False
                 claim = db.execute('SELECT requested_at FROM lookups WHERE identity_hash=? '
                                    'AND provider=?', (key, name)).fetchone()
-                if claim != (now,):
+                if claim != (now,) or (spec.requires_credentials
+                                        and spec.credentials(self.options.get(name, {}))
+                                        != credentials):
                     return False
                 if fields:
                     db.execute('INSERT INTO track_metadata VALUES(?,?,?,?,?,?,?,?) '
@@ -211,8 +267,16 @@ class ProviderStore:
                 outcome = 'ready' if fields else (
                     result.status if result.status != 'ready' else 'empty')
                 retry_after = now + spec.rate_limit
-                if spec.leaves_lan and outcome not in _EXTERNAL_CACHE_STATES | {'timeout'}:
-                    retry_after = self.clock() + max(_FAILURE_COOLDOWN_S, spec.rate_limit)
+                if spec.leaves_lan:
+                    if outcome in _PAUSE_STATES:
+                        finished = self.clock()
+                        self._record_request(db, name, now, outcome, result.http_status,
+                                             digest, paused_until=finished + _PAUSE_S,
+                                             last_pause_log=finished)
+                    else:
+                        self._record_request(db, name, now, outcome, result.http_status, digest)
+                        if outcome not in _EXTERNAL_CACHE_STATES | {'timeout'}:
+                            retry_after = self.clock() + max(_FAILURE_COOLDOWN_S, spec.rate_limit)
                 db.execute('UPDATE lookups SET status=?,failures=0,retry_after=? '
                            'WHERE identity_hash=? AND provider=?',
                            (outcome, retry_after, key, name))
@@ -225,6 +289,28 @@ class ProviderStore:
                                             max(_FAILURE_COOLDOWN_S, spec.rate_limit)),
                             key, name, now))
             raise
+
+    def _request_state(self, db, name):
+        row = db.execute('SELECT requested_at,status,query_json FROM lookups '
+                         'WHERE identity_hash=? AND provider=?',
+                         (_PROVIDER_REQUEST, name)).fetchone()
+        return (row[0], row[1], json.loads(row[2])) if row else None
+
+    def _record_request(self, db, name, now, outcome, http_status, digest,
+                        *, paused_until=None, last_pause_log=None):
+        previous = self._request_state(db, name)
+        if previous and previous[2]['credential_digest'] == digest:
+            until = previous[2]['paused_until']
+            if until is not None and self.clock() < until:
+                return
+            if paused_until is None and now < previous[0]:
+                return
+        state = encode(dict(http_status=http_status, credential_digest=digest,
+                            paused_until=paused_until, last_pause_log=last_pause_log))
+        db.execute('INSERT INTO lookups VALUES(?,?,?,?,?,?,0) ON CONFLICT '
+                   '(identity_hash,provider) DO UPDATE SET query_json=excluded.query_json,'
+                   'status=excluded.status,requested_at=excluded.requested_at',
+                   (_PROVIDER_REQUEST, name, state, outcome, now, 0.))
 
     def save_file_identity(self, identity, *, album_artist, isrc):
         if not (album_artist or isrc):
@@ -244,14 +330,13 @@ class ProviderStore:
         return json.loads(row[0]) if row else {}
 
     def acquire(self, identity):
-        import logging
         for name, spec in self.specs.items():
             if spec.manual:
                 continue
             try:
                 self.lookup(name, identity)
             except Exception:
-                logging.getLogger(__name__).warning(
+                log.warning(
                     'Metadata provider %s unavailable; retaining stored rows', name)
 
     def display_rows(self, identity):

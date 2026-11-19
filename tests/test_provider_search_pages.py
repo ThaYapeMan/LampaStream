@@ -152,27 +152,73 @@ def test_songbpm_timeout_does_not_escape_adapter():
     assert result.status == 'timeout'
 
 
-def test_songbpm_failure_cooldown(tmp_path):
-    name = 'songbpm'
+@pytest.mark.serial
+@pytest.mark.parametrize(('code', 'status'), [
+    (403, 'blocked'), (429, 'rate_limited'), (401, 'authentication_failed'),
+])
+@pytest.mark.parametrize('provider', ['songbpm', 'beatport'])
+def test_provider_pause_loopback(tmp_path, caplog, provider, code, status):
+    caplog.set_level('INFO')
     requests = []
-    def blocked(request):
-        requests.append(request)
-        return httpx.Response(403)
     now = [1000.]
-    with httpx.Client(transport=httpx.MockTransport(blocked)) as client:
-        store = ProviderStore(GridDatabase.create(tmp_path/'grid.db'),
-                              options={name: {'client': client}}, clock=lambda: now[0])
-        store.configure(name, enabled=True)
-        identity = Identity('one', 'Artist', 'Title')
-        assert not store.lookup(name, identity)
-        assert not store.lookup(name, replace(identity, key='two'))  # global rate limit
-        now[0] += 2
-        assert not store.lookup(name, identity)  # provider cooldown
-        assert len(requests) == 1
-        assert next(p for p in store.list() if p['name'] == name)['lookup']['status'] == 'blocked'
-        now[0] += 60
-        assert not store.lookup(name, identity)
-        assert len(requests) == 2
+    identity = Identity('one', 'Artist', 'Title')
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            requests.append(self.path)
+            self.send_response(code)
+            self.end_headers()
+
+        do_POST = do_GET
+
+    with ThreadingHTTPServer(('127.0.0.1', 0), Handler) as server:
+        worker = Thread(target=server.serve_forever, daemon=True)
+        worker.start()
+        try:
+            url = f'http://127.0.0.1:{server.server_port}/searches'
+            path = tmp_path/'grid.db'
+            GridDatabase.create(path)
+            options = {
+                'songbpm': {'url': url},
+                'beatport': {'credentials': 'fixture',
+                             'fetch': lambda _url, **kwargs: http_page.fetch_json(url, **kwargs)},
+            }
+
+            def open_store():
+                return ProviderStore(GridDatabase(path), options=options, clock=lambda: now[0])
+
+            store = open_store()
+            store.configure(provider, enabled=True)
+            assert not store.lookup(provider, identity)
+            store = open_store()
+            row = next(p for p in store.list() if p['name'] == provider)
+            assert row['lookup']['status'] == status
+            assert row['http_status'] == code
+            assert row['paused_until'] == 1000. + 86400
+            now[0] += 3600
+            assert not store.lookup(provider, identity, force=True)
+            assert not store.lookup(provider, replace(identity, key='two'))
+            assert len(requests) == 1
+            assert sum('paused_until=' in message for message in caplog.messages) == 1
+            now[0] = row['paused_until']
+            assert not store.lookup(provider, identity)
+            assert not store.lookup(provider, replace(identity, key='two'))
+            assert len(requests) == 2
+            store.configure(provider, enabled=False)
+            assert store.configure(provider, enabled=True)['paused_until'] is None
+            now[0] += 2
+            assert not store.lookup(provider, identity)
+            assert len(requests) == 3
+            if provider == 'beatport':
+                options['beatport']['credentials'] = 'changed'
+                row = next(p for p in store.list() if p['name'] == provider)
+                assert row['paused_until'] is None
+                now[0] += 2
+                assert not store.lookup(provider, identity)
+                assert len(requests) == 4
+        finally:
+            server.shutdown()
+            worker.join()
 
 
 def beatport_page(*tracks):
@@ -290,10 +336,13 @@ def test_songbpm_adapter_version_and_retention(tmp_path, caplog):
         assert 'candidates=1 accepted=' in caplog.messages[-1]
         assert 'match=exact tempo=' in caplog.messages[-1]
         with database.connect() as db:
-            query = json.loads(db.execute('SELECT query_json FROM lookups').fetchone()[0])
+            row = db.execute('SELECT query_json FROM lookups WHERE identity_hash=?',
+                             (identity_hash(identity.key),)).fetchone()
+            query = json.loads(row[0])
             assert query['adapter_version'] == PROVIDERS[name].adapter_version == 2
             query.pop('adapter_version')
-            db.execute('UPDATE lookups SET query_json=?', (json.dumps(query),))
+            db.execute('UPDATE lookups SET query_json=? WHERE identity_hash=?',
+                       (json.dumps(query), identity_hash(identity.key)))
         assert not store.lookup(name, identity)
         assert len(caplog.records) == 1
         current[0] += 86401
@@ -439,7 +488,7 @@ def test_beatport_cache_miss_and_rate_limit(tmp_path, outcome):
     assert len(requests) == 1
     now[0] += 60
     store.lookup('beatport', MAU)
-    assert len(requests) == (1 if outcome in ('ready', 'not_found') else 2)
+    assert len(requests) == (2 if outcome == 'read_timeout' else 1)
 
 @pytest.mark.parametrize('songbpm_available', [True, False])
 def test_acquire_continues_after_beatport_exception(tmp_path, songbpm_available, caplog):

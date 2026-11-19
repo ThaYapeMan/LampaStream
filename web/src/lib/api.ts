@@ -541,7 +541,8 @@ export const releaseLights = (id: string) => request(`/api/couplings/${id}/relea
 
 
 export interface MetadataProvider {
-  display_label?: string; lookup?: { status: string; requested_at: number } | null
+  display_label?: string; lookup?: { status: string; requested_at: number | null } | null
+  paused_until?: number | null; http_status?: number | null
   name: string; capabilities: string[]; lookup_keys: string[]; rate_limit: number; ttl: number
   redistributable: boolean; requires_credentials: boolean; enabled: boolean
   status: 'active' | 'disabled' | 'obsolete'; consent: boolean; leaves_lan: boolean
@@ -558,6 +559,7 @@ export type TempoProviderRow = {
 }
 
 export interface TempoMetadata {
+  providers?: MetadataProvider[]
   provider_rows?: TempoProviderRow[]
   identity: string | null; confirmed: boolean; tempo: number | null; phase_offset_s: number
   reason: string | null

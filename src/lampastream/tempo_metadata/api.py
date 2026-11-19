@@ -37,8 +37,14 @@ def get_store(request):
 @router.get('/tempo-metadata')
 async def tempo_metadata(request: Request):
     from ..api import _manager
+    manager = _manager(request)
+    store = get_store(request)
+
+    def current():
+        return dict(refresh(manager, store), providers=store.list())
+
     try:
-        return await asyncio.to_thread(refresh, _manager(request), get_store(request))
+        return await asyncio.to_thread(current)
     except (OSError, ValueError, sqlite3.Error):
         raise HTTPException(503, 'Grid database unavailable; run the standard installer') from None
 
