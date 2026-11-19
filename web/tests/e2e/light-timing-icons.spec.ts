@@ -11,7 +11,8 @@ for (const theme of ['light', 'dark']) for (const kind of ['Sonos', 'LMS']) {
     await setupPreview(page, () => status(fixtureName))
     await page.route('**/api/virtual-players', route => route.fulfill({ json: [{ id: 'p', type: 'LMS', lms_host: 'fixture.invalid' }] }))
     await page.route('**/api/lms/players?**', route => route.fulfill({ json: [
-      { playerid: 'fixture', name, modelname: kind === 'Sonos' ? 'YeneY' : 'LampaStream' },
+      { playerid: 'fixture', name, model: kind === 'Sonos' ? 'yeney' : 'squeezelite',
+        modelname: kind === 'Sonos' ? 'Sonos Port (YeneY)' : 'LampaStream' },
     ] }))
     await page.reload()
     await page.getByRole('button', { name: theme === 'light' ? 'Light' : 'Dark', exact: true }).click()

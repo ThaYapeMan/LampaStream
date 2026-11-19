@@ -11,7 +11,7 @@ for (const theme of ['light', 'dark']) {
       { id: 'air', type: 'AirPlay', player_name: 'AirPlay', player_mac: 'air' },
     ] }))
     await page.route('**/api/lms/players?**', route => route.fulfill({ json: [
-      { playerid: 'sonos', name: 'Study (Sonos)', modelname: 'YeneY' },
+      { playerid: 'sonos', name: 'Study (Sonos)', model: 'yeney', modelname: 'YeneY' },
       { playerid: 'radio', name: 'Radio Red', model: 'baby' },
       { playerid: 'pi', name: 'piCorePlayer', modelname: 'SqueezeLite-pCP', firmware: '8.5-pCP' },
     ] }))

@@ -2,9 +2,9 @@ import { test, expect } from '@playwright/test'
 import { setupPreview } from './preview-fixture'
 
 const discoveries = [
-  { playerid: 'study', name: 'Study', modelname: 'YeneY' },
-  { playerid: 'mbr', name: 'MBR', modelname: 'yeney' },
-  { playerid: 'port', name: 'Sonos Port', modelname: 'YENEY' },
+  { playerid: 'study', name: 'Study', model: 'yeney', modelname: 'YeneY' },
+  { playerid: 'mbr', name: 'MBR', model: 'yeney', modelname: 'Sonos Play:1 (YeneY)' },
+  { playerid: 'port', name: 'Sonos Port', model: 'yeney', modelname: 'Sonos Port (YeneY)' },
 ]
 
 for (const theme of ['light', 'dark']) {

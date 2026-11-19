@@ -331,7 +331,7 @@ it.each(['Study (Sonos)', 'Study', 'MBR', 'Sonos Port'])('renders model icons wi
   players = [{ ...lms, follow_player_mac: '' }, airplay]
   entries = [timing('sonos', 'Sonos Study'), timing('radio', 'Radio Red'), timing('pi', 'piCorePlayer'), timing('unknown', 'Unknown')]
   vi.mocked(api.listLmsPlayers).mockResolvedValue([
-    { playerid: 'sonos', name, modelname: 'YeneY' },
+    { playerid: 'sonos', name, model: 'yeney', modelname: 'YeneY' },
     { playerid: 'radio', name: 'Radio Red', model: 'baby' },
     { playerid: 'pi', name: 'piCorePlayer', modelname: 'SqueezeLite-pCP' },
   ])

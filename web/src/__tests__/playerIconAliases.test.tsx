@@ -8,7 +8,7 @@ vi.mock('@/hooks/usePlayerMetadata', () => ({ usePlayerMetadata: vi.fn() }))
 afterEach(cleanup)
 
 it.each(['Study (Sonos)', 'Study', 'MBR', 'Sonos Port'])('keeps the Sonos timing diagram icon for %s with a saved alias', name => {
-  vi.mocked(usePlayerMetadata).mockReturnValue([{ playerid: 'AA', name, modelname: 'YeneY' }])
+  vi.mocked(usePlayerMetadata).mockReturnValue([{ playerid: 'AA', name, model: 'yeney', modelname: 'YeneY' }])
   const status = {
     follow_target_mac: 'aa', follow_target_name: name, timing_player_name: 'Favourite room', applied_delay_ms: 1000,
     light_timing: { player_mac: 'aa', name: 'Favourite room', strategy: 'auto', trim_ms: 0,
