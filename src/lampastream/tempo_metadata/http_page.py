@@ -19,7 +19,8 @@ class Page:
         return dict(status=self.status, url=self.url, http_status=self.http_status, html=self.body)
 
 
-def fetch(url, *, params=None, client=None, timeout=5., max_bytes=2000000, method='GET', data=None):
+def fetch(url, *, params=None, client=None, timeout=10., max_bytes=2000000,
+          method='GET', data=None):
     """No browser fallback. Transports can be injected for loopback-only tests."""
     if client is None:
         try:
@@ -52,7 +53,7 @@ def fetch(url, *, params=None, client=None, timeout=5., max_bytes=2000000, metho
 
 async def _fetch_song_page(url, params, timeout, max_bytes, method, data):
     return await _fetch_async(
-        url, params=params, timeout=timeout, overall_timeout=2 * timeout,
+        url, params=params, timeout=timeout, overall_timeout=15.,
         max_bytes=max_bytes, method=method, data=data, follow_redirects=True,
         headers={'User-Agent': 'LampaStream/0.2 (personal tempo lookup)',
                  'Accept': 'text/html,application/xhtml+xml'})

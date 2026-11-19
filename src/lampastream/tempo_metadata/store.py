@@ -211,7 +211,7 @@ class ProviderStore:
                 outcome = 'ready' if fields else (
                     result.status if result.status != 'ready' else 'empty')
                 retry_after = now + spec.rate_limit
-                if spec.leaves_lan and outcome not in _EXTERNAL_CACHE_STATES:
+                if spec.leaves_lan and outcome not in _EXTERNAL_CACHE_STATES | {'timeout'}:
                     retry_after = self.clock() + max(_FAILURE_COOLDOWN_S, spec.rate_limit)
                 db.execute('UPDATE lookups SET status=?,failures=0,retry_after=? '
                            'WHERE identity_hash=? AND provider=?',

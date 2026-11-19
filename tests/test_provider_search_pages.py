@@ -530,3 +530,60 @@ def test_text_search_queries_on_loopback():
         finally:
             server.shutdown()
             worker.join()
+
+
+@pytest.mark.serial
+def test_songbpm_step_and_overall_limits(tmp_path, caplog):
+    import time
+
+    requests = []
+    now = [1000.]
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_POST(self):
+            requests.append(self.path)
+            if len(requests) == 1:
+                time.sleep(7)
+                answer = song(artist='Mau P', title='Just A Little Bit More', bpm=128)
+            elif len(requests) == 2:
+                # Keep each individual read active while withholding the complete answer.
+                self.send_response(200)
+                self.send_header('Content-Length', '1000')
+                self.end_headers()
+                for _ in range(3):
+                    try:
+                        self.wfile.write(b'x')
+                        self.wfile.flush()
+                    except OSError:
+                        break
+                    time.sleep(6)
+                return
+            else:
+                answer = '<p>No results</p>'
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(answer.encode())
+
+    caplog.set_level('INFO')
+    with ThreadingHTTPServer(('127.0.0.1', 0), Handler) as server:
+        worker = Thread(target=server.serve_forever, daemon=True)
+        worker.start()
+        try:
+            url = f'http://127.0.0.1:{server.server_port}/searches'
+            store = ProviderStore(GridDatabase.create(tmp_path/'grid.db'),
+                                  options={'songbpm': {'url': url}}, clock=lambda: now[0])
+            store.configure('songbpm', enabled=True)
+            assert store.lookup('songbpm', replace(MAU, artist='Mau P'))
+            now[0] += 2
+            other = Identity('timeout', 'Artist', 'Another track')
+            started = time.monotonic()
+            assert not store.lookup('songbpm', other)
+            assert 14.9 <= time.monotonic() - started < 17
+            provider = next(p for p in store.list() if p['name'] == 'songbpm')
+            assert provider['lookup']['status'] == 'timeout'
+            now[0] += 2
+            assert not store.lookup('songbpm', other)
+            assert len(requests) == 3
+        finally:
+            server.shutdown()
+            worker.join()
