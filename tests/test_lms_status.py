@@ -247,7 +247,12 @@ def test_yeney_discovery_preserves_model_and_name_without_suffix(name):
     }]
 
 
-def test_session_kind_discovery_uses_modelname_from_same_owned_connection(monkeypatch):
+@pytest.mark.parametrize("reply,modelname", [
+    (b'players 0 100 playerid%3Aaa model%3Ayeney modelname%3AYeneY\n', 'YeneY'),
+    (b'players 0 100 playerid%3Aaa model%3AYeneY%20 modelname%3ASonos%20Port%20%28YeneY%29\n',
+     'Sonos Port (YeneY)'),
+])
+def test_session_discovery_preserves_separate_player_fields(monkeypatch, reply, modelname):
     from unittest.mock import MagicMock
 
     from lampastream import lms_status
@@ -255,10 +260,11 @@ def test_session_kind_discovery_uses_modelname_from_same_owned_connection(monkey
     connection.__enter__.return_value = connection
     connection.recv.side_effect = [
         b'aa status - 1 player_name%3ARoom time%3A1\n',
-        b'players 0 100 playerid%3Aaa model%3Asqueezelite modelname%3AYeneY\n',
+        reply,
     ]
     monkeypatch.setattr(lms_status.socket, 'create_connection', lambda *a, **k: connection)
     status = lms_status.query_lms_status('offline.invalid', 'aa', include_model=True)
-    assert status.player_model == 'YeneY/squeezelite'
+    assert status.model == 'yeney'
+    assert status.modelname == modelname
     assert [call.args[0] for call in connection.sendall.call_args_list] == [
         b'aa status - 1 tags:adglcKuf\n', b'players 0 100 tags:\n']

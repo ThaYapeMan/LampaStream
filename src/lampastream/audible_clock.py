@@ -146,15 +146,25 @@ class YeneyRoomAudibleClock(LmsAudibleClock):
         return getattr(self.probe, 'player_delay', None)
 
 
+def lampastream_own_player_clock(probe=None, timing=None):
+    """Clock LampaStream's own player until a followed room is known.
+
+    Also used throughout a session that follows no room.
+    """
+    clock = YeneyRoomAudibleClock(probe, timing)
+    clock.model = 'lampastream own player'
+    return clock
+
+
 def lms_clock_for_model(model, probe=None, timing=None):
-    """Select in PlayerManager; no model identity escapes this per-source object."""
-    model = model.lower() if isinstance(model, str) else ''
-    if any(token in model for token in ('yeney', 'sonos')):
-        result = YeneyRoomAudibleClock(probe, timing)
-    elif ('squeezebox' in model or set(model.split('/')) &
-          {'squeezebox2', 'squeezebox3', 'baby', 'fab4', 'transporter', 'slimp3'}):
-        result = SqueezeboxAudibleClock(probe, timing)
+    """Select the clock of a followed room by its LMS player type."""
+    model = (model or '').strip().lower()
+    if model == 'yeney':
+        clock = YeneyRoomAudibleClock(probe, timing)
+    elif model in {'squeezebox', 'squeezebox2', 'squeezebox3', 'baby', 'fab4',
+                   'transporter', 'slimp3'}:
+        clock = SqueezeboxAudibleClock(probe, timing)
     else:
-        result = LmsAudibleClock(probe, timing)
-    result.model = model or 'unknown LMS model'
-    return result
+        clock = LmsAudibleClock(probe, timing)
+    clock.model = model or 'unknown LMS model'
+    return clock

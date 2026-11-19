@@ -35,7 +35,8 @@ class LmsPlayerStatus:
     mode: str | None = None
     waiting_to_play: bool = False
     time: float | None = None
-    player_model: str | None = None
+    model: str | None = None
+    modelname: str | None = None
     player_name: str | None = None      # display name of the queried player
     sync_master: str | None = None      # MAC of the sync-group master, None if standalone
     genre: str | None = None
@@ -82,17 +83,16 @@ def query_lms_status(host: str, mac: str, port: int = DEFAULT_PORT, *,
     with socket.create_connection((host, port), timeout=_SOCKET_TIMEOUT_S) as sock:
         sock.sendall(command.encode("utf-8"))
         raw = _recv_line(sock).decode("utf-8", errors="replace").strip()
-        model = None
+        player = {}
         if include_model:
             sock.sendall(b"players 0 100 tags:\n")
             reply = _recv_line(sock).decode("utf-8", errors="replace").strip()
             player = next((p for p in _parse_players(reply)
                            if p.get("playerid", "").lower() == mac.lower()), {})
-            model = '/'.join(str(player[key]) for key in ('modelname', 'model')
-                             if player.get(key)) or None
     log.debug("LMS raw response: %r", raw[:400])
     result = _parse_status(raw)
-    result.player_model = model
+    result.model = player.get("model", "").strip().lower() or None
+    result.modelname = player.get("modelname")
     log.debug("LMS parsed: player_name=%r sync_master=%r sync_slaves=%r",
               result.player_name, result.sync_master, result.sync_slaves)
     return result

@@ -397,8 +397,9 @@ def test_lms_players_endpoint_returns_list(client: TestClient, monkeypatch):
     from lampastream import api as api_module
 
     fake_players = [
-        {"playerid": "aa:bb:cc:dd:ee:ff", "name": "Sonos Living Room"},
-        {"playerid": "11:22:33:44:55:66", "name": "Kitchen"},
+        {"playerid": "aa:bb:cc:dd:ee:ff", "name": "Sonos Living Room",
+         "model": "yeney", "modelname": "Sonos Port (YeneY)"},
+        {"playerid": "11:22:33:44:55:66", "name": "Kitchen", "model": "squeezelite"},
     ]
 
     async def mock_to_thread(fn, *args, **kwargs):

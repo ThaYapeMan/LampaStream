@@ -1257,3 +1257,66 @@ def test_failed_hue_stop_closes_dtls_and_blocks_replacement(tmp_path):
     driver.aclose.assert_awaited_once()
     assert manager._active is session
     assert session.stopping
+
+
+@pytest.mark.parametrize("follow_mac", ["", "02:00:00:00:00:02"])
+def test_lms_session_selects_room_clock_only_when_following(tmp_path, monkeypatch, caplog,
+                                                           follow_mac):
+    import logging
+
+    import lampastream.player_manager as pm
+    from lampastream.audible_clock import YeneyRoomAudibleClock
+    from lampastream.latency import NoLatencyProbe
+
+    manager = _make_manager(tmp_path)
+    player = VirtualPlayer(follow_player_mac=follow_mac)
+    manager.storage.save_virtual_player(player)
+    profile = Profile(player_mac="02:00:00:00:00:01", lms_host="127.0.0.1")
+    session = ActiveSession(profile, coupling=Coupling(player_id=player.id))
+    monkeypatch.setattr(manager, "_wait_for_shm", Mock())
+    monkeypatch.setattr(manager, "_start_music", Mock())
+    monkeypatch.setattr(pm, "TeePcmSource", Mock())
+    monkeypatch.setattr(pm, "_make_canonical_pipeline", MagicMock())
+    monkeypatch.setattr(pm, "HueDriver", Mock(return_value=Mock(start=AsyncMock())))
+    own_clock_factory = Mock(wraps=pm.lampastream_own_player_clock)
+    monkeypatch.setattr(pm, "lampastream_own_player_clock", own_clock_factory)
+    select_room = Mock(wraps=manager._select_room_clock)
+    monkeypatch.setattr(manager, "_select_room_clock", select_room)
+    modelname = "Sonos Port (YeneY)"
+    query = Mock(return_value=LmsPlayerStatus(model="yeney", modelname=modelname))
+    monkeypatch.setattr(pm, "query_lms_status", query)
+    initial_clocks = []
+
+    def engine_factory(*args, audible_clock, **kwargs):
+        initial_clocks.append(audible_clock)
+        return Mock(audible_clock=audible_clock, run=AsyncMock())
+
+    monkeypatch.setattr(pm, "SyncEngine", engine_factory)
+
+    async def activate():
+        await manager._activate_lms_pcm(session, profile, None, Mock(), [])
+        await session.poller_task
+        await session.task
+
+    with caplog.at_level(logging.INFO, logger=pm.__name__):
+        asyncio.run(activate())
+
+    own_clock_factory.assert_called_once()
+    initial_clock, = initial_clocks
+    assert type(initial_clock) is YeneyRoomAudibleClock
+    assert initial_clock.model == "lampastream own player"
+    clock = session.sync_engine.audible_clock
+    if follow_mac:
+        query.assert_called_once_with(profile.lms_host, follow_mac, include_model=True)
+        select_room.assert_called_once_with(session, "yeney", modelname)
+        assert clock is not initial_clock
+        assert type(clock) is YeneyRoomAudibleClock
+        assert clock.model == "yeney"
+        assert ("Audible clock selected for room type 'yeney' model text 'Sonos Port (YeneY)'"
+                in caplog.text)
+    else:
+        query.assert_not_called()
+        select_room.assert_not_called()
+        assert clock is initial_clock
+        assert isinstance(session.probe, NoLatencyProbe)
+        assert clock.reported_pipeline_delay_ms is None
