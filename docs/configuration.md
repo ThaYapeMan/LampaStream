@@ -934,13 +934,38 @@ it never creates a missing lock or changes ownership.
 
 ## Tempo provider settings and track corrections
 
-Music settings lists owner, local-tags, recorded-fixture and the reserved SongBPM
-slot. Owner and local-tags are always local/enabled. Recorded-fixture is available
-only in a test harness. SongBPM is obsolete/unavailable until a separate permitted
-adapter and recorded-page fixture arrive. Every external lookup defaults off.
-Provider enable/disable, lifecycle, priority and sharing consent live in grids.db,
-not in a second source-specific configuration. Consent defaults off and only marks
-eligible rows for a future grid export; these controls upload nothing.
+Music settings lists the owner, local-tags, recorded-fixture, SongBPM and
+Beatport providers. Owner and local-tags are always enabled. Recorded-fixture
+is available in the test harness. External lookups default to off. Enabling a
+provider permits it to receive the played artist and title as search text.
+Sharing consent is separate and provider values stay local. Providers and
+lookup outcomes are stored in grids.db.
+
+An available matching ISRC takes precedence. Otherwise the adapters compare
+folded base titles and artist credits, including featured artists and the album
+artist when available. Equivalent versions are preferred, followed by a
+unique duration within two seconds, then agreement on tempo within 0.5 BPM.
+Among several equivalent versions, duration can select one before considering
+tempo agreement. A unique title and duration can also match across different
+credits. The accepted fields record the matching rule and retain the provider's
+artist for a title-and-duration match.
+
+Music settings shows the latest lookup status. `ready` means a row was
+accepted, `not_found` means a readable page offered no qualifying match,
+`ambiguous` means the adapter could not choose, and `unreadable` means it
+could not read the results. `blocked`, `http_error` and `timeout` describe
+request failures. Each actual lookup emits one INFO line under
+`lampastream.tempo_metadata`, with provider, query, HTTP status, response
+bytes, candidate count, accepted title and match and tempo (or failure
+reason), and elapsed milliseconds. Cache hits are silent.
+
+Lookups are limited to one per second per provider. Current-version outcomes
+are cached for 24 hours. Older unsuccessful outcomes are retried after an
+adapter upgrade. Accepted rows retain their original fetch time through an
+unsuccessful refresh. The display payload exposes age and staleness.
+Now Playing appends the available key and genre under the track title,
+using provider priority per field. A question mark beside the provider
+identifies a match based on title and duration alone.
 
 Now Playing uses the existing outline-button pattern for Half tempo, Double tempo,
 Tap tempo and ±20 ms phase nudges. Corrections are saved for the verified audio

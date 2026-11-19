@@ -1,31 +1,42 @@
 """Opt-in SongBPM search results; reference display only."""
-from .http_page import fetch
-from .registry import LookupResult
-from .search_page import Document, no_result, select, valid_tempo
+from .search_page import Document, lookup, no_result, select, title_parts, valid_tempo
 
 
-def parse(html, identity):
+def candidates_from(html):
     document = Document(html).root
     candidates = []
-    links = [a for a in document.all('a') if a.attrs.get('href', '').startswith('/@')]
-    for link in links:
+    for link in document.all('a'):
+        href = link.attrs.get('href') or ''
+        if not href.startswith('/@'):
+            continue
         paragraphs = [' '.join(p.text().split()) for p in link.all('p')]
         spans = [' '.join(s.text().split()) for s in link.all('span')]
         try:
-            bpm = float(spans[spans.index('BPM')+1])
-            minutes, seconds = spans[spans.index('Duration')+1].split(':')
-            if len(paragraphs) < 2 or not valid_tempo(bpm):
+            bpm = float(spans[spans.index('BPM') + 1])
+            artist, title = paragraphs[:2]
+            if not valid_tempo(bpm):
                 continue
-            candidates.append(dict(artist=paragraphs[0], title=paragraphs[1], tempo=bpm,
-                                   duration=int(minutes)*60+int(seconds),
-                                   href=link.attrs['href']))
         except (ValueError, IndexError):
             continue
-    row = select(candidates, identity)
-    if row:
-        return LookupResult({'tempo': row['tempo']}, row, .7)
-    return no_result('not_found' if candidates or 'no results' in html.casefold()
-                     else 'layout_changed')
+        duration = None
+        try:
+            minutes, seconds = spans[spans.index('Duration') + 1].split(':')
+            duration = int(minutes) * 60 + int(seconds)
+        except (ValueError, IndexError):
+            pass
+        key = spans[spans.index('Key') + 1:spans.index('Key') + 2] if 'Key' in spans else []
+        base, version, feature = title_parts(title)
+        raw = dict(artist=artist, title=title, tempo=bpm, duration=duration, href=href)
+        candidates.append(dict(artists=[artist], title=base, version=version, feature=feature,
+                               tempo=bpm, duration=duration, key=next(iter(key), None), raw=raw))
+    no_results = any(' '.join(node.text().casefold().split()) in ('no results', 'no results found')
+                     for tag in ('p', 'h1', 'h2', 'div') for node in document.all(tag))
+    return candidates if candidates or no_results else None
+
+
+def parse(html, identity):
+    candidates = candidates_from(html)
+    return no_result('unreadable') if candidates is None else select(candidates, identity, .7)
 
 
 class Adapter:
@@ -33,10 +44,4 @@ class Adapter:
         self.url, self.client = url, client
 
     def lookup(self, identity):
-        page = fetch(self.url, method='POST', data={'query': f'{identity.artist} {identity.title}'},
-                     client=self.client)
-        if page.status != 'ready':
-            return no_result(page.status, {'url': page.url, 'http_status': page.http_status})
-        result = parse(page.body, identity)
-        return LookupResult(result.fields, dict(url=page.url, track=result.raw_payload),
-                            result.confidence, result.status)
+        return lookup('songbpm', identity, self.url, self.client, candidates_from, .7, post=True)

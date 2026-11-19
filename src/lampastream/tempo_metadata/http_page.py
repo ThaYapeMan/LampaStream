@@ -12,6 +12,7 @@ class Page:
     url: str
     body: str = ''
     http_status: int | None = None
+    byte_count: int = 0
 
     def payload(self):
         return dict(status=self.status, url=self.url, http_status=self.http_status, html=self.body)
@@ -37,9 +38,9 @@ def fetch(url, *, params=None, client=None, timeout=5., max_bytes=2000000, metho
             for chunk in response.iter_bytes():
                 chunks.extend(chunk)
                 if len(chunks) > max_bytes:
-                    return Page('too_large', location, http_status=status)
+                    return Page('too_large', location, http_status=status, byte_count=len(chunks))
             return Page('ready', location, chunks.decode(response.encoding or 'utf-8',
-                                                       errors='replace'), status)
+                                                       errors='replace'), status, len(chunks))
     except httpx.TimeoutException:
         return Page('timeout', str(url))
     except httpx.HTTPError:

@@ -297,5 +297,5 @@ not erase the acquisition adapter's verified recording identity.
 Part B exposes the ranked metadata result and records owner tap, octave and phase
 corrections. The prior/seeding connection to musical estimation belongs to part E;
 providers do not directly retune clocks or manufacture accents. Parts C/D add live
-fingerprint/rolling/learned-grid acquisition through the same interfaces. The
-SongBPM slot has no request code: it awaits owner permission and a saved page.
+fingerprint/rolling/learned-grid acquisition through the same interfaces. SongBPM
+and Beatport lookups are opt-in and supply reference metadata for display.

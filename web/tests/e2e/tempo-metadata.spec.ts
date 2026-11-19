@@ -77,3 +77,36 @@ test('provider references stay beside measured tempo without replacing it', asyn
   await expect(page.getByTestId('track-tempo')).toHaveText('measured 143 BPM · SongBPM 142 · Beatport 144')
   await page.getByTestId('track-tempo').screenshot({ path: '../.test-cache/beat-02-part-b-sendback-1/provider-label.png' })
 })
+
+test('song information sits under the Mau P title at desktop and phone widths', async ({ page }) => {
+  const track = { artist: 'Mau P', title: 'Just A Little Bit More (Extended)',
+    position_s: 26, duration_s: 381.221995, playing: true }
+  const providerRows = process.env.LAMPASTREAM_SCREENSHOT_PROVIDER_ROWS
+    ? JSON.parse(process.env.LAMPASTREAM_SCREENSHOT_PROVIDER_ROWS)
+    : [{ provider: 'beatport', label: 'Beatport', fields: {
+      tempo: 128, key: 'Gb Major', genre: 'Dance / Pop', match: 'exact',
+    } }]
+  await setupPreview(page, () => ({ track, tempo_bpm: 128, tempo_locked: true, grid_tempo: 128,
+    music: { genre: 'other', source: '', raw_tags: [], palette_id: '', energy_profile_id: '', manual: false,
+      tempo_metadata: { identity: 'hint:mau', confirmed: false, tempo: 128,
+        phase_offset_s: 0, reason: null, resolved_tempo: null, provider_rows: providerRows } } }))
+  const title = page.getByTestId('track-title')
+  const information = page.getByTestId('track-information')
+  const source = page.getByTestId('track-information-source')
+  for (const width of [1280, 390]) {
+    await page.setViewportSize({ width, height: 1000 })
+    await expect(title).toHaveText('Mau P — Just A Little Bit More (Extended)')
+    await expect(title).toHaveCSS('white-space', 'nowrap')
+    await expect(information).toContainText('grid 128 BPM')
+    await expect(information).toContainText('G♭ major · Dance / Pop')
+    await expect(source).toHaveText('source: Beatport')
+    const titleBox = (await title.boundingBox())!
+    const informationBox = (await information.boundingBox())!
+    const sourceBox = (await source.boundingBox())!
+    expect(informationBox.y).toBeGreaterThanOrEqual(titleBox.y + titleBox.height)
+    expect(sourceBox.y > informationBox.y + 10).toBe(width === 390)
+    if (width === 1280 && process.env.LAMPASTREAM_SCREENSHOT_PROVIDER_ROWS) {
+      await page.getByTestId('track-block').screenshot({ path: '../docs/designs/now-playing-song-information.png' })
+    }
+  }
+})

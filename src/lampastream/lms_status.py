@@ -43,6 +43,8 @@ class LmsPlayerStatus:
     coverid: str | None = None
     artwork_url: str | None = None
     sync_slaves: list[str] = field(default_factory=list)   # MACs of sync slaves
+    album_artist: str | None = None
+    isrc: str | None = None
 
 
 def _recv_line(sock: socket.socket) -> bytes:
@@ -163,6 +165,8 @@ def _parse_status(text: str) -> LmsPlayerStatus:
             current_title = value or None
         elif key in ("title", "artist", "mode", "genre", "album", "coverid", "artwork_url"):
             setattr(result, key, value or None)
+        elif key in ("albumartist", "album_artist", "isrc"):
+            setattr(result, "album_artist" if key != "isrc" else key, value or None)
         elif key == "duration":
             try:
                 number = float(value)

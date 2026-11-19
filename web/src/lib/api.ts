@@ -547,8 +547,18 @@ export interface MetadataProvider {
   status: 'active' | 'disabled' | 'obsolete'; consent: boolean; leaves_lan: boolean
   always_enabled: boolean; test_only: boolean; toggleable: boolean
 }
+export type TempoProviderRow = {
+  provider: string
+  label: string
+  fields: { tempo?: number; key?: string; genre?: string; match?: string }
+  fetched_at?: number
+  status?: string | null
+  age_s?: number
+  stale?: boolean
+}
+
 export interface TempoMetadata {
-  provider_rows?: Array<{ provider: string; label: string; fields: { tempo?: number }; fetched_at: number; status: string }>
+  provider_rows?: TempoProviderRow[]
   identity: string | null; confirmed: boolean; tempo: number | null; phase_offset_s: number
   reason: string | null
   resolved_tempo: { provider: string; fields: { tempo?: number; phase_offset_s?: number }; confidence: number; redistributable: boolean } | null

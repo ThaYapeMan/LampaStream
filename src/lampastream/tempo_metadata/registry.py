@@ -15,6 +15,7 @@ class Identity:
     fingerprint: dict | None = None
     tags: dict | None = None
     correction: dict | None = None
+    album_artist: str = ''
 
 
 @dataclass(frozen=True)
@@ -47,6 +48,7 @@ class ProviderSpec:
     test_only: bool = False
     manual: bool = False
     display_label: str = ''
+    adapter_version: int = 1
 
     def make(self, **options):
         return import_module(self.module).Adapter(**options)
@@ -65,11 +67,13 @@ PROVIDERS = {
                      ('tempo',), ('artist+title', 'ISRC', 'external_id', 'fingerprint'),
                      0., 3600., False, False, False, priority=10, test_only=True),
         ProviderSpec('songbpm', 'lampastream.tempo_metadata.songbpm',
-                     ('tempo',), ('artist+title',), 1., 86400., False, False, False,
-                     priority=50, leaves_lan=True, display_label='SongBPM'),
+                     ('tempo', 'key', 'duration', 'match', 'artist'), ('artist+title',),
+                     1., 86400., False, False, False,
+                     priority=50, leaves_lan=True, display_label='SongBPM', adapter_version=2),
         ProviderSpec('beatport', 'lampastream.tempo_metadata.beatport',
-                     ('tempo', 'key', 'genre'), ('artist+title',), 1., 86400.,
+                     ('tempo', 'key', 'genre', 'duration', 'match', 'artist'),
+                     ('artist+title',), 1., 86400.,
                      False, False, False, priority=75, leaves_lan=True,
-                     display_label='Beatport'),
+                     display_label='Beatport', adapter_version=2),
     )
 }

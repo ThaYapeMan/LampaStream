@@ -335,3 +335,35 @@ def test_full_backup_restores_provider_state_consent_and_owner_rows(tmp_path, mo
     assert service.resolve(identity())['redistributable']
     states = {row['name']: row for row in service.list()}
     assert states['owner']['consent'] and states['recorded-fixture']['enabled']
+
+
+def test_file_matching_fields_stay_local_until_playback(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+
+    from test_grid import grid
+
+    from lampastream.tempo_metadata.context import refresh
+    from lampastream.tempo_metadata.file_tags import capture
+    from lampastream.tempo_metadata.store import fingerprint_key
+
+    service = store(tmp_path)
+    fp = dict(duration=20., version=1, landmarks=[[i, i * 20] for i in range(32)])
+    available = replace(grid(), audio_fingerprint=fp)
+    raw_tags = {'ALBUM_ARTIST': 'Album Credit', 'ISRC': 'USABC2600001'}
+    monkeypatch.setattr('lampastream.tempo_metadata.file_tags.subprocess.run',
+                        lambda *a, **kw: SimpleNamespace(
+                            stdout=json.dumps({'format': {'tags': raw_tags}})))
+    capture(tmp_path/'private-file.flac', available, service.database)
+    assert service.resolve(Identity(fingerprint_key(fp))) is None
+    assert 'local-file-identity' not in {item['name'] for item in service.list()}
+    attempts = []
+    monkeypatch.setattr(service, 'acquire', attempts.append)
+    manager = SimpleNamespace(
+        track_position=SimpleNamespace(artist='Guest Artist', title='Song',
+                                       duration_s=20., tempo_bpm=None),
+        _active=SimpleNamespace(track_source=SimpleNamespace(
+            grid_adapter=SimpleNamespace(grid=available))))
+    refresh(manager, service)
+    identity, = attempts
+    assert (identity.artist, identity.album_artist, identity.isrc) == (
+        'Guest Artist', 'Album Credit', 'USABC2600001')

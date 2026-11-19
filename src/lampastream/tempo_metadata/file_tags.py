@@ -13,10 +13,13 @@ def capture(path, grid, database):
     result = subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'format_tags',
                              '-of', 'json', str(path)], capture_output=True, text=True,
                             check=True, timeout=5)
-    tags = json.loads(result.stdout).get('format', {}).get('tags', {})
-    # Only normalized tempo inputs enter metadata; arbitrary comments can include
-    # filesystem paths, and neither a path nor a media URL belongs in the store.
-    tags = {name: value for name, value in tags.items() if name.casefold() in ('bpm', 'tbpm')}
+    fields = json.loads(result.stdout).get('format', {}).get('tags', {})
+    fields = {name.casefold(): value for name, value in fields.items()}
+    tags = {name: fields[name] for name in ('bpm', 'tbpm') if name in fields}
+    store = ProviderStore(database)
+    store.save_file_identity(
+        key, album_artist=fields.get('album_artist', fields.get('albumartist', '')),
+        isrc=fields.get('isrc', fields.get('tsrc', '')))
     if tags:
-        ProviderStore(database).acquire(Identity(
+        store.lookup('local-tags', Identity(
             key, duration=grid.duration, fingerprint=grid.audio_fingerprint, tags=tags))

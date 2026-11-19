@@ -11,6 +11,8 @@ from functools import lru_cache
 from ..grid.database import GridDatabase, encode, identity_hash
 from .registry import PROVIDERS
 
+_FILE_IDENTITY = 'local-file-identity'
+
 
 class ProviderStore:
     def __init__(self, database=None, *, specs=None, options=None, allow_test=False,
@@ -37,7 +39,8 @@ class ProviderStore:
                        "OR (?='obsolete' AND enabled<>0))",
                        (status, spec.priority, status, name, status, spec.priority, status))
         db.execute('INSERT OR IGNORE INTO metadata_providers '
-                   "SELECT DISTINCT provider,'obsolete',0,0,0 FROM track_metadata")
+                   "SELECT DISTINCT provider,'obsolete',0,0,0 FROM track_metadata "
+                   "WHERE provider<>?", (_FILE_IDENTITY,))
         known = tuple(self.specs)
         if known:
             slots = ','.join('?' for _ in known)
@@ -99,7 +102,9 @@ class ProviderStore:
         query['tags'] = {k: v for k, v in (identity.tags or {}).items()
                          if k.casefold() in ('tempo', 'tbpm', 'bpm')}
         if spec.leaves_lan:
-            query = {'artist': identity.artist, 'title': identity.title}
+            query = {'artist': identity.artist, 'title': identity.title,
+                     'album_artist': identity.album_artist,
+                     'isrc': identity.isrc, 'adapter_version': spec.adapter_version}
         query_json = encode(query)
         with self.database.connect() as db:
             self._sync(db)
@@ -113,6 +118,16 @@ class ProviderStore:
             attempt = db.execute('SELECT retry_after,status,requested_at,query_json FROM lookups '
                                  'WHERE identity_hash=? AND provider=?', (key, name)).fetchone()
             same_query = attempt is not None and attempt[3] == query_json
+            old_query = json.loads(attempt[3]) if spec.leaves_lan and attempt else {}
+            outdated = (spec.leaves_lan and attempt and attempt[1] != 'ready'
+                        and old_query.get('adapter_version', 1) < spec.adapter_version)
+            if spec.leaves_lan and previous and not force and now < sum(previous):
+                # Keep fresh accepted rows across adapter upgrades. Newly available
+                # ISRC or album artist can improve the match for the same recording.
+                improved = any(query[field] and old_query.get(field) != query[field]
+                               for field in ('isrc', 'album_artist'))
+                if not improved:
+                    return False
             if not force and same_query:
                 if previous and (previous[1] == 0 or now < sum(previous)):
                     return False
@@ -124,7 +139,7 @@ class ProviderStore:
                 return False
             if spec.requires_credentials and not self.options.get(name, {}).get('credentials'):
                 return False
-            if attempt and now < attempt[0]:
+            if attempt and not outdated and now < attempt[0]:
                 return False
             db.execute('INSERT INTO lookups VALUES(?,?,?,?,?,?,0) ON CONFLICT '
                        '(identity_hash,provider) DO UPDATE SET query_json=excluded.query_json,'
@@ -180,6 +195,23 @@ class ProviderStore:
                            (now+(0. if spec.manual else max(60., spec.rate_limit)), key, name))
             raise
 
+    def save_file_identity(self, identity, *, album_artist, isrc):
+        if not (album_artist or isrc):
+            return
+        raw = encode(dict(album_artist=album_artist, isrc=isrc))
+        with self.database.connect() as db:
+            db.execute("INSERT INTO track_metadata VALUES(?,?,?,0,'{}',?,1,0) "
+                       "ON CONFLICT(identity_hash,provider) DO UPDATE SET "
+                       "fetched_at=excluded.fetched_at,raw_payload_json=excluded.raw_payload_json",
+                       (identity_hash(identity), _FILE_IDENTITY, self.clock(), raw))
+
+    def file_identity(self, identity):
+        with self.database.connect() as db:
+            row = db.execute('SELECT raw_payload_json FROM track_metadata '
+                             'WHERE identity_hash=? AND provider=?',
+                             (identity_hash(identity), _FILE_IDENTITY)).fetchone()
+        return json.loads(row[0]) if row else {}
+
     def acquire(self, identity):
         import logging
         for name, spec in self.specs.items():
@@ -196,15 +228,17 @@ class ProviderStore:
             return []
         with self.database.connect() as db:
             self._sync(db)
-            rows = db.execute('SELECT m.provider,m.fields_json,m.fetched_at,l.status '
+            rows = db.execute('SELECT m.provider,m.fields_json,m.fetched_at,m.ttl,l.status '
                               'FROM track_metadata m LEFT JOIN lookups l '
                               'ON m.identity_hash=l.identity_hash AND m.provider=l.provider '
                               'JOIN metadata_providers p ON p.name=m.provider '
                               "WHERE m.identity_hash=? AND p.enabled=1 AND p.status='active' "
                               'ORDER BY p.priority DESC', (identity_hash(identity.key),)).fetchall()
+        now = self.clock()
         return [dict(provider=name, label=self.specs[name].display_label,
-                     fields=json.loads(fields), fetched_at=fetched_at, status=status)
-                for name, fields, fetched_at, status in rows
+                     fields=json.loads(fields), fetched_at=fetched_at, status=status,
+                     age_s=max(0., now - fetched_at), stale=bool(ttl and now >= fetched_at + ttl))
+                for name, fields, fetched_at, ttl, status in rows
                 if name in self.specs and self.specs[name].display_label]
 
     def resolve(self, identity):

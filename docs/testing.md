@@ -1591,8 +1591,11 @@ No player or output is started by either restore path.
 `tests/test_tempo_metadata.py` covers registry acquisition from recorded JSON,
 local file/sender BPM fields, active/disabled/obsolete retention and ranking,
 consent revocation, global rate limits, failed-refresh retention, schema-1 to 2
-migration and API owner corrections with stale-identity rejection. No provider
-makes a network request. SongBPM remains a documented offline skeleton.
+migration and API owner corrections with stale-identity rejection.
+`tests/test_provider_search_pages.py` uses hand-written pages for matching,
+lookup logging and cache outcomes. Set `LAMPASTREAM_PROVIDER_FIXTURES` to the
+private provider recording directory to exercise the saved SongBPM and Beatport
+responses over loopback.
 `tests/test_beat_position.py` covers reference indices, meter, content origin,
 handovers, onset zeros and republication without re-estimation. Set
 `LAMPASTREAM_BEAT_POSITION_REFERENCE` to the private Mau P beats.csv to run its

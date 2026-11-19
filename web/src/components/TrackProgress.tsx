@@ -1,7 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { BackwardIcon, ForwardIcon, PauseIcon, PlayIcon } from './MediaIcons'
-import { controlCouplingTransport, type TransportAction } from '@/lib/api'
+import { controlCouplingTransport, type TempoProviderRow, type TransportAction } from '@/lib/api'
 import type { TrackPosition } from '@/hooks/usePreviewSocket'
+
+function displayKey(key: string): string {
+  return key.replace(/\b([A-G])([b#])/g, (_, note, accidental) => note + (accidental === 'b' ? '♭' : '♯'))
+    .replace(/\bmaj(?:or)?\b/gi, 'major').replace(/\bmin(?:or)?\b/gi, 'minor')
+}
 
 function clock(seconds: number | null): string {
   if (seconds == null) return '—'
@@ -12,7 +17,7 @@ function clock(seconds: number | null): string {
 /** Generic delivery-time anchor; transport is an optional, separate capability. */
 export function TrackProgress({ track, connected, transport, tempoBpm, tempoLocked, beatSource, providerRows, showControls = !!transport }: {
   track: TrackPosition | null
-  providerRows?: Array<{ provider: string; label: string; fields: { tempo?: number } }>
+  providerRows?: TempoProviderRow[]
   beatSource?: string
   tempoBpm?: number | null
   tempoLocked?: boolean
@@ -90,16 +95,33 @@ export function TrackProgress({ track, connected, transport, tempoBpm, tempoLock
     cancelHold()
     if (!current.held) void send(current.tap)
   }
+  const keyRow = providerRows?.find(row => row.fields.key)
+  const genreRow = providerRows?.find(row => row.fields.genre)
+  const key = keyRow?.fields.key
+  const genre = genreRow?.fields.genre
+  const sources = [...new Set([keyRow, genreRow].flatMap(row =>
+    row ? [row.label + (row.fields.match === 'title_duration' ? '?' : '')] : []))]
+  const hasTempo = !!tempoBpm && tempoBpm > 0
   const duration = track?.duration_s ?? null
   const hasProgress = duration != null && duration > 0 && elapsed != null
   const buttonClass = 'flex shrink-0 touch-none select-none items-center justify-center rounded text-foreground focus-visible:outline focus-visible:outline-2 disabled:opacity-40'
   return (
     <div data-testid="track-block" className="w-full space-y-2.5 rounded-xl border border-border bg-card px-4 pt-3 pb-2.5 backdrop-blur-sm">
-      <div data-testid="track-title" className="flex min-w-0 items-baseline gap-1 text-sm"
+      <div data-testid="track-title" className="min-w-0 truncate text-sm font-medium text-foreground"
         title={[track?.title || 'Track information unavailable', track?.artist].filter(Boolean).join(' — ')}>
-        <span className="min-w-0 truncate font-medium text-foreground">{track?.artist && <><span>{track.artist}</span> — </>}<span className="truncate font-medium">{track?.title || 'Track information unavailable'}</span></span>
-        {!!tempoBpm && tempoBpm > 0 && <span data-testid="track-tempo" className={`ml-auto shrink-0 text-right tabular-nums ${tempoLocked ? 'text-foreground' : 'text-muted-foreground'}`}><span className="italic font-normal">{beatSource === "grid" ? "grid" : "measured"}</span> {Math.round(tempoBpm)} BPM{providerRows?.filter(row => !!row.fields.tempo).map(row => <span key={row.provider}> · {row.label} {Math.round(row.fields.tempo!)}</span>)}</span>}
+        {track?.artist && <><span>{track.artist}</span> — </>}<span className="truncate font-medium">{track?.title || 'Track information unavailable'}</span>
       </div>
+      {(hasTempo || sources.length > 0) && (
+        <div data-testid="track-information" className="!mt-0.5 flex flex-wrap items-baseline gap-x-3 text-sm tabular-nums text-muted-foreground"
+          style={{ fontFamily: 'system-ui, sans-serif' }}>
+          <span>
+            {hasTempo && <span data-testid="track-tempo" className={tempoLocked ? undefined : 'opacity-70'}><span className="italic font-normal">{beatSource === 'grid' ? 'grid' : 'measured'}</span> {Math.round(tempoBpm)} BPM{providerRows?.filter(row => !!row.fields.tempo).map(row => <span key={row.provider}> · {row.label} {Math.round(row.fields.tempo!)}</span>)}</span>}
+            {key && <>{hasTempo && ' · '}{displayKey(key)}</>}
+            {genre && <>{(hasTempo || key) && ' · '}{genre}</>}
+          </span>
+          {sources.length > 0 && <span data-testid="track-information-source" className="ml-auto basis-full text-right sm:basis-auto">source: {sources.join(', ')}</span>}
+        </div>
+      )}
       <div data-testid="track-progress-row" className="flex items-center gap-3 text-xs tabular-nums text-muted-foreground">
         <span className="w-12 shrink-0 text-right" data-testid="track-elapsed">{clock(elapsed)}</span>
         {/* Display only; pointer seeking is a separate follow-up. */}

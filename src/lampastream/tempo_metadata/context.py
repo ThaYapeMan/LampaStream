@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from dataclasses import replace
 
 from ..grid import TrackGrid
 from ..grid.database import encode
@@ -34,7 +35,9 @@ def current_identity(manager):
     return Identity(key, artist=track.artist or '' if track else '',
                     title=track.title or '' if track else '',
                     duration=grid.duration if grid else track.duration_s,
-                    fingerprint=fingerprint, tags=tags), grid
+                    fingerprint=fingerprint, tags=tags,
+                    album_artist=(getattr(track, 'album_artist', None) or ''),
+                    isrc=(getattr(track, 'isrc', None) or '')), grid
 
 
 def snapshot(manager, store=None):
@@ -56,6 +59,11 @@ def refresh(manager, store=None):
     store = store or ProviderStore()
     identity, _ = current_identity(manager)
     if identity is not None and store.database.path.exists():
+        if identity.fingerprint:
+            file_fields = store.file_identity(identity.key)
+            identity = replace(
+                identity, album_artist=identity.album_artist or file_fields.get('album_artist', ''),
+                isrc=identity.isrc or file_fields.get('isrc', ''))
         store.acquire(identity)
     return snapshot(manager, store)
 

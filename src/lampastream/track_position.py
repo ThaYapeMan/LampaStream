@@ -35,6 +35,8 @@ class TrackPosition:
     artwork_data: bytes | None = None
     artwork_hash: str | None = None
     tempo_bpm: float | None = None
+    album_artist: str | None = None
+    isrc: str | None = None
 
     def position_now(self) -> float | None:
         if self.position_s is None:
@@ -47,7 +49,8 @@ class TrackPosition:
         result = asdict(self)
         result['position_s'] = self.position_now()
         del result['observed_at']
-        result.pop('artwork_data', None)
+        for field in ('artwork_data', 'album_artist', 'isrc'):
+            result.pop(field, None)
         return {k: v for k, v in result.items()
                 if k not in ('genre', 'album', 'artwork_url', 'artwork_hash', 'tempo_bpm')
                 or v is not None}
@@ -175,7 +178,8 @@ class LmsTrackPositionSource:
         host = f"[{self._host}]" if ":" in self._host else self._host
         url = (f"http://{host}:9000/music/{quote(status.coverid, safe='')}/cover.jpg"
                if status.coverid else status.artwork_url)
-        return dict(genre=status.genre, album=status.album, artwork_url=url)
+        return dict(genre=status.genre, album=status.album, artwork_url=url,
+                    album_artist=status.album_artist, isrc=status.isrc)
 
     async def close(self) -> None:
         if self._playlist_unsubscribe:
