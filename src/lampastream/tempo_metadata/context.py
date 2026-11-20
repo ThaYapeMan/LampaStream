@@ -49,8 +49,11 @@ def snapshot(manager, store=None):
                     tempo=None, phase_offset_s=0., reason='Waiting for track identity')
     resolved = store.resolve(identity)
     fields = resolved['fields'] if resolved else {}
+    # The status stream can pair this snapshot with a newer transport track.
+    track = dict(title=identity.title, artist=identity.artist)
     return dict(identity=identity.key, confirmed=identity.key.startswith('fp:'),
-                provider_rows=store.display_rows(identity), resolved_tempo=resolved,
+                provider_rows=[dict(row, track=track) for row in store.display_rows(identity)],
+                resolved_tempo=resolved,
                 tempo=fields.get('tempo', grid.tempo if grid else None),
                 phase_offset_s=fields.get('phase_offset_s', 0.),
                 reason=None if identity.key.startswith('fp:') else 'Waiting for audio fingerprint')

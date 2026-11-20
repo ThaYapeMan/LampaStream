@@ -14,10 +14,12 @@ function clock(seconds: number | null): string {
   return `${Math.floor(whole / 60)}:${String(whole % 60).padStart(2, '0')}`
 }
 
+type TrackProviderRow = TempoProviderRow & { track?: { title: string; artist: string } }
+
 /** Generic delivery-time anchor; transport is an optional, separate capability. */
-export function TrackProgress({ track, connected, transport, tempoBpm, tempoLocked, beatSource, providerRows, showControls = !!transport }: {
+export function TrackProgress({ track, connected, transport, tempoBpm, tempoLocked, beatSource, providerRows: lookupRows, showControls = !!transport }: {
   track: TrackPosition | null
-  providerRows?: TempoProviderRow[]
+  providerRows?: TrackProviderRow[]
   beatSource?: string
   tempoBpm?: number | null
   tempoLocked?: boolean
@@ -95,6 +97,8 @@ export function TrackProgress({ track, connected, transport, tempoBpm, tempoLock
     cancelHold()
     if (!current.held) void send(current.tap)
   }
+  const providerRows = track && lookupRows?.filter(row => row.track
+    && row.track.title === (track.title ?? '') && row.track.artist === (track.artist ?? ''))
   const keyRow = providerRows?.find(row => row.fields.key)
   const genreRow = providerRows?.find(row => row.fields.genre)
   const key = keyRow?.fields.key

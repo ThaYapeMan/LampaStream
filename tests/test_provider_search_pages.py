@@ -241,6 +241,48 @@ def song(*, artist='LES PAUL', title='Love Sneakin’ Up On You', duration='3:26
             f'<span>BPM</span><span>{bpm}</span></a>')
 
 
+def test_snapshot_rows_identify_the_transport_track_that_resolved(tmp_path):
+    from types import SimpleNamespace
+
+    from test_grid import grid
+
+    from lampastream.tempo_metadata.context import refresh, snapshot
+    from lampastream.track_position import TrackPosition
+
+    first = TrackPosition('First Track', 'Artist', 0., 206.)
+    second = replace(first, title='Second Track')
+    replies = iter([song(artist='Artist', title=first.title, bpm=129),
+                    song(artist='Artist', title=second.title, bpm=123)])
+    with httpx.Client(transport=httpx.MockTransport(
+            lambda _: httpx.Response(200, text=next(replies)))) as client:
+        now = [1000.]
+        store = ProviderStore(GridDatabase.create(tmp_path/'grid.db'),
+                              options={'songbpm': {'client': client}}, clock=lambda: now[0])
+        store.configure('songbpm', enabled=True)
+        adapter = SimpleNamespace(grid=None)
+        manager = SimpleNamespace(track_position=first, _active=SimpleNamespace(
+            track_source=SimpleNamespace(grid_adapter=adapter)))
+        initial = refresh(manager, store)
+        assert initial['resolved_tempo']['fields']['tempo'] == 129
+        assert initial['provider_rows'][0]['track'] == dict(title=first.title, artist=first.artist)
+
+        manager.track_position = second
+        adapter.grid = replace(grid(), provisional=True, tempo=124.)
+        pending = snapshot(manager, store)
+        assert pending['identity'] != initial['identity']
+        assert pending['provider_rows'] == []
+        assert pending['resolved_tempo'] is None
+        assert pending['tempo'] == 124
+        assert pending['reason'] == 'Waiting for audio fingerprint'
+
+        now[0] += 2
+        ready = refresh(manager, store)
+        assert ready['resolved_tempo']['fields']['tempo'] == 123
+        assert ready['provider_rows'][0]['track'] == dict(title=second.title, artist=second.artist)
+        manager.track_position = replace(second, position_s=20.)
+        assert snapshot(manager, store) == ready
+
+
 @pytest.mark.parametrize('suffix', ['(Extended)', '(Extended Version)', '- Extended Mix'])
 def test_separate_mix_equivalence_and_artist_credits(suffix):
     result = beatport.parse(beatport_page(track(mix='Extended Mix')), Identity(

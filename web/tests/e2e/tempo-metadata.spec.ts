@@ -72,12 +72,14 @@ test('provider lifecycle and consent use generic checkbox rows', async ({ page }
 
 
 test('provider references stay beside measured tempo without replacing it', async ({ page }) => {
-  await setupPreview(page, () => ({ tempo_bpm: 143, tempo_locked: true,
+  const track = { title: 'Jealous (Extended Mix)', artist: 'Mochakk',
+    position_s: 26, duration_s: 345, playing: true }
+  await setupPreview(page, () => ({ track, tempo_bpm: 143, tempo_locked: true,
     music: { genre: 'other', source: '', raw_tags: [], palette_id: '', energy_profile_id: '', manual: false,
       tempo_metadata: { identity: 'hint:recording', confirmed: false, tempo: 142,
         phase_offset_s: 0, reason: null, resolved_tempo: null,
-        provider_rows: [{ provider: 'songbpm', label: 'SongBPM', fields: { tempo: 142 }, fetched_at: 1000, status: 'ready' },
-          { provider: 'beatport', label: 'Beatport', fields: { tempo: 144 }, fetched_at: 1000, status: 'ready' }] } } }))
+        provider_rows: [{ provider: 'songbpm', label: 'SongBPM', track, fields: { tempo: 142 }, fetched_at: 1000, status: 'ready' },
+          { provider: 'beatport', label: 'Beatport', track, fields: { tempo: 144 }, fetched_at: 1000, status: 'ready' }] } } }))
   await expect(page.getByTestId('track-tempo')).toHaveText('measured 143 BPM · SongBPM 142 · Beatport 144')
   await page.getByTestId('track-tempo').screenshot({ path: '../.test-cache/beat-02-part-b-sendback-1/provider-label.png' })
 })
@@ -85,7 +87,7 @@ test('provider references stay beside measured tempo without replacing it', asyn
 test('song information sits under the Mau P title at desktop and phone widths', async ({ page }) => {
   const track = { artist: 'Mau P', title: 'Just A Little Bit More (Extended)',
     position_s: 26, duration_s: 381.221995, playing: true }
-  const providerRows = process.env.LAMPASTREAM_SCREENSHOT_PROVIDER_ROWS
+  const providerRows: { provider: string; label: string; fields: Record<string, unknown> }[] = process.env.LAMPASTREAM_SCREENSHOT_PROVIDER_ROWS
     ? JSON.parse(process.env.LAMPASTREAM_SCREENSHOT_PROVIDER_ROWS)
     : [{ provider: 'beatport', label: 'Beatport', fields: {
       tempo: 128, key: 'Gb Major', genre: 'Dance / Pop', match: 'exact',
@@ -93,7 +95,8 @@ test('song information sits under the Mau P title at desktop and phone widths', 
   await setupPreview(page, () => ({ track, tempo_bpm: 128, tempo_locked: true, grid_tempo: 128,
     music: { genre: 'other', source: '', raw_tags: [], palette_id: '', energy_profile_id: '', manual: false,
       tempo_metadata: { identity: 'hint:mau', confirmed: false, tempo: 128,
-        phase_offset_s: 0, reason: null, resolved_tempo: null, provider_rows: providerRows } } }))
+        phase_offset_s: 0, reason: null, resolved_tempo: null,
+        provider_rows: providerRows.map(row => ({ ...row, track })) } } }))
   const title = page.getByTestId('track-title')
   const information = page.getByTestId('track-information')
   const source = page.getByTestId('track-information-source')

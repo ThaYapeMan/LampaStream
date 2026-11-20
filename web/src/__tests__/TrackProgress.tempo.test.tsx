@@ -4,6 +4,7 @@ import { TrackProgress } from '@/components/TrackProgress'
 
 const beatport = { provider: 'beatport', label: 'Beatport' }
 const songbpm = { provider: 'songbpm', label: 'SongBPM' }
+const track = { title: 'First track', artist: 'Artist', position_s: 1, duration_s: 200, playing: true }
 
 describe('track tempo and song information', () => {
   it.each([true, false])('shows rounded tempo with locked=%s', locked => {
@@ -30,8 +31,32 @@ describe('track tempo and song information', () => {
              { ...songbpm, fields: { key: 'F' } }],
       info: 'grid 128 BPM · Beatport 127 · G♭ major', source: 'Beatport' },
   ])('shows $info', ({ rows, info, source }) => {
-    render(<TrackProgress track={null} connected tempoBpm={128} beatSource="grid" providerRows={rows} />)
+    render(<TrackProgress track={track} connected tempoBpm={128} beatSource="grid"
+      providerRows={rows.map(row => ({ ...row, track }))} />)
     expect(screen.getByTestId('track-information').firstElementChild).toHaveTextContent(info)
     expect(screen.getByTestId('track-information-source')).toHaveTextContent(`source: ${source}`)
+  })
+
+  it('clears stale lookup rows on a track change and keeps the grid tempo', () => {
+    const first = { ...songbpm, track, fields: { tempo: 129, key: 'G', genre: 'House' } }
+    const next = { ...track, title: 'Second track' }
+    const second = { ...songbpm, track: next, fields: { tempo: 123, key: 'F', genre: 'Pop' } }
+    const view = (current: typeof track, bpm: number, providerRows: (typeof first)[]) => (
+      <TrackProgress track={current} connected tempoBpm={bpm} beatSource="grid" providerRows={providerRows} />
+    )
+    const { rerender } = render(view(track, 128, [first]))
+    expect(screen.getByTestId('track-information')).toHaveTextContent('SongBPM 129 · G · House')
+    expect(screen.getByTestId('track-information-source')).toHaveTextContent('source: SongBPM')
+
+    rerender(view(next, 124, [first]))
+    expect(screen.getByTestId('track-title')).toHaveTextContent('Second track')
+    expect(screen.getByTestId('track-information')).toHaveTextContent(/^grid 124 BPM$/)
+    expect(screen.queryByTestId('track-information-source')).toBeNull()
+
+    rerender(view(next, 124, [second]))
+    expect(screen.getByTestId('track-information')).toHaveTextContent('SongBPM 123 · F · Pop')
+    rerender(view({ ...next, position_s: 20 }, 124, [second]))
+    expect(screen.getByTestId('track-information')).toHaveTextContent('SongBPM 123 · F · Pop')
+    expect(screen.getByTestId('track-information-source')).toHaveTextContent('source: SongBPM')
   })
 })
