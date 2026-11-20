@@ -14,7 +14,7 @@ import pytest
 from lampastream.grid.database import GridDatabase
 from lampastream.tempo_metadata import beatport, http_page, songbpm
 from lampastream.tempo_metadata.registry import Identity
-from lampastream.tempo_metadata.search_page import title_parts
+from lampastream.tempo_metadata.search_page import normalized, title_parts
 from lampastream.tempo_metadata.store import ProviderStore
 
 CASES = [
@@ -297,6 +297,33 @@ def test_plain_and_original_mix():
                          identity).fields['match'] == 'exact'
     assert beatport.parse(beatport_page(track(mix='Original Mix')),
                           Identity('night', 'Bea', 'Night - Drive')).fields['match'] == 'exact'
+
+
+@pytest.mark.parametrize(('title', 'expected'), [
+    ("Let's Groove", 'lets groove'),
+    ('Lets Groove', 'lets groove'),
+    ('Let’s Groove', 'lets groove'),
+    ('Letʼs Groove', 'lets groove'),
+    ("Rock 'n' Roll", 'rock n roll'),
+    ('Of the Night', 'of the night'),
+    ('Night-Drive', 'night drive'),
+])
+def test_normalized_joins_apostrophes_and_preserves_word_breaks(title, expected):
+    assert normalized(title) == expected
+
+
+def test_songbpm_matches_apostrophe_in_base_title():
+    page = (
+        song(artist='George Morel', title="Let's Groove", duration='6:57', bpm=125)
+        + song(artist='George Morel', title="Let's Groove (Claptone Remix)",
+               duration='7:17', bpm=123)
+        + song(artist='Other Artist', title='Something Else', bpm=120)
+    )
+    result = songbpm.parse(page, Identity('morel', 'George Morel',
+                                         'Lets Groove (Original Mix)', 417))
+    assert result.status == 'ready'
+    assert result.fields['tempo'] == 125
+    assert result.fields['match'] == 'base_title'
 
 
 def test_isrc_precedes_artist_and_title_and_remixer_is_excluded():

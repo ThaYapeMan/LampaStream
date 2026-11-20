@@ -57,11 +57,14 @@ _DASH_SUFFIX = re.compile(r'\s+[-–—]\s+(?:(?!\s+[-–—]\s+).)+$')
 _VERSION = re.compile(
     r'\b(?:mix|remix|edit|version|extended|original|dub|rework|remaster|remastered)\b', re.I)
 log = logging.getLogger(__name__)
+_APOSTROPHES = str.maketrans('', '', "'’ʼ")
 
 
-def normalized(value):
+def normalized(value, *, join_apostrophes=True):
     folded = unicodedata.normalize('NFKD', value.casefold())
     folded = ''.join(c for c in folded if not unicodedata.combining(c))
+    if join_apostrophes:
+        folded = folded.translate(_APOSTROPHES)
     return ' '.join(re.findall(r'[^\W_]+', folded))
 
 
@@ -140,11 +143,12 @@ def select(candidates, identity, confidence, *, strict_version=False):
 
     same_version = [row for row in matches if version_key(row['version']) == version_key(version)]
     if same_version:
-        if len(same_version) == 1:
-            return accepted(same_version, 'exact', confidence)
-        by_duration = duration_matches(same_version)
-        if len(by_duration) == 1:
-            return accepted(by_duration, 'exact', confidence)
+        selected = same_version if len(same_version) == 1 else duration_matches(same_version)
+        if len(selected) == 1:
+            # Keep the same-version selection and distinguish newly folded title matches.
+            exact = (normalized(selected[0]['title'], join_apostrophes=False)
+                     == normalized(base, join_apostrophes=False))
+            return accepted(selected, 'exact' if exact else 'base_title', confidence)
         matches = same_version
     else:
         by_duration = duration_matches(matches)
